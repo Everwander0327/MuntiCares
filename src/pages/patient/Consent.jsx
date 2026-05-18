@@ -36,12 +36,12 @@ const ProviderToggle = ({ name, service, lastAccess, initialValue }) => {
       
       <motion.button 
         onClick={() => setIsEnabled(!isEnabled)}
-        className={`w-14 h-8 rounded-full p-1 transition-colors duration-300 relative ${isEnabled ? 'bg-green-500' : 'bg-slate-200'}`}
+        className={`w-14 h-8 rounded-full p-1 relative overflow-hidden transition-colors duration-300 relative ${isEnabled ? 'bg-green-500' : 'bg-slate-200'}`}
         whileTap={{ scale: 0.95 }}
       >
         <motion.div 
           className="w-6 h-6 bg-white rounded-full shadow-sm"
-          animate={{ x: isEnabled ? 24 : 0 }}
+          animate={{ x: isEnabled ? 18 : 0 }}
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         />
       </motion.button>

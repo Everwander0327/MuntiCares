@@ -95,11 +95,11 @@ const PatientRequests = () => {
             />
             <motion.button 
               onClick={() => alert('New request form coming soon!')}
-              className="flex-1 md:flex-none btn-primary px-6 py-2.5 rounded-xl"
+              className="w-30 h-12 flex items-center justify-center btn-primary px-6 py-2.5 rounded-xl font-bold"
               whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.80 }}
             >
-              New Request
+              Request 
             </motion.button>
           </div>
         </motion.div>

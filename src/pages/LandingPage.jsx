@@ -257,12 +257,12 @@ const HowItWorks = () => {
           <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-blue-100 -z-10"></div>
           
           {/* Connecting arrows between steps */}
-          <div className="hidden md:flex absolute top-1/2 left-[33%] -translate-x-1/2 -translate-y-1/2 z-10">
+          <div className="hidden md:flex absolute top-1/2 left-[67%] -translate-x-1/2 -translate-y-1/2 z-10">
             <div className="bg-white rounded-full p-1 shadow-md border border-blue-100">
               <ChevronRight className="w-5 h-5 text-primary" />
             </div>
           </div>
-          <div className="hidden md:flex absolute top-1/2 left-[66%] -translate-x-1/2 -translate-y-1/2 z-10">
+          <div className="hidden md:flex absolute top-1/2 left-[33%] -translate-x-1/2 -translate-y-1/2 z-10">
             <div className="bg-white rounded-full p-1 shadow-md border border-blue-100">
               <ChevronRight className="w-5 h-5 text-primary" />
             </div>
