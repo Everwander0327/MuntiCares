@@ -1,23 +1,159 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   @apply font-sans bg-secondary text-slate-900;
+  line-height: 1.7;
+}
+
+/* Tighter letter-spacing for headings */
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.02em;
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg active:scale-95;
+    @apply bg-primary text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg hover:scale-[1.02] active:scale-[0.97];
   }
   
   .btn-outline {
-    @apply border-2 border-primary text-primary px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:bg-primary hover:text-white active:scale-95;
+    @apply border-2 border-primary text-primary px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:bg-primary hover:text-white hover:scale-[1.02] active:scale-[0.97];
   }
 
   .card {
-    @apply bg-white p-8 rounded-2xl shadow-xl shadow-blue-900/5 border border-blue-50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2;
+    @apply bg-white p-8 rounded-2xl shadow-xl shadow-blue-900/5 border border-blue-50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1;
   }
+}
+
+/* Focus glow for form inputs */
+input:focus, textarea:focus, select:focus {
+  border-color: #1E6FBF !important;
+  box-shadow: 0 0 0 3px rgba(30, 111, 191, 0.15) !important;
+}
+
+/* Skeleton loading animation */
+@keyframes skeleton-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+  border-radius: 0.75rem;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Floating animation for hero image */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(2deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(2deg);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Shake animation for form errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Auth floating blobs */
+@keyframes blob-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+}
+
+@keyframes blob-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-25px, 25px) scale(0.9); }
+  66% { transform: translate(15px, -15px) scale(1.1); }
+}
+
+@keyframes blob-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(20px, 10px) scale(1.05); }
+  66% { transform: translate(-10px, -20px) scale(0.95); }
+}
+
+.blob-1 { animation: blob-float-1 8s ease-in-out infinite; }
+.blob-2 { animation: blob-float-2 10s ease-in-out infinite; }
+.blob-3 { animation: blob-float-3 12s ease-in-out infinite; }
+
+/* Status dot animation */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.status-dot {
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+/* Table styling */
+.table-striped tbody tr:nth-child(even) {
+  background-color: #F8FBFF;
+}
+
+.table-striped tbody tr:hover {
+  background-color: #EFF6FF !important;
+}
+
+/* Mobile bottom nav */
+@media (max-width: 1023px) {
+  .dashboard-main {
+    padding-bottom: 5rem;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }

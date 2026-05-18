@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { MessageSquare, Phone, ChevronRight, Search } from 'lucide-react';
+import { MessageSquare, Phone, ChevronRight, Search, ChevronLeft } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const ProviderPatients = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -27,7 +28,12 @@ const ProviderPatients = () => {
   return (
     <DashboardLayout role="provider">
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <motion.div 
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div>
             <h1 className="text-2xl font-bold text-slate-900">My Patients</h1>
             <p className="text-slate-500">Manage your active patient list</p>
@@ -42,13 +48,24 @@ const ProviderPatients = () => {
               className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm"
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <motion.div 
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           {/* Mobile Card View */}
           <div className="block md:hidden divide-y divide-slate-50">
             {filteredPatients.map((p, idx) => (
-              <div key={idx} className="p-4 space-y-4">
+              <motion.div 
+                key={idx} 
+                className="p-4 space-y-4"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold">
@@ -59,9 +76,12 @@ const ProviderPatients = () => {
                       <p className="text-xs text-primary font-semibold">{p.service}</p>
                     </div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                     p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                   }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                      p.status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'
+                    }`} />
                     {p.status}
                   </span>
                 </div>
@@ -76,13 +96,13 @@ const ProviderPatients = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-striped">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
                   <th className="px-6 py-4 font-semibold">Patient Name</th>
@@ -92,9 +112,15 @@ const ProviderPatients = () => {
                   <th className="px-6 py-4 font-semibold">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {filteredPatients.map((p, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                  <motion.tr 
+                    key={idx} 
+                    className="transition-colors group"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.05 }}
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold">
@@ -106,9 +132,12 @@ const ProviderPatients = () => {
                     <td className="px-6 py-4 text-slate-600">{p.service}</td>
                     <td className="px-6 py-4 text-slate-500 text-sm">{p.lastVisit}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                         p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
                       }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                          p.status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'
+                        }`} />
                         {p.status}
                       </span>
                     </td>
@@ -125,7 +154,7 @@ const ProviderPatients = () => {
                         </button>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
@@ -133,7 +162,20 @@ const ProviderPatients = () => {
           {filteredPatients.length === 0 && (
             <div className="p-10 text-center text-slate-500">No patients found.</div>
           )}
-        </div>
+          {/* Pagination */}
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+            <p className="text-sm text-slate-500">Showing 1-{filteredPatients.length} of {filteredPatients.length} results</p>
+            <div className="flex items-center gap-1">
+              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">1</button>
+              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

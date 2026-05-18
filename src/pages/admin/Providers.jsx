@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Filter, ShieldCheck, MoreVertical, Star, ChevronDown } from 'lucide-react';
+import { Search, ShieldCheck, MoreVertical, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 
 const AdminProviders = () => {
@@ -35,7 +36,12 @@ const AdminProviders = () => {
   return (
     <DashboardLayout role="admin">
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <motion.div 
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Manage Providers</h1>
             <p className="text-slate-500">Review and verify healthcare professionals</p>
@@ -62,13 +68,24 @@ const AdminProviders = () => {
               ]}
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <motion.div 
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           {/* Mobile Card View */}
           <div className="block md:hidden divide-y divide-slate-50">
             {filteredProviders.map((p, idx) => (
-              <div key={idx} className="p-4 space-y-3">
+              <motion.div 
+                key={idx} 
+                className="p-4 space-y-3"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary">
@@ -79,11 +96,16 @@ const AdminProviders = () => {
                       <p className="text-[10px] text-slate-400 font-mono">{p.id}</p>
                     </div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                     p.status === 'Verified' ? 'bg-green-100 text-green-700' :
                     p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                     'bg-blue-100 text-primary'
                   }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                      p.status === 'Verified' ? 'bg-green-500' :
+                      p.status === 'Pending' ? 'bg-yellow-500' :
+                      'bg-blue-500'
+                    }`} />
                     {p.status}
                   </span>
                 </div>
@@ -99,13 +121,13 @@ const AdminProviders = () => {
                     Review Provider
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-striped">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="px-6 py-4 font-bold">Provider ID</th>
@@ -116,9 +138,15 @@ const AdminProviders = () => {
                   <th className="px-6 py-4 font-bold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {filteredProviders.map((p, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                  <motion.tr 
+                    key={idx} 
+                    className="transition-colors"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.03 }}
+                  >
                     <td className="px-6 py-4 text-sm font-mono text-slate-400">{p.id}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -139,11 +167,16 @@ const AdminProviders = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                         p.status === 'Verified' ? 'bg-green-100 text-green-700' :
                         p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-blue-100 text-primary'
                       }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                          p.status === 'Verified' ? 'bg-green-500' :
+                          p.status === 'Pending' ? 'bg-yellow-500' :
+                          'bg-blue-500'
+                        }`} />
                         {p.status}
                       </span>
                     </td>
@@ -152,7 +185,7 @@ const AdminProviders = () => {
                         <MoreVertical className="w-5 h-5" />
                       </button>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
@@ -160,7 +193,21 @@ const AdminProviders = () => {
           {filteredProviders.length === 0 && (
             <div className="p-10 text-center text-slate-500">No providers found.</div>
           )}
-        </div>
+          {/* Pagination */}
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+            <p className="text-sm text-slate-500">Showing 1-{filteredProviders.length} of {filteredProviders.length} results</p>
+            <div className="flex items-center gap-1">
+              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">1</button>
+              <button className="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-50 text-sm font-medium transition-colors">2</button>
+              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

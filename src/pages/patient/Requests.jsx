@@ -1,10 +1,23 @@
 import React from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Filter, Clock, MapPin, ChevronDown } from 'lucide-react';
+import { Clock, MapPin } from 'lucide-react';
+import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 
+const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.1 } },
+};
+const staggerItem = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+};
+
 const RequestCard = ({ provider, service, date, status, price }) => (
-  <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all">
+  <motion.div 
+    className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
+    variants={staggerItem}
+    whileHover={{ y: -4, transition: { duration: 0.2 } }}
+  >
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold text-lg">
@@ -28,16 +41,21 @@ const RequestCard = ({ provider, service, date, status, price }) => (
         <div className="font-bold text-slate-900">
           ₱{price}
         </div>
-        <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${
+        <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold ${
           status === 'Accepted' ? 'bg-green-100 text-green-700' :
           status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
           'bg-red-100 text-red-700'
         }`}>
+          <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+            status === 'Accepted' ? 'bg-green-500' :
+            status === 'Pending' ? 'bg-yellow-500' :
+            'bg-red-500'
+          }`} />
           {status}
         </span>
       </div>
     </div>
-  </div>
+  </motion.div>
 );
 
 const PatientRequests = () => {
@@ -54,7 +72,12 @@ const PatientRequests = () => {
   return (
     <DashboardLayout role="patient">
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <motion.div 
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div>
             <h1 className="text-2xl font-bold text-slate-900">My Requests</h1>
             <p className="text-slate-500">Track and manage your service requests</p>
@@ -70,24 +93,37 @@ const PatientRequests = () => {
                 { value: 'Rejected', label: 'Rejected' },
               ]}
             />
-            <button 
+            <motion.button 
               onClick={() => alert('New request form coming soon!')}
               className="flex-1 md:flex-none btn-primary px-6 py-2.5 rounded-xl"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.97 }}
             >
               New Request
-            </button>
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="space-y-4">
+        <motion.div 
+          className="space-y-4"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
+        >
           {filteredRequests.length > 0 ? (
             filteredRequests.map((req, i) => (
               <RequestCard key={i} {...req} />
             ))
           ) : (
-            <div className="p-10 text-center text-slate-500 bg-white rounded-3xl border border-slate-100">No requests found for this filter.</div>
+            <motion.div 
+              className="p-10 text-center text-slate-500 bg-white rounded-3xl border border-slate-100"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              No requests found for this filter.
+            </motion.div>
           )}
-        </div>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

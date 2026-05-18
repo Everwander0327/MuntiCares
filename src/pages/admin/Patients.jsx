@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Filter, MoreVertical, Shield, ChevronDown } from 'lucide-react';
+import { Search, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 
 const AdminPatients = () => {
@@ -35,7 +36,12 @@ const AdminPatients = () => {
   return (
     <DashboardLayout role="admin">
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <motion.div 
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Manage Patients</h1>
             <p className="text-slate-500">Overview of all registered patients in Muntinlupa</p>
@@ -62,13 +68,24 @@ const AdminPatients = () => {
               ]}
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <motion.div 
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           {/* Mobile Card View */}
           <div className="block md:hidden divide-y divide-slate-50">
             {filteredPatients.map((p, idx) => (
-              <div key={idx} className="p-4 space-y-3">
+              <motion.div 
+                key={idx} 
+                className="p-4 space-y-3"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-500">
@@ -79,11 +96,16 @@ const AdminPatients = () => {
                       <p className="text-xs text-slate-400 font-mono">{p.id}</p>
                     </div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                     p.status === 'Verified' ? 'bg-green-100 text-green-700' :
                     p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                     'bg-red-100 text-red-700'
                   }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                      p.status === 'Verified' ? 'bg-green-500' :
+                      p.status === 'Pending' ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`} />
                     {p.status}
                   </span>
                 </div>
@@ -96,13 +118,13 @@ const AdminPatients = () => {
                     View Options
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-striped">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="px-6 py-4 font-bold">Patient ID</th>
@@ -113,9 +135,15 @@ const AdminPatients = () => {
                   <th className="px-6 py-4 font-bold text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {filteredPatients.map((p, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                  <motion.tr 
+                    key={idx} 
+                    className="transition-colors"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.03 }}
+                  >
                     <td className="px-6 py-4 text-sm font-mono text-slate-400">{p.id}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
@@ -128,11 +156,16 @@ const AdminPatients = () => {
                     <td className="px-6 py-4 text-slate-600 text-sm">{p.email}</td>
                     <td className="px-6 py-4 text-slate-500 text-sm">{p.joinDate}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                         p.status === 'Verified' ? 'bg-green-100 text-green-700' :
                         p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'
                       }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                          p.status === 'Verified' ? 'bg-green-500' :
+                          p.status === 'Pending' ? 'bg-yellow-500' :
+                          'bg-red-500'
+                        }`} />
                         {p.status}
                       </span>
                     </td>
@@ -141,7 +174,7 @@ const AdminPatients = () => {
                         <MoreVertical className="w-5 h-5" />
                       </button>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
@@ -149,7 +182,21 @@ const AdminPatients = () => {
           {filteredPatients.length === 0 && (
             <div className="p-10 text-center text-slate-500">No patients found.</div>
           )}
-        </div>
+          {/* Pagination */}
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+            <p className="text-sm text-slate-500">Showing 1-{filteredPatients.length} of {filteredPatients.length} results</p>
+            <div className="flex items-center gap-1">
+              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">1</button>
+              <button className="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-50 text-sm font-medium transition-colors">2</button>
+              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

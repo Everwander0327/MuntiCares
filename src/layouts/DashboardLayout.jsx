@@ -14,15 +14,42 @@ import {
   Bell,
   ChevronLeft
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SidebarItem = ({ icon, label, to, active, onClick }) => (
   <Link 
     to={to} 
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group ${active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-blue-50 hover:text-primary'}`}
+    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-blue-50 hover:text-primary'}`}
   >
+    {/* Active indicator bar */}
+    <motion.div
+      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-primary rounded-r-full"
+      initial={false}
+      animate={{ 
+        height: active ? '60%' : '0%',
+        opacity: active ? 1 : 0,
+      }}
+      transition={{ duration: 0.2 }}
+    />
     {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-primary'}` })}
     <span className="font-semibold">{label}</span>
+  </Link>
+);
+
+const MobileNavItem = ({ icon, label, to, active }) => (
+  <Link 
+    to={to}
+    className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${active ? 'text-primary' : 'text-slate-400'}`}
+  >
+    {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-primary' : 'text-slate-400'}` })}
+    <span className={`text-[10px] font-bold ${active ? 'text-primary' : 'text-slate-400'}`}>{label}</span>
+    {active && (
+      <motion.div 
+        className="w-1 h-1 bg-primary rounded-full"
+        layoutId="mobile-indicator"
+      />
+    )}
   </Link>
 );
 
@@ -54,20 +81,34 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
   const links = role === 'patient' ? patientLinks : role === 'provider' ? providerLinks : adminLinks;
 
+  const userInfo = {
+    patient: { name: 'Juan Dela Cruz', initials: 'JD', badge: 'Patient' },
+    provider: { name: 'Maria Santos', initials: 'MS', badge: 'Provider' },
+    admin: { name: 'Admin User', initials: 'AD', badge: 'Admin' },
+  };
+
+  const user = userInfo[role];
+
   return (
     <div className="min-h-screen bg-slate-50 flex overflow-hidden">
       {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div 
+            className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-sm"
+            onClick={() => setIsSidebarOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:translate-x-0`}>
         <div className="h-full flex flex-col p-6">
-          <div className="flex items-center justify-between mb-10">
+          {/* Logo */}
+          <div className="flex items-center justify-between mb-8">
             <Link to="/" className="flex items-center gap-2 group">
               <div className="bg-primary p-2 rounded-lg group-hover:rotate-12 transition-transform">
                 <Heart className="text-white w-5 h-5" fill="currentColor" />
@@ -79,7 +120,11 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
             </button>
           </div>
 
-          <nav className="flex-1 space-y-2 overflow-y-auto">
+          {/* Nav section label */}
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
+
+          {/* Nav links */}
+          <nav className="flex-1 space-y-1 overflow-y-auto">
             {links.map((link) => (
               <SidebarItem 
                 key={link.label} 
@@ -90,15 +135,30 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
             ))}
           </nav>
 
-          <div className="pt-6 border-t border-slate-100">
-            <button 
-              onClick={() => navigate('/')}
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all w-full group"
-            >
-              <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500" />
-              <span className="font-semibold">Logout</span>
-            </button>
+          {/* Divider */}
+          <div className="border-t border-slate-100 my-4" />
+
+          {/* User Info */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-2xl mb-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+              {user.initials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-slate-900 text-sm truncate">{user.name}</p>
+              <span className="inline-flex items-center px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase tracking-wider">
+                {user.badge}
+              </span>
+            </div>
           </div>
+
+          {/* Logout */}
+          <button 
+            onClick={() => navigate('/')}
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all w-full group"
+          >
+            <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500" />
+            <span className="font-semibold">Logout</span>
+          </button>
         </div>
       </aside>
 
@@ -116,14 +176,35 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-primary font-bold shadow-sm border border-white shrink-0">
-              {role === 'patient' ? 'JD' : role === 'provider' ? 'MS' : 'AD'}
+              {user.initials}
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-10">
-          {children}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-10 pb-24 lg:pb-10">
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+          >
+            {children}
+          </motion.div>
         </main>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-slate-100 shadow-lg shadow-slate-200/50">
+        <div className="flex items-center justify-around px-2 py-1">
+          {links.slice(0, 4).map((link) => (
+            <MobileNavItem 
+              key={link.label}
+              icon={link.icon}
+              label={link.label.split(' ').pop()}
+              to={link.to}
+              active={location.pathname === link.to}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

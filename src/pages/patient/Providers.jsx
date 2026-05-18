@@ -1,45 +1,16 @@
 import React from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Filter, Star, MapPin, ChevronDown } from 'lucide-react';
+import { Search, Star, MapPin } from 'lucide-react';
+import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 
-const ProviderCard = ({ name, services, rating }) => (
-  <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-    <div className="flex items-center gap-4 mb-6">
-      <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-xl font-bold text-primary shadow-inner">
-        {name.split(' ').map(n => n[0]).join('')}
-      </div>
-      <div>
-        <h3 className="font-bold text-slate-900 text-lg">{name}</h3>
-        <div className="flex items-center gap-1 text-yellow-500">
-          {[...Array(5)].map((_, i) => (
-            <Star key={i} className={`w-4 h-4 ${i < Math.floor(rating) ? 'fill-current' : 'text-slate-300'}`} />
-          ))}
-          <span className="text-slate-400 text-sm ml-1 font-medium">{rating.toFixed(1)}</span>
-        </div>
-      </div>
-    </div>
-    
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {services.map((s, i) => (
-          <span key={i} className="px-3 py-1 bg-slate-50 text-slate-600 rounded-lg text-xs font-semibold border border-slate-100">
-            {s}
-          </span>
-        ))}
-      </div>
-      
-      <div className="flex items-center gap-2 text-slate-400 text-sm">
-        <MapPin className="w-4 h-4" />
-        <span>Muntinlupa City</span>
-      </div>
-
-      <button className="w-full btn-primary py-3 rounded-2xl text-sm font-bold shadow-lg shadow-primary/20">
-        Request Service
-      </button>
-    </div>
-  </div>
-);
+const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.08 } },
+};
+const staggerItem = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+};
 
 const PatientProviders = () => {
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -79,7 +50,12 @@ const PatientProviders = () => {
   return (
     <DashboardLayout role="patient">
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <motion.div 
+          className="flex flex-col md:flex-row gap-4 items-center justify-between"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div className="relative flex-1 w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input 
@@ -101,12 +77,22 @@ const PatientProviders = () => {
               { value: 'Medication Management', label: 'Medication Management' },
             ]}
           />
-        </div>
+        </motion.div>
 
         {filteredProviders.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
             {filteredProviders.map((p, i) => (
-              <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+              <motion.div 
+                key={i} 
+                className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300"
+                variants={staggerItem}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+              >
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-xl font-bold text-primary shadow-inner">
                     {p.name.split(' ').map(n => n[0]).join('')}
@@ -136,21 +122,27 @@ const PatientProviders = () => {
                     <span>Muntinlupa City</span>
                   </div>
 
-                  <button 
+                  <motion.button 
                     onClick={() => handleRequest(p.name)}
                     disabled={requested.includes(p.name)}
                     className={`w-full py-3 rounded-2xl text-sm font-bold shadow-lg transition-all ${requested.includes(p.name) ? 'bg-green-100 text-green-600 cursor-not-allowed shadow-none' : 'btn-primary shadow-primary/20'}`}
+                    whileHover={!requested.includes(p.name) ? { scale: 1.02 } : {}}
+                    whileTap={!requested.includes(p.name) ? { scale: 0.97 } : {}}
                   >
                     {requested.includes(p.name) ? 'Request Sent ✓' : 'Request Service'}
-                  </button>
+                  </motion.button>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
-          <div className="text-center py-20 bg-white rounded-[2rem] border border-slate-100">
+          <motion.div 
+            className="text-center py-20 bg-white rounded-[2rem] border border-slate-100"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
             <p className="text-slate-500 text-lg">No providers found matching your search.</p>
-          </div>
+          </motion.div>
         )}
       </div>
     </DashboardLayout>

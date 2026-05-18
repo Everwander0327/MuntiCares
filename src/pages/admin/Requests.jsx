@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Filter, ArrowUpRight, ArrowDownLeft, ChevronDown } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 
 const AdminRequests = () => {
@@ -36,7 +37,12 @@ const AdminRequests = () => {
   return (
     <DashboardLayout role="admin">
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <motion.div 
+          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Platform Requests</h1>
             <p className="text-slate-500">Monitor all service interactions across Muntinlupa</p>
@@ -63,23 +69,39 @@ const AdminRequests = () => {
               ]}
             />
           </div>
-        </div>
+        </motion.div>
 
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+        <motion.div 
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
           {/* Mobile Card View */}
           <div className="block md:hidden divide-y divide-slate-50">
             {filteredRequests.map((r, idx) => (
-              <div key={idx} className="p-4 space-y-3">
+              <motion.div 
+                key={idx} 
+                className="p-4 space-y-3"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+              >
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-bold text-slate-900">{r.service}</p>
                     <p className="text-[10px] text-slate-400 font-mono">{r.id}</p>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                     r.status === 'Accepted' ? 'bg-green-100 text-green-700' :
                     r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                     'bg-red-100 text-red-700'
                   }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                      r.status === 'Accepted' ? 'bg-green-500' :
+                      r.status === 'Pending' ? 'bg-yellow-500' :
+                      'bg-red-500'
+                    }`} />
                     {r.status}
                   </span>
                 </div>
@@ -91,13 +113,13 @@ const AdminRequests = () => {
                   <span className="text-[10px] text-slate-400 uppercase font-bold">{r.date}</span>
                   <button className="text-primary font-bold text-xs">Details</button>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse table-striped">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                   <th className="px-6 py-4 font-bold">Request ID</th>
@@ -108,9 +130,15 @@ const AdminRequests = () => {
                   <th className="px-6 py-4 font-bold text-right">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {filteredRequests.map((r, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                  <motion.tr 
+                    key={idx} 
+                    className="transition-colors group"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.03 }}
+                  >
                     <td className="px-6 py-4 text-sm font-mono text-slate-400">{r.id}</td>
                     <td className="px-6 py-4">
                       <span className="font-bold text-slate-700">{r.patient}</span>
@@ -122,18 +150,23 @@ const AdminRequests = () => {
                       <span className="px-2 py-1 bg-slate-50 rounded-lg text-xs text-slate-500 font-semibold">{r.service}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                         r.status === 'Accepted' ? 'bg-green-100 text-green-700' :
                         r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'
                       }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                          r.status === 'Accepted' ? 'bg-green-500' :
+                          r.status === 'Pending' ? 'bg-yellow-500' :
+                          'bg-red-500'
+                        }`} />
                         {r.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right text-slate-500 text-sm">
                       {r.date}
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))}
               </tbody>
             </table>
@@ -141,7 +174,21 @@ const AdminRequests = () => {
           {filteredRequests.length === 0 && (
             <div className="p-10 text-center text-slate-500">No requests found.</div>
           )}
-        </div>
+          {/* Pagination */}
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+            <p className="text-sm text-slate-500">Showing 1-{filteredRequests.length} of {filteredRequests.length} results</p>
+            <div className="flex items-center gap-1">
+              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">1</button>
+              <button className="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-50 text-sm font-medium transition-colors">2</button>
+              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

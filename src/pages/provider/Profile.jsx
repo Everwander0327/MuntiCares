@@ -1,6 +1,15 @@
 import React from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Camera, Mail, Phone, MapPin, Briefcase, Award } from 'lucide-react';
+import { Camera, Mail, Phone, MapPin, Award } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+const staggerContainer = {
+  animate: { transition: { staggerChildren: 0.1 } },
+};
+const staggerItem = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+};
 
 const ProviderProfile = () => {
   const [isEditing, setIsEditing] = React.useState(false);
@@ -12,15 +21,27 @@ const ProviderProfile = () => {
 
   return (
     <DashboardLayout role="provider">
-      <div className="max-w-4xl space-y-8">
-        <div className="flex flex-col md:flex-row items-start gap-8 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+      <motion.div 
+        className="max-w-4xl space-y-8"
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
+        <motion.div 
+          className="flex flex-col md:flex-row items-start gap-8 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm"
+          variants={staggerItem}
+        >
           <div className="relative group">
             <div className="w-32 h-32 rounded-[2rem] bg-blue-100 flex items-center justify-center text-4xl font-bold text-primary shadow-inner">
               MS
             </div>
-            <button className="absolute -bottom-2 -right-2 p-2 bg-primary text-white rounded-xl shadow-lg hover:scale-110 transition-transform">
+            <motion.button 
+              className="absolute -bottom-2 -right-2 p-2 bg-primary text-white rounded-xl shadow-lg transition-transform"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
               <Camera className="w-5 h-5" />
-            </button>
+            </motion.button>
           </div>
           
           <div className="flex-1 space-y-4">
@@ -48,16 +69,21 @@ const ProviderProfile = () => {
             </div>
           </div>
           
-          <button 
+          <motion.button 
             onClick={() => isEditing ? handleSave() : setIsEditing(true)}
             className="btn-primary px-8 rounded-2xl"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.97 }}
           >
             {isEditing ? 'Save Profile' : 'Edit Profile'}
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+          <motion.div 
+            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6"
+            variants={staggerItem}
+          >
             <h3 className="text-xl font-bold text-slate-900 border-b pb-4">Contact Information</h3>
             <div className="space-y-4">
               <div className="flex items-center gap-4">
@@ -79,20 +105,29 @@ const ProviderProfile = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+          <motion.div 
+            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6"
+            variants={staggerItem}
+          >
             <h3 className="text-xl font-bold text-slate-900 border-b pb-4">Specializations</h3>
             <div className="flex flex-wrap gap-2">
               {['Wound Care', 'Post-Surgery Recovery', 'Elderly Care', 'IV Therapy', 'Diabetes Management'].map((s, i) => (
-                <span key={i} className="px-4 py-2 bg-blue-50 text-primary rounded-xl text-sm font-bold border border-blue-100">
+                <motion.span 
+                  key={i} 
+                  className="px-4 py-2 bg-blue-50 text-primary rounded-xl text-sm font-bold border border-blue-100"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
+                >
                   {s}
-                </span>
+                </motion.span>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 };
