@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
@@ -21,6 +22,7 @@ import PatientProfile from './pages/patient/Profile';
 import ProviderDashboard from './pages/provider/Dashboard';
 import ProviderRequests from './pages/provider/Requests';
 import ProviderPatients from './pages/provider/Patients';
+import ProviderSchedule from './pages/provider/Schedule';
 import ProviderProfile from './pages/provider/Profile';
 
 // Admin Pages
@@ -33,6 +35,7 @@ import AdminProfile from './pages/admin/Profile';
 function App() {
   return (
     <Router>
+      <Toaster position="top-right" />
       <Routes>
         {/* Public Routes with Main Navbar/Footer */}
         <Route path="/" element={<MainLayout />}>
@@ -54,6 +57,7 @@ function App() {
           <Route path="dashboard" element={<ProviderDashboard />} />
           <Route path="requests" element={<ProviderRequests />} />
           <Route path="patients" element={<ProviderPatients />} />
+          <Route path="schedule" element={<ProviderSchedule />} />
           <Route path="profile" element={<ProviderProfile />} />
         </Route>
 

@@ -12,7 +12,8 @@ import {
   Users,
   Briefcase,
   Bell,
-  ChevronLeft
+  ChevronLeft,
+  CalendarDays
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -71,7 +72,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     { icon: <LayoutDashboard />, label: 'Dashboard', to: '/provider/dashboard' },
     { icon: <Bell />, label: 'Incoming Requests', to: '/provider/requests' },
     { icon: <Users />, label: 'My Patients', to: '/provider/patients' },
-    { icon: <User />, label: 'Profile', to: '/provider/profile' },
+    { icon: <CalendarDays />, label: 'My Schedule', to: '/provider/schedule' },
   ];
 
   const adminLinks = [

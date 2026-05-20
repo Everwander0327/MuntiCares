@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { MessageSquare, Phone, ChevronRight, Search, ChevronLeft, CheckCircle } from 'lucide-react';
+import { MessageSquare, Phone, ChevronRight, Search, ChevronLeft, CheckCircle, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
+import PatientRecordModal from '../../components/PatientRecordModal';
 
 const ProviderPatients = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
+  
+  // Modal State
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   const { user } = useAuth();
 
   useEffect(() => {
@@ -26,9 +32,9 @@ const ProviderPatients = () => {
 
         if (error) throw error;
 
-        // Note: Patient doesn't have phone number in users table, normally we'd fetch it if it existed.
         const formatted = (data || []).map(r => ({
           requestId: r.id,
+          patientId: r.patient_id,
           name: r.patient?.full_name || 'Unknown Patient',
           service: r.service,
           lastVisit: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
@@ -73,6 +79,11 @@ const ProviderPatients = () => {
     } finally {
       setUpdatingId(null);
     }
+  };
+
+  const handleOpenRecord = (patientId, patientName) => {
+    setSelectedPatient({ id: patientId, name: patientName });
+    setIsModalOpen(true);
   };
 
   if (loading) {
@@ -156,6 +167,13 @@ const ProviderPatients = () => {
                         <CheckCircle className="w-4 h-4" />
                       </button>
                     )}
+                    <button 
+                      className="p-2 bg-blue-50 text-blue-600 hover:text-white hover:bg-blue-500 rounded-lg transition-colors"
+                      onClick={() => handleOpenRecord(p.patientId, p.name)}
+                      title="View Medical Record"
+                    >
+                      <FileText className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </motion.div>
@@ -215,6 +233,13 @@ const ProviderPatients = () => {
                             <CheckCircle className="w-5 h-5" />
                           </button>
                         )}
+                        <button 
+                          className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white rounded-xl transition-colors" 
+                          onClick={() => handleOpenRecord(p.patientId, p.name)}
+                          title="View Medical Record"
+                        >
+                          <FileText className="w-5 h-5" />
+                        </button>
                         <button className="p-2 text-slate-400 hover:text-primary transition-colors" onClick={() => alert(`Messaging ${p.name}`)}>
                           <MessageSquare className="w-5 h-5" />
                         </button>
@@ -230,6 +255,15 @@ const ProviderPatients = () => {
           )}
         </motion.div>
       </div>
+
+      {selectedPatient && (
+        <PatientRecordModal 
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name}
+        />
+      )}
     </DashboardLayout>
   );
 };

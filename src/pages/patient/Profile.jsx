@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2 } from 'lucide-react';
+import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2, Upload, FileText, X, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [documents, setDocuments] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
@@ -56,6 +59,17 @@ const PatientProfile = () => {
           is_profile_complete: patData?.is_profile_complete || false,
           created_at: userData.created_at
         });
+
+        // Fetch Documents
+        const { data: docs, error: docsError } = await supabase
+          .from('patient_documents')
+          .select('*')
+          .eq('patient_id', user.id)
+          .order('uploaded_at', { ascending: false });
+          
+        if (!docsError && docs) {
+          setDocuments(docs);
+        }
       } catch (err) {
         console.error('Error fetching profile:', err);
       } finally {
@@ -82,10 +96,10 @@ const PatientProfile = () => {
 
       if (error) throw error;
       setProfile(prev => ({ ...prev, is_profile_complete: true }));
-      alert('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
     } catch (err) {
       console.error('Error saving profile:', err);
-      alert('Failed to save profile.');
+      toast.error('Failed to save profile.');
     } finally {
       setSaving(false);
     }
@@ -94,6 +108,60 @@ const PatientProfile = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // 500KB Limit Check
+    const maxSize = 500 * 1024;
+    if (file.size > maxSize) {
+      toast.error("File is too large! Limit is 500KB lang po.");
+      event.target.value = ''; // Reset input
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      // Upload to Storage
+      const { error: uploadError } = await supabase.storage
+        .from('medical_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Save to Database
+      const { error: dbError } = await supabase
+        .from('patient_documents')
+        .insert([{
+          patient_id: user.id,
+          document_title: file.name,
+          file_path: filePath
+        }]);
+
+      if (dbError) throw dbError;
+
+      // Refresh documents
+      const { data: docs } = await supabase
+        .from('patient_documents')
+        .select('*')
+        .eq('patient_id', user.id)
+        .order('uploaded_at', { ascending: false });
+      if (docs) setDocuments(docs);
+      
+      toast.success('Document uploaded successfully!');
+    } catch (err) {
+      console.error('Upload error:', err);
+      toast.error('Failed to upload document.');
+    } finally {
+      setUploading(false);
+      event.target.value = ''; // Reset input
+    }
   };
 
   // Calculate completion
@@ -353,6 +421,105 @@ const PatientProfile = () => {
                 </button>
               </div>
             </form>
+          </motion.div>
+
+          {/* Documents Section */}
+          <motion.div 
+            className="lg:col-span-2 lg:col-start-2 bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mt-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg md:text-xl font-bold text-slate-900">Medical Documents</h3>
+                <p className="text-slate-500 text-sm mt-1">Upload lab results, prescriptions, etc. (Max 500KB)</p>
+              </div>
+              <div>
+                <input 
+                  type="file" 
+                  id="doc-upload" 
+                  className="hidden" 
+                  accept="image/jpeg, image/png, application/pdf"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                />
+                <label 
+                  htmlFor="doc-upload" 
+                  className={`flex items-center gap-2 px-4 py-2 bg-blue-50 text-primary font-bold rounded-xl cursor-pointer hover:bg-blue-100 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                >
+                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                  {uploading ? 'Uploading...' : 'Upload File'}
+                </label>
+              </div>
+            </div>
+
+            {/* Upload Progress Indication */}
+            {uploading && (
+              <div className="px-6 md:px-8 pb-4">
+                <div className="flex justify-between text-xs text-slate-500 font-bold mb-1">
+                  <span>Uploading document...</span>
+                  <span className="text-primary animate-pulse">Processing</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: "0%" }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div className="p-6 md:p-8">
+              {documents.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <FileText className="w-6 h-6 text-slate-400" />
+                  </div>
+                  <p className="text-slate-500 font-medium">No documents uploaded yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                      <div className="p-2 bg-blue-100 rounded-lg text-primary">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-700 text-sm truncate">{doc.document_title}</p>
+                        <p className="text-xs text-slate-400">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                      </div>
+                      <button 
+                         type="button"
+                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                         onClick={async () => {
+                           if(window.confirm('Are you sure you want to delete this document?')) {
+                             // 1. Delete from Storage Bucket first
+                             await supabase.storage
+                               .from('medical_documents')
+                               .remove([doc.file_path]);
+                               
+                             // 2. Delete from Database
+                             await supabase
+                               .from('patient_documents')
+                               .delete()
+                               .eq('id', doc.id);
+                               
+                             // 3. Update UI
+                             setDocuments(documents.filter(d => d.id !== doc.id));
+                             toast.success('Document deleted!');
+                           }
+                         }}
+                      >
+                         <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </motion.div>
         </div>
       </div>

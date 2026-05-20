@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, ShieldCheck, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, ShieldCheck, Calendar, ChevronLeft, ChevronRight, Navigation, Home, Stethoscope, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useCountUp from '../../hooks/useCountUp';
@@ -49,7 +49,7 @@ const PatientDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState({ active: 0, accepted: 0, pending: 0 });
-  const [upcomingAppointment, setUpcomingAppointment] = useState(null);
+  const [activeVisit, setActiveVisit] = useState(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -66,29 +66,49 @@ const PatientDashboard = () => {
 
         if (requestsError) throw requestsError;
 
-        const formattedRequests = (requestsData || []).map(req => ({
-          provider: req.provider?.full_name || 'Unknown',
-          service: req.service,
-          date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          status: req.status,
-        }));
+        const formattedRequests = (requestsData || []).map(req => {
+          let timeStr = '';
+          try {
+            if (req.time) timeStr = new Date(`2000-01-01T${req.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          } catch { timeStr = req.time || ''; }
+          return {
+            provider: req.provider?.full_name || 'Unknown',
+            service: req.service,
+            date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: timeStr,
+            status: req.status,
+          };
+        });
 
         setRequests(formattedRequests);
 
         // Calculate stats
-        const accepted = (requestsData || []).filter(r => r.status === 'Accepted').length;
+        const accepted = (requestsData || []).filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
         const pending = (requestsData || []).filter(r => r.status === 'Pending').length;
-        const active = accepted + pending;
+        const completed = (requestsData || []).filter(r => r.status === 'Completed').length;
 
-        setStats({ active, accepted, pending });
+        setStats({ active: accepted + pending, accepted, pending });
 
-        // Find upcoming appointment (next accepted request)
-        const upcoming = (requestsData || []).find(r => r.status === 'Accepted');
-        if (upcoming) {
-          setUpcomingAppointment({
-            provider: upcoming.provider?.full_name || 'Unknown',
-            service: upcoming.service,
-            date: new Date(upcoming.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        // Find the most active visit (prioritize On The Way > Arrived > Accepted)
+        const priorityOrder = ['On The Way', 'Arrived', 'Accepted'];
+        let activeReq = null;
+        for (const status of priorityOrder) {
+          activeReq = (requestsData || []).find(r => r.status === status);
+          if (activeReq) break;
+        }
+
+        if (activeReq) {
+          let timeLabel = '';
+          try {
+            if (activeReq.time) timeLabel = new Date(`2000-01-01T${activeReq.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          } catch { timeLabel = activeReq.time || ''; }
+
+          setActiveVisit({
+            provider: activeReq.provider?.full_name || 'Unknown',
+            service: activeReq.service,
+            date: new Date(activeReq.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+            time: timeLabel,
+            status: activeReq.status,
           });
         }
       } catch (err) {
@@ -174,25 +194,97 @@ const PatientDashboard = () => {
             </div>
           </div>
 
-          {/* Upcoming Appointment */}
-          <div className="bg-gradient-to-br from-primary to-blue-600 rounded-3xl p-6 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
-            <div className="relative z-10">
-              <p className="text-blue-200 text-sm font-semibold mb-2">Upcoming Appointment</p>
-              {upcomingAppointment ? (
+          {/* Live Visit Tracker */}
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-6 relative overflow-hidden">
+            {activeVisit ? (() => {
+              const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
+              const STEP_LABELS = ['Confirmed', 'En Route', 'Arrived', 'Done'];
+              const STEP_ICONS = [
+                <CheckCircle2 className="w-3.5 h-3.5" />,
+                <Navigation className="w-3.5 h-3.5" />,
+                <Home className="w-3.5 h-3.5" />,
+                <Stethoscope className="w-3.5 h-3.5" />,
+              ];
+              const STEP_COLORS = ['bg-blue-500', 'bg-amber-500', 'bg-purple-500', 'bg-green-500'];
+              const currentStep = STATUS_STEPS.indexOf(activeVisit.status);
+
+              const STATUS_MESSAGES = {
+                Accepted: '✅ Your provider has confirmed the visit. Please prepare for their arrival.',
+                'On The Way': '🚗 Your provider is on the way to your location. Please stay at home.',
+                Arrived: '🏠 Your provider has arrived! The home care session is starting now.',
+                Completed: '✅ Your visit has been completed. Check your medical records for notes.',
+              };
+
+              return (
                 <>
-                  <h3 className="text-xl font-bold mb-4">{upcomingAppointment.provider} — {upcomingAppointment.service}</h3>
-                  <div className="flex items-center gap-4 text-blue-100 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>{upcomingAppointment.date}</span>
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Home Care Visit</p>
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{activeVisit.provider}</h3>
                     </div>
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">{activeVisit.service}</span>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-sm text-slate-500 mb-5">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="font-medium">{activeVisit.date}</span>
+                    </div>
+                    {activeVisit.time && (
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span className="font-medium">{activeVisit.time}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status Stepper */}
+                  <div className="flex items-center gap-1 mb-2">
+                    {STATUS_STEPS.map((step, i) => (
+                      <React.Fragment key={step}>
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-500 ${
+                          i < currentStep ? 'bg-green-100 text-green-600'
+                          : i === currentStep ? `${STEP_COLORS[i]} text-white shadow-lg`
+                          : 'bg-slate-100 text-slate-400'
+                        }`}>
+                          {i < currentStep ? <CheckCircle2 className="w-3.5 h-3.5" /> : STEP_ICONS[i]}
+                        </div>
+                        {i < STATUS_STEPS.length - 1 && (
+                          <div className={`flex-1 h-1 rounded-full transition-all duration-500 ${
+                            i < currentStep ? 'bg-green-200' : i === currentStep ? `${STEP_COLORS[i]} opacity-30` : 'bg-slate-100'
+                          }`} />
+                        )}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between mb-5">
+                    {STEP_LABELS.map((label, i) => (
+                      <span key={label} className={`text-[9px] sm:text-[10px] font-bold transition-colors ${
+                        i <= currentStep ? 'text-slate-700' : 'text-slate-300'
+                      }`}>{label}</span>
+                    ))}
+                  </div>
+
+                  {/* Status Message */}
+                  <div className={`p-3 rounded-xl text-sm font-medium ${
+                    activeVisit.status === 'On The Way' ? 'bg-amber-50 text-amber-800 border border-amber-100'
+                    : activeVisit.status === 'Arrived' ? 'bg-purple-50 text-purple-800 border border-purple-100'
+                    : activeVisit.status === 'Completed' ? 'bg-green-50 text-green-800 border border-green-100'
+                    : 'bg-blue-50 text-blue-800 border border-blue-100'
+                  }`}>
+                    {STATUS_MESSAGES[activeVisit.status]}
                   </div>
                 </>
-              ) : (
-                <h3 className="text-xl font-bold mb-4">No upcoming appointments</h3>
-              )}
-            </div>
+              );
+            })() : (
+              <div className="text-center py-6">
+                <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Stethoscope className="w-6 h-6 text-slate-300" />
+                </div>
+                <p className="text-slate-700 font-bold">No Active Visits</p>
+                <p className="text-sm text-slate-500 mt-1">Book a provider to see your visit tracker here.</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
