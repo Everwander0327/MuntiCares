@@ -15,6 +15,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../contexts/AuthContext';
 
 const SidebarItem = ({ icon, label, to, active, onClick }) => (
   <Link 
@@ -57,6 +58,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user: authUser, logout } = useAuth();
 
   const patientLinks = [
     { icon: <LayoutDashboard />, label: 'Dashboard', to: '/patient/dashboard' },
@@ -79,7 +81,14 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     { icon: <FileText />, label: 'Requests', to: '/admin/requests' },
   ];
 
-  const links = role === 'patient' ? patientLinks : role === 'provider' ? providerLinks : adminLinks;
+  // Use the actual logged in user data, fallback to dummy info if not available
+  const currentRole = authUser?.role || role;
+  const links = currentRole === 'patient' ? patientLinks : currentRole === 'provider' ? providerLinks : adminLinks;
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
 
   const userInfo = {
     patient: { name: 'Juan Dela Cruz', initials: 'JD', badge: 'Patient' },
@@ -87,7 +96,11 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     admin: { name: 'Admin User', initials: 'AD', badge: 'Admin' },
   };
 
-  const user = userInfo[role];
+  const user = {
+    name: authUser?.full_name || userInfo[currentRole]?.name,
+    initials: getInitials(authUser?.full_name) || userInfo[currentRole]?.initials,
+    badge: authUser?.role ? authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1) : userInfo[currentRole]?.badge,
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex overflow-hidden">
@@ -153,7 +166,10 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
           {/* Logout */}
           <button 
-            onClick={() => navigate('/')}
+            onClick={() => {
+              logout();
+              navigate('/login');
+            }}
             className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all w-full group"
           >
             <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500" />
@@ -170,7 +186,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
               <Menu className="w-6 h-6" />
             </button>
             <h2 className="text-sm md:text-lg font-bold text-slate-900 truncate max-w-[200px] md:max-w-none">
-              {role === 'patient' ? 'Welcome back, Juan!' : role === 'provider' ? 'Welcome, Maria Santos!' : 'Admin Panel'}
+              Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
             </h2>
           </div>
 

@@ -1,29 +1,76 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Heart, Mail, Lock, User, Shield, Briefcase, Eye, EyeOff } from 'lucide-react';
+import { Heart, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const { user, login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [shake, setShake] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleDemoLogin = (role) => {
-    if (role === 'patient') navigate('/patient/dashboard');
-    if (role === 'provider') navigate('/provider/dashboard');
-    if (role === 'admin') navigate('/admin/dashboard');
-  };
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (user) {
+      if (user.role === 'patient') navigate('/patient/dashboard');
+      else if (user.role === 'provider') navigate('/provider/dashboard');
+      else if (user.role === 'admin') navigate('/admin/dashboard');
+      else navigate('/');
+    }
+  }, [user, navigate]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
     if (!email || !password) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
       return;
     }
-    alert('In a real app, this would verify your credentials. Use the Demo buttons below for now!');
+
+    try {
+      setLoading(true);
+      
+      const { data, error: queryError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+        
+      if (queryError) {
+        throw new Error('Invalid email or password');
+      }
+
+      if (data && data.password === password) {
+        if (data.is_banned) {
+          throw new Error('Your account has been banned. Please contact support.');
+        }
+
+        // Successful login
+        login(data);
+        
+        // Redirect based on role
+        if (data.role === 'patient') navigate('/patient/dashboard');
+        else if (data.role === 'provider') navigate('/provider/dashboard');
+        else if (data.role === 'admin') navigate('/admin/dashboard');
+        else navigate('/');
+      } else {
+        throw new Error('Invalid email or password');
+      }
+    } catch (err) {
+      setError(err.message);
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -92,13 +139,20 @@ const LoginPage = () => {
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 text-red-500 p-4 rounded-xl text-sm font-medium text-center">
+              {error}
+            </div>
+          )}
+
           <motion.button 
             type="submit" 
-            className="btn-primary w-full py-4 text-lg shadow-lg shadow-primary/30"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
+            disabled={loading}
+            className={`btn-primary w-full py-4 text-lg shadow-lg shadow-primary/30 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            whileHover={!loading ? { scale: 1.02 } : {}}
+            whileTap={!loading ? { scale: 0.97 } : {}}
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </motion.button>
         </form>
 
@@ -107,51 +161,9 @@ const LoginPage = () => {
             Don't have an account? <Link to="/register" className="text-primary font-bold hover:underline">Register</Link>
           </p>
         </div>
-
-        <div className="mt-10 pt-8 border-t border-slate-200/50">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center mb-6">Demo Access</p>
-          <motion.div 
-            className="grid grid-cols-1 gap-3"
-            initial="initial"
-            animate="animate"
-            variants={{
-              animate: { transition: { staggerChildren: 0.1 } },
-            }}
-          >
-            {[
-              { role: 'patient', icon: <User className="w-5 h-5" />, label: 'Login as Patient', bg: 'bg-blue-50 hover:bg-blue-100 text-primary' },
-              { role: 'provider', icon: <Briefcase className="w-5 h-5" />, label: 'Login as Provider', bg: 'bg-slate-50 hover:bg-slate-100 text-slate-700' },
-              { role: 'admin', icon: <Shield className="w-5 h-5" />, label: 'Login as Admin', bg: 'bg-slate-50 hover:bg-slate-100 text-slate-700' },
-            ].map((demo) => (
-              <motion.button 
-                key={demo.role}
-                onClick={() => handleDemoLogin(demo.role)}
-                className={`flex items-center justify-between ${demo.bg} px-6 py-3 rounded-2xl transition-all font-semibold group`}
-                variants={{
-                  initial: { opacity: 0, y: 10 },
-                  animate: { opacity: 1, y: 0 },
-                }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <div className="flex items-center gap-3">
-                  {demo.icon}
-                  <span>{demo.label}</span>
-                </div>
-                <ArrowRightIcon className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-              </motion.button>
-            ))}
-          </motion.div>
-        </div>
       </motion.div>
     </div>
   );
 };
-
-const ArrowRightIcon = ({ className }) => (
-  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-  </svg>
-);
 
 export default LoginPage;

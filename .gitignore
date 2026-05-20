@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .history/
+.env
+.env.bak
+supabase_schema.sql

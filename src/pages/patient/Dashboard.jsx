@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useCountUp from '../../hooks/useCountUp';
 import { SkeletonPage } from '../../components/Skeleton';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -43,17 +45,59 @@ const StatCard = ({ label, value, icon, color, trend, trendUp }) => {
 
 const PatientDashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState([]);
+  const [stats, setStats] = useState({ active: 0, accepted: 0, pending: 0 });
+  const [upcomingAppointment, setUpcomingAppointment] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchData = async () => {
+      if (!user) return;
 
-  const requests = [
-    { provider: 'Maria Santos', service: 'Wound Care', date: 'Oct 24, 2025', status: 'Accepted' },
-    { provider: 'Jose Reyes', service: 'Elder Care', date: 'Oct 25, 2025', status: 'Pending' },
-    { provider: 'Ana Cruz', service: 'Physical Therapy', date: 'Oct 26, 2025', status: 'Rejected' },
-  ];
+      try {
+        // Fetch all requests for this patient, join with provider info
+        const { data: requestsData, error: requestsError } = await supabase
+          .from('requests')
+          .select('*, provider:provider_id(full_name)')
+          .eq('patient_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (requestsError) throw requestsError;
+
+        const formattedRequests = (requestsData || []).map(req => ({
+          provider: req.provider?.full_name || 'Unknown',
+          service: req.service,
+          date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          status: req.status,
+        }));
+
+        setRequests(formattedRequests);
+
+        // Calculate stats
+        const accepted = (requestsData || []).filter(r => r.status === 'Accepted').length;
+        const pending = (requestsData || []).filter(r => r.status === 'Pending').length;
+        const active = accepted + pending;
+
+        setStats({ active, accepted, pending });
+
+        // Find upcoming appointment (next accepted request)
+        const upcoming = (requestsData || []).find(r => r.status === 'Accepted');
+        if (upcoming) {
+          setUpcomingAppointment({
+            provider: upcoming.provider?.full_name || 'Unknown',
+            service: upcoming.service,
+            date: new Date(upcoming.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
 
   if (loading) {
     return (
@@ -75,27 +119,21 @@ const PatientDashboard = () => {
         >
           <StatCard 
             label="Active Requests" 
-            value="2" 
+            value={String(stats.active)} 
             icon={<Clock />} 
             color="bg-blue-50 text-primary" 
-            trend="+15%"
-            trendUp={true}
           />
           <StatCard 
             label="Accepted Providers" 
-            value="1" 
+            value={String(stats.accepted)} 
             icon={<CheckCircle2 />} 
             color="bg-green-50 text-green-600" 
-            trend="+8%"
-            trendUp={true}
           />
           <StatCard 
             label="Pending Requests" 
-            value="3" 
+            value={String(stats.pending)} 
             icon={<AlertCircle />} 
             color="bg-yellow-50 text-yellow-600" 
-            trend="-5%"
-            trendUp={false}
           />
         </motion.div>
 
@@ -139,17 +177,19 @@ const PatientDashboard = () => {
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
             <div className="relative z-10">
               <p className="text-blue-200 text-sm font-semibold mb-2">Upcoming Appointment</p>
-              <h3 className="text-xl font-bold mb-4">Maria Santos — Wound Care</h3>
-              <div className="flex items-center gap-4 text-blue-100 text-sm">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>Tomorrow</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  <span>9:00 AM</span>
-                </div>
-              </div>
+              {upcomingAppointment ? (
+                <>
+                  <h3 className="text-xl font-bold mb-4">{upcomingAppointment.provider} — {upcomingAppointment.service}</h3>
+                  <div className="flex items-center gap-4 text-blue-100 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      <span>{upcomingAppointment.date}</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <h3 className="text-xl font-bold mb-4">No upcoming appointments</h3>
+              )}
             </div>
           </div>
         </motion.div>
@@ -176,46 +216,54 @@ const PatientDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {requests.map((req, idx) => (
-                  <motion.tr 
-                    key={idx} 
-                    className="transition-colors"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + idx * 0.1 }}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary">
-                          {req.provider.split(' ').map(n => n[0]).join('')}
+                {requests.length > 0 ? (
+                  requests.slice(0, 5).map((req, idx) => (
+                    <motion.tr 
+                      key={idx} 
+                      className="transition-colors"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + idx * 0.1 }}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary">
+                            {req.provider.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <span className="font-semibold text-slate-700">{req.provider}</span>
                         </div>
-                        <span className="font-semibold text-slate-700">{req.provider}</span>
-                      </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">{req.service}</td>
+                      <td className="px-6 py-4 text-slate-600">{req.date}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                          req.status === 'Accepted' ? 'bg-green-100 text-green-700' :
+                          req.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full status-dot ${
+                            req.status === 'Accepted' ? 'bg-green-500' :
+                            req.status === 'Pending' ? 'bg-yellow-500' :
+                            'bg-red-500'
+                          }`} />
+                          {req.status}
+                        </span>
+                      </td>
+                    </motion.tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-10 text-center text-slate-400">
+                      No requests yet. Start by finding a provider!
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{req.service}</td>
-                    <td className="px-6 py-4 text-slate-600">{req.date}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                        req.status === 'Accepted' ? 'bg-green-100 text-green-700' :
-                        req.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                          req.status === 'Accepted' ? 'bg-green-500' :
-                          req.status === 'Pending' ? 'bg-yellow-500' :
-                          'bg-red-500'
-                        }`} />
-                        {req.status}
-                      </span>
-                    </td>
-                  </motion.tr>
-                ))}
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
           {/* Pagination */}
           <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Showing 1-3 of 3 results</p>
+            <p className="text-sm text-slate-500">Showing {Math.min(requests.length, 5)} of {requests.length} results</p>
             <div className="flex items-center gap-1">
               <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
                 <ChevronLeft className="w-4 h-4" />

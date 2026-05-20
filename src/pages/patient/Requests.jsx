@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Clock, MapPin } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -12,7 +14,7 @@ const staggerItem = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
-const RequestCard = ({ provider, service, date, status, price }) => (
+const RequestCard = ({ provider, service, date, status, price, location }) => (
   <motion.div 
     className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
     variants={staggerItem}
@@ -36,7 +38,7 @@ const RequestCard = ({ provider, service, date, status, price }) => (
         </div>
         <div className="flex items-center gap-2 text-slate-400 text-sm">
           <MapPin className="w-4 h-4" />
-          <span>Muntinlupa</span>
+          <span>{location || 'Muntinlupa'}</span>
         </div>
         <div className="font-bold text-slate-900">
           ₱{price}
@@ -59,13 +61,58 @@ const RequestCard = ({ provider, service, date, status, price }) => (
 );
 
 const PatientRequests = () => {
-  const [filter, setFilter] = React.useState('All');
-  const requests = [
-    { provider: 'Maria Santos', service: 'Wound Care', date: 'Oct 24, 2025', status: 'Accepted', price: '1,500' },
-    { provider: 'Jose Reyes', service: 'Elder Care', date: 'Oct 25, 2025', status: 'Pending', price: '2,000' },
-    { provider: 'Ana Cruz', service: 'Physical Therapy', date: 'Oct 26, 2025', status: 'Rejected', price: '1,800' },
-    { provider: 'Pedro Lim', service: 'Medication Management', date: 'Oct 22, 2025', status: 'Accepted', price: '1,200' },
-  ];
+  const [filter, setFilter] = useState('All');
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('requests')
+          .select('*, provider:provider_id(full_name)')
+          .eq('patient_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        // Fetch provider locations from providers table
+        const providerIds = (data || []).map(r => r.provider_id);
+        let providerLocations = {};
+
+        if (providerIds.length > 0) {
+          const { data: provData } = await supabase
+            .from('providers')
+            .select('user_id, location')
+            .in('user_id', providerIds);
+          
+          (provData || []).forEach(p => {
+            providerLocations[p.user_id] = p.location;
+          });
+        }
+
+        const formatted = (data || []).map(req => ({
+          provider: req.provider?.full_name || 'Unknown',
+          service: req.service,
+          date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          status: req.status,
+          price: req.price || '0',
+          location: providerLocations[req.provider_id] || 'Muntinlupa',
+        }));
+
+        setRequests(formatted);
+      } catch (err) {
+        console.error('Error fetching requests:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+  }, [user]);
 
   const filteredRequests = requests.filter(r => filter === 'All' || r.status === filter);
 
@@ -93,37 +140,33 @@ const PatientRequests = () => {
                 { value: 'Rejected', label: 'Rejected' },
               ]}
             />
-            <motion.button 
-              onClick={() => alert('New request form coming soon!')}
-              className="w-30 h-12 flex items-center justify-center btn-primary px-6 py-2.5 rounded-xl font-bold"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.80 }}
-            >
-              Request 
-            </motion.button>
           </div>
         </motion.div>
 
-        <motion.div 
-          className="space-y-4"
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-        >
-          {filteredRequests.length > 0 ? (
-            filteredRequests.map((req, i) => (
-              <RequestCard key={i} {...req} />
-            ))
-          ) : (
-            <motion.div 
-              className="p-10 text-center text-slate-500 bg-white rounded-3xl border border-slate-100"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              No requests found for this filter.
-            </motion.div>
-          )}
-        </motion.div>
+        {loading ? (
+          <div className="text-center py-20 text-slate-400">Loading requests...</div>
+        ) : (
+          <motion.div 
+            className="space-y-4"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
+            {filteredRequests.length > 0 ? (
+              filteredRequests.map((req, i) => (
+                <RequestCard key={i} {...req} />
+              ))
+            ) : (
+              <motion.div 
+                className="p-10 text-center text-slate-500 bg-white rounded-3xl border border-slate-100"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                {requests.length === 0 ? 'No requests yet. Find a provider to get started!' : 'No requests found for this filter.'}
+              </motion.div>
+            )}
+          </motion.div>
+        )}
       </div>
     </DashboardLayout>
   );

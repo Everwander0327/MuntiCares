@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Check, X, MapPin, Calendar, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { SkeletonPage } from '../../components/Skeleton';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -12,45 +15,111 @@ const staggerItem = {
 };
 
 const ProviderRequests = () => {
-  const [requests, setRequests] = React.useState([
-    { id: 1, patient: 'Juan Dela Cruz', service: 'Wound Care Dressing', date: 'Oct 28, 2025', time: '10:00 AM', location: 'Putatan, Muntinlupa' },
-    { id: 2, patient: 'Liza Soberano', service: 'Blood Pressure Monitoring', date: 'Oct 29, 2025', time: '02:00 PM', location: 'Alabang, Muntinlupa' },
-    { id: 3, patient: 'Enrique Gil', service: 'Medication Assistance', date: 'Oct 30, 2025', time: '09:00 AM', location: 'Bayanan, Muntinlupa' },
-    { id: 4, patient: 'Kathryn Bernardo', service: 'Post-Surgery Checkup', date: 'Oct 31, 2025', time: '11:00 AM', location: 'Tunasan, Muntinlupa' },
-    { id: 5, patient: 'Daniel Padilla', service: 'Elder Care Checkup', date: 'Nov 01, 2025', time: '01:00 PM', location: 'Ayala Alabang, Muntinlupa' },
-    { id: 6, patient: 'James Reid', service: 'Physiotherapy', date: 'Nov 02, 2025', time: '03:00 PM', location: 'Cupang, Muntinlupa' },
-    { id: 7, patient: 'Nadine Lustre', service: 'Medication Delivery', date: 'Nov 03, 2025', time: '08:00 AM', location: 'Sucat, Muntinlupa' },
-    { id: 8, patient: 'Piolo Pascual', service: 'Home Nursing', date: 'Nov 04, 2025', time: '12:00 PM', location: 'Buli, Muntinlupa' },
-  ]);
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionStates, setActionStates] = useState({});
+  const { user } = useAuth();
 
-  const [actionStates, setActionStates] = React.useState({});
+  useEffect(() => {
+    const fetchRequests = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('requests')
+          .select('id, patient_id, service, date, time, status, patient:patient_id(full_name)')
+          .eq('provider_id', user.id)
+          .eq('status', 'Pending')
+          .order('created_at', { ascending: false });
 
-  const handleAccept = (id, name) => {
+        if (error) throw error;
+
+        // Note: location is currently not on users table, so we just use a default or fetch if added later.
+        const formatted = (data || []).map(r => ({
+          id: r.id,
+          patient: r.patient?.full_name || 'Unknown Patient',
+          service: r.service,
+          date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: r.time,
+          location: 'Muntinlupa City' // Placeholder since patients don't have location yet
+        }));
+
+        setRequests(formatted);
+      } catch (err) {
+        console.error('Error fetching incoming requests:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRequests();
+  }, [user]);
+
+  const handleAccept = async (id, name) => {
     setActionStates(prev => ({ ...prev, [id]: 'accepted' }));
-    setTimeout(() => {
-      setRequests(requests.filter(r => r.id !== id));
-      setActionStates(prev => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-      alert(`You have accepted the request from ${name}.`);
-    }, 800);
-  };
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ status: 'Accepted' })
+        .eq('id', id);
 
-  const handleReject = (id, name) => {
-    if (confirm(`Are you sure you want to reject ${name}'s request?`)) {
-      setActionStates(prev => ({ ...prev, [id]: 'rejected' }));
+      if (error) throw error;
+
       setTimeout(() => {
-        setRequests(requests.filter(r => r.id !== id));
+        setRequests(prev => prev.filter(r => r.id !== id));
         setActionStates(prev => {
           const next = { ...prev };
           delete next[id];
           return next;
         });
       }, 800);
+    } catch (err) {
+      console.error('Error accepting request:', err);
+      alert('Failed to accept request.');
+      setActionStates(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     }
   };
+
+  const handleReject = async (id, name) => {
+    if (window.confirm(`Are you sure you want to reject ${name}'s request?`)) {
+      setActionStates(prev => ({ ...prev, [id]: 'rejected' }));
+      try {
+        const { error } = await supabase
+          .from('requests')
+          .update({ status: 'Rejected' })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        setTimeout(() => {
+          setRequests(prev => prev.filter(r => r.id !== id));
+          setActionStates(prev => {
+            const next = { ...prev };
+            delete next[id];
+            return next;
+          });
+        }, 800);
+      } catch (err) {
+        console.error('Error rejecting request:', err);
+        alert('Failed to reject request.');
+        setActionStates(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout role="provider">
+        <SkeletonPage />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="provider">
@@ -87,7 +156,7 @@ const ProviderRequests = () => {
                   <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold">
-                        {req.patient.split(' ').map(n => n[0]).join('')}
+                        {req.patient.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                       </div>
                       <div>
                         <h3 className="font-bold text-slate-900">{req.patient}</h3>

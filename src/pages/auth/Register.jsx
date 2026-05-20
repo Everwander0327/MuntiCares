@@ -2,29 +2,95 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 const RegisterPage = () => {
   const [role, setRole] = useState('patient');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [shake, setShake] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user, login } = useAuth();
+  
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (user) {
+      if (user.role === 'patient') navigate('/patient/dashboard');
+      else if (user.role === 'provider') navigate('/provider/dashboard');
+      else if (user.role === 'admin') navigate('/admin/dashboard');
+      else navigate('/');
+    }
+  }, [user, navigate]);
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    const form = e.target;
-    const inputs = form.querySelectorAll('input[required]');
-    let allFilled = true;
-    inputs.forEach(input => {
-      if (!input.value) allFilled = false;
-    });
-    if (!allFilled) {
+    setError('');
+
+    if (!fullName || !email || !password || !confirmPassword) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
       return;
     }
-    if (role === 'patient') navigate('/patient/dashboard');
-    else navigate('/provider/dashboard');
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      // Insert user directly into the custom 'users' table without Supabase Auth
+      const { data, error: insertError } = await supabase
+        .from('users')
+        .insert([
+          { 
+            full_name: fullName, 
+            email: email, 
+            password: password, 
+            role: role 
+          }
+        ])
+        .select();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // If registering as a provider, also create a row in the providers table
+      if (role === 'provider' && data && data[0]) {
+        const { error: providerError } = await supabase
+          .from('providers')
+          .insert([{ user_id: data[0].id }]);
+
+        if (providerError) {
+          console.error('Error creating provider profile:', providerError);
+        }
+      }
+
+      // Store basic info in context 
+      if (data && data[0]) {
+        login(data[0]);
+      }
+
+      if (role === 'patient') navigate('/patient/dashboard');
+      else navigate('/provider/dashboard');
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.message || 'An error occurred during registration');
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -132,6 +198,8 @@ const RegisterPage = () => {
                 <input 
                   type="text" 
                   placeholder="Juan Dela Cruz"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   required
                   className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
@@ -145,6 +213,8 @@ const RegisterPage = () => {
                 <input 
                   type="email" 
                   placeholder="juan@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
@@ -158,6 +228,8 @@ const RegisterPage = () => {
                 <input 
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
                   className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
@@ -178,6 +250,8 @@ const RegisterPage = () => {
                 <input 
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   required
                   className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
@@ -192,12 +266,19 @@ const RegisterPage = () => {
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 text-red-500 p-4 rounded-xl text-sm font-medium text-center">
+              {error}
+            </div>
+          )}
+
           <motion.button 
-            className="btn-primary w-full py-4 text-lg shadow-lg shadow-primary/30"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
+            disabled={loading}
+            className={`btn-primary w-full py-4 text-lg shadow-lg shadow-primary/30 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            whileHover={!loading ? { scale: 1.02 } : {}}
+            whileTap={!loading ? { scale: 0.97 } : {}}
           >
-            Create Account
+            {loading ? 'Creating Account...' : 'Create Account'}
           </motion.button>
         </form>
 

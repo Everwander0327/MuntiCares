@@ -1,29 +1,87 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { MessageSquare, Phone, ChevronRight, Search, ChevronLeft } from 'lucide-react';
+import { MessageSquare, Phone, ChevronRight, Search, ChevronLeft, CheckCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { SkeletonPage } from '../../components/Skeleton';
 
 const ProviderPatients = () => {
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const patients = [
-    { name: 'Juan Dela Cruz', service: 'Wound Care', lastVisit: 'Oct 20, 2025', status: 'Active' },
-    { name: 'Maria Makiling', service: 'Elder Care', lastVisit: 'Oct 22, 2025', status: 'Active' },
-    { name: 'Leonor Rivera', service: 'Physical Therapy', lastVisit: 'Oct 15, 2025', status: 'On Hold' },
-    { name: 'Crisostomo Ibarra', service: 'Medication Management', lastVisit: 'Oct 23, 2025', status: 'Active' },
-    { name: 'Simoun Reyes', service: 'Palliative Care', lastVisit: 'Oct 10, 2025', status: 'Active' },
-    { name: 'Basilio Santos', service: 'Wound Care', lastVisit: 'Oct 24, 2025', status: 'Active' },
-    { name: 'Crispin Roxas', service: 'Checkup', lastVisit: 'Oct 21, 2025', status: 'Active' },
-    { name: 'Sisa Dela Cruz', service: 'Mental Health', lastVisit: 'Oct 18, 2025', status: 'Active' },
-    { name: 'Padre Florentino', service: 'Elder Care', lastVisit: 'Oct 19, 2025', status: 'Active' },
-    { name: 'Isagani Gil', service: 'Physio', lastVisit: 'Oct 22, 2025', status: 'Active' },
-    { name: 'Paulita Gomez', service: 'Medication', lastVisit: 'Oct 23, 2025', status: 'Active' },
-    { name: 'Doña Victorina', service: 'Post-Surgery', lastVisit: 'Oct 24, 2025', status: 'Active' },
-  ];
+  const [searchTerm, setSearchTerm] = useState('');
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchPatients = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('requests')
+          .select('id, patient_id, service, date, status, patient:patient_id(full_name)')
+          .eq('provider_id', user.id)
+          .in('status', ['Accepted', 'Completed'])
+          .order('date', { ascending: false });
+
+        if (error) throw error;
+
+        // Note: Patient doesn't have phone number in users table, normally we'd fetch it if it existed.
+        const formatted = (data || []).map(r => ({
+          requestId: r.id,
+          name: r.patient?.full_name || 'Unknown Patient',
+          service: r.service,
+          lastVisit: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          status: r.status === 'Completed' ? 'Completed' : 'Active', // Map 'Accepted' to 'Active' for UI
+          rawStatus: r.status
+        }));
+
+        // In a real app we might want to group by patient_id, but here we list all engagements.
+        setPatients(formatted);
+      } catch (err) {
+        console.error('Error fetching patients:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPatients();
+  }, [user]);
 
   const filteredPatients = patients.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     p.service.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleMarkCompleted = async (requestId, patientName) => {
+    if (!window.confirm(`Mark service for ${patientName} as completed?`)) return;
+    
+    setUpdatingId(requestId);
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ status: 'Completed' })
+        .eq('id', requestId);
+      
+      if (error) throw error;
+
+      setPatients(prev => prev.map(p => 
+        p.requestId === requestId ? { ...p, status: 'Completed', rawStatus: 'Completed' } : p
+      ));
+    } catch (err) {
+      console.error('Error updating status:', err);
+      alert('Failed to mark as completed.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout role="provider">
+        <SkeletonPage />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="provider">
@@ -36,7 +94,7 @@ const ProviderPatients = () => {
         >
           <div>
             <h1 className="text-2xl font-bold text-slate-900">My Patients</h1>
-            <p className="text-slate-500">Manage your active patient list</p>
+            <p className="text-slate-500">Manage your active patient list and completed services</p>
           </div>
           <div className="relative md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -69,7 +127,7 @@ const ProviderPatients = () => {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold">
-                      {p.name.split(' ').map(n => n[0]).join('')}
+                      {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">{p.name}</p>
@@ -77,23 +135,27 @@ const ProviderPatients = () => {
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                    p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                    p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                      p.status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'
+                      p.status === 'Active' ? 'bg-green-500' : 'bg-slate-400'
                     }`} />
                     {p.status}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Last Visit: {p.lastVisit}</p>
+                  <p className="text-xs text-slate-400">Date: {p.lastVisit}</p>
                   <div className="flex gap-2">
-                    <button className="p-2 bg-slate-50 text-slate-400 hover:text-primary rounded-lg transition-colors" onClick={() => alert(`Messaging ${p.name}`)}>
-                      <MessageSquare className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 bg-slate-50 text-slate-400 hover:text-primary rounded-lg transition-colors" onClick={() => alert(`Calling ${p.name}`)}>
-                      <Phone className="w-4 h-4" />
-                    </button>
+                    {p.rawStatus === 'Accepted' && (
+                      <button 
+                        className={`p-2 bg-green-50 text-green-600 hover:text-white hover:bg-green-500 rounded-lg transition-colors ${updatingId === p.requestId ? 'opacity-50' : ''}`}
+                        onClick={() => handleMarkCompleted(p.requestId, p.name)}
+                        disabled={updatingId === p.requestId}
+                        title="Mark as Completed"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -107,9 +169,9 @@ const ProviderPatients = () => {
                 <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
                   <th className="px-6 py-4 font-semibold">Patient Name</th>
                   <th className="px-6 py-4 font-semibold">Service</th>
-                  <th className="px-6 py-4 font-semibold">Last Visit</th>
+                  <th className="px-6 py-4 font-semibold">Date</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold">Actions</th>
+                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -124,7 +186,7 @@ const ProviderPatients = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold">
-                          {p.name.split(' ').map(n => n[0]).join('')}
+                          {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                         </div>
                         <span className="font-bold text-slate-700">{p.name}</span>
                       </div>
@@ -133,24 +195,28 @@ const ProviderPatients = () => {
                     <td className="px-6 py-4 text-slate-500 text-sm">{p.lastVisit}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                        p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                          p.status === 'Active' ? 'bg-green-500' : 'bg-yellow-500'
+                          p.status === 'Active' ? 'bg-green-500' : 'bg-slate-400'
                         }`} />
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        {p.rawStatus === 'Accepted' && (
+                          <button 
+                            className={`p-2 text-green-600 bg-green-50 hover:bg-green-500 hover:text-white rounded-xl transition-colors ${updatingId === p.requestId ? 'opacity-50' : ''}`}
+                            onClick={() => handleMarkCompleted(p.requestId, p.name)}
+                            disabled={updatingId === p.requestId}
+                            title="Mark as Completed"
+                          >
+                            <CheckCircle className="w-5 h-5" />
+                          </button>
+                        )}
                         <button className="p-2 text-slate-400 hover:text-primary transition-colors" onClick={() => alert(`Messaging ${p.name}`)}>
                           <MessageSquare className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-primary transition-colors" onClick={() => alert(`Calling ${p.name}`)}>
-                          <Phone className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-primary transition-colors" onClick={() => alert(`Viewing details for ${p.name}`)}>
-                          <ChevronRight className="w-5 h-5" />
                         </button>
                       </div>
                     </td>
@@ -160,21 +226,8 @@ const ProviderPatients = () => {
             </table>
           </div>
           {filteredPatients.length === 0 && (
-            <div className="p-10 text-center text-slate-500">No patients found.</div>
+            <div className="p-10 text-center text-slate-500">No patients found. Accept a request to add them here.</div>
           )}
-          {/* Pagination */}
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Showing 1-{filteredPatients.length} of {filteredPatients.length} results</p>
-            <div className="flex items-center gap-1">
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">1</button>
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
         </motion.div>
       </div>
     </DashboardLayout>

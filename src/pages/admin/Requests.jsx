@@ -1,30 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
+import { supabase } from '../../lib/supabase';
+import { SkeletonPage } from '../../components/Skeleton';
 
 const AdminRequests = () => {
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [filter, setFilter] = React.useState('All');
-  
-  const requests = [
-    { id: 'REQ-101', patient: 'Juan Dela Cruz', provider: 'Maria Santos', service: 'Wound Care', status: 'Accepted', date: 'Oct 24, 2025' },
-    { id: 'REQ-102', patient: 'Liza Soberano', provider: 'Jose Reyes', service: 'Elder Care', status: 'Pending', date: 'Oct 24, 2025' },
-    { id: 'REQ-103', patient: 'Enrique Gil', provider: 'Maria Santos', service: 'Medication', status: 'Accepted', date: 'Oct 23, 2025' },
-    { id: 'REQ-104', patient: 'Kathryn Bernardo', provider: 'Ana Cruz', service: 'Physical Therapy', status: 'Rejected', date: 'Oct 22, 2025' },
-    { id: 'REQ-105', patient: 'Daniel Padilla', provider: 'Pedro Lim', service: 'Checkup', status: 'Accepted', date: 'Oct 22, 2025' },
-    { id: 'REQ-106', patient: 'Ricardo Dalisay', provider: 'Antonio Luna', service: 'Emergency', status: 'Accepted', date: 'Oct 21, 2025' },
-    { id: 'REQ-107', patient: 'Nora Aunor', provider: 'Melchora Aquino', service: 'Elder Care', status: 'Accepted', date: 'Oct 20, 2025' },
-    { id: 'REQ-108', patient: 'Vilma Santos', provider: 'Jose Rizal', service: 'Eye Care', status: 'Pending', date: 'Oct 19, 2025' },
-    { id: 'REQ-109', patient: 'Sharon Cuneta', provider: 'Andres Bonifacio', service: 'Checkup', status: 'Accepted', date: 'Oct 18, 2025' },
-    { id: 'REQ-110', patient: 'Piolo Pascual', provider: 'Apolinario Mabini', service: 'Rehab', status: 'Accepted', date: 'Oct 17, 2025' },
-    { id: 'REQ-111', patient: 'Dolphy Quizon', provider: 'Gabriela Silang', service: 'Home Nursing', status: 'Accepted', date: 'Oct 16, 2025' },
-    { id: 'REQ-112', patient: 'Gloria Romero', provider: 'Maria Santos', service: 'Wound Care', status: 'Pending', date: 'Oct 15, 2025' },
-    { id: 'REQ-113', patient: 'Eddie Garcia', provider: 'Jose Reyes', service: 'Elder Care', status: 'Accepted', date: 'Oct 14, 2025' },
-    { id: 'REQ-114', patient: 'Fernando Poe Jr.', provider: 'Ana Cruz', service: 'Physio', status: 'Accepted', date: 'Oct 13, 2025' },
-    { id: 'REQ-115', patient: 'James Reid', provider: 'Pedro Lim', service: 'Medication', status: 'Rejected', date: 'Oct 12, 2025' },
-  ];
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRequests = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('requests')
+          .select(`
+            id, 
+            service, 
+            status, 
+            date, 
+            time, 
+            created_at,
+            patient:patient_id(full_name),
+            provider:provider_id(full_name)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const formatted = (data || []).map(r => ({
+          id: r.id,
+          patient: r.patient?.full_name || 'Unknown',
+          provider: r.provider?.full_name || 'Unknown',
+          service: r.service,
+          status: r.status,
+          date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        }));
+
+        setRequests(formatted);
+      } catch (err) {
+        console.error('Error fetching requests:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRequests();
+  }, []);
 
   const filteredRequests = requests.filter(r => {
     const matchesSearch = r.patient.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -33,6 +58,10 @@ const AdminRequests = () => {
     const matchesFilter = filter === 'All' || r.status === filter;
     return matchesSearch && matchesFilter;
   });
+
+  if (loading) {
+    return <DashboardLayout role="admin"><SkeletonPage /></DashboardLayout>;
+  }
 
   return (
     <DashboardLayout role="admin">
@@ -48,7 +77,7 @@ const AdminRequests = () => {
             <p className="text-slate-500">Monitor all service interactions across Muntinlupa</p>
           </div>
           <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-            <div className="relative md:w-64">
+            <div className="relative flex-1 md:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
                 type="text" 
@@ -66,6 +95,7 @@ const AdminRequests = () => {
                 { value: 'Accepted', label: 'Accepted' },
                 { value: 'Pending', label: 'Pending' },
                 { value: 'Rejected', label: 'Rejected' },
+                { value: 'Completed', label: 'Completed' },
               ]}
             />
           </div>
@@ -81,7 +111,7 @@ const AdminRequests = () => {
           <div className="block md:hidden divide-y divide-slate-50">
             {filteredRequests.map((r, idx) => (
               <motion.div 
-                key={idx} 
+                key={r.id} 
                 className="p-4 space-y-3"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -93,12 +123,14 @@ const AdminRequests = () => {
                     <p className="text-[10px] text-slate-400 font-mono">{r.id}</p>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                    r.status === 'Accepted' ? 'bg-green-100 text-green-700' :
+                    r.status === 'Accepted' ? 'bg-blue-100 text-blue-700' :
+                    r.status === 'Completed' ? 'bg-green-100 text-green-700' :
                     r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                     'bg-red-100 text-red-700'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                      r.status === 'Accepted' ? 'bg-green-500' :
+                      r.status === 'Accepted' ? 'bg-blue-500' :
+                      r.status === 'Completed' ? 'bg-green-500' :
                       r.status === 'Pending' ? 'bg-yellow-500' :
                       'bg-red-500'
                     }`} />
@@ -111,7 +143,6 @@ const AdminRequests = () => {
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-slate-50">
                   <span className="text-[10px] text-slate-400 uppercase font-bold">{r.date}</span>
-                  <button className="text-primary font-bold text-xs">Details</button>
                 </div>
               </motion.div>
             ))}
@@ -133,13 +164,13 @@ const AdminRequests = () => {
               <tbody>
                 {filteredRequests.map((r, idx) => (
                   <motion.tr 
-                    key={idx} 
+                    key={r.id} 
                     className="transition-colors group"
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + idx * 0.03 }}
                   >
-                    <td className="px-6 py-4 text-sm font-mono text-slate-400">{r.id}</td>
+                    <td className="px-6 py-4 text-sm font-mono text-slate-400">{r.id.split('-')[0]}...</td>
                     <td className="px-6 py-4">
                       <span className="font-bold text-slate-700">{r.patient}</span>
                     </td>
@@ -151,12 +182,14 @@ const AdminRequests = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                        r.status === 'Accepted' ? 'bg-green-100 text-green-700' :
+                        r.status === 'Accepted' ? 'bg-blue-100 text-blue-700' :
+                        r.status === 'Completed' ? 'bg-green-100 text-green-700' :
                         r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
                         'bg-red-100 text-red-700'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                          r.status === 'Accepted' ? 'bg-green-500' :
+                          r.status === 'Accepted' ? 'bg-blue-500' :
+                          r.status === 'Completed' ? 'bg-green-500' :
                           r.status === 'Pending' ? 'bg-yellow-500' :
                           'bg-red-500'
                         }`} />
@@ -174,19 +207,8 @@ const AdminRequests = () => {
           {filteredRequests.length === 0 && (
             <div className="p-10 text-center text-slate-500">No requests found.</div>
           )}
-          {/* Pagination */}
           <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Showing 1-{filteredRequests.length} of {filteredRequests.length} results</p>
-            <div className="flex items-center gap-1">
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">1</button>
-              <button className="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-50 text-sm font-medium transition-colors">2</button>
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            <p className="text-sm text-slate-500">Showing {filteredRequests.length} of {requests.length} results</p>
           </div>
         </motion.div>
       </div>

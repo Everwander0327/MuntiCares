@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -39,21 +40,21 @@ function App() {
         </Route>
 
         {/* Dashboard Routes with Sidebar */}
-        <Route path="/patient">
+        <Route path="/patient" element={<ProtectedRoute allowedRole="patient" />}>
           <Route path="dashboard" element={<PatientDashboard />} />
           <Route path="providers" element={<PatientProviders />} />
           <Route path="requests" element={<PatientRequests />} />
           <Route path="consent" element={<PatientConsent />} />
         </Route>
 
-        <Route path="/provider">
+        <Route path="/provider" element={<ProtectedRoute allowedRole="provider" />}>
           <Route path="dashboard" element={<ProviderDashboard />} />
           <Route path="requests" element={<ProviderRequests />} />
           <Route path="patients" element={<ProviderPatients />} />
           <Route path="profile" element={<ProviderProfile />} />
         </Route>
 
-        <Route path="/admin">
+        <Route path="/admin" element={<ProtectedRoute allowedRole="admin" />}>
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="patients" element={<AdminPatients />} />
           <Route path="providers" element={<AdminProviders />} />

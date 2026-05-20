@@ -1,37 +1,96 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Search, ChevronLeft, ChevronRight, Ban, X, Mail, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
+import { supabase } from '../../lib/supabase';
+import { SkeletonPage } from '../../components/Skeleton';
 
 const AdminPatients = () => {
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [filter, setFilter] = React.useState('All');
-  const patients = [
-    { id: 'PAT-001', name: 'Juan Dela Cruz', email: 'juan.dc@email.ph', joinDate: 'Jan 12, 2025', status: 'Verified' },
-    { id: 'PAT-002', name: 'Maria Makiling', email: 'm.makiling@cloud.com', joinDate: 'Jan 15, 2025', status: 'Pending' },
-    { id: 'PAT-003', name: 'Pedro Penduko', email: 'pedro.p@munti.gov.ph', joinDate: 'Feb 02, 2025', status: 'Verified' },
-    { id: 'PAT-004', name: 'Liza Soberano', email: 'liza.s@star.ph', joinDate: 'Feb 10, 2025', status: 'Verified' },
-    { id: 'PAT-005', name: 'Enrique Gil', email: 'egil@mail.com', joinDate: 'Feb 12, 2025', status: 'Banned' },
-    { id: 'PAT-006', name: 'Ricardo Dalisay', email: 'carding.d@pnp.gov.ph', joinDate: 'Mar 01, 2025', status: 'Verified' },
-    { id: 'PAT-007', name: 'Nora Aunor', email: 'superstar@nora.ph', joinDate: 'Mar 05, 2025', status: 'Verified' },
-    { id: 'PAT-008', name: 'Vilma Santos', email: 'ate.vi@batangas.ph', joinDate: 'Mar 12, 2025', status: 'Pending' },
-    { id: 'PAT-009', name: 'Fernando Poe Jr.', label: 'Da King', email: 'fpj@king.ph', joinDate: 'Apr 20, 2025', status: 'Verified' },
-    { id: 'PAT-010', name: 'Dolphy Quizon', email: 'dolphy@comedy.ph', joinDate: 'May 05, 2025', status: 'Verified' },
-    { id: 'PAT-011', name: 'Gloria Romero', email: 'gloria@cinema.ph', joinDate: 'May 10, 2025', status: 'Verified' },
-    { id: 'PAT-012', name: 'Eddie Garcia', email: 'manoy@mail.ph', joinDate: 'May 15, 2025', status: 'Verified' },
-    { id: 'PAT-013', name: 'Sharon Cuneta', email: 'sharon.c@mega.ph', joinDate: 'Jun 01, 2025', status: 'Pending' },
-    { id: 'PAT-014', name: 'Piolo Pascual', email: 'pj@pascual.ph', joinDate: 'Jun 05, 2025', status: 'Verified' },
-    { id: 'PAT-015', name: 'Kathryn Bernardo', email: 'kath@bernardo.ph', joinDate: 'Jun 10, 2025', status: 'Verified' },
-  ];
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filter, setFilter] = useState('All');
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchPatients = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, email, is_banned, created_at')
+        .eq('role', 'patient')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const shaped = (data || []).map(p => ({
+        id: p.id,
+        name: p.full_name,
+        email: p.email,
+        joinDate: new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        is_banned: p.is_banned || false,
+        status: p.is_banned ? 'Banned' : 'Active'
+      }));
+
+      setPatients(shaped);
+    } catch (err) {
+      console.error('Error fetching patients:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const handleBan = async (patient) => {
+    const action = patient.is_banned ? 'unban' : 'ban';
+    if (!window.confirm(`Are you sure you want to ${action} ${patient.name}?`)) return;
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_banned: !patient.is_banned })
+        .eq('id', patient.id);
+      if (error) throw error;
+      await fetchPatients();
+    } catch (err) {
+      console.error(`Error ${action}ning patient:`, err);
+      alert(`Failed to ${action} patient.`);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRemove = async (patient) => {
+    if (!window.confirm(`⚠️ PERMANENTLY DELETE ${patient.name} and all their data? This cannot be undone!`)) return;
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', patient.id);
+      if (error) throw error;
+      await fetchPatients();
+    } catch (err) {
+      console.error('Error removing patient:', err);
+      alert('Failed to remove patient.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const filteredPatients = patients.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.id.toLowerCase().includes(searchTerm.toLowerCase());
+                          p.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filter === 'All' || p.status === filter;
     return matchesSearch && matchesFilter;
   });
+
+  if (loading) {
+    return <DashboardLayout role="admin"><SkeletonPage /></DashboardLayout>;
+  }
 
   return (
     <DashboardLayout role="admin">
@@ -62,8 +121,7 @@ const AdminPatients = () => {
               onChange={setFilter}
               options={[
                 { value: 'All', label: 'All Status' },
-                { value: 'Verified', label: 'Verified' },
-                { value: 'Pending', label: 'Pending' },
+                { value: 'Active', label: 'Active' },
                 { value: 'Banned', label: 'Banned' },
               ]}
             />
@@ -80,7 +138,7 @@ const AdminPatients = () => {
           <div className="block md:hidden divide-y divide-slate-50">
             {filteredPatients.map((p, idx) => (
               <motion.div 
-                key={idx} 
+                key={p.id} 
                 className="p-4 space-y-3"
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -89,33 +147,39 @@ const AdminPatients = () => {
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-500">
-                      {p.name.split(' ').map(n => n[0]).join('')}
+                      {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                     </div>
                     <div>
                       <p className="font-bold text-slate-900">{p.name}</p>
-                      <p className="text-xs text-slate-400 font-mono">{p.id}</p>
+                      <p className="text-xs text-slate-400">{p.email}</p>
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                    p.status === 'Verified' ? 'bg-green-100 text-green-700' :
-                    p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
+                    p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                      p.status === 'Verified' ? 'bg-green-500' :
-                      p.status === 'Pending' ? 'bg-yellow-500' :
-                      'bg-red-500'
+                      p.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
                     }`} />
                     {p.status}
                   </span>
                 </div>
-                <div className="text-sm text-slate-600">
-                  <p>{p.email}</p>
-                  <p className="text-slate-400 text-xs mt-1">Joined: {p.joinDate}</p>
-                </div>
-                <div className="flex justify-end pt-2 border-t border-slate-50">
-                  <button className="text-primary font-bold text-xs" onClick={() => alert(`Options for ${p.name}`)}>
-                    View Options
+                <div className="text-sm text-slate-400">Joined: {p.joinDate}</div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-50">
+                  <button 
+                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                      p.is_banned ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100'
+                    }`}
+                    onClick={() => handleBan(p)}
+                    disabled={actionLoading}
+                  >
+                    {p.is_banned ? 'Unban' : 'Ban'}
+                  </button>
+                  <button 
+                    className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                    onClick={() => handleRemove(p)}
+                    disabled={actionLoading}
+                  >
+                    Remove
                   </button>
                 </div>
               </motion.div>
@@ -127,28 +191,26 @@ const AdminPatients = () => {
             <table className="w-full text-left border-collapse table-striped">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                  <th className="px-6 py-4 font-bold">Patient ID</th>
                   <th className="px-6 py-4 font-bold">Full Name</th>
                   <th className="px-6 py-4 font-bold">Email</th>
-                  <th className="px-6 py-4 font-bold">Join Date</th>
+                  <th className="px-6 py-4 font-bold">Joined</th>
                   <th className="px-6 py-4 font-bold">Status</th>
-                  <th className="px-6 py-4 font-bold text-right">Action</th>
+                  <th className="px-6 py-4 font-bold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredPatients.map((p, idx) => (
                   <motion.tr 
-                    key={idx} 
+                    key={p.id} 
                     className="transition-colors"
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + idx * 0.03 }}
                   >
-                    <td className="px-6 py-4 text-sm font-mono text-slate-400">{p.id}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
-                          {p.name.split(' ').map(n => n[0]).join('')}
+                          {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                         </div>
                         <span className="font-bold text-slate-700">{p.name}</span>
                       </div>
@@ -157,22 +219,37 @@ const AdminPatients = () => {
                     <td className="px-6 py-4 text-slate-500 text-sm">{p.joinDate}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                        p.status === 'Verified' ? 'bg-green-100 text-green-700' :
-                        p.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
+                        p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                          p.status === 'Verified' ? 'bg-green-500' :
-                          p.status === 'Pending' ? 'bg-yellow-500' :
-                          'bg-red-500'
+                          p.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
                         }`} />
                         {p.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="p-2 text-slate-400 hover:text-slate-600 transition-colors" onClick={() => alert(`Options for ${p.name}`)}>
-                        <MoreVertical className="w-5 h-5" />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button 
+                          className={`p-2 rounded-xl transition-all ${
+                            p.is_banned 
+                              ? 'text-green-600 bg-green-50 hover:bg-green-100' 
+                              : 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100'
+                          }`}
+                          onClick={() => handleBan(p)}
+                          disabled={actionLoading}
+                          title={p.is_banned ? 'Unban' : 'Ban'}
+                        >
+                          <Ban className="w-4 h-4" />
+                        </button>
+                        <button 
+                          className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                          onClick={() => handleRemove(p)}
+                          disabled={actionLoading}
+                          title="Remove Permanently"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ))}
@@ -182,19 +259,8 @@ const AdminPatients = () => {
           {filteredPatients.length === 0 && (
             <div className="p-10 text-center text-slate-500">No patients found.</div>
           )}
-          {/* Pagination */}
           <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Showing 1-{filteredPatients.length} of {filteredPatients.length} results</p>
-            <div className="flex items-center gap-1">
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">1</button>
-              <button className="w-8 h-8 rounded-lg text-slate-500 hover:bg-slate-50 text-sm font-medium transition-colors">2</button>
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors">
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            <p className="text-sm text-slate-500">Showing {filteredPatients.length} of {patients.length} patients</p>
           </div>
         </motion.div>
       </div>

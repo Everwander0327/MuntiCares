@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { ShieldCheck, Info, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -11,9 +13,7 @@ const staggerItem = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
-const ProviderToggle = ({ name, service, lastAccess, initialValue }) => {
-  const [isEnabled, setIsEnabled] = useState(initialValue);
-
+const ProviderToggle = ({ providerName, service, lastAccess, isEnabled, onToggle, loading }) => {
   return (
     <motion.div 
       className="flex items-center justify-between p-6 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
@@ -22,21 +22,22 @@ const ProviderToggle = ({ name, service, lastAccess, initialValue }) => {
     >
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-lg font-bold text-slate-400">
-          {name.split(' ').map(n => n[0]).join('')}
+          {providerName.split(' ').map(n => n[0]).join('')}
         </div>
         <div>
-          <h4 className="font-bold text-slate-900">{name}</h4>
+          <h4 className="font-bold text-slate-900">{providerName}</h4>
           <p className="text-slate-500 text-sm">{service}</p>
           <div className="flex items-center gap-1 text-slate-400 text-xs mt-1">
             <Calendar className="w-3 h-3" />
-            <span>Last access: {lastAccess}</span>
+            <span>Last access: {lastAccess || 'Never'}</span>
           </div>
         </div>
       </div>
       
       <motion.button 
-        onClick={() => setIsEnabled(!isEnabled)}
-        className={`w-14 h-8 rounded-full p-1 relative overflow-hidden transition-colors duration-300 relative ${isEnabled ? 'bg-green-500' : 'bg-slate-200'}`}
+        onClick={onToggle}
+        disabled={loading}
+        className={`w-14 h-8 rounded-full p-1 relative overflow-hidden transition-colors duration-300 ${isEnabled ? 'bg-green-500' : 'bg-slate-200'} ${loading ? 'opacity-50' : ''}`}
         whileTap={{ scale: 0.95 }}
       >
         <motion.div 
@@ -50,6 +51,83 @@ const ProviderToggle = ({ name, service, lastAccess, initialValue }) => {
 };
 
 const PatientConsent = () => {
+  const [consents, setConsents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const fetchConsents = async () => {
+      if (!user) return;
+
+      try {
+        // Fetch all consent entries for this patient, join with provider info
+        // Fetch consent entries with user info
+        const { data, error } = await supabase
+          .from('consent_access')
+          .select('*, provider:provider_id(full_name)')
+          .eq('patient_id', user.id);
+
+        if (error) throw error;
+
+        // Fetch provider details (services) from the providers table
+        const providerIds = (data || []).map(c => c.provider_id);
+        let providerDetails = {};
+        
+        if (providerIds.length > 0) {
+          const { data: provData } = await supabase
+            .from('providers')
+            .select('user_id, services')
+            .in('user_id', providerIds);
+          
+          (provData || []).forEach(p => {
+            providerDetails[p.user_id] = p;
+          });
+        }
+
+        const formatted = (data || []).map(c => {
+          const provInfo = providerDetails[c.provider_id];
+          return {
+            id: c.id,
+            providerId: c.provider_id,
+            providerName: c.provider?.full_name || 'Unknown',
+            service: (provInfo?.services && provInfo.services.length > 0) ? provInfo.services[0] : 'General Care',
+            lastAccess: c.last_access ? new Date(c.last_access).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never',
+            isEnabled: c.is_enabled,
+          };
+        });
+
+        setConsents(formatted);
+      } catch (err) {
+        console.error('Error fetching consents:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchConsents();
+  }, [user]);
+
+  const handleToggle = async (consentId, currentValue) => {
+    setTogglingId(consentId);
+    try {
+      const { error } = await supabase
+        .from('consent_access')
+        .update({ is_enabled: !currentValue })
+        .eq('id', consentId);
+
+      if (error) throw error;
+
+      setConsents(prev => prev.map(c => 
+        c.id === consentId ? { ...c, isEnabled: !currentValue } : c
+      ));
+    } catch (err) {
+      console.error('Error toggling consent:', err);
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   return (
     <DashboardLayout role="patient">
       <div className="max-w-4xl space-y-8">
@@ -83,17 +161,35 @@ const PatientConsent = () => {
           </div>
         </motion.div>
 
-        <motion.div 
-          className="space-y-4"
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-        >
-          <h3 className="text-lg font-bold text-slate-900 px-2">Authorized Providers</h3>
-          <ProviderToggle name="Maria Santos" service="Wound Care" lastAccess="Oct 20, 2025" initialValue={true} />
-          <ProviderToggle name="Jose Reyes" service="Elder Care" lastAccess="Never" initialValue={false} />
-          <ProviderToggle name="Ana Cruz" service="Physical Therapy" lastAccess="Oct 22, 2025" initialValue={true} />
-        </motion.div>
+        {loading ? (
+          <div className="text-center py-10 text-slate-400">Loading consent settings...</div>
+        ) : (
+          <motion.div 
+            className="space-y-4"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
+            <h3 className="text-lg font-bold text-slate-900 px-2">Authorized Providers</h3>
+            {consents.length > 0 ? (
+              consents.map((c) => (
+                <ProviderToggle 
+                  key={c.id}
+                  providerName={c.providerName}
+                  service={c.service}
+                  lastAccess={c.lastAccess}
+                  isEnabled={c.isEnabled}
+                  loading={togglingId === c.id}
+                  onToggle={() => handleToggle(c.id, c.isEnabled)}
+                />
+              ))
+            ) : (
+              <div className="p-10 text-center text-slate-500 bg-white rounded-3xl border border-slate-100">
+                No providers to manage yet. Request a service from a provider first!
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     </DashboardLayout>
   );

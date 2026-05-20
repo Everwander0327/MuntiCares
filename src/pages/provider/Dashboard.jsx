@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Clock, Users, CheckCircle, Check, X, TrendingUp, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Clock, Users, CheckCircle, Check, X, TrendingUp, Calendar, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import useCountUp from '../../hooks/useCountUp';
 import { SkeletonPage } from '../../components/Skeleton';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -13,7 +16,7 @@ const staggerItem = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
-const StatCard = ({ label, value, icon, color, trend }) => {
+const StatCard = ({ label, value, icon, color }) => {
   const { count, ref } = useCountUp(parseInt(value), 1500, false);
   
   return (
@@ -27,12 +30,6 @@ const StatCard = ({ label, value, icon, color, trend }) => {
         <div className={`p-3 rounded-2xl ${color}`}>
           {React.cloneElement(icon, { className: 'w-6 h-6' })}
         </div>
-        {trend && (
-          <div className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded-lg">
-            <TrendingUp className="w-3 h-3" />
-            <span>{trend}</span>
-          </div>
-        )}
       </div>
       <p className="text-slate-500 text-sm font-medium mt-3">{label}</p>
       <p className="text-2xl font-bold text-slate-900" ref={ref}>{count}</p>
@@ -43,28 +40,109 @@ const StatCard = ({ label, value, icon, color, trend }) => {
 const ProviderDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState({});
+  
+  const [stats, setStats] = useState({ pending: 0, activePatients: 0, completed: 0 });
+  const [schedule, setSchedule] = useState([]);
+  const [incomingRequests, setIncomingRequests] = useState([]);
+  
+  const { user } = useAuth();
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchDashboardData = async () => {
+      if (!user) return;
+      try {
+        const { data, error } = await supabase
+          .from('requests')
+          .select('id, patient_id, service, date, time, status, patient:patient_id(full_name)')
+          .eq('provider_id', user.id)
+          .order('date', { ascending: true });
 
-  const requests = [
-    { patient: 'Juan Dela Cruz', service: 'Wound Care Dressing', date: 'Oct 28, 2025' },
-    { patient: 'Liza Soberano', service: 'Blood Pressure Monitoring', date: 'Oct 29, 2025' },
-    { patient: 'Enrique Gil', service: 'Medication Assistance', date: 'Oct 30, 2025' },
-  ];
+        if (error) throw error;
 
-  const todaySchedule = [
-    { patient: 'Maria Makiling', time: '10:00 AM', service: 'Wound Care Check' },
-    { patient: 'Leonor Rivera', time: '2:30 PM', service: 'Physical Therapy Session' },
-  ];
+        const allRequests = data || [];
 
-  const handleAction = (idx, action) => {
-    setActionStates(prev => ({ ...prev, [idx]: action }));
-    setTimeout(() => {
-      setActionStates(prev => ({ ...prev, [idx]: null }));
-    }, 1500);
+        // Stats calculation
+        const pendingCount = allRequests.filter(r => r.status === 'Pending').length;
+        const completedCount = allRequests.filter(r => r.status === 'Completed').length;
+        
+        // Active patients: unique patients with Accepted or Completed requests
+        const activePatientIds = new Set(
+          allRequests.filter(r => r.status === 'Accepted' || r.status === 'Completed').map(r => r.patient_id)
+        );
+
+        setStats({
+          pending: pendingCount,
+          activePatients: activePatientIds.size,
+          completed: completedCount
+        });
+
+        // Today's schedule: upcoming Accepted requests
+        const upcoming = allRequests
+          .filter(r => r.status === 'Accepted')
+          .map(r => ({
+            patient: r.patient?.full_name || 'Unknown',
+            time: r.time ? r.time.substring(0, 5) : '09:00', // simple format
+            service: r.service,
+            date: new Date(r.date).toLocaleDateString()
+          }))
+          .slice(0, 5); // limit to 5
+        setSchedule(upcoming);
+
+        // Incoming requests
+        const incoming = allRequests
+          .filter(r => r.status === 'Pending')
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .map(r => ({
+            id: r.id,
+            patient: r.patient?.full_name || 'Unknown',
+            service: r.service,
+            date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          }));
+        setIncomingRequests(incoming);
+
+      } catch (err) {
+        console.error('Error fetching dashboard:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDashboardData();
+  }, [user]);
+
+  const handleAction = async (id, action) => {
+    setActionStates(prev => ({ ...prev, [id]: action }));
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ status: action === 'accepted' ? 'Accepted' : 'Rejected' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTimeout(() => {
+        setIncomingRequests(prev => prev.filter(r => r.id !== id));
+        setActionStates(prev => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        
+        // Update stats optimistically
+        setStats(prev => ({
+          ...prev,
+          pending: prev.pending - 1,
+          activePatients: action === 'accepted' ? prev.activePatients + 1 : prev.activePatients
+        }));
+      }, 800);
+    } catch (err) {
+      console.error('Error updating request:', err);
+      alert('Failed to update request.');
+      setActionStates(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
   };
 
   if (loading) {
@@ -86,28 +164,25 @@ const ProviderDashboard = () => {
         >
           <StatCard 
             label="Pending Requests" 
-            value="4" 
+            value={String(stats.pending)} 
             icon={<Clock />} 
             color="bg-yellow-50 text-yellow-600" 
-            trend="+10%"
           />
           <StatCard 
             label="Active Patients" 
-            value="6" 
+            value={String(stats.activePatients)} 
             icon={<Users />} 
             color="bg-blue-50 text-primary" 
-            trend="+18%"
           />
           <StatCard 
             label="Completed Services" 
-            value="23" 
+            value={String(stats.completed)} 
             icon={<CheckCircle />} 
             color="bg-green-50 text-green-600" 
-            trend="+25%"
           />
         </motion.div>
 
-        {/* Today's Schedule */}
+        {/* Schedule */}
         <motion.div 
           className="bg-gradient-to-br from-primary to-blue-600 rounded-3xl p-6 text-white relative overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -118,21 +193,28 @@ const ProviderDashboard = () => {
           <div className="relative z-10">
             <div className="flex items-center gap-2 mb-4">
               <Calendar className="w-5 h-5 text-blue-200" />
-              <p className="text-blue-200 font-semibold text-sm">Today's Schedule</p>
+              <p className="text-blue-200 font-semibold text-sm">Upcoming Schedule</p>
             </div>
             <div className="space-y-3">
-              {todaySchedule.map((appt, idx) => (
-                <div key={idx} className="flex items-center gap-4 bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
-                  <div className="text-center">
-                    <p className="text-lg font-bold">{appt.time}</p>
+              {schedule.length > 0 ? (
+                schedule.map((appt, idx) => (
+                  <div key={idx} className="flex items-center gap-4 bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                    <div className="text-center w-20">
+                      <p className="text-lg font-bold">{appt.time}</p>
+                      <p className="text-xs text-blue-200">{appt.date}</p>
+                    </div>
+                    <div className="w-px h-10 bg-white/20" />
+                    <div>
+                      <p className="font-bold">{appt.patient}</p>
+                      <p className="text-blue-200 text-sm">{appt.service}</p>
+                    </div>
                   </div>
-                  <div className="w-px h-10 bg-white/20" />
-                  <div>
-                    <p className="font-bold">{appt.patient}</p>
-                    <p className="text-blue-200 text-sm">{appt.service}</p>
-                  </div>
+                ))
+              ) : (
+                <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
+                  <p>No upcoming scheduled services.</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </motion.div>
@@ -146,7 +228,9 @@ const ProviderDashboard = () => {
         >
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-xl font-bold text-slate-900">Incoming Requests</h3>
-            <button className="text-primary font-semibold text-sm hover:underline">View All</button>
+            <Link to="/provider/requests" className="text-primary font-semibold text-sm hover:underline flex items-center gap-1">
+              View All <ChevronRight className="w-4 h-4" />
+            </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse table-striped">
@@ -159,62 +243,66 @@ const ProviderDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {requests.map((req, idx) => (
-                  <motion.tr 
-                    key={idx} 
-                    className="transition-colors"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + idx * 0.1 }}
-                  >
-                    <td className="px-6 py-4 font-semibold text-slate-700">{req.patient}</td>
-                    <td className="px-6 py-4 text-slate-600">{req.service}</td>
-                    <td className="px-6 py-4 text-slate-600">{req.date}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex gap-2">
-                        <motion.button 
-                          className={`p-2 rounded-xl transition-all shadow-sm ${
-                            actionStates[idx] === 'accepted' 
-                              ? 'bg-green-500 text-white' 
-                              : 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white'
-                          }`}
-                          onClick={() => handleAction(idx, 'accepted')}
-                          whileTap={{ scale: 0.9 }}
-                          animate={actionStates[idx] === 'accepted' ? { scale: [1, 1.2, 1] } : {}}
-                        >
-                          <Check className="w-5 h-5" />
-                        </motion.button>
-                        <motion.button 
-                          className={`p-2 rounded-xl transition-all shadow-sm ${
-                            actionStates[idx] === 'rejected' 
-                              ? 'bg-red-500 text-white' 
-                              : 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white'
-                          }`}
-                          onClick={() => handleAction(idx, 'rejected')}
-                          whileTap={{ scale: 0.9 }}
-                          animate={actionStates[idx] === 'rejected' ? { scale: [1, 1.2, 1] } : {}}
-                        >
-                          <X className="w-5 h-5" />
-                        </motion.button>
-                      </div>
+                {incomingRequests.length > 0 ? (
+                  incomingRequests.slice(0, 5).map((req, idx) => (
+                    <motion.tr 
+                      key={req.id} 
+                      className="transition-colors"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + idx * 0.1 }}
+                    >
+                      <td className="px-6 py-4 font-semibold text-slate-700">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary">
+                            {req.patient.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                          </div>
+                          {req.patient}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">{req.service}</td>
+                      <td className="px-6 py-4 text-slate-600">{req.date}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          <motion.button 
+                            className={`p-2 rounded-xl transition-all shadow-sm ${
+                              actionStates[req.id] === 'accepted' 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white'
+                            }`}
+                            onClick={() => handleAction(req.id, 'accepted')}
+                            whileTap={{ scale: 0.9 }}
+                            animate={actionStates[req.id] === 'accepted' ? { scale: [1, 1.2, 1] } : {}}
+                            disabled={!!actionStates[req.id]}
+                          >
+                            <Check className="w-5 h-5" />
+                          </motion.button>
+                          <motion.button 
+                            className={`p-2 rounded-xl transition-all shadow-sm ${
+                              actionStates[req.id] === 'rejected' 
+                                ? 'bg-red-500 text-white' 
+                                : 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white'
+                            }`}
+                            onClick={() => handleAction(req.id, 'rejected')}
+                            whileTap={{ scale: 0.9 }}
+                            animate={actionStates[req.id] === 'rejected' ? { scale: [1, 1.2, 1] } : {}}
+                            disabled={!!actionStates[req.id]}
+                          >
+                            <X className="w-5 h-5" />
+                          </motion.button>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="4" className="px-6 py-10 text-center text-slate-400">
+                      No incoming requests.
                     </td>
-                  </motion.tr>
-                ))}
+                  </tr>
+                )}
               </tbody>
             </table>
-          </div>
-          {/* Pagination */}
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Showing 1-3 of 3 results</p>
-            <div className="flex items-center gap-1">
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button className="w-8 h-8 rounded-lg bg-primary text-white text-sm font-bold">1</button>
-              <button className="p-2 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors" disabled>
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
           </div>
         </motion.div>
       </div>
