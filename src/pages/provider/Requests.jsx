@@ -24,24 +24,38 @@ const ProviderRequests = () => {
     const fetchRequests = async () => {
       if (!user) return;
       try {
+        // Fetch requests including notes
         const { data, error } = await supabase
           .from('requests')
-          .select('id, patient_id, service, date, time, status, patient:patient_id(full_name)')
+          .select('id, patient_id, service, date, time, notes, status, patient:patient_id(full_name)')
           .eq('provider_id', user.id)
           .eq('status', 'Pending')
           .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        // Note: location is currently not on users table, so we just use a default or fetch if added later.
-        const formatted = (data || []).map(r => ({
-          id: r.id,
-          patient: r.patient?.full_name || 'Unknown Patient',
-          service: r.service,
-          date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          time: r.time,
-          location: 'Muntinlupa City' // Placeholder since patients don't have location yet
-        }));
+        // Fetch patient profiles for locations
+        const patientIds = data.map(r => r.patient_id);
+        const { data: patientProfiles } = await supabase
+          .from('patients')
+          .select('user_id, address')
+          .in('user_id', patientIds);
+
+        const formatted = (data || []).map(r => {
+          const profile = patientProfiles?.find(p => p.user_id === r.patient_id);
+          // Convert 24h to 12h time format
+          const timeString = new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          
+          return {
+            id: r.id,
+            patient: r.patient?.full_name || 'Unknown Patient',
+            service: r.service,
+            date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            time: timeString,
+            notes: r.notes || '',
+            location: profile?.address || 'Address pending profile completion'
+          };
+        });
 
         setRequests(formatted);
       } catch (err) {
@@ -165,7 +179,7 @@ const ProviderRequests = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-3 mb-8">
+                  <div className="space-y-3 mb-6">
                     <div className="flex items-center gap-3 text-slate-500 text-sm">
                       <Calendar className="w-4 h-4" />
                       <span>{req.date}</span>
@@ -179,6 +193,13 @@ const ProviderRequests = () => {
                       <span>{req.location}</span>
                     </div>
                   </div>
+
+                  {req.notes && (
+                    <div className="mb-6 p-4 bg-yellow-50/50 rounded-2xl border border-yellow-100">
+                      <p className="text-xs font-bold text-yellow-800 uppercase tracking-wider mb-1">Patient Notes</p>
+                      <p className="text-sm text-yellow-900 leading-relaxed italic">"{req.notes}"</p>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <motion.button 

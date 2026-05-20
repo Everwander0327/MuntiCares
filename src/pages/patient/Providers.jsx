@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Star, MapPin } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Search, Star, MapPin, X, Calendar, Clock, FileText, CheckCircle2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { SkeletonPage } from '../../components/Skeleton';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.08 } },
@@ -21,12 +22,23 @@ const PatientProviders = () => {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [serviceOptions, setServiceOptions] = useState([{ value: 'All', label: 'All Services' }]);
+  
+  // Booking Modal State
+  const [selectedProvider, setSelectedProvider] = useState(null);
+  const [bookingForm, setBookingForm] = useState({
+    service: '',
+    date: '',
+    time: '',
+    notes: '',
+    consent: false
+  });
+  const [bookingLoading, setBookingLoading] = useState(false);
+
   const { user } = useAuth();
 
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        // Fetch from providers table, joined with users for name
         const { data, error } = await supabase
           .from('providers')
           .select('id, user_id, services, rating, location, price_per_service, is_approved, user:user_id(id, full_name)')
@@ -34,7 +46,6 @@ const PatientProviders = () => {
 
         if (error) throw error;
 
-        // Reshape data so each provider has the user info at top level
         const shaped = (data || []).map(p => ({
           id: p.user_id,
           full_name: p.user?.full_name || 'Unknown',
@@ -46,7 +57,6 @@ const PatientProviders = () => {
 
         setProviders(shaped);
 
-        // Build unique service list for the filter
         const allServices = new Set();
         (data || []).forEach(p => {
           (p.services || []).forEach(s => allServices.add(s));
@@ -56,7 +66,6 @@ const PatientProviders = () => {
           ...[...allServices].map(s => ({ value: s, label: s })),
         ]);
 
-        // Also fetch which providers the patient already requested
         if (user) {
           const { data: existingRequests } = await supabase
             .from('requests')
@@ -84,54 +93,70 @@ const PatientProviders = () => {
     return matchesSearch && matchesFilter;
   });
 
-  const handleRequest = async (provider) => {
-    if (!user) return;
+  const openBookingModal = (provider) => {
+    setSelectedProvider(provider);
+    setBookingForm({
+      service: provider.services?.[0] || 'General Care',
+      date: new Date().toISOString().split('T')[0],
+      time: '09:00',
+      notes: '',
+      consent: false
+    });
+  };
+
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    if (!user || !selectedProvider) return;
+
+    if (!bookingForm.consent) {
+      alert("You must consent to sharing your profile and address to proceed.");
+      return;
+    }
+
+    setBookingLoading(true);
 
     try {
-      // Pick the first service from provider's list, or a default
-      const service = (provider.services && provider.services.length > 0) ? provider.services[0] : 'General Care';
-      const price = provider.price_per_service ? String(provider.price_per_service) : '0';
-
-      const wantToShare = window.confirm(
-        `Do you want to share your health data with ${provider.full_name}?\n\n` + 
-        `If you click OK, they will be able to view your medical information to provide better care.`
-      );
-
-      const { error } = await supabase
+      // 1. Send the request
+      const { error: reqError } = await supabase
         .from('requests')
         .insert([{
           patient_id: user.id,
-          provider_id: provider.id,
-          service: service,
-          date: new Date().toISOString().split('T')[0],
-          time: '09:00:00',
+          provider_id: selectedProvider.id,
+          service: bookingForm.service,
+          date: bookingForm.date,
+          time: bookingForm.time + ':00', // Time column expects HH:MM:SS
           status: 'Pending',
-          price: price,
+          price: String(selectedProvider.price_per_service || 0),
+          notes: bookingForm.notes
         }]);
 
-      if (error) throw error;
+      if (reqError) throw reqError;
 
-      setRequested([...requested, provider.id]);
-
-      // Create a consent_access entry
+      // 2. Enable Data Sharing (Consent)
       await supabase
         .from('consent_access')
         .upsert([{
           patient_id: user.id,
-          provider_id: provider.id,
-          is_enabled: wantToShare,
+          provider_id: selectedProvider.id,
+          is_enabled: true,
         }], { onConflict: 'patient_id,provider_id' });
 
-      alert('Request sent successfully!');
+      setRequested([...requested, selectedProvider.id]);
+      setSelectedProvider(null);
+      alert('Booking request sent successfully!');
     } catch (err) {
       console.error('Error sending request:', err);
-      alert('Failed to send request. Please try again.');
+      alert('Failed to send booking request. Please try again.');
+    } finally {
+      setBookingLoading(false);
     }
   };
 
+  if (loading) return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;
+
   return (
     <DashboardLayout role="patient">
-      <div className="space-y-8">
+      <div className="space-y-8 relative">
         <motion.div 
           className="flex flex-col md:flex-row gap-4 items-center justify-between"
           initial={{ opacity: 0, y: 20 }}
@@ -155,9 +180,7 @@ const PatientProviders = () => {
           />
         </motion.div>
 
-        {loading ? (
-          <div className="text-center py-20 text-slate-400">Loading providers...</div>
-        ) : filteredProviders.length > 0 ? (
+        {filteredProviders.length > 0 ? (
           <motion.div 
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             variants={staggerContainer}
@@ -173,7 +196,7 @@ const PatientProviders = () => {
               >
                 <div className="flex items-center gap-4 mb-6">
                   <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-xl font-bold text-primary shadow-inner">
-                    {p.full_name.split(' ').map(n => n[0]).join('')}
+                    {p.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-lg">{p.full_name}</h3>
@@ -212,13 +235,13 @@ const PatientProviders = () => {
                   )}
 
                   <motion.button 
-                    onClick={() => handleRequest(p)}
+                    onClick={() => openBookingModal(p)}
                     disabled={requested.includes(p.id)}
                     className={`w-full py-3 rounded-2xl text-sm font-bold shadow-lg transition-all ${requested.includes(p.id) ? 'bg-green-100 text-green-600 cursor-not-allowed shadow-none' : 'btn-primary shadow-primary/20'}`}
                     whileHover={!requested.includes(p.id) ? { scale: 1.02 } : {}}
                     whileTap={!requested.includes(p.id) ? { scale: 0.97 } : {}}
                   >
-                    {requested.includes(p.id) ? 'Request Sent ✓' : 'Request Service'}
+                    {requested.includes(p.id) ? 'Request Pending ✓' : 'Book Appointment'}
                   </motion.button>
                 </div>
               </motion.div>
@@ -234,6 +257,140 @@ const PatientProviders = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Booking Modal */}
+      <AnimatePresence>
+        {selectedProvider && (
+          <motion.div 
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedProvider(null)}
+          >
+            <motion.div 
+              className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full p-8 relative my-8"
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setSelectedProvider(null)}
+                className="absolute top-6 right-6 p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              <div className="mb-8 pr-12">
+                <h2 className="text-2xl font-bold text-slate-900">Book Appointment</h2>
+                <p className="text-slate-500 mt-1">with <span className="font-bold text-primary">{selectedProvider.full_name}</span></p>
+              </div>
+
+              <form onSubmit={handleBookingSubmit} className="space-y-6">
+                {/* Service Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Select Service</label>
+                  <select 
+                    required
+                    value={bookingForm.service}
+                    onChange={e => setBookingForm({...bookingForm, service: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
+                  >
+                    {selectedProvider.services?.length > 0 ? (
+                      selectedProvider.services.map(s => (
+                        <option key={s} value={s}>{s} (₱{selectedProvider.price_per_service})</option>
+                      ))
+                    ) : (
+                      <option value="General Care">General Care</option>
+                    )}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Date */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Date</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input 
+                        type="date" 
+                        required
+                        min={new Date().toISOString().split('T')[0]}
+                        value={bookingForm.date}
+                        onChange={e => setBookingForm({...bookingForm, date: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Time */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Proposed Time</label>
+                    <div className="relative">
+                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input 
+                        type="time" 
+                        required
+                        value={bookingForm.time}
+                        onChange={e => setBookingForm({...bookingForm, time: e.target.value})}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Message for Provider (Optional)</label>
+                  <div className="relative">
+                    <FileText className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
+                    <textarea 
+                      value={bookingForm.notes}
+                      onChange={e => setBookingForm({...bookingForm, notes: e.target.value})}
+                      placeholder="Any specific instructions, conditions, or details?"
+                      rows={3}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Consent Checkbox */}
+                <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-2xl flex items-start gap-3">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      id="consent"
+                      required
+                      checked={bookingForm.consent}
+                      onChange={e => setBookingForm({...bookingForm, consent: e.target.checked})}
+                      className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
+                    />
+                  </div>
+                  <label htmlFor="consent" className="text-sm text-slate-600 leading-tight cursor-pointer">
+                    I consent to sharing my medical profile and home address with <span className="font-bold">{selectedProvider.full_name}</span> for the purpose of this home care service.
+                  </label>
+                </div>
+
+                <div className="pt-2">
+                  <button 
+                    type="submit"
+                    disabled={bookingLoading || !bookingForm.consent}
+                    className="w-full btn-primary py-4 rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {bookingLoading ? 'Submitting...' : (
+                      <>
+                        <CheckCircle2 className="w-5 h-5" />
+                        Send Booking Request
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 };

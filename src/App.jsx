@@ -15,6 +15,7 @@ import PatientDashboard from './pages/patient/Dashboard';
 import PatientProviders from './pages/patient/Providers';
 import PatientConsent from './pages/patient/Consent';
 import PatientRequests from './pages/patient/Requests';
+import PatientProfile from './pages/patient/Profile';
 
 // Provider Pages
 import ProviderDashboard from './pages/provider/Dashboard';
@@ -27,6 +28,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminPatients from './pages/admin/Patients';
 import AdminProviders from './pages/admin/Providers';
 import AdminRequests from './pages/admin/Requests';
+import AdminProfile from './pages/admin/Profile';
 
 function App() {
   return (
@@ -45,6 +47,7 @@ function App() {
           <Route path="providers" element={<PatientProviders />} />
           <Route path="requests" element={<PatientRequests />} />
           <Route path="consent" element={<PatientConsent />} />
+          <Route path="profile" element={<PatientProfile />} />
         </Route>
 
         <Route path="/provider" element={<ProtectedRoute allowedRole="provider" />}>
@@ -59,6 +62,7 @@ function App() {
           <Route path="patients" element={<AdminPatients />} />
           <Route path="providers" element={<AdminProviders />} />
           <Route path="requests" element={<AdminRequests />} />
+          <Route path="profile" element={<AdminProfile />} />
         </Route>
       </Routes>
     </Router>

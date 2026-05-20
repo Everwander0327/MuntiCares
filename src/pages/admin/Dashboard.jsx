@@ -20,18 +20,20 @@ const StatCard = ({ label, value, icon, color }) => {
   
   return (
     <motion.div 
-      className="p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
+      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
       style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)' }}
       variants={staggerItem}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-2xl ${color}`}>
-          {React.cloneElement(icon, { className: 'w-6 h-6' })}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2 mb-2">
+        <div className={`p-2 md:p-3 w-fit rounded-xl md:rounded-2xl ${color}`}>
+          {React.cloneElement(icon, { className: 'w-4 h-4 md:w-6 md:h-6' })}
         </div>
       </div>
-      <p className="text-slate-500 text-sm font-medium">{label}</p>
-      <p className="text-2xl font-bold text-slate-900" ref={ref}>{count}</p>
+      <div>
+        <p className="text-slate-500 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight">{label}</p>
+        <p className="text-lg md:text-2xl font-bold text-slate-900" ref={ref}>{count}</p>
+      </div>
     </motion.div>
   );
 };
@@ -163,9 +165,9 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout role="admin">
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         <motion.div 
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6"
           variants={staggerContainer}
           initial="initial"
           animate="animate"

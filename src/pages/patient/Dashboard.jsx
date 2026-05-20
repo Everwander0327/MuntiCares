@@ -21,24 +21,26 @@ const StatCard = ({ label, value, icon, color, trend, trendUp }) => {
   
   return (
     <motion.div 
-      className="p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
+      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
       style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)' }}
       variants={staggerItem}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className={`p-3 rounded-2xl ${color}`}>
-          {React.cloneElement(icon, { className: 'w-6 h-6' })}
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2 mb-2">
+        <div className={`p-2 md:p-3 w-fit rounded-xl md:rounded-2xl ${color}`}>
+          {React.cloneElement(icon, { className: 'w-4 h-4 md:w-6 md:h-6' })}
         </div>
         {trend && (
-          <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${trendUp ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>
-            {trendUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-            <span>{trend}</span>
+          <div className={`flex items-center gap-1 text-[10px] md:text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-lg w-fit ${trendUp ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>
+            {trendUp ? <TrendingUp className="w-2 h-2 md:w-3 md:h-3" /> : <TrendingDown className="w-2 h-2 md:w-3 md:h-3" />}
+            <span className="hidden xl:inline">{trend}</span>
           </div>
         )}
       </div>
-      <p className="text-slate-500 text-sm font-medium mt-3">{label}</p>
-      <p className="text-2xl font-bold text-slate-900" ref={ref}>{count}</p>
+      <div>
+        <p className="text-slate-500 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight">{label}</p>
+        <p className="text-lg md:text-2xl font-bold text-slate-900" ref={ref}>{count}</p>
+      </div>
     </motion.div>
   );
 };
@@ -109,10 +111,10 @@ const PatientDashboard = () => {
 
   return (
     <DashboardLayout role="patient">
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {/* Stats Row */}
         <motion.div 
-          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6"
+          className="grid grid-cols-3 gap-3 md:gap-6"
           variants={staggerContainer}
           initial="initial"
           animate="animate"

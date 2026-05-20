@@ -182,18 +182,28 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       <div className="flex-1 flex flex-col min-w-0 h-screen">
         <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-10 shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden text-slate-500 p-2 hover:bg-slate-50 rounded-xl transition-colors">
-              <Menu className="w-6 h-6" />
-            </button>
-            <h2 className="text-sm md:text-lg font-bold text-slate-900 truncate max-w-[200px] md:max-w-none">
-              Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
-            </h2>
+            {/* Removed mobile hamburger menu button as requested */}
+            <div>
+              <h2 className="text-sm md:text-lg font-bold text-slate-900 truncate max-w-[200px] md:max-w-none">
+                Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-primary font-bold shadow-sm border border-white shrink-0">
+            <button className="p-2 text-slate-400 hover:text-primary transition-colors relative">
+              <Bell className="w-6 h-6" />
+              <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+            </button>
+            <Link 
+              to={`/${currentRole}/profile`} 
+              className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-primary font-bold shadow-sm border border-white shrink-0 hover:bg-blue-200 transition-colors cursor-pointer"
+            >
               {user.initials}
-            </div>
+            </Link>
           </div>
         </header>
 

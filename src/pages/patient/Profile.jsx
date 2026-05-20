@@ -1,0 +1,363 @@
+import React, { useState, useEffect } from 'react';
+import DashboardLayout from '../../layouts/DashboardLayout';
+import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { SkeletonPage } from '../../components/Skeleton';
+import { useNavigate } from 'react-router-dom';
+
+const PatientProfile = () => {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  
+  const [profile, setProfile] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    medical_notes: '',
+    emergency_contact: '',
+    is_profile_complete: false,
+    created_at: ''
+  });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user) return;
+      try {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('full_name, email, created_at')
+          .eq('id', user.id)
+          .single();
+          
+        if (userError) throw userError;
+
+        const { data: patData, error: patError } = await supabase
+          .from('patients')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (patError && patError.code !== 'PGRST116') {
+          throw patError;
+        }
+
+        setProfile({
+          full_name: userData.full_name,
+          email: userData.email,
+          phone: patData?.phone || '',
+          address: patData?.address || '',
+          medical_notes: patData?.medical_notes || '',
+          emergency_contact: patData?.emergency_contact || '',
+          is_profile_complete: patData?.is_profile_complete || false,
+          created_at: userData.created_at
+        });
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [user]);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .upsert({
+          user_id: user.id,
+          phone: profile.phone,
+          address: profile.address,
+          medical_notes: profile.medical_notes,
+          emergency_contact: profile.emergency_contact,
+          is_profile_complete: true
+        }, { onConflict: 'user_id' });
+
+      if (error) throw error;
+      setProfile(prev => ({ ...prev, is_profile_complete: true }));
+      alert('Profile updated successfully!');
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      alert('Failed to save profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  // Calculate completion
+  const fields = [profile.phone, profile.address, profile.emergency_contact];
+  const filled = fields.filter(f => f && f.trim() !== '').length;
+  const completionPercent = Math.round((filled / fields.length) * 100);
+
+  if (loading) {
+    return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;
+  }
+
+  return (
+    <DashboardLayout role="patient">
+      <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
+        {/* Completion Alert */}
+        {!profile.is_profile_complete && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl md:rounded-3xl p-4 md:p-6"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-yellow-800 font-bold text-base md:text-lg">Complete Your Profile</h3>
+                <p className="text-yellow-700 text-xs md:text-sm mt-1">Your address is required so providers know where to deliver home care services.</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="w-24 h-2 bg-yellow-200 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-yellow-500 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${completionPercent}%` }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                  />
+                </div>
+                <span className="text-yellow-700 font-bold text-sm">{completionPercent}%</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          {/* Profile Sidebar Card */}
+          <div className="lg:col-span-1">
+            <motion.div 
+              className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {/* Gradient Banner */}
+              <div className="h-28 md:h-32 bg-gradient-to-br from-primary via-blue-500 to-blue-400 relative">
+                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+              </div>
+
+              {/* Avatar overlapping the banner */}
+              <div className="px-6 md:px-8 -mt-14 md:-mt-16 relative z-10">
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center text-3xl md:text-4xl font-bold text-primary mx-auto"
+                  style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)' }}
+                >
+                  {profile.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                </div>
+              </div>
+
+              <div className="px-6 md:px-8 pt-4 pb-6 md:pb-8 text-center">
+                <h2 className="text-xl md:text-2xl font-bold text-slate-900">{profile.full_name}</h2>
+                <p className="text-slate-500 text-sm font-medium mt-1">{profile.email}</p>
+                
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <span className="inline-flex items-center px-3 py-1 bg-blue-50 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full border border-blue-100">
+                    Patient
+                  </span>
+                  {profile.is_profile_complete && (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 font-bold text-[10px] uppercase tracking-widest rounded-full border border-green-100">
+                      <CheckCircle2 className="w-3 h-3" /> Complete
+                    </span>
+                  )}
+                </div>
+
+                {/* Quick Info */}
+                <div className="mt-6 space-y-3 text-left">
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <div className="p-2 bg-slate-50 rounded-lg shrink-0">
+                      <Mail className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <span className="truncate">{profile.email}</span>
+                  </div>
+                  {profile.phone && (
+                    <div className="flex items-center gap-3 text-sm text-slate-600">
+                      <div className="p-2 bg-slate-50 rounded-lg shrink-0">
+                        <Phone className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <span>{profile.phone}</span>
+                    </div>
+                  )}
+                  {profile.address && (
+                    <div className="flex items-start gap-3 text-sm text-slate-600">
+                      <div className="p-2 bg-slate-50 rounded-lg shrink-0 mt-0.5">
+                        <MapPin className="w-4 h-4 text-slate-400" />
+                      </div>
+                      <span className="line-clamp-2">{profile.address}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <div className="p-2 bg-slate-50 rounded-lg shrink-0">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <span>Member since {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}</span>
+                  </div>
+                </div>
+
+                {/* Logout — very bottom */}
+                <div className="mt-8 pt-6 border-t border-slate-100">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors text-sm"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Edit Form */}
+          <motion.div 
+            className="lg:col-span-2 bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <div className="p-6 md:p-8 border-b border-slate-100">
+              <h3 className="text-lg md:text-xl font-bold text-slate-900">Personal & Medical Details</h3>
+              <p className="text-slate-500 text-sm mt-1">This information helps providers give you the best possible care.</p>
+            </div>
+            
+            <form onSubmit={handleSave} className="p-6 md:p-8 space-y-5 md:space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Phone Number</label>
+                  <div className="relative group">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <input 
+                      type="tel"
+                      required
+                      value={profile.phone}
+                      onChange={e => setProfile({...profile, phone: e.target.value})}
+                      placeholder="e.g., 09123456789"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Emergency Contact</label>
+                  <div className="relative group">
+                    <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <input 
+                      type="text"
+                      required
+                      value={profile.emergency_contact}
+                      onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
+                      placeholder="Name & Number"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Home Address (Service Location)</label>
+                  <div className="relative group">
+                    <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <textarea 
+                      required
+                      value={profile.address}
+                      onChange={e => setProfile({...profile, address: e.target.value})}
+                      placeholder="Full home address in Muntinlupa..."
+                      rows={3}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700 ml-1">Medical Notes (Allergies, Conditions)</label>
+                  <div className="relative group">
+                    <Activity className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <textarea 
+                      value={profile.medical_notes}
+                      onChange={e => setProfile({...profile, medical_notes: e.target.value})}
+                      placeholder="Any important medical history providers should know?"
+                      rows={4}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                    />
+                  </div>
+                  
+                  {/* Smart Suggestions */}
+                  <div className="pt-2 space-y-3">
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quick Add Suggestions:</p>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs py-1.5 px-2 bg-slate-100 rounded-lg font-bold text-slate-500 mr-1 flex items-center">💊 Conditions</span>
+                        {['Diabetic', 'High Blood Pressure', 'Asthma', 'Heart Condition'].filter(s => !(profile.medical_notes || '').toLowerCase().includes(s.toLowerCase())).map(s => (
+                          <motion.button
+                            key={s}
+                            type="button"
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => {
+                              const curr = (profile.medical_notes || '').trim();
+                              const newNotes = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
+                              setProfile({...profile, medical_notes: newNotes});
+                            }}
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary rounded-lg text-xs font-bold border border-blue-100 transition-colors"
+                          >
+                            + {s}
+                          </motion.button>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-xs py-1.5 px-2 bg-slate-100 rounded-lg font-bold text-slate-500 mr-1 flex items-center">⚠️ Allergies/Notes</span>
+                        {['No known allergies', 'Penicillin Allergy', 'Needs Wheelchair'].filter(s => !(profile.medical_notes || '').toLowerCase().includes(s.toLowerCase())).map(s => (
+                          <motion.button
+                            key={s}
+                            type="button"
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => {
+                              const curr = (profile.medical_notes || '').trim();
+                              const newNotes = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
+                              setProfile({...profile, medical_notes: newNotes});
+                            }}
+                            className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg text-xs font-bold border border-orange-100 transition-colors"
+                          >
+                            + {s}
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 md:pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setProfile({...profile, medical_notes: ''})}
+                  className="px-6 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors text-sm"
+                >
+                  Clear Notes
+                </button>
+                <button 
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-xl md:rounded-2xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all disabled:opacity-50 w-full sm:w-auto"
+                >
+                  <Save className="w-5 h-5" />
+                  {saving ? 'Saving...' : 'Save Profile'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+};
+
+export default PatientProfile;
