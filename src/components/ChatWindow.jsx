@@ -11,10 +11,23 @@ const ChatWindow = ({ currentUser, otherUser }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
+  const [incomingCall, setIncomingCall] = useState(false);
   
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const channelRef = useRef(null);
+  const ringtoneRef = useRef(null);
+
+  useEffect(() => {
+    // Setup Ringtone Audio
+    ringtoneRef.current = new Audio('https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg');
+    ringtoneRef.current.loop = true;
+    return () => {
+      if (ringtoneRef.current) {
+        ringtoneRef.current.pause();
+      }
+    };
+  }, []);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -125,6 +138,13 @@ const ChatWindow = ({ currentUser, otherUser }) => {
           setTimeout(scrollToBottom, 50);
         }
       })
+      // Listen for incoming call event
+      .on('broadcast', { event: 'incoming_call' }, (payload) => {
+        if (payload.payload.sender_id === otherUser.id && payload.payload.receiver_id === currentUser.id) {
+          setIncomingCall(true);
+          ringtoneRef.current?.play().catch(e => console.log('Audio play blocked:', e));
+        }
+      })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({ user_id: currentUser.id, online_at: new Date().toISOString() });
@@ -159,19 +179,14 @@ const ChatWindow = ({ currentUser, otherUser }) => {
     }
   };
 
-  const handleSend = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const msgText = newMessage.trim();
-    setNewMessage('');
-    clearTimeout(typingTimeoutRef.current);
+  const sendMessage = async (text) => {
+    if (!text.trim()) return;
     
     const tempMsg = {
       id: `temp-${Date.now()}`,
       sender_id: currentUser.id,
       receiver_id: otherUser.id,
-      content: msgText,
+      content: text,
       created_at: new Date().toISOString(),
       is_read: false
     };
@@ -179,7 +194,6 @@ const ChatWindow = ({ currentUser, otherUser }) => {
     if (channelRef.current) {
        // Stop typing indicator
        channelRef.current.send({ type: 'broadcast', event: 'typing', payload: { sender_id: currentUser.id, receiver_id: otherUser.id, isTyping: false } });
-       
        // BROADCAST INSTANTLY to receiver (bypasses database latency)
        channelRef.current.send({ type: 'broadcast', event: 'new_message', payload: tempMsg });
     }
@@ -190,9 +204,34 @@ const ChatWindow = ({ currentUser, otherUser }) => {
     await supabase.from('messages').insert([{
       sender_id: currentUser.id,
       receiver_id: otherUser.id,
-      content: msgText,
+      content: text,
       is_read: false
     }]);
+  };
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    const msgText = newMessage.trim();
+    setNewMessage('');
+    clearTimeout(typingTimeoutRef.current);
+    
+    await sendMessage(msgText);
+  };
+
+  const startVideoCall = () => {
+    setIsVideoCallActive(true);
+    sendMessage("📞 I've started a video consultation. Please click the Video icon at the top right to join the call!");
+    
+    // Broadcast incoming call to the other user
+    if (channelRef.current) {
+      channelRef.current.send({ 
+        type: 'broadcast', 
+        event: 'incoming_call', 
+        payload: { sender_id: currentUser.id, receiver_id: otherUser.id } 
+      });
+    }
   };
 
   if (loading) {
@@ -208,6 +247,51 @@ const ChatWindow = ({ currentUser, otherUser }) => {
 
   return (
     <div className="flex flex-col h-full bg-slate-50/50 relative overflow-hidden">
+      {/* Incoming Call Overlay */}
+      <AnimatePresence>
+        {incomingCall && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -50, scale: 0.9 }}
+            className="absolute top-4 inset-x-4 z-[150] bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 p-4 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center animate-pulse shrink-0">
+                <Video className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 leading-tight">Incoming Video Call...</h3>
+                <p className="text-sm text-slate-500 font-medium">{otherUser.name} is calling you</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => {
+                  ringtoneRef.current?.pause();
+                  setIncomingCall(false);
+                  setIsVideoCallActive(true); // Accept Call
+                }}
+                className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors shadow-lg shadow-green-500/30 hover:scale-105"
+                title="Accept Call"
+              >
+                <Check className="w-6 h-6" />
+              </button>
+              <button 
+                onClick={() => {
+                  ringtoneRef.current?.pause();
+                  setIncomingCall(false);
+                }}
+                className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30 hover:scale-105"
+                title="Decline Call"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Video Call Overlay */}
       <AnimatePresence>
         {isVideoCallActive && (
@@ -290,7 +374,7 @@ const ChatWindow = ({ currentUser, otherUser }) => {
         
         {/* Video Call Button */}
         <button
-          onClick={() => setIsVideoCallActive(true)}
+          onClick={startVideoCall}
           className="w-12 h-12 rounded-full bg-blue-50 text-primary flex items-center justify-center hover:bg-blue-100 transition-all shadow-sm shrink-0 border border-blue-100 hover:scale-105"
           title="Start Teleconsultation"
         >

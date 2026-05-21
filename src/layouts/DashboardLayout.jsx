@@ -224,8 +224,8 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
       {/* Mobile Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-slate-100 shadow-lg shadow-slate-200/50">
-        <div className="flex items-center justify-around px-2 py-1">
-          {links.slice(0, 4).map((link) => (
+        <div className="flex items-center justify-around px-1 py-1">
+          {links.slice(0, 5).map((link) => (
             <MobileNavItem 
               key={link.label}
               icon={link.icon}
