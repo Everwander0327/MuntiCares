@@ -13,7 +13,8 @@ import {
   Briefcase,
   Bell,
   ChevronLeft,
-  CalendarDays
+  CalendarDays,
+  MessageCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,6 +66,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     { icon: <LayoutDashboard />, label: 'Dashboard', to: '/patient/dashboard' },
     { icon: <Search />, label: 'Find Providers', to: '/patient/providers' },
     { icon: <FileText />, label: 'My Requests', to: '/patient/requests' },
+    { icon: <MessageCircle />, label: 'Messages', to: '/patient/messages' },
     { icon: <Settings />, label: 'Consent Settings', to: '/patient/consent' },
   ];
 
@@ -73,6 +75,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     { icon: <Bell />, label: 'Incoming Requests', to: '/provider/requests' },
     { icon: <Users />, label: 'My Patients', to: '/provider/patients' },
     { icon: <CalendarDays />, label: 'My Schedule', to: '/provider/schedule' },
+    { icon: <MessageCircle />, label: 'Messages', to: '/provider/messages' },
   ];
 
   const adminLinks = [

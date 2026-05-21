@@ -17,6 +17,7 @@ import PatientProviders from './pages/patient/Providers';
 import PatientConsent from './pages/patient/Consent';
 import PatientRequests from './pages/patient/Requests';
 import PatientProfile from './pages/patient/Profile';
+import PatientMessages from './pages/patient/Messages';
 
 // Provider Pages
 import ProviderDashboard from './pages/provider/Dashboard';
@@ -24,6 +25,7 @@ import ProviderRequests from './pages/provider/Requests';
 import ProviderPatients from './pages/provider/Patients';
 import ProviderSchedule from './pages/provider/Schedule';
 import ProviderProfile from './pages/provider/Profile';
+import ProviderMessages from './pages/provider/Messages';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -49,6 +51,7 @@ function App() {
           <Route path="dashboard" element={<PatientDashboard />} />
           <Route path="providers" element={<PatientProviders />} />
           <Route path="requests" element={<PatientRequests />} />
+          <Route path="messages" element={<PatientMessages />} />
           <Route path="consent" element={<PatientConsent />} />
           <Route path="profile" element={<PatientProfile />} />
         </Route>
@@ -58,6 +61,7 @@ function App() {
           <Route path="requests" element={<ProviderRequests />} />
           <Route path="patients" element={<ProviderPatients />} />
           <Route path="schedule" element={<ProviderSchedule />} />
+          <Route path="messages" element={<ProviderMessages />} />
           <Route path="profile" element={<ProviderProfile />} />
         </Route>
 
