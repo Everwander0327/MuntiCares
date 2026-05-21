@@ -50,6 +50,8 @@ const ProviderDashboard = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    let channel;
+
     const fetchDashboardData = async () => {
       if (!user) return;
       try {
@@ -108,7 +110,30 @@ const ProviderDashboard = () => {
         setLoading(false);
       }
     };
+
     fetchDashboardData();
+
+    if (user) {
+      channel = supabase
+        .channel('provider-dashboard-requests')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'requests',
+            filter: `provider_id=eq.${user.id}`
+          },
+          () => {
+            fetchDashboardData();
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleAction = async (id, action) => {

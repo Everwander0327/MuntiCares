@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2, Upload, FileText, X, Loader2 } from 'lucide-react';
+import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { jsPDF } from 'jspdf';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
   const [documents, setDocuments] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -169,6 +171,289 @@ const PatientProfile = () => {
   const filled = fields.filter(f => f && f.trim() !== '').length;
   const completionPercent = Math.round((filled / fields.length) * 100);
 
+  // PDF Generation
+  const generatePDF = async () => {
+    setGeneratingPdf(true);
+    try {
+      // Fetch medical history
+      const { data: histData } = await supabase
+        .from('medical_histories')
+        .select('*')
+        .eq('patient_id', user.id)
+        .maybeSingle();
+
+      // Fetch visit notes
+      const { data: notesData } = await supabase
+        .from('visit_notes')
+        .select('*, provider:provider_id(full_name)')
+        .eq('patient_id', user.id)
+        .order('created_at', { ascending: false });
+
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let y = 20;
+
+      const checkPage = (needed = 20) => {
+        if (y + needed > 275) {
+          doc.addPage();
+          y = 20;
+        }
+      };
+
+      // Header
+      doc.setFillColor(37, 99, 235);
+      doc.rect(0, 0, pageWidth, 35, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MuntiCares - Medical Summary', 14, 15);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Generated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, 14, 23);
+      doc.text('CONFIDENTIAL - For authorized use only', 14, 29);
+
+      y = 45;
+      doc.setTextColor(30, 41, 59);
+
+      // Patient Info
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Patient Information', 14, y);
+      y += 2;
+      doc.setDrawColor(37, 99, 235);
+      doc.setLineWidth(0.5);
+      doc.line(14, y, pageWidth - 14, y);
+      y += 8;
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const info = [
+        ['Full Name', profile.full_name],
+        ['Email', profile.email],
+        ['Phone', profile.phone || 'Not provided'],
+        ['Address', profile.address || 'Not provided'],
+        ['Emergency Contact', profile.emergency_contact || 'Not provided'],
+      ];
+      info.forEach(([label, val]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${label}:`, 14, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(val, 55, y);
+        y += 6;
+      });
+
+      // Medical Notes
+      y += 6;
+      checkPage(30);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Medical Notes', 14, y);
+      y += 2;
+      doc.line(14, y, pageWidth - 14, y);
+      y += 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const notes = profile.medical_notes || 'No medical notes provided.';
+      const splitNotes = doc.splitTextToSize(notes, pageWidth - 28);
+      doc.text(splitNotes, 14, y);
+      y += splitNotes.length * 5 + 4;
+
+      // Medical History
+      if (histData) {
+        y += 4;
+        checkPage(40);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Medical History', 14, y);
+        y += 2;
+        doc.line(14, y, pageWidth - 14, y);
+        y += 8;
+        doc.setFontSize(10);
+
+        const histItems = [
+          ['Allergies', histData.allergies || 'None reported'],
+          ['Chronic Conditions', histData.chronic_conditions || 'None reported'],
+          ['Past Surgeries', histData.past_surgeries || 'None reported'],
+        ];
+        histItems.forEach(([label, val]) => {
+          checkPage(15);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(220, 38, 38);
+          if (label !== 'Allergies') doc.setTextColor(30, 41, 59);
+          doc.text(`${label}:`, 14, y);
+          doc.setTextColor(30, 41, 59);
+          doc.setFont('helvetica', 'normal');
+          const splitVal = doc.splitTextToSize(val, pageWidth - 60);
+          doc.text(splitVal, 55, y);
+          y += splitVal.length * 5 + 4;
+        });
+      }
+
+      // Uploaded Documents
+      if (documents.length > 0) {
+        y += 4;
+        checkPage(30);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('Uploaded Documents', 14, y);
+        y += 2;
+        doc.line(14, y, pageWidth - 14, y);
+        y += 8;
+        doc.setFontSize(10);
+
+        for (let i = 0; i < documents.length; i++) {
+          const d = documents[i];
+          const ext = d.document_title.split('.').pop().toLowerCase();
+          const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+          const { data: urlData } = supabase.storage.from('medical_documents').getPublicUrl(d.file_path);
+          const publicUrl = urlData?.publicUrl;
+
+          checkPage(isImage ? 80 : 14);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 41, 59);
+          doc.text(`${i + 1}. ${d.document_title} (${new Date(d.uploaded_at).toLocaleDateString()})`, 14, y);
+          y += 6;
+
+          if (isImage && publicUrl) {
+            try {
+              const response = await fetch(publicUrl);
+              const blob = await response.blob();
+              const base64 = await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+              });
+
+              const imgFormat = ext === 'png' ? 'PNG' : 'JPEG';
+              const maxW = pageWidth - 28;
+              const maxH = 60;
+              doc.addImage(base64, imgFormat, 14, y, maxW, maxH, undefined, 'MEDIUM');
+              y += maxH + 6;
+            } catch (imgErr) {
+              console.warn('Could not embed image:', imgErr);
+              doc.setFont('helvetica', 'normal');
+              doc.setTextColor(37, 99, 235);
+              doc.textWithLink('    ↳ View/Download File', 14, y, { url: publicUrl });
+              doc.setTextColor(30, 41, 59);
+              y += 7;
+            }
+          } else if (publicUrl) {
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(37, 99, 235);
+            doc.textWithLink('    ↳ View/Download File', 14, y, { url: publicUrl });
+            doc.setTextColor(30, 41, 59);
+            y += 7;
+          }
+        }
+      }
+
+      // Visit Notes
+      if (notesData && notesData.length > 0) {
+        y += 4;
+        checkPage(30);
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Visit History', 14, y);
+        y += 2;
+        doc.line(14, y, pageWidth - 14, y);
+        y += 8;
+
+        for (let i = 0; i < notesData.length; i++) {
+          const note = notesData[i];
+          checkPage(40);
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Visit #${i + 1} — ${new Date(note.created_at).toLocaleDateString()} by Dr. ${note.provider?.full_name || 'Provider'}`, 14, y);
+          y += 6;
+          doc.setFont('helvetica', 'normal');
+          const vitals = [
+            note.vitals_bp && `BP: ${note.vitals_bp}`,
+            note.vitals_temp && `Temp: ${note.vitals_temp}°C`,
+            note.vitals_hr && `HR: ${note.vitals_hr}`,
+            note.vitals_spo2 && `SpO2: ${note.vitals_spo2}%`,
+            note.pain_scale != null && `Pain: ${note.pain_scale}/10`,
+          ].filter(Boolean).join('  |  ');
+          if (vitals) {
+            doc.text(`Vitals: ${vitals}`, 14, y);
+            y += 5;
+          }
+          if (note.services_rendered) {
+            doc.text(`Services: ${note.services_rendered}`, 14, y);
+            y += 5;
+          }
+          if (note.notes) {
+            const splitN = doc.splitTextToSize(`Notes: ${note.notes}`, pageWidth - 28);
+            doc.text(splitN, 14, y);
+            y += splitN.length * 5;
+          }
+
+          if (note.attachment_url) {
+             const { data: urlData } = supabase.storage.from('medical_documents').getPublicUrl(note.attachment_url);
+             const publicUrl = urlData?.publicUrl;
+             const ext = note.attachment_url.split('.').pop().toLowerCase();
+             const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+
+             if (isImage && publicUrl) {
+                try {
+                  checkPage(65);
+                  const response = await fetch(publicUrl);
+                  const blob = await response.blob();
+                  const base64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                  });
+
+                  doc.setFont('helvetica', 'italic');
+                  doc.text('Attached Image:', 14, y);
+                  y += 4;
+                  
+                  const imgFormat = ext === 'png' ? 'PNG' : 'JPEG';
+                  const maxW = pageWidth - 28;
+                  const maxH = 60;
+                  doc.addImage(base64, imgFormat, 14, y, maxW, maxH, undefined, 'MEDIUM');
+                  y += maxH;
+                } catch (imgErr) {
+                  console.warn('Could not embed note attachment:', imgErr);
+                  doc.setFont('helvetica', 'normal');
+                  doc.setTextColor(37, 99, 235);
+                  doc.textWithLink('↳ View Attached File', 14, y, { url: publicUrl });
+                  doc.setTextColor(30, 41, 59);
+                }
+             } else if (publicUrl) {
+                  checkPage(10);
+                  doc.setFont('helvetica', 'normal');
+                  doc.setTextColor(37, 99, 235);
+                  doc.textWithLink('↳ View Attached File', 14, y, { url: publicUrl });
+                  doc.setTextColor(30, 41, 59);
+             }
+          }
+          
+          y += 6;
+        }
+      }
+
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`MuntiCares Medical Summary — Page ${i} of ${pageCount}`, 14, 290);
+        doc.text('This document is auto-generated and not a substitute for official medical records.', pageWidth - 14, 290, { align: 'right' });
+      }
+
+      doc.save(`MuntiCares_MedicalSummary_${profile.full_name.replace(/\s+/g, '_')}.pdf`);
+      toast.success('Medical Summary downloaded!');
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      toast.error('Failed to generate PDF.');
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
+
   if (loading) {
     return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;
   }
@@ -272,8 +557,16 @@ const PatientProfile = () => {
                   </div>
                 </div>
 
-                {/* Logout — very bottom */}
-                <div className="mt-8 pt-6 border-t border-slate-100">
+                {/* Download & Logout */}
+                <div className="mt-8 pt-6 border-t border-slate-100 space-y-3">
+                  <button 
+                    onClick={generatePDF}
+                    disabled={generatingPdf}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-primary bg-blue-50 hover:bg-blue-100 transition-colors text-sm disabled:opacity-50"
+                  >
+                    {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    {generatingPdf ? 'Generating...' : 'Download Medical Summary'}
+                  </button>
                   <button 
                     onClick={handleLogout}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors text-sm"

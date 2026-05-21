@@ -38,55 +38,79 @@ const ProviderSchedule = () => {
   const [modalPatient, setModalPatient] = useState(null);
 
   useEffect(() => {
-    if (user) fetchAppointments();
-  }, [user]);
+    let channel;
 
-  const fetchAppointments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('requests')
-        .select('id, patient_id, service, date, time, status, notes, patient:patient_id(full_name)')
-        .eq('provider_id', user.id)
-        .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed']);
+    const fetchAppointments = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('requests')
+          .select('id, patient_id, service, date, time, status, notes, patient:patient_id(full_name)')
+          .eq('provider_id', user.id)
+          .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed']);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Fetch addresses from patients table separately
-      const patientIds = (data || []).map(r => r.patient_id);
-      const { data: patientProfiles } = await supabase
-        .from('patients')
-        .select('user_id, address')
-        .in('user_id', patientIds);
+        // Fetch addresses from patients table separately
+        const patientIds = (data || []).map(r => r.patient_id);
+        const { data: patientProfiles } = await supabase
+          .from('patients')
+          .select('user_id, address')
+          .in('user_id', patientIds);
 
-      const formatted = (data || []).map(r => {
-        const profile = patientProfiles?.find(p => p.user_id === r.patient_id);
-        let timeStr = '';
-        try {
-          timeStr = new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        } catch { timeStr = r.time; }
+        const formatted = (data || []).map(r => {
+          const profile = patientProfiles?.find(p => p.user_id === r.patient_id);
+          let timeStr = '';
+          try {
+            timeStr = new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          } catch { timeStr = r.time; }
 
-        return {
-          id: r.id,
-          patientId: r.patient_id,
-          patient: r.patient?.full_name || 'Unknown',
-          service: r.service,
-          date: r.date,
-          time: r.time,
-          timeLabel: timeStr,
-          status: r.status,
-          notes: r.notes || '',
-          address: profile?.address || 'Address not provided',
-        };
-      });
+          return {
+            id: r.id,
+            patientId: r.patient_id,
+            patient: r.patient?.full_name || 'Unknown',
+            service: r.service,
+            date: r.date,
+            time: r.time,
+            timeLabel: timeStr,
+            status: r.status,
+            notes: r.notes || '',
+            address: profile?.address || 'Address not provided',
+          };
+        });
 
-      setAppointments(formatted);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to load schedule.');
-    } finally {
-      setLoading(false);
+        setAppointments(formatted);
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to load schedule.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchAppointments();
+
+      channel = supabase
+        .channel('provider-schedule-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'requests',
+            filter: `provider_id=eq.${user.id}`
+          },
+          () => {
+            fetchAppointments();
+          }
+        )
+        .subscribe();
     }
-  };
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   // Calendar helpers
   const year = currentDate.getFullYear();

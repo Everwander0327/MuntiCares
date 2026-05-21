@@ -53,6 +53,8 @@ const PatientDashboard = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    let channel;
+
     const fetchData = async () => {
       if (!user) return;
 
@@ -110,6 +112,8 @@ const PatientDashboard = () => {
             time: timeLabel,
             status: activeReq.status,
           });
+        } else {
+          setActiveVisit(null);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -119,6 +123,32 @@ const PatientDashboard = () => {
     };
 
     fetchData();
+
+    if (user) {
+      // Set up real-time subscription
+      channel = supabase
+        .channel('patient-requests-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'requests',
+            filter: `patient_id=eq.${user.id}`
+          },
+          () => {
+            // Re-fetch data when any change happens to this patient's requests
+            fetchData();
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [user]);
 
   if (loading) {

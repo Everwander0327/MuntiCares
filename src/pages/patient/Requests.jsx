@@ -67,6 +67,8 @@ const PatientRequests = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    let channel;
+
     const fetchRequests = async () => {
       if (!user) return;
 
@@ -112,6 +114,31 @@ const PatientRequests = () => {
     };
 
     fetchRequests();
+
+    if (user) {
+      // Set up real-time subscription
+      channel = supabase
+        .channel('patient-requests-list-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'requests',
+            filter: `patient_id=eq.${user.id}`
+          },
+          () => {
+            fetchRequests();
+          }
+        )
+        .subscribe();
+    }
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [user]);
 
   const filteredRequests = requests.filter(r => filter === 'All' || r.status === filter);
