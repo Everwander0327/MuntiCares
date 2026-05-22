@@ -4,6 +4,8 @@ import { Heart, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { sha256Hex } from '../../lib/hash';
+import { toast } from 'react-hot-toast';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -37,24 +39,39 @@ const LoginPage = () => {
 
     try {
       setLoading(true);
-      
+
+      // Hash entered password to compare with stored hash
+      const enteredHash = await sha256Hex(password);
+
       const { data, error: queryError } = await supabase
         .from('users')
         .select('*')
         .eq('email', email)
         .single();
-        
+
       if (queryError) {
         throw new Error('Invalid email or password');
       }
 
-      if (data && data.password === password) {
+      if (data && (data.password === enteredHash || data.password === password)) {
         if (data.is_banned) {
           throw new Error('Your account has been banned. Please contact support.');
+        }
+        // If the stored password matched plaintext (legacy), migrate it to hashed form
+        if (data.password === password) {
+          try {
+            const newHash = await sha256Hex(password);
+            await supabase.from('users').update({ password: newHash }).eq('id', data.id);
+            data.password = newHash; // update the local object
+          } catch (e) {
+            // migration failure shouldn't block login; log and continue
+            console.error('Password migration failed:', e);
+          }
         }
 
         // Successful login
         login(data);
+        toast.success('Logged in successfully');
         
         // Redirect based on role
         if (data.role === 'patient') navigate('/patient/dashboard');
@@ -66,6 +83,7 @@ const LoginPage = () => {
       }
     } catch (err) {
       setError(err.message);
+      toast.error(err.message);
       setShake(true);
       setTimeout(() => setShake(false), 500);
     } finally {

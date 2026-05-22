@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
+import { sha256Hex } from '../../lib/hash';
+import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 
 const RegisterPage = () => {
@@ -48,6 +50,8 @@ const RegisterPage = () => {
 
     try {
       setLoading(true);
+      // Hash password client-side before inserting (interim measure)
+      const hashed = await sha256Hex(password);
       // Insert user directly into the custom 'users' table without Supabase Auth
       const { data, error: insertError } = await supabase
         .from('users')
@@ -55,7 +59,7 @@ const RegisterPage = () => {
           { 
             full_name: fullName, 
             email: email, 
-            password: password, 
+            password: hashed, 
             role: role 
           }
         ])
@@ -79,6 +83,7 @@ const RegisterPage = () => {
       // Store basic info in context 
       if (data && data[0]) {
         login(data[0]);
+        toast.success('Account created');
       }
 
       if (role === 'patient') navigate('/patient/dashboard');
@@ -273,6 +278,7 @@ const RegisterPage = () => {
           )}
 
           <motion.button 
+            type="submit"
             disabled={loading}
             className={`btn-primary w-full py-4 text-lg shadow-lg shadow-primary/30 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             whileHover={!loading ? { scale: 1.02 } : {}}
