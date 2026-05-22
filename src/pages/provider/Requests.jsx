@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
+import toast from 'react-hot-toast';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -21,10 +22,10 @@ const ProviderRequests = () => {
   const { user } = useAuth();
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchRequests = async () => {
-      if (!user) return;
       try {
-        // Fetch requests including notes
         const { data, error } = await supabase
           .from('requests')
           .select('id, patient_id, service, date, time, notes, status, patient:patient_id(full_name)')
@@ -34,7 +35,6 @@ const ProviderRequests = () => {
 
         if (error) throw error;
 
-        // Fetch patient profiles for locations
         const patientIds = data.map(r => r.patient_id);
         const { data: patientProfiles } = await supabase
           .from('patients')
@@ -43,7 +43,6 @@ const ProviderRequests = () => {
 
         const formatted = (data || []).map(r => {
           const profile = patientProfiles?.find(p => p.user_id === r.patient_id);
-          // Convert 24h to 12h time format
           const timeString = new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
           
           return {
@@ -64,10 +63,53 @@ const ProviderRequests = () => {
         setLoading(false);
       }
     };
+
     fetchRequests();
+
+    const channel = supabase
+      .channel('provider-requests-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'requests',
+          filter: `provider_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newStatus = payload.new?.status;
+          const deletedId = payload.old?.id;
+
+          if (payload.eventType === 'DELETE' || newStatus === 'Cancelled' || newStatus === 'Rejected') {
+            setRequests(prev => prev.filter(r => r.id !== deletedId && r.id !== payload.new?.id));
+            return;
+          }
+
+          if (newStatus && newStatus !== 'Pending') {
+            setRequests(prev => prev.filter(r => r.id !== payload.new?.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const handleAccept = async (id, name) => {
+    const { data: current } = await supabase
+      .from('requests')
+      .select('status')
+      .eq('id', id)
+      .single();
+
+    if (!current || current.status !== 'Pending') {
+      toast.error('This request is no longer available.');
+      setRequests(prev => prev.filter(r => r.id !== id));
+      return;
+    }
+
     setActionStates(prev => ({ ...prev, [id]: 'accepted' }));
     try {
       const { error } = await supabase
@@ -87,7 +129,7 @@ const ProviderRequests = () => {
       }, 800);
     } catch (err) {
       console.error('Error accepting request:', err);
-      alert('Failed to accept request.');
+      toast.error('Failed to accept request.');
       setActionStates(prev => {
         const next = { ...prev };
         delete next[id];
@@ -97,33 +139,45 @@ const ProviderRequests = () => {
   };
 
   const handleReject = async (id, name) => {
-    if (window.confirm(`Are you sure you want to reject ${name}'s request?`)) {
-      setActionStates(prev => ({ ...prev, [id]: 'rejected' }));
-      try {
-        const { error } = await supabase
-          .from('requests')
-          .update({ status: 'Rejected' })
-          .eq('id', id);
+    if (!window.confirm(`Are you sure you want to reject ${name}'s request?`)) return;
 
-        if (error) throw error;
+    const { data: current } = await supabase
+      .from('requests')
+      .select('status')
+      .eq('id', id)
+      .single();
 
-        setTimeout(() => {
-          setRequests(prev => prev.filter(r => r.id !== id));
-          setActionStates(prev => {
-            const next = { ...prev };
-            delete next[id];
-            return next;
-          });
-        }, 800);
-      } catch (err) {
-        console.error('Error rejecting request:', err);
-        alert('Failed to reject request.');
+    if (!current || current.status !== 'Pending') {
+      toast.error('This request is no longer available.');
+      setRequests(prev => prev.filter(r => r.id !== id));
+      return;
+    }
+
+    setActionStates(prev => ({ ...prev, [id]: 'rejected' }));
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ status: 'Rejected' })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setTimeout(() => {
+        setRequests(prev => prev.filter(r => r.id !== id));
         setActionStates(prev => {
           const next = { ...prev };
           delete next[id];
           return next;
         });
-      }
+      }, 800);
+    } catch (err) {
+      console.error('Error rejecting request:', err);
+      toast.error('Failed to reject request.');
+      setActionStates(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     }
   };
 

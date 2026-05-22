@@ -74,53 +74,28 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
         uploadedUrls.push(fileName);
       }
 
-      // 2. Save pre-session data to the request notes or a dedicated table
-      const presessionData = {
-        symptom_notes: symptomNotes,
-        vitals_bp: vitals.bp || null,
-        vitals_temp: vitals.temp || null,
-        vitals_hr: vitals.hr || null,
-        weight: vitals.weight || null,
-        attachments: uploadedUrls,
-        submitted_at: new Date().toISOString()
-      };
+      // 2. Append pre-session data to the request notes
+      const notesSummary = [
+        symptomNotes ? `[Pre-session Symptoms] ${symptomNotes}` : '',
+        vitals.bp ? `BP: ${vitals.bp}` : '',
+        vitals.temp ? `Temp: ${vitals.temp}°C` : '',
+        vitals.hr ? `HR: ${vitals.hr} bpm` : '',
+        vitals.weight ? `Weight: ${vitals.weight} kg` : '',
+        uploadedUrls.length > 0 ? `[${uploadedUrls.length} file(s) uploaded]` : ''
+      ].filter(Boolean).join(' | ');
 
-      // Try inserting into presession_data table first
-      const { error: tableError } = await supabase
-        .from('presession_data')
-        .insert([{
-          request_id: request.id,
-          patient_id: request.patientId,
-          provider_id: request.providerId,
-          ...presessionData
-        }]);
+      if (notesSummary) {
+        const { data: currentReq } = await supabase
+          .from('requests')
+          .select('notes')
+          .eq('id', request.id)
+          .single();
 
-      if (tableError) {
-        console.warn('presession_data table not found, appending to request notes:', tableError);
-        
-        // Fallback: append pre-session info to the request's notes field
-        const notesSummary = [
-          symptomNotes ? `[Pre-session Symptoms] ${symptomNotes}` : '',
-          vitals.bp ? `BP: ${vitals.bp}` : '',
-          vitals.temp ? `Temp: ${vitals.temp}°C` : '',
-          vitals.hr ? `HR: ${vitals.hr} bpm` : '',
-          vitals.weight ? `Weight: ${vitals.weight} kg` : '',
-          uploadedUrls.length > 0 ? `[${uploadedUrls.length} file(s) uploaded]` : ''
-        ].filter(Boolean).join(' | ');
-
-        if (notesSummary) {
-          const { data: currentReq } = await supabase
-            .from('requests')
-            .select('notes')
-            .eq('id', request.id)
-            .single();
-
-          const existingNotes = currentReq?.notes || '';
-          await supabase
-            .from('requests')
-            .update({ notes: existingNotes ? `${existingNotes}\n${notesSummary}` : notesSummary })
-            .eq('id', request.id);
-        }
+        const existingNotes = currentReq?.notes || '';
+        await supabase
+          .from('requests')
+          .update({ notes: existingNotes ? `${existingNotes}\n${notesSummary}` : notesSummary })
+          .eq('id', request.id);
       }
 
       toast.success('Pre-session info submitted successfully!');

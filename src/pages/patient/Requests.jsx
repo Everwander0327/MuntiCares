@@ -19,7 +19,7 @@ const staggerItem = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
-const RequestCard = ({ id, providerId, patientId, provider, service, date, status, price, location, onRateProvider, isRated, onManageRequest, onPreSession, presessionSubmitted }) => (
+const RequestCard = ({ id, providerId, patientId, provider, service, date, time, status, price, location, onRateProvider, isRated, onManageRequest, onPreSession, presessionSubmitted }) => (
   <motion.div 
     className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
     variants={staggerItem}
@@ -79,7 +79,7 @@ const RequestCard = ({ id, providerId, patientId, provider, service, date, statu
         {/* Cancel/Reschedule - only for Pending or Accepted */}
         {['Pending', 'Accepted'].includes(status) && (
           <button
-            onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date })}
+            onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date, time })}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
           >
             <XCircle className="w-3.5 h-3.5" />

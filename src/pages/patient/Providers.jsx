@@ -9,6 +9,10 @@ import { SkeletonPage } from '../../components/Skeleton';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
+const WORKING_HOURS_START = 9;
+const WORKING_HOURS_END = 17;
+const SLOT_DURATION_MINUTES = 60;
+
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.08 } },
 };
@@ -38,6 +42,9 @@ const PatientProviders = () => {
     consent: false
   });
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingStep, setBookingStep] = useState('form');
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -80,7 +87,7 @@ const PatientProviders = () => {
             .from('requests')
             .select('provider_id')
             .eq('patient_id', user.id)
-            .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
+            .eq('status', 'Pending');
 
           if (existingRequests) {
             setRequested(existingRequests.map(r => r.provider_id));
@@ -123,6 +130,50 @@ const PatientProviders = () => {
     fetchProviderReviews();
   }, [viewingProvider]);
 
+  useEffect(() => {
+    if (!selectedProvider || !selectedProvider.id || !bookingForm.date) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    const fetchAvailableSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        const { data: existingBookings } = await supabase
+          .from('requests')
+          .select('time')
+          .eq('provider_id', selectedProvider.id)
+          .eq('date', bookingForm.date)
+          .in('status', ['Accepted', 'On The Way', 'Arrived']);
+
+        const bookedTimes = (existingBookings || []).map(b => b.time);
+
+        const slots = [];
+        for (let hour = WORKING_HOURS_START; hour < WORKING_HOURS_END; hour++) {
+          const time = `${String(hour).padStart(2, '0')}:00`;
+          const isBooked = bookedTimes.some(bt => {
+            const bh = parseInt(bt.split(':')[0]);
+            const bm = parseInt(bt.split(':')[1]);
+            const slotStart = hour;
+            const slotEnd = hour + SLOT_DURATION_MINUTES / 60;
+            const bookingTime = bh + bm / 60;
+            return bookingTime >= slotStart && bookingTime < slotEnd;
+          });
+          slots.push({ time, available: !isBooked });
+        }
+
+        setAvailableSlots(slots);
+      } catch (err) {
+        console.error('Error fetching available slots:', err);
+        setAvailableSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchAvailableSlots();
+  }, [selectedProvider, bookingForm.date]);
+
   const filteredProviders = providers.filter(p => {
     const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (p.services || []).some(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -132,27 +183,77 @@ const PatientProviders = () => {
 
   const openBookingModal = (provider) => {
     setSelectedProvider(provider);
+    setBookingStep('form');
+    setAvailableSlots([]);
     setBookingForm({
       service: provider.services?.[0] || 'General Care',
       date: new Date().toISOString().split('T')[0],
-      time: '09:00',
+      time: '',
       notes: '',
       consent: false
     });
   };
 
-  const handleBookingSubmit = async (e) => {
+  const handleReviewBooking = (e) => {
     e.preventDefault();
     if (!user || !selectedProvider) return;
 
-    if (!bookingForm.consent) {
-      toast.error("You must consent to sharing your profile and address to proceed.");
+    if (!bookingForm.service) {
+      toast.error('Please select a service.');
       return;
     }
+    if (!bookingForm.date) {
+      toast.error('Please select a date.');
+      return;
+    }
+    if (!bookingForm.time) {
+      toast.error('Please select a time slot.');
+      return;
+    }
+    if (!bookingForm.consent) {
+      toast.error('You must consent to sharing your profile and address to proceed.');
+      return;
+    }
+
+    setBookingStep('confirm');
+  };
+
+  const handleBookingSubmit = async () => {
+    if (!user || !selectedProvider) return;
 
     setBookingLoading(true);
 
     try {
+      const { data: existing } = await supabase
+        .from('requests')
+        .select('id')
+        .eq('patient_id', user.id)
+        .eq('provider_id', selectedProvider.id)
+        .eq('status', 'Pending');
+
+      if (existing && existing.length > 0) {
+        toast.error('You already have a pending request with this provider.');
+        setBookingLoading(false);
+        setBookingStep('form');
+        return;
+      }
+
+      const { data: conflict } = await supabase
+        .from('requests')
+        .select('id')
+        .eq('provider_id', selectedProvider.id)
+        .eq('date', bookingForm.date)
+        .in('status', ['Accepted', 'On The Way', 'Arrived'])
+        .gte('time', bookingForm.time + ':00')
+        .lt('time', `${String(parseInt(bookingForm.time.split(':')[0]) + 1).padStart(2, '0')}:00`);
+
+      if (conflict && conflict.length > 0) {
+        toast.error('This time slot has just been taken. Please choose another.');
+        setBookingLoading(false);
+        setBookingStep('form');
+        return;
+      }
+
       // 1. Send the request
       const { error: reqError } = await supabase
         .from('requests')
@@ -161,7 +262,7 @@ const PatientProviders = () => {
           provider_id: selectedProvider.id,
           service: bookingForm.service,
           date: bookingForm.date,
-          time: bookingForm.time + ':00', // Time column expects HH:MM:SS
+          time: bookingForm.time + ':00',
           status: 'Pending',
           price: String(selectedProvider.price_per_service || 0),
           notes: bookingForm.notes
@@ -185,6 +286,7 @@ const PatientProviders = () => {
     } catch (err) {
       console.error('Error sending request:', err);
       toast.error('Failed to send booking request. Please try again.');
+      setBookingStep('form');
     } finally {
       setBookingLoading(false);
     }
@@ -303,7 +405,9 @@ const PatientProviders = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setSelectedProvider(null)}
+            onClick={() => {
+              if (bookingStep === 'form') setSelectedProvider(null);
+            }}
           >
             <motion.div 
               className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full p-8 relative my-8"
@@ -313,39 +417,46 @@ const PatientProviders = () => {
               onClick={e => e.stopPropagation()}
             >
               <button 
-                onClick={() => setSelectedProvider(null)}
+                onClick={() => {
+                  if (bookingStep === 'confirm') {
+                    setBookingStep('form');
+                  } else {
+                    setSelectedProvider(null);
+                  }
+                }}
                 className="absolute top-6 right-6 p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
 
               <div className="mb-8 pr-12">
-                <h2 className="text-2xl font-bold text-slate-900">Book Appointment</h2>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {bookingStep === 'form' ? 'Book Appointment' : 'Confirm Booking'}
+                </h2>
                 <p className="text-slate-500 mt-1">with <span className="font-bold text-primary">{selectedProvider.full_name}</span></p>
               </div>
 
-              <form onSubmit={handleBookingSubmit} className="space-y-6">
-                {/* Service Selection */}
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Select Service</label>
-                  <select 
-                    required
-                    value={bookingForm.service}
-                    onChange={e => setBookingForm({...bookingForm, service: e.target.value})}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
-                  >
-                    {selectedProvider.services?.length > 0 ? (
-                      selectedProvider.services.map(s => (
-                        <option key={s} value={s}>{s} (₱{selectedProvider.price_per_service})</option>
-                      ))
-                    ) : (
-                      <option value="General Care">General Care</option>
-                    )}
-                  </select>
-                </div>
+              {/* Step 1: Booking Form */}
+              {bookingStep === 'form' && (
+                <form onSubmit={handleReviewBooking} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Select Service</label>
+                    <select 
+                      required
+                      value={bookingForm.service}
+                      onChange={e => setBookingForm({...bookingForm, service: e.target.value})}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
+                    >
+                      {selectedProvider.services?.length > 0 ? (
+                        selectedProvider.services.map(s => (
+                          <option key={s} value={s}>{s} (₱{selectedProvider.price_per_service})</option>
+                        ))
+                      ) : (
+                        <option value="General Care">General Care</option>
+                      )}
+                    </select>
+                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Date */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Date</label>
                     <div className="relative">
@@ -355,75 +466,163 @@ const PatientProviders = () => {
                         required
                         min={new Date().toISOString().split('T')[0]}
                         value={bookingForm.date}
-                        onChange={e => setBookingForm({...bookingForm, date: e.target.value})}
+                        onChange={e => {
+                          setBookingForm({...bookingForm, date: e.target.value, time: ''});
+                        }}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
                       />
                     </div>
                   </div>
 
-                  {/* Time */}
+                  {/* Time Slot Selection */}
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 ml-1">Proposed Time</label>
+                    <label className="text-sm font-bold text-slate-700 ml-1">Available Time Slots</label>
+                    {!bookingForm.date ? (
+                      <p className="text-sm text-slate-400 ml-1">Select a date to see available slots.</p>
+                    ) : loadingSlots ? (
+                      <p className="text-sm text-slate-400 ml-1">Checking availability...</p>
+                    ) : availableSlots.length === 0 ? (
+                      <p className="text-sm text-slate-400 ml-1">No available slots for this date.</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {availableSlots.map(slot => (
+                          <button
+                            key={slot.time}
+                            type="button"
+                            disabled={!slot.available}
+                            onClick={() => setBookingForm({...bookingForm, time: slot.time})}
+                            className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all border ${
+                              bookingForm.time === slot.time
+                                ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                                : slot.available
+                                  ? 'bg-slate-50 text-slate-700 border-slate-200 hover:border-primary hover:text-primary'
+                                  : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                            }`}
+                          >
+                            {new Date(`2000-01-01T${slot.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-slate-700 ml-1">Message for Provider (Optional)</label>
                     <div className="relative">
-                      <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                      <input 
-                        type="time" 
-                        required
-                        value={bookingForm.time}
-                        onChange={e => setBookingForm({...bookingForm, time: e.target.value})}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                      <FileText className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
+                      <textarea 
+                        value={bookingForm.notes}
+                        onChange={e => setBookingForm({...bookingForm, notes: e.target.value})}
+                        placeholder="Any specific instructions, conditions, or details?"
+                        rows={3}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Notes */}
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Message for Provider (Optional)</label>
-                  <div className="relative">
-                    <FileText className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
-                    <textarea 
-                      value={bookingForm.notes}
-                      onChange={e => setBookingForm({...bookingForm, notes: e.target.value})}
-                      placeholder="Any specific instructions, conditions, or details?"
-                      rows={3}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
-                    />
+                  <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-2xl flex items-start gap-3">
+                    <div className="pt-0.5">
+                      <input 
+                        type="checkbox" 
+                        id="consent"
+                        required
+                        checked={bookingForm.consent}
+                        onChange={e => setBookingForm({...bookingForm, consent: e.target.checked})}
+                        className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
+                      />
+                    </div>
+                    <label htmlFor="consent" className="text-sm text-slate-600 leading-tight cursor-pointer">
+                      I consent to sharing my medical profile and home address with <span className="font-bold">{selectedProvider.full_name}</span> for the purpose of this home care service.
+                    </label>
                   </div>
-                </div>
 
-                {/* Consent Checkbox */}
-                <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-2xl flex items-start gap-3">
-                  <div className="pt-0.5">
-                    <input 
-                      type="checkbox" 
-                      id="consent"
-                      required
-                      checked={bookingForm.consent}
-                      onChange={e => setBookingForm({...bookingForm, consent: e.target.checked})}
-                      className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
-                    />
+                  <div className="pt-2">
+                    <button 
+                      type="submit"
+                      className="w-full btn-primary py-4 rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 className="w-5 h-5" />
+                      Review Booking
+                    </button>
                   </div>
-                  <label htmlFor="consent" className="text-sm text-slate-600 leading-tight cursor-pointer">
-                    I consent to sharing my medical profile and home address with <span className="font-bold">{selectedProvider.full_name}</span> for the purpose of this home care service.
-                  </label>
-                </div>
+                </form>
+              )}
 
-                <div className="pt-2">
-                  <button 
-                    type="submit"
-                    disabled={bookingLoading || !bookingForm.consent}
-                    className="w-full btn-primary py-4 rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {bookingLoading ? 'Submitting...' : (
-                      <>
-                        <CheckCircle2 className="w-5 h-5" />
-                        Send Booking Request
-                      </>
+              {/* Step 2: Confirmation */}
+              {bookingStep === 'confirm' && (
+                <div className="space-y-6">
+                  <div className="bg-slate-50 rounded-2xl p-5 space-y-4 border border-slate-100">
+                    <div className="flex items-center gap-3 pb-3 border-b border-slate-200">
+                      <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-primary font-bold">
+                        {selectedProvider.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900">{selectedProvider.full_name}</p>
+                        <p className="text-sm text-slate-500">{selectedProvider.location || 'Muntinlupa City'}</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Service</p>
+                        <p className="font-bold text-slate-800 mt-0.5">{bookingForm.service}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Fee</p>
+                        <p className="font-bold text-slate-800 mt-0.5">₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Date</p>
+                        <p className="font-bold text-slate-800 mt-0.5">
+                          {new Date(bookingForm.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase font-bold text-slate-400">Time</p>
+                        <p className="font-bold text-slate-800 mt-0.5">
+                          {new Date(`2000-01-01T${bookingForm.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+
+                    {bookingForm.notes && (
+                      <div className="pt-3 border-t border-slate-200">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Your Message</p>
+                        <p className="text-sm text-slate-600 italic">"{bookingForm.notes}"</p>
+                      </div>
                     )}
-                  </button>
+
+                    <div className="pt-3 border-t border-slate-200 flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-green-700 font-semibold">Data sharing consent provided</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setBookingStep('form')}
+                      disabled={bookingLoading}
+                      className="w-full py-4 border border-slate-100 hover:bg-slate-50 rounded-2xl font-bold text-slate-600 transition-all text-sm disabled:opacity-50"
+                    >
+                      Go Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBookingSubmit}
+                      disabled={bookingLoading}
+                      className="w-full btn-primary py-4 rounded-2xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {bookingLoading ? 'Submitting...' : (
+                        <>
+                          <CheckCircle2 className="w-5 h-5" />
+                          Confirm Booking
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </form>
+              )}
             </motion.div>
           </motion.div>
         )}

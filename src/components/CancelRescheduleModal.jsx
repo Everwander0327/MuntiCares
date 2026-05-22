@@ -1,8 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, AlertTriangle, CalendarClock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+
+const WORKING_HOURS_START = 9;
+const WORKING_HOURS_END = 17;
+const SLOT_DURATION_MINUTES = 60;
 
 const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) => {
   const [mode, setMode] = useState('choose'); // 'choose' | 'cancel' | 'reschedule'
@@ -10,6 +14,53 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
   const [newTime, setNewTime] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  useEffect(() => {
+    if (mode !== 'reschedule' || !newDate || !request?.providerId) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    const fetchAvailableSlots = async () => {
+      setLoadingSlots(true);
+      try {
+        const { data: existingBookings } = await supabase
+          .from('requests')
+          .select('time')
+          .neq('id', request.id)
+          .eq('provider_id', request.providerId)
+          .eq('date', newDate)
+          .in('status', ['Accepted', 'On The Way', 'Arrived']);
+
+        const bookedTimes = (existingBookings || []).map(b => b.time);
+
+        const slots = [];
+        for (let hour = WORKING_HOURS_START; hour < WORKING_HOURS_END; hour++) {
+          const time = `${String(hour).padStart(2, '0')}:00`;
+          const isBooked = bookedTimes.some(bt => {
+            const bh = parseInt(bt.split(':')[0]);
+            const bm = parseInt(bt.split(':')[1]);
+            const slotStart = hour;
+            const slotEnd = hour + SLOT_DURATION_MINUTES / 60;
+            const bookingTime = bh + bm / 60;
+            return bookingTime >= slotStart && bookingTime < slotEnd;
+          });
+          slots.push({ time, available: !isBooked });
+        }
+
+        setAvailableSlots(slots);
+      } catch (err) {
+        console.error('Error fetching slots for reschedule:', err);
+        setAvailableSlots([]);
+      } finally {
+        setLoadingSlots(false);
+      }
+    };
+
+    fetchAvailableSlots();
+  }, [mode, newDate, request?.id, request?.providerId]);
 
   if (!isOpen || !request) return null;
 
@@ -43,6 +94,22 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
     setSubmitting(true);
     try {
+      const { data: conflict } = await supabase
+        .from('requests')
+        .select('id')
+        .neq('id', request.id)
+        .eq('provider_id', request.providerId)
+        .eq('date', newDate)
+        .in('status', ['Accepted', 'On The Way', 'Arrived'])
+        .gte('time', newTime + ':00')
+        .lt('time', `${String(parseInt(newTime.split(':')[0]) + 1).padStart(2, '0')}:00`);
+
+      if (conflict && conflict.length > 0) {
+        toast.error('This time slot is no longer available. Please choose another.');
+        setSubmitting(false);
+        return;
+      }
+
       const { error } = await supabase
         .from('requests')
         .update({ 
@@ -72,6 +139,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
     setCancelReason('');
     setNewDate('');
     setNewTime('');
+    setAvailableSlots([]);
     onClose();
   };
 
@@ -185,33 +253,56 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                 <p className="text-sm text-slate-500 mt-1">Pick a new date and time below</p>
               </div>
 
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" /> New Date
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    min={new Date().toISOString().split('T')[0]}
-                    value={newDate}
-                    onChange={e => setNewDate(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm"
-                  />
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" /> New Date
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      min={new Date().toISOString().split('T')[0]}
+                      value={newDate}
+                      onChange={e => {
+                        setNewDate(e.target.value);
+                        setNewTime('');
+                      }}
+                      className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5" /> New Time Slot
+                    </label>
+                    {!newDate ? (
+                      <p className="text-sm text-slate-400 ml-1">Select a date to see available slots.</p>
+                    ) : loadingSlots ? (
+                      <p className="text-sm text-slate-400 ml-1">Checking availability...</p>
+                    ) : availableSlots.length === 0 ? (
+                      <p className="text-sm text-slate-400 ml-1">No available slots for this date.</p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {availableSlots.map(slot => (
+                          <button
+                            key={slot.time}
+                            type="button"
+                            disabled={!slot.available}
+                            onClick={() => setNewTime(slot.time)}
+                            className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all border ${
+                              newTime === slot.time
+                                ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
+                                : slot.available
+                                  ? 'bg-slate-50 text-slate-700 border-slate-200 hover:border-primary hover:text-primary'
+                                  : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                            }`}
+                          >
+                            {new Date(`2000-01-01T${slot.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5" /> New Time
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={newTime}
-                    onChange={e => setNewTime(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm"
-                  />
-                </div>
-              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <button
