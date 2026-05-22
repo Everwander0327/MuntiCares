@@ -4,6 +4,7 @@ import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, Fil
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useCountUp from '../../hooks/useCountUp';
+import usePatientRequests from '../../hooks/usePatientRequests';
 import { SkeletonPage } from '../../components/Skeleton';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -52,97 +53,64 @@ const PatientDashboard = () => {
   const [activeVisit, setActiveVisit] = useState(null);
   const { user } = useAuth();
 
+  // Use shared hook for requests + realtime
+  const { requests: fetchedRequests, loading: requestsLoading } = usePatientRequests(user?.id || null);
+
   useEffect(() => {
     let channel;
 
-    const fetchData = async () => {
-      if (!user) return;
+    // map fetchedRequests into local structures used by this component
+    if (!requestsLoading) {
+      if (fetchedRequests && fetchedRequests.length > 0) {
+      const formattedRequests = (fetchedRequests || []).map(req => {
+        let timeStr = '';
+        try { if (req.time) timeStr = new Date(`2000-01-01T${req.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { timeStr = req.time || ''; }
+        return {
+          provider: req.provider || 'Unknown',
+          service: req.service,
+          date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: timeStr,
+          status: req.status,
+        };
+      });
 
-      try {
-        // Fetch all requests for this patient, join with provider info
-        const { data: requestsData, error: requestsError } = await supabase
-          .from('requests')
-          .select('*, provider:provider_id(full_name)')
-          .eq('patient_id', user.id)
-          .order('created_at', { ascending: false });
+      setRequests(formattedRequests);
 
-        if (requestsError) throw requestsError;
+      const accepted = (fetchedRequests || []).filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
+      const pending = (fetchedRequests || []).filter(r => r.status === 'Pending').length;
+      setStats({ active: accepted + pending, accepted, pending });
 
-        const formattedRequests = (requestsData || []).map(req => {
-          let timeStr = '';
-          try {
-            if (req.time) timeStr = new Date(`2000-01-01T${req.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-          } catch { timeStr = req.time || ''; }
-          return {
-            provider: req.provider?.full_name || 'Unknown',
-            service: req.service,
-            date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            time: timeStr,
-            status: req.status,
-          };
-        });
-
-        setRequests(formattedRequests);
-
-        // Calculate stats
-        const accepted = (requestsData || []).filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
-        const pending = (requestsData || []).filter(r => r.status === 'Pending').length;
-        const completed = (requestsData || []).filter(r => r.status === 'Completed').length;
-
-        setStats({ active: accepted + pending, accepted, pending });
-
-        // Find the most active visit (prioritize On The Way > Arrived > Accepted)
-        const priorityOrder = ['On The Way', 'Arrived', 'Accepted'];
-        let activeReq = null;
-        for (const status of priorityOrder) {
-          activeReq = (requestsData || []).find(r => r.status === status);
-          if (activeReq) break;
-        }
-
-        if (activeReq) {
-          let timeLabel = '';
-          try {
-            if (activeReq.time) timeLabel = new Date(`2000-01-01T${activeReq.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-          } catch { timeLabel = activeReq.time || ''; }
-
-          setActiveVisit({
-            providerId: activeReq.provider_id,
-            provider: activeReq.provider?.full_name || 'Unknown',
-            service: activeReq.service,
-            date: new Date(activeReq.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
-            time: timeLabel,
-            status: activeReq.status,
-          });
-        } else {
-          setActiveVisit(null);
-        }
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-      } finally {
-        setLoading(false);
+      const priorityOrder = ['On The Way', 'Arrived', 'Accepted'];
+      let activeReq = null;
+      for (const status of priorityOrder) {
+        activeReq = (fetchedRequests || []).find(r => r.status === status);
+        if (activeReq) break;
       }
-    };
 
-    fetchData();
+      if (activeReq) {
+        let timeLabel = '';
+        try { if (activeReq.time) timeLabel = new Date(`2000-01-01T${activeReq.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { timeLabel = activeReq.time || ''; }
+        setActiveVisit({
+          providerId: activeReq.providerId,
+          provider: activeReq.provider || 'Unknown',
+          service: activeReq.service,
+          date: new Date(activeReq.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          time: timeLabel,
+          status: activeReq.status,
+        });
+      } else {
+        setActiveVisit(null);
+      }
 
-    if (user) {
-      // Set up real-time subscription
-      channel = supabase
-        .channel('patient-requests-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'requests',
-            filter: `patient_id=eq.${user.id}`
-          },
-          () => {
-            // Re-fetch data when any change happens to this patient's requests
-            fetchData();
-          }
-        )
-        .subscribe();
+      setLoading(false);
+      } else {
+        // no requests
+        setRequests([]);
+        setStats({ active: 0, accepted: 0, pending: 0 });
+        setActiveVisit(null);
+      setLoading(false);
+      }
+
     }
 
     return () => {
@@ -150,7 +118,7 @@ const PatientDashboard = () => {
         supabase.removeChannel(channel);
       }
     };
-  }, [user]);
+  }, [fetchedRequests, requestsLoading, user]);
 
   if (loading) {
     return (

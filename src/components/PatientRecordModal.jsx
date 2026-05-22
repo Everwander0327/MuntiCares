@@ -152,9 +152,14 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
     });
   };
 
-  const getFileUrl = (filePath) => {
-    const { data } = supabase.storage.from('medical_documents').getPublicUrl(filePath);
-    return data.publicUrl;
+  const getFileUrl = async (filePath) => {
+    try {
+      const { getSignedUrl } = await import('../lib/supabaseHelpers');
+      return await getSignedUrl(filePath, 3600);
+    } catch (err) {
+      console.warn('Could not get signed url', err);
+      return null;
+    }
   };
 
   if (!isOpen) return null;
@@ -261,15 +266,16 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                               <p className="font-bold text-slate-800 truncate">{doc.document_title}</p>
                               <p className="text-xs text-slate-500">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                             </div>
-                            <a 
-                              href={getFileUrl(doc.file_path)} 
-                              target="_blank" 
-                              rel="noreferrer"
+                            <button
+                              onClick={async () => {
+                                const url = await getFileUrl(doc.file_path);
+                                if (url) window.open(url, '_blank');
+                              }}
                               className="p-2 text-primary hover:bg-blue-50 rounded-lg transition-colors"
                               title="View Document"
                             >
                               <ExternalLink className="w-5 h-5" />
-                            </a>
+                            </button>
                           </div>
                         ))}
                       </div>

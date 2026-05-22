@@ -4,6 +4,7 @@ import { Clock, MapPin, MessageSquare, Star, XCircle, FileUp } from 'lucide-reac
 import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import { useAuth } from '../../contexts/AuthContext';
+import usePatientRequests from '../../hooks/usePatientRequests';
 import { supabase } from '../../lib/supabase';
 import { Link } from 'react-router-dom';
 import ReviewModal from '../../components/ReviewModal';
@@ -189,36 +190,17 @@ const PatientRequests = () => {
     }
   };
 
+  // Use the shared hook for fetching and realtime
+  const { requests: fetchedRequests, loading: requestsLoading, refetch } = usePatientRequests(user?.id || null);
+
   useEffect(() => {
-    let channel;
-
-    fetchRequests();
-
-    if (user) {
-      // Set up real-time subscription
-      channel = supabase
-        .channel('patient-requests-list-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'requests',
-            filter: `patient_id=eq.${user.id}`
-          },
-          () => {
-            fetchRequests();
-          }
-        )
-        .subscribe();
+    if (!requestsLoading) {
+      setRequests(fetchedRequests || []);
+      setLoading(false);
+    } else {
+      setLoading(true);
     }
-
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
-  }, [user]);
+  }, [fetchedRequests, requestsLoading]);
 
   const filteredRequests = requests.filter(r => filter === 'All' || r.status === filter);
 

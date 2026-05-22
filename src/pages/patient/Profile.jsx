@@ -8,6 +8,7 @@ import { SkeletonPage } from '../../components/Skeleton';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
+import { getSignedUrl } from '../../lib/supabaseHelpers';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -318,8 +319,7 @@ const PatientProfile = () => {
           const d = documents[i];
           const ext = d.document_title.split('.').pop().toLowerCase();
           const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
-          const { data: urlData } = supabase.storage.from('medical_documents').getPublicUrl(d.file_path);
-          const publicUrl = urlData?.publicUrl;
+          const publicUrl = await getSignedUrl(d.file_path, 3600);
 
           checkPage(isImage ? 80 : 14);
           doc.setFont('helvetica', 'bold');
@@ -342,21 +342,21 @@ const PatientProfile = () => {
               const maxH = 60;
               doc.addImage(base64, imgFormat, 14, y, maxW, maxH, undefined, 'MEDIUM');
               y += maxH + 6;
-            } catch (imgErr) {
-              console.warn('Could not embed image:', imgErr);
-              doc.setFont('helvetica', 'normal');
-              doc.setTextColor(37, 99, 235);
-              doc.textWithLink('    ↳ View/Download File', 14, y, { url: publicUrl });
-              doc.setTextColor(30, 41, 59);
-              y += 7;
-            }
-          } else if (publicUrl) {
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(37, 99, 235);
-            doc.textWithLink('    ↳ View/Download File', 14, y, { url: publicUrl });
-            doc.setTextColor(30, 41, 59);
-            y += 7;
-          }
+              } catch (imgErr) {
+               console.warn('Could not embed image:', imgErr);
+               doc.setFont('helvetica', 'normal');
+               doc.setTextColor(37, 99, 235);
+                if (publicUrl) doc.textWithLink('    ↳ View/Download File', 14, y, { url: publicUrl });
+               doc.setTextColor(30, 41, 59);
+               y += 7;
+             }
+           } else if (publicUrl) {
+             doc.setFont('helvetica', 'normal');
+             doc.setTextColor(37, 99, 235);
+             doc.textWithLink('    ↳ View/Download File', 14, y, { url: publicUrl });
+             doc.setTextColor(30, 41, 59);
+             y += 7;
+           }
         }
       }
 
@@ -401,8 +401,7 @@ const PatientProfile = () => {
           }
 
           if (note.attachment_url) {
-             const { data: urlData } = supabase.storage.from('medical_documents').getPublicUrl(note.attachment_url);
-             const publicUrl = urlData?.publicUrl;
+              const publicUrl = await getSignedUrl(note.attachment_url, 3600);
              const ext = note.attachment_url.split('.').pop().toLowerCase();
              const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
 
@@ -426,20 +425,20 @@ const PatientProfile = () => {
                   const maxH = 60;
                   doc.addImage(base64, imgFormat, 14, y, maxW, maxH, undefined, 'MEDIUM');
                   y += maxH;
-                } catch (imgErr) {
-                  console.warn('Could not embed note attachment:', imgErr);
-                  doc.setFont('helvetica', 'normal');
-                  doc.setTextColor(37, 99, 235);
-                  doc.textWithLink('↳ View Attached File', 14, y, { url: publicUrl });
-                  doc.setTextColor(30, 41, 59);
-                }
-             } else if (publicUrl) {
+                   } catch (imgErr) {
+                    console.warn('Could not embed note attachment:', imgErr);
+                    doc.setFont('helvetica', 'normal');
+                    doc.setTextColor(37, 99, 235);
+                    if (publicUrl) doc.textWithLink('↳ View Attached File', 14, y, { url: publicUrl });
+                    doc.setTextColor(30, 41, 59);
+                  }
+               } else if (publicUrl) {
                   checkPage(10);
                   doc.setFont('helvetica', 'normal');
                   doc.setTextColor(37, 99, 235);
                   doc.textWithLink('↳ View Attached File', 14, y, { url: publicUrl });
                   doc.setTextColor(30, 41, 59);
-             }
+               }
           }
           
           y += 6;
@@ -901,17 +900,19 @@ const PatientProfile = () => {
                         </div>
                       )}
 
-                      {note.attachment_url && (
-                        <a 
-                          href={supabase.storage.from('medical_documents').getPublicUrl(note.attachment_url).data?.publicUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 text-sm text-primary font-bold hover:underline"
-                        >
-                          <FileText className="w-4 h-4" />
-                          View Attachment
-                        </a>
-                      )}
+                       {note.attachment_url && (
+                         <button
+                           type="button"
+                           onClick={async () => {
+                             const url = await getSignedUrl(note.attachment_url, 3600);
+                             if (url) window.open(url, '_blank');
+                           }}
+                           className="inline-flex items-center gap-2 text-sm text-primary font-bold hover:underline"
+                         >
+                           <FileText className="w-4 h-4" />
+                           View Attachment
+                         </button>
+                       )}
                     </div>
                   ))}
                 </div>
