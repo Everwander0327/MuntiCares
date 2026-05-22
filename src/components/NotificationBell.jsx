@@ -214,36 +214,35 @@ const NotificationBell = () => {
       if (prevNotifsRef.current.length > 0) {
         const newlyAdded = notifs.filter(n => !prevNotifsRef.current.some(pn => pn.id === n.id));
         newlyAdded.forEach(notif => {
-          const ageMs = Date.now() - new Date(notif.time).getTime();
-          if (ageMs < 12000) { // Only toast if event is very recent (under 12 seconds)
-            let icon = '🔔';
-            if (notif.type === 'request_accepted') icon = '✅';
-            else if (notif.type === 'status_on_the_way') icon = '🚗';
-            else if (notif.type === 'status_arrived') icon = '🏠';
-            else if (notif.type === 'status_completed') icon = '⭐';
-            else if (notif.type === 'request_rejected') icon = '❌';
-            else if (notif.type === 'new_request') icon = '📋';
-            else if (notif.type === 'request_cancelled') icon = '🚫';
+          let icon = '🔔';
+          if (notif.type === 'request_accepted') icon = '✅';
+          else if (notif.type === 'status_on_the_way') icon = '🚗';
+          else if (notif.type === 'status_arrived') icon = '🏠';
+          else if (notif.type === 'status_completed') icon = '⭐';
+          else if (notif.type === 'request_rejected') icon = '❌';
+          else if (notif.type === 'new_request') icon = '📋';
+          else if (notif.type === 'request_cancelled') icon = '🚫';
 
-            toast(
-              <div>
-                <p className="font-bold text-slate-900 text-xs">{notif.title}</p>
-                <p className="text-slate-500 text-[11px] font-normal mt-0.5">{notif.message}</p>
-              </div>,
-              {
-                icon,
-                style: {
-                  borderRadius: '1rem',
-                  background: '#fff',
-                  color: '#1e293b',
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
-                  border: '1px solid #f1f5f9',
-                  padding: '10px 14px'
-                },
-                duration: 4000
-              }
-            );
-          }
+          toast(
+            <div>
+              <p className="font-bold text-slate-900 text-xs">{notif.title}</p>
+              <p className="text-slate-500 text-[11px] font-normal mt-0.5">{notif.message}</p>
+            </div>,
+            {
+              icon,
+              style: {
+                borderRadius: '1rem',
+                background: '#fff',
+                color: '#1e293b',
+                boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
+                border: '1px solid #f1f5f9',
+                padding: '10px 14px'
+              },
+              duration: 4000
+            }
+          );
+
+          fireBrowserNotification(notif.title, notif.message);
         });
       }
       
@@ -257,6 +256,14 @@ const NotificationBell = () => {
     } catch (err) {
       console.error('Error fetching notifications:', err);
     }
+  };
+
+  const fireBrowserNotification = (title, body) => {
+    try {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/vite.svg' });
+      }
+    } catch {}
   };
 
   useEffect(() => {
@@ -335,6 +342,9 @@ const NotificationBell = () => {
       <button 
         onClick={() => {
           setIsOpen(!isOpen);
+          if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+          }
         }}
         className="p-2 text-slate-400 hover:text-primary transition-colors relative"
       >

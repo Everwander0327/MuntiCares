@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, ShieldCheck, Calendar, ChevronLeft, ChevronRight, Navigation, Home, Stethoscope, MapPin, MessageSquare, MessageCircle, RefreshCw, Star, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -8,6 +8,7 @@ import usePatientRequests from '../../hooks/usePatientRequests';
 import { SkeletonPage } from '../../components/Skeleton';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import toast from 'react-hot-toast';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -58,6 +59,7 @@ const PatientDashboard = () => {
   const pullDistRef = React.useRef(0);
   const isPulling = React.useRef(false);
   const mainRef = React.useRef(null);
+  const prevStatusesRef = useRef({});
   const { user } = useAuth();
 
   // Use shared hook for requests + realtime
@@ -108,6 +110,24 @@ const PatientDashboard = () => {
       } else {
         setActiveVisit(null);
       }
+
+      (fetchedRequests || []).forEach(req => {
+        const prev = prevStatusesRef.current[req.id];
+        if (prev && prev !== req.status) {
+          const providerName = req.provider || 'A provider';
+          const msgMap = {
+            'Accepted': `${providerName} accepted your request!`,
+            'Cancelled': `${providerName} cancelled your request.`,
+            'Rejected': `${providerName} declined your request.`,
+            'On The Way': `${providerName} is on the way!`,
+            'Arrived': `${providerName} has arrived!`,
+            'Completed': `Your session with ${providerName} is complete.`,
+          };
+          const msg = msgMap[req.status];
+          if (msg) toast(msg, { icon: '🔄', duration: 4000 });
+        }
+        prevStatusesRef.current[req.id] = req.status;
+      });
 
       setLoading(false);
       } else {

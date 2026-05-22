@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Send, UserCircle, Loader2, Check, CheckCheck, Video, X } from 'lucide-react';
+import { Send, UserCircle, Loader2, Check, CheckCheck, Video, X, ArrowLeft, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { JitsiMeeting } from '@jitsi/react-sdk';
 
@@ -16,7 +16,24 @@ const addReadMsgIds = (userId, ids) => {
   } catch {}
 };
 
-const ChatWindow = ({ currentUser, otherUser }) => {
+const formatDateLabel = (dateStr) => {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+};
+
+const shouldShowTimestamp = (msg, nextMsg) => {
+  if (!nextMsg) return true;
+  if (msg.sender_id !== nextMsg.sender_id) return true;
+  const diff = new Date(nextMsg.created_at) - new Date(msg.created_at);
+  return diff > 5 * 60 * 1000;
+};
+
+const ChatWindow = ({ currentUser, otherUser, onBack }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -24,14 +41,15 @@ const ChatWindow = ({ currentUser, otherUser }) => {
   const [isOnline, setIsOnline] = useState(false);
   const [isVideoCallActive, setIsVideoCallActive] = useState(false);
   const [incomingCall, setIncomingCall] = useState(false);
-  
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+
   const messagesEndRef = useRef(null);
+  const scrollRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const channelRef = useRef(null);
   const ringtoneRef = useRef(null);
 
   useEffect(() => {
-    // Setup Ringtone Audio
     ringtoneRef.current = new Audio('https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg');
     ringtoneRef.current.loop = true;
     return () => {
@@ -47,13 +65,12 @@ const ChatWindow = ({ currentUser, otherUser }) => {
     }
   };
 
-  // Auto-scroll when messages update or typing indicator appears
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
 
   useEffect(() => {
-    if (!currentUser || !otherUser) return;
+    if (!currentUser?.id || !otherUser?.id) return;
 
     const fetchMessages = async () => {
       setLoading(true);
@@ -62,9 +79,9 @@ const ChatWindow = ({ currentUser, otherUser }) => {
         .from('messages')
         .delete()
         .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-      
+
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('messages')
         .select('*')
         .gte('created_at', yesterday)
@@ -73,7 +90,6 @@ const ChatWindow = ({ currentUser, otherUser }) => {
 
       if (data) {
         setMessages(data);
-        
         const unreadIds = data.filter(m => m.receiver_id === currentUser.id && !m.is_read).map(m => m.id);
         if (unreadIds.length > 0) {
           addReadMsgIds(currentUser.id, unreadIds);
@@ -85,15 +101,13 @@ const ChatWindow = ({ currentUser, otherUser }) => {
 
     fetchMessages();
 
-    // 2. Setup Realtime Channel (Database, Presence, Broadcast)
-    const roomName = `chat_room`; // Shared room for presence
+    const roomName = `chat_${currentUser.id}_${otherUser.id}`;
     const channel = supabase.channel(roomName, {
       config: { presence: { key: currentUser.id }, broadcast: { self: true } }
     });
     channelRef.current = channel;
 
     channel
-      // Listen for new messages
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
         const msg = payload.new;
         if (
@@ -105,43 +119,34 @@ const ChatWindow = ({ currentUser, otherUser }) => {
             addReadMsgIds(currentUser.id, [msg.id]);
           }
           setMessages(prev => {
-            // Prevent duplicates due to optimistic UI
             if (prev.find(m => m.id === msg.id)) return prev;
-            
-            // Look for the optimistic temp message (starts with 'temp-') and replace it with the real DB message
-            const tempMatch = prev.find(m => 
-              typeof m.id === 'string' && 
-              m.id.startsWith('temp-') && 
-              m.content === msg.content && 
+            const tempMatch = prev.find(m =>
+              typeof m.id === 'string' &&
+              m.id.startsWith('temp-') &&
+              m.content === msg.content &&
               m.sender_id === msg.sender_id
             );
-            
             if (tempMatch) {
-              return prev.map(m => m.id === tempMatch.id ? msg : m);
+              return prev.map(m => m.id === tempMatch.id ? { ...msg, status: 'sent' } : m);
             }
-            
             return [...prev, msg];
           });
           setTimeout(scrollToBottom, 100);
         }
       })
-      // Listen for message updates (e.g., when they read our message)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
-        setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m));
+        setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...payload.new, status: payload.new.is_read ? 'read' : 'sent' } : m));
       })
-      // Track online status via Presence
       .on('presence', { event: 'sync' }, () => {
         const state = channel.presenceState();
         const otherUserPresent = Object.values(state).flat().some(p => p.presence_ref === otherUser.id || p.user_id === otherUser.id || state[otherUser.id]);
         setIsOnline(!!state[otherUser.id] || otherUserPresent);
       })
-      // Listen for Typing events via Broadcast
       .on('broadcast', { event: 'typing' }, (payload) => {
         if (payload.payload.sender_id === otherUser.id && payload.payload.receiver_id === currentUser.id) {
           setIsTyping(payload.payload.isTyping);
         }
       })
-      // Listen for INSTANT new messages via Broadcast (bypasses DB latency)
       .on('broadcast', { event: 'new_message' }, (payload) => {
         const msg = payload.payload;
         if (msg.sender_id === otherUser.id && msg.receiver_id === currentUser.id) {
@@ -152,7 +157,6 @@ const ChatWindow = ({ currentUser, otherUser }) => {
           setTimeout(scrollToBottom, 50);
         }
       })
-      // Listen for incoming call event
       .on('broadcast', { event: 'incoming_call' }, (payload) => {
         if (payload.payload.sender_id === otherUser.id && payload.payload.receiver_id === currentUser.id) {
           setIncomingCall(true);
@@ -170,18 +174,20 @@ const ChatWindow = ({ currentUser, otherUser }) => {
     };
   }, [currentUser, otherUser]);
 
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    setIsScrolledUp(scrollHeight - scrollTop - clientHeight > 100);
+  };
+
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
-    
-    // Broadcast typing status
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
         event: 'typing',
         payload: { sender_id: currentUser.id, receiver_id: otherUser.id, isTyping: true }
       });
-
-      // Clear typing status after 2 seconds of stopping
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
         channelRef.current.send({
@@ -195,55 +201,54 @@ const ChatWindow = ({ currentUser, otherUser }) => {
 
   const sendMessage = async (text) => {
     if (!text.trim()) return;
-    
+
     const tempMsg = {
       id: `temp-${Date.now()}`,
       sender_id: currentUser.id,
       receiver_id: otherUser.id,
       content: text,
       created_at: new Date().toISOString(),
-      is_read: false
+      is_read: false,
+      status: 'sending',
     };
 
     if (channelRef.current) {
-       // Stop typing indicator
-       channelRef.current.send({ type: 'broadcast', event: 'typing', payload: { sender_id: currentUser.id, receiver_id: otherUser.id, isTyping: false } });
-       // BROADCAST INSTANTLY to receiver (bypasses database latency)
-       channelRef.current.send({ type: 'broadcast', event: 'new_message', payload: tempMsg });
+      channelRef.current.send({ type: 'broadcast', event: 'typing', payload: { sender_id: currentUser.id, receiver_id: otherUser.id, isTyping: false } });
+      channelRef.current.send({ type: 'broadcast', event: 'new_message', payload: { ...tempMsg, status: undefined } });
     }
-    
-    setMessages(prev => [...prev, tempMsg]);
+
+    setMessages(prev => [...prev, { ...tempMsg, status: 'sending' }]);
     setTimeout(scrollToBottom, 100);
 
-    await supabase.from('messages').insert([{
+    const { data } = await supabase.from('messages').insert([{
       sender_id: currentUser.id,
       receiver_id: otherUser.id,
       content: text,
-      is_read: false
-    }]);
+      is_read: false,
+    }]).select();
+
+    if (data?.[0]) {
+      setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...data[0], status: 'sent' } : m));
+    }
   };
 
   const handleSend = async (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-
     const msgText = newMessage.trim();
     setNewMessage('');
     clearTimeout(typingTimeoutRef.current);
-    
     await sendMessage(msgText);
   };
 
   const startVideoCall = () => {
     setIsVideoCallActive(true);
     sendMessage("📞 I've started a video consultation. Please click the Video icon at the top right to join the call!");
-    
-    // Broadcast incoming call to the other user
     if (channelRef.current) {
-      channelRef.current.send({ 
-        type: 'broadcast', 
-        event: 'incoming_call', 
-        payload: { sender_id: currentUser.id, receiver_id: otherUser.id } 
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'incoming_call',
+        payload: { sender_id: currentUser.id, receiver_id: otherUser.id }
       });
     }
   };
@@ -256,15 +261,22 @@ const ChatWindow = ({ currentUser, otherUser }) => {
     );
   }
 
-  // Unique Room Name for Jitsi based on sorted user IDs
   const roomName = `MuntiCaresRoom_${[currentUser.id, otherUser.id].sort().join('')}`.replace(/-/g, '');
 
+  const statusIcon = (msg) => {
+    if (typeof msg.id === 'string' && msg.id.startsWith('temp-')) {
+      return <Clock className="w-3 h-3 text-slate-400" />;
+    }
+    if (msg.is_read) return <CheckCheck className="w-3 h-3 text-blue-500" />;
+    return <Check className="w-3 h-3 text-slate-400" />;
+  };
+
   return (
-    <div className="flex flex-col h-full bg-slate-50/50 relative overflow-hidden">
+    <div className="flex flex-col h-full bg-white relative overflow-hidden">
       {/* Incoming Call Overlay */}
       <AnimatePresence>
         {incomingCall && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.9 }}
@@ -280,24 +292,22 @@ const ChatWindow = ({ currentUser, otherUser }) => {
               </div>
             </div>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={() => {
                   ringtoneRef.current?.pause();
                   setIncomingCall(false);
-                  setIsVideoCallActive(true); // Accept Call
+                  setIsVideoCallActive(true);
                 }}
                 className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors shadow-lg shadow-green-500/30 hover:scale-105"
-                title="Accept Call"
               >
                 <Check className="w-6 h-6" />
               </button>
-              <button 
+              <button
                 onClick={() => {
                   ringtoneRef.current?.pause();
                   setIncomingCall(false);
                 }}
                 className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30 hover:scale-105"
-                title="Decline Call"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -309,7 +319,7 @@ const ChatWindow = ({ currentUser, otherUser }) => {
       {/* Video Call Overlay */}
       <AnimatePresence>
         {isVideoCallActive && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
@@ -326,7 +336,7 @@ const ChatWindow = ({ currentUser, otherUser }) => {
                   <p className="text-xs text-slate-400">with {otherUser.name}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsVideoCallActive(false)}
                 className="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors flex items-center gap-2 text-sm font-bold bg-slate-800"
               >
@@ -343,7 +353,7 @@ const ChatWindow = ({ currentUser, otherUser }) => {
                   startWithVideoMuted: false,
                   disableModeratorIndicator: true,
                   enableEmailInStats: false,
-                  prejoinPageEnabled: false // Skip prejoin page for instant connect
+                  prejoinPageEnabled: false,
                 }}
                 interfaceConfigOverwrite={{
                   DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
@@ -353,9 +363,7 @@ const ChatWindow = ({ currentUser, otherUser }) => {
                     'videoquality', 'filmstrip', 'shortcuts', 'tileview'
                   ]
                 }}
-                userInfo={{
-                  displayName: currentUser.name,
-                }}
+                userInfo={{ displayName: currentUser.name }}
                 getIFrameRef={(iframeRef) => {
                   iframeRef.style.height = '100%';
                   iframeRef.style.width = '100%';
@@ -367,29 +375,34 @@ const ChatWindow = ({ currentUser, otherUser }) => {
       </AnimatePresence>
 
       {/* Chat Header */}
-      <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center gap-4 shrink-0 shadow-sm z-10">
+      <div className="px-4 py-3 bg-white border-b border-slate-100 flex items-center gap-3 shrink-0 z-10">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors -ml-1"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
+          </button>
+        )}
         <div className="relative">
           <div className="w-10 h-10 rounded-full bg-blue-100 text-primary flex items-center justify-center font-bold overflow-hidden shrink-0 border border-slate-200">
             {otherUser.photoUrl ? (
-              <img src={otherUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+              <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
             ) : (
               <UserCircle className="w-6 h-6" />
             )}
           </div>
-          {/* Active Dot */}
           <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white transition-colors duration-300 ${isOnline ? 'bg-green-500' : 'bg-slate-300'}`} />
         </div>
-        <div className="flex-1">
-          <h3 className="font-bold text-slate-900 leading-tight">{otherUser.name}</h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-slate-900 leading-tight truncate">{otherUser.name}</h3>
           <p className={`text-xs font-medium transition-colors duration-300 ${isOnline ? 'text-green-500' : 'text-slate-400'}`}>
             {isOnline ? 'Active now' : 'Offline'}
           </p>
         </div>
-        
-        {/* Video Call Button */}
         <button
           onClick={startVideoCall}
-          className="w-12 h-12 rounded-full bg-blue-50 text-primary flex items-center justify-center hover:bg-blue-100 transition-all shadow-sm shrink-0 border border-blue-100 hover:scale-105"
+          className="w-11 h-11 rounded-full bg-blue-50 text-primary flex items-center justify-center hover:bg-blue-100 transition-all shrink-0 border border-blue-100 hover:scale-105"
           title="Start Teleconsultation"
         >
           <Video className="w-5 h-5 fill-current" />
@@ -397,111 +410,151 @@ const ChatWindow = ({ currentUser, otherUser }) => {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-slate-400 mt-10">
-            <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
-              <span className="text-2xl">👋</span>
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto bg-slate-50/50"
+      >
+        <div className="px-4 md:px-6 py-4">
+          {messages.length === 0 ? (
+            <div className="text-center text-slate-400 mt-16">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100">
+                <span className="text-2xl">👋</span>
+              </div>
+              <p className="text-sm font-medium">Say hello to start the conversation!</p>
             </div>
-            <p className="text-sm font-medium">Say hello to start the conversation!</p>
-          </div>
-        ) : (
-          messages.map((msg, idx) => {
-            const isMe = msg.sender_id === currentUser.id;
-            const showAvatar = idx === 0 || messages[idx - 1].sender_id !== msg.sender_id;
+          ) : (
+            <>
+              {messages.map((msg, idx) => {
+                const isMe = msg.sender_id === currentUser.id;
+                const prevMsg = messages[idx - 1];
+                const nextMsg = messages[idx + 1];
+                const showAvatar = !prevMsg || prevMsg.sender_id !== msg.sender_id;
+                const showDate = !prevMsg || new Date(msg.created_at).toDateString() !== new Date(prevMsg.created_at).toDateString();
+                const showTime = shouldShowTimestamp(msg, nextMsg);
 
-            return (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                key={msg.id} 
-                className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${!showAvatar ? 'mt-1' : 'mt-4'}`}
+                return (
+                  <React.Fragment key={msg.id}>
+                    {showDate && (
+                      <div className="flex justify-center my-4">
+                        <span className="text-[11px] font-bold text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
+                          {formatDateLabel(msg.created_at)}
+                        </span>
+                      </div>
+                    )}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'}`}
+                    >
+                      {!isMe && (
+                        <div className={`w-8 h-8 rounded-full bg-blue-100 overflow-hidden shrink-0 mr-2 self-end ${showAvatar ? '' : 'invisible'}`}>
+                          {otherUser.photoUrl ? (
+                            <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-primary font-bold text-xs">
+                              {otherUser.name?.[0] || '?'}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div className={`max-w-[75%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                        <div className={`px-4 py-2.5 relative ${
+                          isMe
+                            ? 'bg-gradient-to-tr from-primary to-blue-500 text-white rounded-2xl rounded-br-sm'
+                            : 'bg-white text-slate-700 border border-slate-100 rounded-2xl rounded-bl-sm shadow-sm'
+                        }`}>
+                          <p className="text-[15px] whitespace-pre-wrap leading-snug">{msg.content}</p>
+                        </div>
+                        {showTime && (
+                          <div className="flex items-center gap-1 mt-1 px-1">
+                            <span className="text-[9px] text-slate-400 font-medium">
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {isMe && (
+                              <span className="text-slate-400">{statusIcon(msg)}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  </React.Fragment>
+                );
+              })}
+
+              {/* 24-Hour Notice */}
+              <div className="flex justify-center my-6">
+                <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase bg-slate-200/50 px-3 py-1 rounded-full">
+                  🔒 Messages disappear after 24 hours
+                </span>
+              </div>
+            </>
+          )}
+
+          {/* Typing Indicator */}
+          <AnimatePresence>
+            {isTyping && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                className="flex justify-start mt-2"
               >
-                {!isMe && (
-                  <div className={`w-8 h-8 rounded-full bg-blue-100 text-primary flex items-center justify-center font-bold shrink-0 mr-2 shadow-sm ${!showAvatar ? 'invisible' : ''}`}>
-                    {otherUser.photoUrl ? (
-                      <img src={otherUser.photoUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      <UserCircle className="w-5 h-5" />
-                    )}
-                  </div>
-                )}
-                
-                <div className={`max-w-[75%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                  <div className={`rounded-2xl px-4 py-2.5 shadow-sm relative ${
-                    isMe 
-                      ? 'bg-gradient-to-tr from-primary to-blue-500 text-white rounded-br-sm' 
-                      : 'bg-white text-slate-700 border border-slate-100 rounded-bl-sm'
-                  }`}>
-                    <p className="text-[15px] whitespace-pre-wrap leading-snug">{msg.content}</p>
-                  </div>
-                  
-                  {/* Timestamp & Seen Indicator */}
-                  <div className="flex items-center gap-1 mt-1 px-1">
-                    <span className="text-[9px] text-slate-400 font-medium">
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    {isMe && (
-                      <span className="text-slate-400">
-                        {msg.is_read ? <CheckCheck className="w-3 h-3 text-blue-500" /> : <Check className="w-3 h-3" />}
-                      </span>
-                    )}
-                  </div>
+                <div className="w-8 h-8 rounded-full bg-blue-100 overflow-hidden mr-2 shadow-sm shrink-0">
+                  {otherUser.photoUrl ? (
+                    <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-primary font-bold text-xs">
+                      {otherUser.name?.[0] || '?'}
+                    </div>
+                  )}
+                </div>
+                <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
+                  <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
                 </div>
               </motion.div>
-            );
-          })
-        )}
+            )}
+          </AnimatePresence>
 
-        {/* 24-Hour Notice (Instagram style) */}
-        {messages.length > 0 && (
-          <div className="flex justify-center mt-6 mb-2">
-            <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase bg-slate-200/50 px-3 py-1 rounded-full">
-              🔒 Messages disappear after 24 hours
-            </span>
-          </div>
-        )}
+          <div ref={messagesEndRef} />
+        </div>
 
-        {/* Typing Indicator Bubble */}
-        <AnimatePresence>
-          {isTyping && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 10 }}
-              className="flex justify-start mt-4"
-            >
-              <div className="w-8 h-8 rounded-full bg-blue-100 mr-2 overflow-hidden shadow-sm shrink-0">
-                <img src={otherUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
-              </div>
-              <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
-                <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
-                <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
-                <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        
-        <div ref={messagesEndRef} />
+        {/* Scroll-to-bottom button */}
+        {isScrolledUp && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={scrollToBottom}
+            className="fixed bottom-20 right-6 w-10 h-10 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-colors z-30"
+          >
+            <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </motion.button>
+        )}
       </div>
 
       {/* Input Area */}
-      <div className="p-4 bg-white border-t border-slate-100 shrink-0 shadow-[0_-4px_20px_-15px_rgba(0,0,0,0.1)] relative z-20">
-        <form onSubmit={handleSend} className="flex gap-3 max-w-4xl mx-auto">
-          <input
-            type="text"
-            value={newMessage}
-            onChange={handleTyping}
-            placeholder="Type your message..."
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-full px-5 py-3.5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all text-sm font-medium"
-          />
+      <div className="p-3 md:p-4 bg-white border-t border-slate-100 shrink-0">
+        <form onSubmit={handleSend} className="flex gap-2 max-w-4xl mx-auto">
+          <div className="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-full px-4 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary focus-within:bg-white transition-all">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={handleTyping}
+              placeholder="Type a message..."
+              className="flex-1 bg-transparent py-3 focus:outline-none text-sm font-medium text-slate-900 placeholder-slate-400"
+              style={{ fontSize: '16px' }}
+            />
+          </div>
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/90 transition-all disabled:opacity-50 disabled:scale-95 shrink-0 shadow-lg shadow-primary/20"
+            className="w-11 h-11 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/90 transition-all disabled:opacity-50 disabled:scale-95 shrink-0 shadow-lg shadow-primary/20"
           >
-            <Send className="w-5 h-5 ml-1" />
+            <Send className="w-4 h-4 ml-0.5" />
           </button>
         </form>
       </div>
