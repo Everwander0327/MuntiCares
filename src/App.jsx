@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 // Layouts
@@ -48,6 +48,7 @@ function App() {
 
         {/* Dashboard Routes with Sidebar */}
         <Route path="/patient" element={<ProtectedRoute allowedRole="patient" />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<PatientDashboard />} />
           <Route path="providers" element={<PatientProviders />} />
           <Route path="requests" element={<PatientRequests />} />
@@ -57,6 +58,7 @@ function App() {
         </Route>
 
         <Route path="/provider" element={<ProtectedRoute allowedRole="provider" />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ProviderDashboard />} />
           <Route path="requests" element={<ProviderRequests />} />
           <Route path="patients" element={<ProviderPatients />} />
@@ -66,6 +68,7 @@ function App() {
         </Route>
 
         <Route path="/admin" element={<ProtectedRoute allowedRole="admin" />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="patients" element={<AdminPatients />} />
           <Route path="providers" element={<AdminProviders />} />

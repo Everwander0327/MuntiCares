@@ -5,9 +5,11 @@ import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import { MessageSquareWarning, MessageCircle } from 'lucide-react';
 import ChatWindow from '../../components/ChatWindow';
+import { useLocation } from 'react-router-dom';
 
 const PatientMessages = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [patientData, setPatientData] = useState(null);
   const [providers, setProviders] = useState([]);
@@ -53,7 +55,19 @@ const PatientMessages = () => {
         });
 
         setProviders(uniqueProviders);
-        if (uniqueProviders.length > 0) {
+        
+        // Parse target provider from query parameter
+        const params = new URLSearchParams(location.search);
+        const targetProviderId = params.get('provider');
+        
+        if (targetProviderId) {
+          const matched = uniqueProviders.find(p => p.id === targetProviderId);
+          if (matched) {
+            setActiveProvider(matched);
+          } else if (uniqueProviders.length > 0) {
+            setActiveProvider(uniqueProviders[0]);
+          }
+        } else if (uniqueProviders.length > 0) {
           setActiveProvider(uniqueProviders[0]);
         }
       } catch (err) {
@@ -63,7 +77,7 @@ const PatientMessages = () => {
       }
     };
     fetchChatData();
-  }, [user]);
+  }, [user, location.search]);
 
   if (loading) {
     return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;

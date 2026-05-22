@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import NotificationBell from '../components/NotificationBell';
 import { 
   LayoutDashboard, 
   Search, 
@@ -198,10 +199,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2 text-slate-400 hover:text-primary transition-colors relative">
-              <Bell className="w-6 h-6" />
-              <span className="absolute top-1.5 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+            <NotificationBell />
             <Link 
               to={`/${currentRole}/profile`} 
               className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-primary font-bold shadow-sm border border-white shrink-0 hover:bg-blue-200 transition-colors cursor-pointer"

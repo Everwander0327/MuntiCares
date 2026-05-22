@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, ShieldCheck, Calendar, ChevronLeft, ChevronRight, Navigation, Home, Stethoscope, MapPin } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, ShieldCheck, Calendar, ChevronLeft, ChevronRight, Navigation, Home, Stethoscope, MapPin, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useCountUp from '../../hooks/useCountUp';
@@ -106,6 +106,7 @@ const PatientDashboard = () => {
           } catch { timeLabel = activeReq.time || ''; }
 
           setActiveVisit({
+            providerId: activeReq.provider_id,
             provider: activeReq.provider?.full_name || 'Unknown',
             service: activeReq.service,
             date: new Date(activeReq.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
@@ -252,7 +253,16 @@ const PatientDashboard = () => {
                       <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">Home Care Visit</p>
                       <h3 className="text-base sm:text-lg font-bold text-slate-900 mt-0.5">{activeVisit.provider}</h3>
                     </div>
-                    <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">{activeVisit.service}</span>
+                    <div className="flex items-center gap-2">
+                      <Link 
+                        to={`/patient/messages?provider=${activeVisit.providerId}`}
+                        className="p-2 text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-all flex items-center justify-center"
+                        title="Chat with Provider"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </Link>
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-3 py-1 rounded-full">{activeVisit.service}</span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3 text-sm text-slate-500 mb-5">
@@ -361,13 +371,15 @@ const PatientDashboard = () => {
                       <td className="px-6 py-4 text-slate-600">{req.date}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                          req.status === 'Accepted' ? 'bg-green-100 text-green-700' :
+                          ['Accepted', 'Completed'].includes(req.status) ? 'bg-green-100 text-green-700' :
                           req.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
+                          req.status === 'Cancelled' ? 'bg-slate-100 text-slate-500' :
                           'bg-red-100 text-red-700'
                         }`}>
                           <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                            req.status === 'Accepted' ? 'bg-green-500' :
+                            ['Accepted', 'Completed'].includes(req.status) ? 'bg-green-500' :
                             req.status === 'Pending' ? 'bg-yellow-500' :
+                            req.status === 'Cancelled' ? 'bg-slate-400' :
                             'bg-red-500'
                           }`} />
                           {req.status}

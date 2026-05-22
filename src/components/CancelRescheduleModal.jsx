@@ -1,0 +1,240 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Calendar, Clock, AlertTriangle, CalendarClock } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
+
+const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) => {
+  const [mode, setMode] = useState('choose'); // 'choose' | 'cancel' | 'reschedule'
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  if (!isOpen || !request) return null;
+
+  const handleCancel = async () => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ status: 'Cancelled', notes: cancelReason ? `[Cancelled by patient] ${cancelReason}` : '[Cancelled by patient]' })
+        .eq('id', request.id);
+
+      if (error) throw error;
+
+      toast.success('Request has been cancelled.');
+      if (onActionComplete) onActionComplete();
+      onClose();
+    } catch (err) {
+      console.error('Error cancelling request:', err);
+      toast.error('Failed to cancel request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReschedule = async (e) => {
+    e.preventDefault();
+    if (!newDate || !newTime) {
+      toast.error('Please select both a new date and time.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('requests')
+        .update({ 
+          date: newDate, 
+          time: newTime + ':00',
+          notes: request.originalNotes 
+            ? `${request.originalNotes} [Rescheduled by patient]`
+            : '[Rescheduled by patient]'
+        })
+        .eq('id', request.id);
+
+      if (error) throw error;
+
+      toast.success('Appointment rescheduled successfully!');
+      if (onActionComplete) onActionComplete();
+      onClose();
+    } catch (err) {
+      console.error('Error rescheduling request:', err);
+      toast.error('Failed to reschedule. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetAndClose = () => {
+    setMode('choose');
+    setCancelReason('');
+    setNewDate('');
+    setNewTime('');
+    onClose();
+  };
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={resetAndClose}
+      >
+        <motion.div
+          className="bg-white rounded-[2.5rem] p-8 max-w-md w-full border border-slate-100 shadow-2xl relative"
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            onClick={resetAndClose}
+            className="absolute right-6 top-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5 text-slate-400" />
+          </button>
+
+          {/* Choose Mode */}
+          {mode === 'choose' && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <h2 className="text-xl font-bold text-slate-900">Manage Appointment</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  with <span className="font-bold text-primary">{request.providerName}</span> on {request.date}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  onClick={() => setMode('reschedule')}
+                  className="flex items-center gap-4 p-5 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition-all text-left group"
+                >
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                    <CalendarClock className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Reschedule</p>
+                    <p className="text-xs text-slate-500">Change the date or time of this visit</p>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setMode('cancel')}
+                  className="flex items-center gap-4 p-5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-2xl transition-all text-left group"
+                >
+                  <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                    <AlertTriangle className="w-6 h-6 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Cancel Request</p>
+                    <p className="text-xs text-slate-500">Withdraw this appointment entirely</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Cancel Confirmation */}
+          {mode === 'cancel' && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <span className="text-3xl">⚠️</span>
+                <h2 className="text-xl font-bold text-slate-900 mt-2">Cancel Appointment?</h2>
+                <p className="text-sm text-slate-500 mt-1">This action cannot be undone.</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Reason (optional)</label>
+                <textarea
+                  value={cancelReason}
+                  onChange={e => setCancelReason(e.target.value)}
+                  placeholder="Let the provider know why you're cancelling..."
+                  rows={3}
+                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-red-100 transition-all text-sm resize-none text-slate-800 placeholder-slate-400"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setMode('choose')}
+                  className="w-full py-3 border border-slate-100 hover:bg-slate-50 rounded-2xl font-bold text-slate-600 transition-all text-sm"
+                >
+                  Go Back
+                </button>
+                <button
+                  onClick={handleCancel}
+                  disabled={submitting}
+                  className="w-full py-3 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-2xl font-bold transition-all shadow-lg shadow-red-200 text-sm"
+                >
+                  {submitting ? 'Cancelling...' : 'Confirm Cancel'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Reschedule Form */}
+          {mode === 'reschedule' && (
+            <form onSubmit={handleReschedule} className="space-y-6">
+              <div className="text-center">
+                <span className="text-3xl">📅</span>
+                <h2 className="text-xl font-bold text-slate-900 mt-2">Reschedule Visit</h2>
+                <p className="text-sm text-slate-500 mt-1">Pick a new date and time below</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" /> New Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    min={new Date().toISOString().split('T')[0]}
+                    value={newDate}
+                    onChange={e => setNewDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" /> New Time
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={newTime}
+                    onChange={e => setNewTime(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-3 px-4 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMode('choose')}
+                  className="w-full py-3 border border-slate-100 hover:bg-slate-50 rounded-2xl font-bold text-slate-600 transition-all text-sm"
+                >
+                  Go Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-2xl font-bold transition-all shadow-lg shadow-primary/20 text-sm"
+                >
+                  {submitting ? 'Saving...' : 'Confirm Reschedule'}
+                </button>
+              </div>
+            </form>
+          )}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+export default CancelRescheduleModal;

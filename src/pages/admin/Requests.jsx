@@ -94,8 +94,9 @@ const AdminRequests = () => {
                 { value: 'All', label: 'All Status' },
                 { value: 'Accepted', label: 'Accepted' },
                 { value: 'Pending', label: 'Pending' },
-                { value: 'Rejected', label: 'Rejected' },
                 { value: 'Completed', label: 'Completed' },
+                { value: 'Cancelled', label: 'Cancelled' },
+                { value: 'Rejected', label: 'Rejected' },
               ]}
             />
           </div>

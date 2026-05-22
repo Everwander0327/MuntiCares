@@ -15,6 +15,7 @@ const PatientProfile = () => {
   const [uploading, setUploading] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [documents, setDocuments] = useState([]);
+  const [visitNotes, setVisitNotes] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
@@ -71,6 +72,17 @@ const PatientProfile = () => {
           
         if (!docsError && docs) {
           setDocuments(docs);
+        }
+
+        // Fetch Visit Notes
+        const { data: notes, error: notesError } = await supabase
+          .from('visit_notes')
+          .select('*, provider:provider_id(full_name)')
+          .eq('patient_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (!notesError && notes) {
+          setVisitNotes(notes);
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -808,6 +820,98 @@ const PatientProfile = () => {
                       >
                          <X className="w-4 h-4" />
                       </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Visit History Section */}
+          <motion.div 
+            className="lg:col-span-2 lg:col-start-2 bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mt-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="p-6 md:p-8 border-b border-slate-100">
+              <h3 className="text-lg md:text-xl font-bold text-slate-900">Visit History & Clinical Notes</h3>
+              <p className="text-slate-500 text-sm mt-1">Past consultations, vitals, and provider notes.</p>
+            </div>
+            
+            <div className="p-6 md:p-8">
+              {visitNotes.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Activity className="w-6 h-6 text-slate-400" />
+                  </div>
+                  <p className="text-slate-500 font-medium">No past visits recorded.</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {visitNotes.map((note) => (
+                    <div key={note.id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                        <div>
+                          <p className="font-bold text-slate-900 text-lg">Dr. {note.provider?.full_name || 'Unknown'}</p>
+                          <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>{new Date(note.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                          </div>
+                        </div>
+                        {note.services_rendered && (
+                          <span className="inline-flex items-center px-3 py-1 bg-blue-100 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full self-start sm:self-auto">
+                            {note.services_rendered}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Vitals Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {note.vitals_bp && (
+                          <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Blood Pressure</p>
+                            <p className="font-bold text-slate-700">{note.vitals_bp}</p>
+                          </div>
+                        )}
+                        {note.vitals_temp && (
+                          <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Temperature</p>
+                            <p className="font-bold text-slate-700">{note.vitals_temp}°C</p>
+                          </div>
+                        )}
+                        {note.vitals_hr && (
+                          <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Heart Rate</p>
+                            <p className="font-bold text-slate-700">{note.vitals_hr} bpm</p>
+                          </div>
+                        )}
+                        {note.vitals_spo2 && (
+                          <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">SpO2</p>
+                            <p className="font-bold text-slate-700">{note.vitals_spo2}%</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {note.notes && (
+                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Clinical Notes</p>
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.notes}</p>
+                        </div>
+                      )}
+
+                      {note.attachment_url && (
+                        <a 
+                          href={supabase.storage.from('medical_documents').getPublicUrl(note.attachment_url).data?.publicUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 text-sm text-primary font-bold hover:underline"
+                        >
+                          <FileText className="w-4 h-4" />
+                          View Attachment
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>
