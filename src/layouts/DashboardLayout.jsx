@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
+import { supabase } from '../lib/supabase';
 import { 
   LayoutDashboard, 
   Search, 
@@ -20,13 +21,12 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
-const SidebarItem = ({ icon, label, to, active, onClick }) => (
+const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
   <Link 
     to={to} 
     onClick={onClick}
     className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-blue-50 hover:text-primary'}`}
   >
-    {/* Active indicator bar */}
     <motion.div
       className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-primary rounded-r-full"
       initial={false}
@@ -37,16 +37,30 @@ const SidebarItem = ({ icon, label, to, active, onClick }) => (
       transition={{ duration: 0.2 }}
     />
     {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-primary'}` })}
-    <span className="font-semibold">{label}</span>
+    <span className="font-semibold flex-1">{label}</span>
+    {badge > 0 && (
+      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[9px] font-bold px-1.5 ${
+        active ? 'bg-white text-primary' : 'bg-red-500 text-white'
+      }`}>
+        {badge > 9 ? '9+' : badge}
+      </span>
+    )}
   </Link>
 );
 
-const MobileNavItem = ({ icon, label, to, active }) => (
+const MobileNavItem = ({ icon, label, to, active, badge }) => (
   <Link 
     to={to}
-    className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all ${active ? 'text-primary' : 'text-slate-400'}`}
+    className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all relative ${active ? 'text-primary' : 'text-slate-400'}`}
   >
-    {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-primary' : 'text-slate-400'}` })}
+    <div className="relative">
+      {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-primary' : 'text-slate-400'}` })}
+      {badge > 0 && (
+        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[7px] font-bold text-white px-0.5">
+          {badge > 9 ? '9+' : badge}
+        </span>
+      )}
+    </div>
     <span className={`text-[10px] font-bold ${active ? 'text-primary' : 'text-slate-400'}`}>{label}</span>
     {active && (
       <motion.div 
@@ -59,6 +73,8 @@ const MobileNavItem = ({ icon, label, to, active }) => (
 
 const DashboardLayout = ({ children, role = 'patient' }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser, logout } = useAuth();
@@ -107,6 +123,44 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     badge: authUser?.role ? authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1) : userInfo[currentRole]?.badge,
   };
 
+  const fetchCounts = useCallback(async () => {
+    if (!authUser) return;
+    const pendingRes = await supabase
+      .from('requests')
+      .select('id', { count: 'exact', head: true })
+      .eq(authUser.role === 'patient' ? 'patient_id' : 'provider_id', authUser.id)
+      .eq('status', 'Pending');
+    if (!pendingRes.error) setPendingCount(pendingRes.count || 0);
+
+    const { data: msgData, error: msgError } = await supabase
+      .from('messages')
+      .select('id')
+      .eq('receiver_id', authUser.id);
+    if (!msgError) {
+      const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${authUser.id}`) || '[]'));
+      const unreadCount = (msgData || []).filter(m => !readIds.has(m.id)).length;
+      setUnreadMsgCount(unreadCount);
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    fetchCounts();
+
+    const channel = supabase
+      .channel('layout-counts')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests', filter: `${authUser.role === 'patient' ? 'patient_id' : 'provider_id'}=eq.${authUser.id}` }, () => fetchCounts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, () => fetchCounts())
+      .subscribe();
+
+    const pollInterval = setInterval(fetchCounts, 5000);
+
+    return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
+  }, [authUser, fetchCounts]);
+
+  useEffect(() => {
+    fetchCounts();
+  }, [location.pathname, fetchCounts]);
+
   return (
     <div className="min-h-screen bg-slate-50 flex overflow-hidden">
       {/* Mobile Sidebar Overlay */}
@@ -143,14 +197,27 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
           {/* Nav links */}
           <nav className="flex-1 space-y-1 overflow-y-auto">
-            {links.map((link) => (
-              <SidebarItem 
-                key={link.label} 
-                {...link} 
-                active={location.pathname === link.to}
-                onClick={() => setIsSidebarOpen(false)}
-              />
-            ))}
+            {links.map((link) => {
+              let badge = 0;
+              if (currentRole === 'patient') {
+                if (link.label === 'My Requests') badge = pendingCount;
+                if (link.label === 'Messages') badge = unreadMsgCount;
+              } else if (currentRole === 'provider') {
+                if (link.label === 'Incoming Requests') badge = pendingCount;
+                if (link.label === 'Messages') badge = unreadMsgCount;
+              }
+              return (
+                <SidebarItem 
+                  key={link.label} 
+                  icon={link.icon}
+                  label={link.label}
+                  to={link.to}
+                  active={location.pathname === link.to}
+                  onClick={() => setIsSidebarOpen(false)}
+                  badge={badge}
+                />
+              );
+            })}
           </nav>
 
           {/* Divider */}
@@ -186,9 +253,8 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-screen">
         <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-10 shrink-0">
-          <div className="flex items-center gap-4">
-            {/* Removed mobile hamburger menu button as requested */}
-            <div>
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="min-w-0">
               <h2 className="text-sm md:text-lg font-bold text-slate-900 truncate max-w-[200px] md:max-w-none">
                 Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
               </h2>
@@ -223,15 +289,26 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       {/* Mobile Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-slate-100 shadow-lg shadow-slate-200/50">
         <div className="flex items-center justify-around px-1 py-1">
-          {links.slice(0, 5).map((link) => (
-            <MobileNavItem 
-              key={link.label}
-              icon={link.icon}
-              label={link.label.split(' ').pop()}
-              to={link.to}
-              active={location.pathname === link.to}
-            />
-          ))}
+          {links.slice(0, 5).map((link) => {
+            let badge = 0;
+            if (currentRole === 'patient') {
+              if (link.label === 'My Requests') badge = pendingCount;
+              if (link.label === 'Messages') badge = unreadMsgCount;
+            } else if (currentRole === 'provider') {
+              if (link.label === 'Incoming Requests') badge = pendingCount;
+              if (link.label === 'Messages') badge = unreadMsgCount;
+            }
+            return (
+              <MobileNavItem 
+                key={link.label}
+                icon={link.icon}
+                label={link.label.split(' ').pop()}
+                to={link.to}
+                active={location.pathname === link.to}
+                badge={badge}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

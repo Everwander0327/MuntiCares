@@ -131,13 +131,16 @@ const PatientDashboard = () => {
     if (!user) return;
 
     const fetchUnreadCount = async () => {
-      const { count } = await supabase
+      const { data, error } = await supabase
         .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('receiver_id', user.id)
-        .eq('is_read', false);
+        .select('id')
+        .eq('receiver_id', user.id);
 
-      setUnreadCount(count || 0);
+      if (!error) {
+        const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
+        const unreadCount = (data || []).filter(m => !readIds.has(m.id)).length;
+        setUnreadCount(unreadCount);
+      }
     };
 
     fetchUnreadCount();
@@ -145,14 +148,17 @@ const PatientDashboard = () => {
     const channel = supabase
       .channel('dashboard-unread-msg')
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'messages',
         filter: `receiver_id=eq.${user.id}`,
       }, () => fetchUnreadCount())
       .subscribe();
 
+    const pollInterval = setInterval(fetchUnreadCount, 5000);
+
     return () => {
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, [user]);

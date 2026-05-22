@@ -4,6 +4,18 @@ import { Send, UserCircle, Loader2, Check, CheckCheck, Video, X } from 'lucide-r
 import { motion, AnimatePresence } from 'framer-motion';
 import { JitsiMeeting } from '@jitsi/react-sdk';
 
+const addReadMsgIds = (userId, ids) => {
+  if (!ids.length) return;
+  try {
+    const key = `read_msgs_${userId}`;
+    const stored = JSON.parse(localStorage.getItem(key) || '[]');
+    const set = new Set(stored);
+    ids.forEach(id => set.add(id));
+    const arr = Array.from(set).slice(-500);
+    localStorage.setItem(key, JSON.stringify(arr));
+  } catch {}
+};
+
 const ChatWindow = ({ currentUser, otherUser }) => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -43,11 +55,15 @@ const ChatWindow = ({ currentUser, otherUser }) => {
   useEffect(() => {
     if (!currentUser || !otherUser) return;
 
-    // 1. Fetch only messages from the last 24 hours
     const fetchMessages = async () => {
       setLoading(true);
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+      await supabase
+        .from('messages')
+        .delete()
+        .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
       
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -58,10 +74,9 @@ const ChatWindow = ({ currentUser, otherUser }) => {
       if (data) {
         setMessages(data);
         
-        // Mark received messages as read
         const unreadIds = data.filter(m => m.receiver_id === currentUser.id && !m.is_read).map(m => m.id);
         if (unreadIds.length > 0) {
-          await supabase.from('messages').update({ is_read: true }).in('id', unreadIds);
+          addReadMsgIds(currentUser.id, unreadIds);
         }
       }
       setLoading(false);
@@ -85,10 +100,9 @@ const ChatWindow = ({ currentUser, otherUser }) => {
           (msg.sender_id === currentUser.id && msg.receiver_id === otherUser.id) ||
           (msg.sender_id === otherUser.id && msg.receiver_id === currentUser.id)
         ) {
-          // If we received it, mark it as read immediately
           if (msg.receiver_id === currentUser.id) {
             msg.is_read = true;
-            await supabase.from('messages').update({ is_read: true }).eq('id', msg.id);
+            addReadMsgIds(currentUser.id, [msg.id]);
           }
           setMessages(prev => {
             // Prevent duplicates due to optimistic UI

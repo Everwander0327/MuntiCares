@@ -28,6 +28,9 @@ const PatientProviders = () => {
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [serviceOptions, setServiceOptions] = useState([{ value: 'All', label: 'All Services' }]);
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const searchRef = React.useRef(null);
   
   // Booking & Viewing Modal State
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -48,6 +51,13 @@ const PatientProviders = () => {
 
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      const saved = JSON.parse(localStorage.getItem(`search_history_${user.id}`) || '[]');
+      setSearchHistory(saved);
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -129,6 +139,19 @@ const PatientProviders = () => {
     };
     fetchProviderReviews();
   }, [viewingProvider]);
+
+  useEffect(() => {
+    if (!searchTerm.trim() || !user) return;
+    const timer = setTimeout(() => {
+      setSearchHistory(prev => {
+        const filtered = prev.filter(s => s !== searchTerm);
+        const updated = [searchTerm, ...filtered].slice(0, 8);
+        localStorage.setItem(`search_history_${user.id}`, JSON.stringify(updated));
+        return updated;
+      });
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, user]);
 
   useEffect(() => {
     if (!selectedProvider || !selectedProvider.id || !bookingForm.date) {
@@ -303,15 +326,49 @@ const PatientProviders = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="relative flex-1 w-full">
+          <div className="relative flex-1 w-full" ref={searchRef}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input 
               type="text" 
               placeholder="Search for providers or services..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setShowHistory(true)}
+              onBlur={() => setTimeout(() => setShowHistory(false), 200)}
               className="w-full bg-white border border-slate-100 rounded-2xl py-4 pl-12 pr-4 shadow-sm focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all outline-none"
             />
+
+            {/* Search History Dropdown */}
+            {showHistory && !searchTerm && searchHistory.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-100 shadow-xl z-40 p-3">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Recent Searches</span>
+                  <button
+                    onClick={() => {
+                      setSearchHistory([]);
+                      if (user) localStorage.removeItem(`search_history_${user.id}`);
+                    }}
+                    className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {searchHistory.map((term, idx) => (
+                    <button
+                      key={idx}
+                      onMouseDown={() => {
+                        setSearchTerm(term);
+                        setShowHistory(false);
+                      }}
+                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-semibold text-slate-600 transition-all"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <CustomSelect 
             value={filter}
@@ -429,11 +486,32 @@ const PatientProviders = () => {
                 <X className="w-6 h-6" />
               </button>
 
-              <div className="mb-8 pr-12">
+              <div className="mb-6 pr-12">
                 <h2 className="text-2xl font-bold text-slate-900">
                   {bookingStep === 'form' ? 'Book Appointment' : 'Confirm Booking'}
                 </h2>
                 <p className="text-slate-500 mt-1">with <span className="font-bold text-primary">{selectedProvider.full_name}</span></p>
+              </div>
+
+              {/* Step Progress */}
+              <div className="flex items-center gap-2 mb-6 px-1">
+                <div className={`flex items-center gap-2 ${bookingStep === 'form' ? 'text-primary' : 'text-green-600'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                    bookingStep === 'confirm' ? 'bg-green-100 text-green-600' : 'bg-primary text-white'
+                  }`}>
+                    {bookingStep === 'confirm' ? '✓' : '1'}
+                  </div>
+                  <span className="text-xs font-semibold">Details</span>
+                </div>
+                <div className={`flex-1 h-0.5 rounded-full ${bookingStep === 'confirm' ? 'bg-green-200' : 'bg-slate-200'}`} />
+                <div className={`flex items-center gap-2 ${bookingStep === 'confirm' ? 'text-primary' : 'text-slate-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
+                    bookingStep === 'confirm' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    2
+                  </div>
+                  <span className="text-xs font-semibold">Confirm</span>
+                </div>
               </div>
 
               {/* Step 1: Booking Form */}

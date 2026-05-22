@@ -206,6 +206,25 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
             </div>
           )}
 
+          {/* Step indicator for cancel/reschedule */}
+          {mode !== 'choose' && (
+            <div className="flex items-center gap-2 mb-6 px-1">
+              <button onClick={() => setMode('choose')} className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors">
+                <div className="w-7 h-7 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
+                  ✓
+                </div>
+                <span className="text-xs font-semibold">Choose Action</span>
+              </button>
+              <div className="flex-1 h-0.5 rounded-full bg-green-200" />
+              <div className="flex items-center gap-2 text-primary">
+                <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
+                  {mode === 'cancel' ? '!' : '2'}
+                </div>
+                <span className="text-xs font-semibold">{mode === 'cancel' ? 'Confirm Cancel' : 'Pick New Time'}</span>
+              </div>
+            </div>
+          )}
+
           {/* Cancel Confirmation */}
           {mode === 'cancel' && (
             <div className="space-y-6">
@@ -250,7 +269,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
               <div className="text-center">
                 <span className="text-3xl">📅</span>
                 <h2 className="text-xl font-bold text-slate-900 mt-2">Reschedule Visit</h2>
-                <p className="text-sm text-slate-500 mt-1">Pick a new date and time below</p>
+                <p className="text-sm text-slate-500 mt-1">Pick a new date and time for this visit</p>
               </div>
 
                 <div className="space-y-4">
