@@ -9,6 +9,8 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('history');
   const [loading, setLoading] = useState(true);
+  const [consentBlocked, setConsentBlocked] = useState(false);
+  const [grantedPermissions, setGrantedPermissions] = useState(null);
 
   // Data States
   const [history, setHistory] = useState(null);
@@ -26,9 +28,93 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
   useEffect(() => {
     if (isOpen && patientId) {
-      fetchPatientData();
+      checkConsentThenLoad();
     }
   }, [isOpen, patientId]);
+
+  useEffect(() => {
+    if (!isOpen || !patientId || !user) return;
+
+    const pollConsent = async () => {
+      const { data } = await supabase
+        .from('consent_access')
+        .select('is_enabled, permissions')
+        .eq('patient_id', patientId)
+        .eq('provider_id', user.id)
+        .single();
+
+      if (!data) return;
+      if (!data.is_enabled) {
+        setConsentBlocked(true);
+        setGrantedPermissions(null);
+      } else {
+        setConsentBlocked(false);
+        setGrantedPermissions(data.permissions || { medical_history: true, documents: true, visit_notes: true });
+      }
+    };
+
+    const channel = supabase
+      .channel(`consent-realtime-${patientId}-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'consent_access',
+        filter: `patient_id=eq.${patientId}`,
+      }, () => { pollConsent(); })
+      .subscribe();
+
+    const interval = setInterval(pollConsent, 2000);
+
+    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+  }, [isOpen, patientId, user]);
+
+  const checkConsentThenLoad = async () => {
+    setLoading(true);
+    setConsentBlocked(false);
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('consent_access')
+        .select('is_enabled, permissions')
+        .eq('patient_id', patientId)
+        .eq('provider_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (!data || !data.is_enabled) {
+        setConsentBlocked(true);
+        setLoading(false);
+        return;
+      }
+
+      setGrantedPermissions(data.permissions || { medical_history: true, documents: true, visit_notes: true });
+      fetchPatientData();
+      logDataAccess();
+    } catch (err) {
+      console.warn('Consent check failed:', err.message);
+      setGrantedPermissions({ medical_history: true, documents: true, visit_notes: true });
+      fetchPatientData();
+      logDataAccess();
+    }
+  };
+
+  const logDataAccess = async () => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('consent_access')
+        .update({ last_access: new Date().toISOString() })
+        .eq('patient_id', patientId)
+        .eq('provider_id', user.id);
+
+      if (error && error.code !== 'PGRST116') {
+        console.warn('Data access log skipped (RLS may block update):', error.message);
+      }
+    } catch (err) {
+      console.warn('Could not log data access:', err.message);
+    }
+  };
 
   const fetchPatientData = async () => {
     setLoading(true);
@@ -184,31 +270,54 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
             </button>
           </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-slate-100 bg-white shrink-0">
-            <button 
-              onClick={() => setActiveTab('history')}
-              className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${activeTab === 'history' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
-            >
-              <Activity className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Medical History</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('documents')}
-              className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${activeTab === 'documents' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
-            >
-              <FileText className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Docs ({documents.length})</span>
-            </button>
-            <button 
-              onClick={() => setActiveTab('notes')}
-              className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${activeTab === 'notes' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
-            >
-              <ClipboardList className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Progress Notes</span>
-            </button>
-          </div>
+          {/* Consent Blocked Banner */}
+          {consentBlocked ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-10 bg-slate-50/50 text-center">
+              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-5">
+                <X className="w-10 h-10 text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Data Access Revoked</h3>
+              <p className="text-slate-500 max-w-md mb-6">
+                <span className="font-bold">{patientName}</span> has revoked your access to their medical records. 
+                You cannot view their data until they re-enable data sharing in their consent settings.
+              </p>
+              <button
+                onClick={onClose}
+                className="px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Tabs */}
+              <div className="flex border-b border-slate-100 bg-white shrink-0">
+                <button 
+                  onClick={() => grantedPermissions?.medical_history !== false && setActiveTab('history')}
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.medical_history !== false ? activeTab === 'history' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'border-transparent text-slate-300 bg-slate-50 cursor-not-allowed'}`}
+                >
+                  <Activity className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Medical History</span>
+                  {grantedPermissions?.medical_history === false && <span className="text-[8px] text-slate-300 ml-1">🔒</span>}
+                </button>
+                <button 
+                  onClick={() => grantedPermissions?.documents !== false && setActiveTab('documents')}
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.documents !== false ? activeTab === 'documents' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'border-transparent text-slate-300 bg-slate-50 cursor-not-allowed'}`}
+                >
+                  <FileText className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Docs ({documents.length})</span>
+                  {grantedPermissions?.documents === false && <span className="text-[8px] text-slate-300 ml-1">🔒</span>}
+                </button>
+                <button 
+                  onClick={() => grantedPermissions?.visit_notes !== false && setActiveTab('notes')}
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.visit_notes !== false ? activeTab === 'notes' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'border-transparent text-slate-300 bg-slate-50 cursor-not-allowed'}`}
+                >
+                  <ClipboardList className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Progress Notes</span>
+                  {grantedPermissions?.visit_notes === false && <span className="text-[8px] text-slate-300 ml-1">🔒</span>}
+                </button>
+              </div>
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
-            {loading ? (
+              {/* Content Area */}
+              <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+                {loading ? (
               <div className="flex flex-col items-center justify-center h-64 text-slate-400">
                 <Loader2 className="w-8 h-8 animate-spin mb-2" />
                 <p>Loading patient records...</p>
@@ -217,6 +326,15 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
               <>
                 {/* TAB 1: HISTORY */}
                 {activeTab === 'history' && (
+                  grantedPermissions?.medical_history === false ? (
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <X className="w-7 h-7 text-slate-300" />
+                      </div>
+                      <p className="text-slate-600 font-bold">Medical History Not Shared</p>
+                      <p className="text-sm text-slate-400 mt-1">The patient has not granted access to their medical history.</p>
+                    </div>
+                  ) : (
                   <div className="space-y-6">
                     {(!history?.allergies && !history?.chronic_conditions && !history?.past_surgeries) ? (
                       <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
@@ -244,11 +362,21 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                         </div>
                       </>
                     )}
-                  </div>
+                    </div>
+                  )
                 )}
 
                 {/* TAB 2: DOCUMENTS */}
                 {activeTab === 'documents' && (
+                  grantedPermissions?.documents === false ? (
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <X className="w-7 h-7 text-slate-300" />
+                      </div>
+                      <p className="text-slate-600 font-bold">Documents Not Shared</p>
+                      <p className="text-sm text-slate-400 mt-1">The patient has not granted access to their documents.</p>
+                    </div>
+                  ) : (
                   <div>
                     {documents.length === 0 ? (
                       <div className="text-center py-12">
@@ -281,10 +409,20 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                       </div>
                     )}
                   </div>
+                  )
                 )}
 
                 {/* TAB 3: PROGRESS NOTES */}
                 {activeTab === 'notes' && (
+                  grantedPermissions?.visit_notes === false ? (
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <X className="w-7 h-7 text-slate-300" />
+                      </div>
+                      <p className="text-slate-600 font-bold">Progress Notes Not Shared</p>
+                      <p className="text-sm text-slate-400 mt-1">The patient has not granted access to their visit notes.</p>
+                    </div>
+                  ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     {/* Add Note Form */}
                     <div className="lg:col-span-2">
@@ -457,10 +595,13 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                       )}
                     </div>
                   </div>
+                  )
                 )}
               </>
             )}
           </div>
+            </>
+          )}
         </motion.div>
       </div>
     </AnimatePresence>

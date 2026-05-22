@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { MessageSquareWarning } from 'lucide-react';
+import { MessageSquareWarning, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const formatRelativeTime = (dateStr) => {
@@ -28,7 +28,7 @@ const getLastMessagePreview = (msg, userId) => {
   return { text, isYou };
 };
 
-const ConversationList = ({ user, onSelect }) => {
+const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,6 +136,10 @@ const ConversationList = ({ user, onSelect }) => {
     return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
   }, [user]);
 
+  const filtered = searchTerm
+    ? conversations.filter(c => c.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+    : conversations;
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -144,7 +148,16 @@ const ConversationList = ({ user, onSelect }) => {
     );
   }
 
-  if (conversations.length === 0) {
+  if (filtered.length === 0) {
+    if (searchTerm && conversations.length > 0) {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-20">
+          <Search className="w-10 h-10 text-slate-300 mb-3" />
+          <h3 className="text-lg font-bold text-slate-900">No results found</h3>
+          <p className="text-sm text-slate-400 mt-1">No conversations match "{searchTerm}"</p>
+        </div>
+      );
+    }
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-20">
         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-slate-100">
@@ -162,7 +175,7 @@ const ConversationList = ({ user, onSelect }) => {
 
   return (
     <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
-      {conversations.map((conv, i) => {
+      {filtered.map((conv, i) => {
         const preview = getLastMessagePreview(conv.lastMessage, user.id);
         return (
           <motion.button
