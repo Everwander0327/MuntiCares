@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, ShieldCheck, Calendar, ChevronLeft, ChevronRight, Navigation, Home, Stethoscope, MapPin, MessageSquare } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, ShieldCheck, Calendar, ChevronLeft, ChevronRight, Navigation, Home, Stethoscope, MapPin, MessageSquare, MessageCircle, RefreshCw, Star, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useCountUp from '../../hooks/useCountUp';
@@ -51,6 +51,13 @@ const PatientDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState({ active: 0, accepted: 0, pending: 0 });
   const [activeVisit, setActiveVisit] = useState(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = React.useRef(0);
+  const pullDistRef = React.useRef(0);
+  const isPulling = React.useRef(false);
+  const mainRef = React.useRef(null);
   const { user } = useAuth();
 
   // Use shared hook for requests + realtime
@@ -120,6 +127,78 @@ const PatientDashboard = () => {
     };
   }, [fetchedRequests, requestsLoading, user]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchUnreadCount = async () => {
+      const { count } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
+
+      setUnreadCount(count || 0);
+    };
+
+    fetchUnreadCount();
+
+    const channel = supabase
+      .channel('dashboard-unread-msg')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `receiver_id=eq.${user.id}`,
+      }, () => fetchUnreadCount())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const getScrollContainer = () => {
+    if (!mainRef.current) return null;
+    let el = mainRef.current.parentElement;
+    while (el) {
+      if (window.getComputedStyle(el).overflowY === 'auto') return el;
+      el = el.parentElement;
+    }
+    return null;
+  };
+
+  const handleTouchStart = (e) => {
+    const scrollContainer = getScrollContainer();
+    if (scrollContainer && scrollContainer.scrollTop <= 0) {
+      touchStartY.current = e.touches[0].clientY;
+      isPulling.current = true;
+    }
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isPulling.current) return;
+    const dist = e.touches[0].clientY - touchStartY.current;
+    if (dist > 0) {
+      const clamped = Math.min(dist * 0.5, 80);
+      pullDistRef.current = clamped;
+      setPullDistance(clamped);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    if (pullDistRef.current >= 60 && !refreshing) {
+      setRefreshing(true);
+      setPullDistance(0);
+      pullDistRef.current = 0;
+      isPulling.current = false;
+      window.location.reload();
+    } else {
+      setPullDistance(0);
+      pullDistRef.current = 0;
+      isPulling.current = false;
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout role="patient">
@@ -130,7 +209,29 @@ const PatientDashboard = () => {
 
   return (
     <DashboardLayout role="patient">
-      <div className="space-y-6 md:space-y-8">
+      {/* Pull-to-refresh indicator */}
+      {pullDistance > 0 && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center pointer-events-none"
+          style={{ height: pullDistance + 20, paddingTop: pullDistance > 30 ? pullDistance * 0.3 : 0 }}
+        >
+          <motion.div
+            initial={{ rotate: 0 }}
+            animate={{ rotate: pullDistance >= 60 ? 180 : 0 }}
+            className="w-8 h-8 bg-white rounded-full shadow-md border border-slate-100 flex items-center justify-center"
+          >
+            <RefreshCw className={`w-4 h-4 text-primary ${refreshing ? 'animate-spin' : ''}`} />
+          </motion.div>
+        </div>
+      )}
+      <div
+        ref={mainRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        className="space-y-6 md:space-y-8"
+        style={pullDistance > 0 ? { transform: `translateY(${pullDistance}px)`, transition: 'transform 0.1s ease-out' } : { transition: 'transform 0.3s ease-out' }}
+      >
         {/* Stats Row */}
         <motion.div 
           className="grid grid-cols-3 gap-3 md:gap-6"
@@ -184,12 +285,77 @@ const PatientDashboard = () => {
                 View Requests
               </Link>
               <Link 
-                to="/patient/consent"
-                className="btn-outline flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold"
+                to="/patient/messages"
+                className={`btn-outline flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-bold relative`}
               >
-                <ShieldCheck className="w-4 h-4" />
-                Manage Consent
+                <MessageCircle className="w-4 h-4" />
+                Messages
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white px-1">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </Link>
+            </div>
+
+            {/* Contextual action cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {activeVisit && stats.accepted > 0 && (
+                <Link
+                  to={`/patient/messages?provider=${activeVisit.providerId}`}
+                  className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-2xl transition-all group"
+                >
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow transition-shadow">
+                    <MessageSquare className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 text-sm">Message Provider</p>
+                    <p className="text-[11px] text-slate-500 truncate">{activeVisit.provider}</p>
+                  </div>
+                </Link>
+              )}
+
+              {fetchedRequests?.some(r => r.status === 'Completed') && (
+                <Link
+                  to="/patient/providers"
+                  className="flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-2xl transition-all group"
+                >
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow transition-shadow">
+                    <RotateCcw className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 text-sm">Rebook a Provider</p>
+                    <p className="text-[11px] text-slate-500">Book a new appointment</p>
+                  </div>
+                </Link>
+              )}
+
+              {fetchedRequests?.some(r => ['Completed', 'Accepted'].includes(r.status)) && (
+                <Link
+                  to="/patient/requests"
+                  className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 border border-green-100 rounded-2xl transition-all group"
+                >
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:shadow transition-shadow">
+                    <Star className="w-5 h-5 text-green-500" />
+                  </div>
+                  <div className="min-0">
+                    <p className="font-bold text-slate-900 text-sm">View Visit History</p>
+                    <p className="text-[11px] text-slate-500">Check past and upcoming visits</p>
+                  </div>
+                </Link>
+              )}
+
+              {!fetchedRequests?.some(r => ['Accepted', 'On The Way', 'Arrived', 'Completed'].includes(r.status)) && (
+                <div className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl col-span-1 sm:col-span-2">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <Search className="w-5 h-5 text-slate-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-700 text-sm">Ready to get started?</p>
+                    <p className="text-[11px] text-slate-500">Find a provider and book your first visit</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -285,12 +451,30 @@ const PatientDashboard = () => {
                 </>
               );
             })() : (
-              <div className="text-center py-6">
-                <div className="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Stethoscope className="w-6 h-6 text-slate-300" />
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Calendar className="w-7 h-7 text-primary" />
                 </div>
-                <p className="text-slate-700 font-bold">No Active Visits</p>
-                <p className="text-sm text-slate-500 mt-1">Book a provider to see your visit tracker here.</p>
+                <p className="text-slate-800 font-bold text-lg">No Active Visits</p>
+                <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
+                  You don't have any upcoming visits. Browse available providers and book a home care service to get started.
+                </p>
+                <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link
+                    to="/patient/providers"
+                    className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold shadow-lg shadow-primary/20"
+                  >
+                    <Search className="w-4 h-4" />
+                    Find a Provider
+                  </Link>
+                  <Link
+                    to="/patient/requests"
+                    className="btn-outline inline-flex items-center justify-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold"
+                  >
+                    <FileText className="w-4 h-4" />
+                    View Past Requests
+                  </Link>
+                </div>
               </div>
             )}
           </div>
@@ -357,8 +541,25 @@ const PatientDashboard = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="px-6 py-10 text-center text-slate-400">
-                      No requests yet. Start by finding a provider!
+                    <td colSpan="4" className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-slate-300" />
+                        </div>
+                        <div>
+                          <p className="text-slate-600 font-bold">No Requests Yet</p>
+                          <p className="text-sm text-slate-400 mt-0.5">
+                            Find a provider and book your first home care service.
+                          </p>
+                        </div>
+                        <Link
+                          to="/patient/providers"
+                          className="mt-1 text-primary font-bold text-sm hover:underline inline-flex items-center gap-1"
+                        >
+                          <Search className="w-3.5 h-3.5" />
+                          Browse Providers
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 )}
