@@ -6,16 +6,19 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { sha256Hex } from '../../lib/hash';
 import { toast } from 'react-hot-toast';
+import useFormValidation from '../../hooks/useFormValidation';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const { user, login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [shake, setShake] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const form = useFormValidation([
+    { name: 'email', rules: ['required', 'email'] },
+    { name: 'password', rules: ['required', (v) => v.length >= 6 || 'At least 6 characters'] },
+  ]);
 
   // Redirect if already logged in
   React.useEffect(() => {
@@ -31,11 +34,13 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
 
-    if (!email || !password) {
+    if (!form.validateAll()) {
       setShake(true);
       setTimeout(() => setShake(false), 500);
       return;
     }
+
+    const { email, password } = form.values;
 
     try {
       setLoading(true);
@@ -129,10 +134,14 @@ const LoginPage = () => {
               <input 
                 type="email" 
                 placeholder="juan.delacruz@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                value={form.values.email}
+                onChange={(e) => form.handleChange('email', e.target.value)}
+                onBlur={() => form.handleBlur('email')}
+                className={`w-full bg-white/70 border rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${form.errors.email && form.touched.email ? 'border-red-300' : 'border-slate-200'}`}
               />
+              {form.errors.email && form.touched.email && (
+                <p className="text-xs text-red-500 mt-1 ml-1">{form.errors.email}</p>
+              )}
             </div>
           </div>
 
@@ -143,10 +152,14 @@ const LoginPage = () => {
               <input 
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                value={form.values.password}
+                onChange={(e) => form.handleChange('password', e.target.value)}
+                onBlur={() => form.handleBlur('password')}
+                className={`w-full bg-white/70 border rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${form.errors.password && form.touched.password ? 'border-red-300' : 'border-slate-200'}`}
               />
+              {form.errors.password && form.touched.password && (
+                <p className="text-xs text-red-500 mt-1 ml-1">{form.errors.password}</p>
+              )}
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}

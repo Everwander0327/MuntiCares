@@ -77,22 +77,26 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
   const handleCancel = async () => {
     setSubmitting(true);
+    const reason = cancelReason || selectedReason || 'No reason provided';
+
+    // Optimistic: close modal and notify immediately
+    const actionComplete = onActionComplete;
+    const close = onClose;
+    close();
+    toast.success('Request has been cancelled.');
+    if (actionComplete) actionComplete();
+
+    // Background: update DB
     try {
       const { error } = await supabase
         .from('requests')
-        .update({ status: 'Cancelled', notes: cancelReason ? `[Cancelled by patient] ${cancelReason}` : '[Cancelled by patient]' })
+        .update({ status: 'Cancelled', notes: `[Cancelled by patient] ${reason}` })
         .eq('id', request.id);
 
       if (error) throw error;
-
-      toast.success('Request has been cancelled.');
-      if (onActionComplete) onActionComplete();
-      onClose();
     } catch (err) {
       console.error('Error cancelling request:', err);
-      toast.error('Failed to cancel request. Please try again.');
-    } finally {
-      setSubmitting(false);
+      toast.error('Failed to update server. The request may still be active.');
     }
   };
 
@@ -104,6 +108,15 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
     }
 
     setSubmitting(true);
+
+    // Optimistic: close and notify immediately
+    const actionComplete = onActionComplete;
+    const close = onClose;
+    close();
+    toast.success('Appointment rescheduled successfully!');
+    if (actionComplete) actionComplete();
+
+    // Background: check conflicts + update DB
     try {
       const { data: conflict } = await supabase
         .from('requests')
@@ -116,7 +129,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         .lt('time', `${String(parseInt(newTime.split(':')[0]) + 1).padStart(2, '0')}:00`);
 
       if (conflict && conflict.length > 0) {
-        toast.error('This time slot is no longer available. Please choose another.');
+        toast.error('That slot was taken. The reschedule may not have been saved.');
         setSubmitting(false);
         return;
       }
@@ -133,13 +146,9 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         .eq('id', request.id);
 
       if (error) throw error;
-
-      toast.success('Appointment rescheduled successfully!');
-      if (onActionComplete) onActionComplete();
-      onClose();
     } catch (err) {
       console.error('Error rescheduling request:', err);
-      toast.error('Failed to reschedule. Please try again.');
+      toast.error('Reschedule failed on the server. The original schedule remains.');
     } finally {
       setSubmitting(false);
     }

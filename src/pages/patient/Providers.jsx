@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import useFormValidation from '../../hooks/useFormValidation';
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
@@ -37,13 +38,13 @@ const PatientProviders = () => {
   const [viewingProvider, setViewingProvider] = useState(null);
   const [providerReviews, setProviderReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
-  const [bookingForm, setBookingForm] = useState({
-    service: '',
-    date: '',
-    time: '',
-    notes: '',
-    consent: false
-  });
+  const bookingForm = useFormValidation([
+    { name: 'service', rules: [(v) => v ? '' : 'Please select a service.'] },
+    { name: 'date', rules: ['required'] },
+    { name: 'time', rules: [(v) => v ? '' : 'Please select a time slot.'] },
+    { name: 'notes', default: '' },
+    { name: 'consent', rules: [(v) => v === true ? '' : 'You must consent to proceed.'] },
+  ]);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingStep, setBookingStep] = useState('form');
   const [availableSlots, setAvailableSlots] = useState([]);
@@ -154,7 +155,7 @@ const PatientProviders = () => {
   }, [searchTerm, user]);
 
   useEffect(() => {
-    if (!selectedProvider || !selectedProvider.id || !bookingForm.date) {
+    if (!selectedProvider || !selectedProvider.id || !bookingForm.values.date) {
       setAvailableSlots([]);
       return;
     }
@@ -166,7 +167,7 @@ const PatientProviders = () => {
           .from('requests')
           .select('time')
           .eq('provider_id', selectedProvider.id)
-          .eq('date', bookingForm.date)
+          .eq('date', bookingForm.values.date)
           .in('status', ['Accepted', 'On The Way', 'Arrived']);
 
         const bookedTimes = (existingBookings || []).map(b => b.time);
@@ -195,7 +196,7 @@ const PatientProviders = () => {
     };
 
     fetchAvailableSlots();
-  }, [selectedProvider, bookingForm.date]);
+  }, [selectedProvider, bookingForm.values.date]);
 
   const filteredProviders = providers.filter(p => {
     const matchesSearch = p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -208,7 +209,7 @@ const PatientProviders = () => {
     setSelectedProvider(provider);
     setBookingStep('form');
     setAvailableSlots([]);
-    setBookingForm({
+    bookingForm.setValues({
       service: provider.services?.[0] || 'General Care',
       date: new Date().toISOString().split('T')[0],
       time: '',
@@ -221,20 +222,8 @@ const PatientProviders = () => {
     e.preventDefault();
     if (!user || !selectedProvider) return;
 
-    if (!bookingForm.service) {
-      toast.error('Please select a service.');
-      return;
-    }
-    if (!bookingForm.date) {
-      toast.error('Please select a date.');
-      return;
-    }
-    if (!bookingForm.time) {
-      toast.error('Please select a time slot.');
-      return;
-    }
-    if (!bookingForm.consent) {
-      toast.error('You must consent to sharing your profile and address to proceed.');
+    if (!bookingForm.validateAll()) {
+      toast.error('Please fix the errors in the form.');
       return;
     }
 
@@ -265,10 +254,10 @@ const PatientProviders = () => {
         .from('requests')
         .select('id')
         .eq('provider_id', selectedProvider.id)
-        .eq('date', bookingForm.date)
+        .eq('date', bookingForm.values.date)
         .in('status', ['Accepted', 'On The Way', 'Arrived'])
-        .gte('time', bookingForm.time + ':00')
-        .lt('time', `${String(parseInt(bookingForm.time.split(':')[0]) + 1).padStart(2, '0')}:00`);
+        .gte('time', bookingForm.values.time + ':00')
+        .lt('time', `${String(parseInt(bookingForm.values.time.split(':')[0]) + 1).padStart(2, '0')}:00`);
 
       if (conflict && conflict.length > 0) {
         toast.error('This time slot has just been taken. Please choose another.');
@@ -283,12 +272,12 @@ const PatientProviders = () => {
         .insert([{
           patient_id: user.id,
           provider_id: selectedProvider.id,
-          service: bookingForm.service,
-          date: bookingForm.date,
-          time: bookingForm.time + ':00',
+          service: bookingForm.values.service,
+          date: bookingForm.values.date,
+          time: bookingForm.values.time + ':00',
           status: 'Pending',
           price: String(selectedProvider.price_per_service || 0),
-          notes: bookingForm.notes
+          notes: bookingForm.values.notes
         }]);
 
       if (reqError) throw reqError;
@@ -368,8 +357,11 @@ const PatientProviders = () => {
                   ))}
                 </div>
               </div>
-            )}
-          </div>
+                    )}
+                    {bookingForm.errors.time && bookingForm.touched.time && (
+                      <p className="text-xs text-red-500 mt-1 ml-1">{bookingForm.errors.time}</p>
+                    )}
+                  </div>
           <CustomSelect 
             value={filter}
             onChange={setFilter}
@@ -521,9 +513,10 @@ const PatientProviders = () => {
                     <label className="text-sm font-bold text-slate-700 ml-1">Select Service</label>
                     <select 
                       required
-                      value={bookingForm.service}
-                      onChange={e => setBookingForm({...bookingForm, service: e.target.value})}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none"
+                      value={bookingForm.values.service}
+                      onChange={e => bookingForm.handleChange('service', e.target.value)}
+                      onBlur={() => bookingForm.handleBlur('service')}
+                      className={`w-full bg-slate-50 border rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none ${bookingForm.errors.service && bookingForm.touched.service ? 'border-red-300' : 'border-slate-200'}`}
                     >
                       {selectedProvider.services?.length > 0 ? (
                         selectedProvider.services.map(s => (
@@ -533,6 +526,9 @@ const PatientProviders = () => {
                         <option value="General Care">General Care</option>
                       )}
                     </select>
+                    {bookingForm.errors.service && bookingForm.touched.service && (
+                      <p className="text-xs text-red-500 mt-1 ml-1">{bookingForm.errors.service}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -543,19 +539,24 @@ const PatientProviders = () => {
                         type="date" 
                         required
                         min={new Date().toISOString().split('T')[0]}
-                        value={bookingForm.date}
+                        value={bookingForm.values.date}
                         onChange={e => {
-                          setBookingForm({...bookingForm, date: e.target.value, time: ''});
+                          bookingForm.handleChange('date', e.target.value);
+                          bookingForm.handleChange('time', '');
                         }}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                        onBlur={() => bookingForm.handleBlur('date')}
+                        className={`w-full bg-slate-50 border rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${bookingForm.errors.date && bookingForm.touched.date ? 'border-red-300' : 'border-slate-200'}`}
                       />
                     </div>
+                    {bookingForm.errors.date && bookingForm.touched.date && (
+                      <p className="text-xs text-red-500 mt-1 ml-1">{bookingForm.errors.date}</p>
+                    )}
                   </div>
 
                   {/* Time Slot Selection */}
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700 ml-1">Available Time Slots</label>
-                    {!bookingForm.date ? (
+                    {!bookingForm.values.date ? (
                       <p className="text-sm text-slate-400 ml-1">Select a date to see available slots.</p>
                     ) : loadingSlots ? (
                       <p className="text-sm text-slate-400 ml-1">Checking availability...</p>
@@ -568,9 +569,9 @@ const PatientProviders = () => {
                             key={slot.time}
                             type="button"
                             disabled={!slot.available}
-                            onClick={() => setBookingForm({...bookingForm, time: slot.time})}
+                            onClick={() => { bookingForm.handleChange('time', slot.time); bookingForm.handleBlur('time'); }}
                             className={`py-2.5 px-3 rounded-xl text-sm font-bold transition-all border ${
-                              bookingForm.time === slot.time
+                              bookingForm.values.time === slot.time
                                 ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                                 : slot.available
                                   ? 'bg-slate-50 text-slate-700 border-slate-200 hover:border-primary hover:text-primary'
@@ -589,8 +590,8 @@ const PatientProviders = () => {
                     <div className="relative">
                       <FileText className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
                       <textarea 
-                        value={bookingForm.notes}
-                        onChange={e => setBookingForm({...bookingForm, notes: e.target.value})}
+                        value={bookingForm.values.notes}
+                        onChange={e => bookingForm.handleChange('notes', e.target.value)}
                         placeholder="Any specific instructions, conditions, or details?"
                         rows={3}
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
@@ -604,14 +605,18 @@ const PatientProviders = () => {
                         type="checkbox" 
                         id="consent"
                         required
-                        checked={bookingForm.consent}
-                        onChange={e => setBookingForm({...bookingForm, consent: e.target.checked})}
+                        checked={bookingForm.values.consent}
+                        onChange={e => bookingForm.handleChange('consent', e.target.checked)}
+                        onBlur={() => bookingForm.handleBlur('consent')}
                         className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
                       />
                     </div>
                     <label htmlFor="consent" className="text-sm text-slate-600 leading-tight cursor-pointer">
                       I consent to sharing my medical profile and home address with <span className="font-bold">{selectedProvider.full_name}</span> for the purpose of this home care service.
                     </label>
+                    {bookingForm.errors.consent && bookingForm.touched.consent && (
+                      <p className="text-xs text-red-500 mt-1 ml-1">{bookingForm.errors.consent}</p>
+                    )}
                   </div>
 
                   <div className="pt-2">
@@ -643,7 +648,7 @@ const PatientProviders = () => {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400">Service</p>
-                        <p className="font-bold text-slate-800 mt-0.5">{bookingForm.service}</p>
+                        <p className="font-bold text-slate-800 mt-0.5">{bookingForm.values.service}</p>
                       </div>
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400">Fee</p>
@@ -652,21 +657,21 @@ const PatientProviders = () => {
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400">Date</p>
                         <p className="font-bold text-slate-800 mt-0.5">
-                          {new Date(bookingForm.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}
+                          {new Date(bookingForm.values.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
                       </div>
                       <div>
                         <p className="text-[10px] uppercase font-bold text-slate-400">Time</p>
                         <p className="font-bold text-slate-800 mt-0.5">
-                          {new Date(`2000-01-01T${bookingForm.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          {new Date(`2000-01-01T${bookingForm.values.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                         </p>
                       </div>
                     </div>
 
-                    {bookingForm.notes && (
+                    {bookingForm.values.notes && (
                       <div className="pt-3 border-t border-slate-200">
                         <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Your Message</p>
-                        <p className="text-sm text-slate-600 italic">"{bookingForm.notes}"</p>
+                        <p className="text-sm text-slate-600 italic">"{bookingForm.values.notes}"</p>
                       </div>
                     )}
 

@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 // Layouts
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -49,31 +50,31 @@ function App() {
         {/* Dashboard Routes with Sidebar */}
         <Route path="/patient" element={<ProtectedRoute allowedRole="patient" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<PatientDashboard />} />
-          <Route path="providers" element={<PatientProviders />} />
-          <Route path="requests" element={<PatientRequests />} />
-          <Route path="messages" element={<PatientMessages />} />
-          <Route path="consent" element={<PatientConsent />} />
-          <Route path="profile" element={<PatientProfile />} />
+          <Route path="dashboard" element={<ErrorBoundary><PatientDashboard /></ErrorBoundary>} />
+          <Route path="providers" element={<ErrorBoundary><PatientProviders /></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><PatientRequests /></ErrorBoundary>} />
+          <Route path="messages" element={<ErrorBoundary><PatientMessages /></ErrorBoundary>} />
+          <Route path="consent" element={<ErrorBoundary><PatientConsent /></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><PatientProfile /></ErrorBoundary>} />
         </Route>
 
         <Route path="/provider" element={<ProtectedRoute allowedRole="provider" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ProviderDashboard />} />
-          <Route path="requests" element={<ProviderRequests />} />
-          <Route path="patients" element={<ProviderPatients />} />
-          <Route path="schedule" element={<ProviderSchedule />} />
-          <Route path="messages" element={<ProviderMessages />} />
-          <Route path="profile" element={<ProviderProfile />} />
+          <Route path="dashboard" element={<ErrorBoundary><ProviderDashboard /></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><ProviderRequests /></ErrorBoundary>} />
+          <Route path="patients" element={<ErrorBoundary><ProviderPatients /></ErrorBoundary>} />
+          <Route path="schedule" element={<ErrorBoundary><ProviderSchedule /></ErrorBoundary>} />
+          <Route path="messages" element={<ErrorBoundary><ProviderMessages /></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><ProviderProfile /></ErrorBoundary>} />
         </Route>
 
         <Route path="/admin" element={<ProtectedRoute allowedRole="admin" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="patients" element={<AdminPatients />} />
-          <Route path="providers" element={<AdminProviders />} />
-          <Route path="requests" element={<AdminRequests />} />
-          <Route path="profile" element={<AdminProfile />} />
+          <Route path="dashboard" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />
+          <Route path="patients" element={<ErrorBoundary><AdminPatients /></ErrorBoundary>} />
+          <Route path="providers" element={<ErrorBoundary><AdminProviders /></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><AdminRequests /></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><AdminProfile /></ErrorBoundary>} />
         </Route>
       </Routes>
     </Router>

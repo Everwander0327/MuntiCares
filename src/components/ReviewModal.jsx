@@ -35,6 +35,18 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
     }
 
     setSubmitting(true);
+
+    // Optimistic: close immediately
+    const close = onClose;
+    const submittedCb = onReviewSubmitted;
+    close();
+    toast.success('Thank you! Your review has been submitted.');
+    if (submittedCb) submittedCb(request.id);
+    const rated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
+    rated[request.id] = true;
+    localStorage.setItem('rated_requests', JSON.stringify(rated));
+
+    // Background: persist to DB
     try {
       // 1. Try to insert into provider_reviews
       const { error: reviewError } = await supabase
@@ -82,18 +94,9 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
         }
       }
 
-      toast.success('Thank you! Your review has been submitted.');
-      
-      // Store in localStorage that this request has been rated
-      const rated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
-      rated[request.id] = true;
-      localStorage.setItem('rated_requests', JSON.stringify(rated));
-
-      if (onReviewSubmitted) onReviewSubmitted(request.id);
-      onClose();
     } catch (err) {
       console.error('Error submitting review:', err);
-      toast.error('Failed to submit review. Please try again.');
+      toast.error('Your review is saved locally but failed to sync to the server.');
     } finally {
       setSubmitting(false);
     }
