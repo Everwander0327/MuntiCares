@@ -255,7 +255,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-50">
+      <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
       </div>
     );
@@ -272,7 +272,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white relative overflow-hidden">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-800 relative overflow-hidden">
       {/* Incoming Call Overlay */}
       <AnimatePresence>
         {incomingCall && (
@@ -280,15 +280,15 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.9 }}
-            className="absolute top-4 inset-x-4 z-[150] bg-white rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] border border-slate-100 p-4 flex items-center justify-between"
+            className="absolute top-4 inset-x-4 z-[150] bg-white dark:bg-slate-800 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 p-4 flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center animate-pulse shrink-0">
                 <Video className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 leading-tight">Incoming Video Call...</h3>
-                <p className="text-sm text-slate-500 font-medium">{otherUser.name} is calling you</p>
+                <h3 className="font-bold text-slate-900 dark:text-slate-100 leading-tight">Incoming Video Call...</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{otherUser.name} is calling you</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -375,34 +375,34 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
       </AnimatePresence>
 
       {/* Chat Header */}
-      <div className="px-4 py-3 bg-white border-b border-slate-100 flex items-center gap-3 shrink-0 z-10">
+      <div className="px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3 shrink-0 z-10">
         {onBack && (
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors -ml-1"
+            className="w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors -ml-1"
           >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
+            <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-300" />
           </button>
         )}
         <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-blue-100 text-primary flex items-center justify-center font-bold overflow-hidden shrink-0 border border-slate-200">
+          <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-primary flex items-center justify-center font-bold overflow-hidden shrink-0 border border-slate-200 dark:border-slate-600">
             {otherUser.photoUrl ? (
               <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
             ) : (
               <UserCircle className="w-6 h-6" />
             )}
           </div>
-          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white transition-colors duration-300 ${isOnline ? 'bg-green-500' : 'bg-slate-300'}`} />
+          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white transition-colors duration-300 ${isOnline ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-slate-900 leading-tight truncate">{otherUser.name}</h3>
-          <p className={`text-xs font-medium transition-colors duration-300 ${isOnline ? 'text-green-500' : 'text-slate-400'}`}>
+          <h3 className="font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">{otherUser.name}</h3>
+          <p className={`text-xs font-medium transition-colors duration-300 ${isOnline ? 'text-green-500' : 'text-slate-400 dark:text-slate-500'}`}>
             {isOnline ? 'Active now' : 'Offline'}
           </p>
         </div>
         <button
           onClick={startVideoCall}
-          className="w-11 h-11 rounded-full bg-blue-50 text-primary flex items-center justify-center hover:bg-blue-100 transition-all shrink-0 border border-blue-100 hover:scale-105"
+          className="w-11 h-11 rounded-full bg-blue-50 dark:bg-blue-900/30 text-primary flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all shrink-0 border border-blue-100 dark:border-blue-900/30 hover:scale-105"
           title="Start Teleconsultation"
         >
           <Video className="w-5 h-5 fill-current" />
@@ -413,12 +413,12 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-slate-50/50"
+        className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-900/50"
       >
         <div className="px-4 md:px-6 py-4">
           {messages.length === 0 ? (
-            <div className="text-center text-slate-400 mt-16">
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-100">
+            <div className="text-center text-slate-400 dark:text-slate-500 mt-16">
+              <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700">
                 <span className="text-2xl">👋</span>
               </div>
               <p className="text-sm font-medium">Say hello to start the conversation!</p>
@@ -437,7 +437,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
                   <React.Fragment key={msg.id}>
                     {showDate && (
                       <div className="flex justify-center my-4">
-                        <span className="text-[11px] font-bold text-slate-400 bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">
+                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-100 dark:border-slate-700 shadow-sm">
                           {formatDateLabel(msg.created_at)}
                         </span>
                       </div>
@@ -448,7 +448,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
                       className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'}`}
                     >
                       {!isMe && (
-                        <div className={`w-8 h-8 rounded-full bg-blue-100 overflow-hidden shrink-0 mr-2 self-end ${showAvatar ? '' : 'invisible'}`}>
+                        <div className={`w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden shrink-0 mr-2 self-end ${showAvatar ? '' : 'invisible'}`}>
                           {otherUser.photoUrl ? (
                             <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -462,17 +462,17 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
                         <div className={`px-4 py-2.5 relative ${
                           isMe
                             ? 'bg-gradient-to-tr from-primary to-blue-500 text-white rounded-2xl rounded-br-sm'
-                            : 'bg-white text-slate-700 border border-slate-100 rounded-2xl rounded-bl-sm shadow-sm'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-2xl rounded-bl-sm shadow-sm dark:shadow-slate-900/50'
                         }`}>
                           <p className="text-[15px] whitespace-pre-wrap leading-snug">{msg.content}</p>
                         </div>
                         {showTime && (
                           <div className="flex items-center gap-1 mt-1 px-1">
-                            <span className="text-[9px] text-slate-400 font-medium">
+                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium">
                               {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             {isMe && (
-                              <span className="text-slate-400">{statusIcon(msg)}</span>
+                              <span className="text-slate-400 dark:text-slate-500">{statusIcon(msg)}</span>
                             )}
                           </div>
                         )}
@@ -484,7 +484,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
 
               {/* 24-Hour Notice */}
               <div className="flex justify-center my-6">
-                <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase bg-slate-200/50 px-3 py-1 rounded-full">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-widest uppercase bg-slate-200/50 dark:bg-slate-700/50 px-3 py-1 rounded-full">
                   🔒 Messages disappear after 24 hours
                 </span>
               </div>
@@ -500,7 +500,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
                 exit={{ opacity: 0, scale: 0.8, y: 10 }}
                 className="flex justify-start mt-2"
               >
-                <div className="w-8 h-8 rounded-full bg-blue-100 overflow-hidden mr-2 shadow-sm shrink-0">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden mr-2 shadow-sm shrink-0">
                   {otherUser.photoUrl ? (
                     <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -509,10 +509,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
                     </div>
                   )}
                 </div>
-                <div className="bg-white border border-slate-100 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
-                  <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
-                  <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
-                  <motion.div className="w-1.5 h-1.5 bg-slate-400 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
+                <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
+                  <motion.div className="w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
                 </div>
               </motion.div>
             )}
@@ -527,9 +527,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={scrollToBottom}
-            className="fixed bottom-20 right-6 w-10 h-10 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center hover:bg-slate-50 transition-colors z-30"
+            className="fixed bottom-20 right-6 w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-lg dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors z-30"
           >
-            <svg className="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </motion.button>
@@ -537,15 +537,15 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
       </div>
 
       {/* Input Area */}
-      <div className="p-3 md:p-4 bg-white border-t border-slate-100 shrink-0">
+      <div className="p-3 md:p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shrink-0">
         <form onSubmit={handleSend} className="flex gap-2 max-w-4xl mx-auto">
-          <div className="flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-full px-4 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary focus-within:bg-white transition-all">
+          <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-full px-4 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary focus-within:bg-white dark:focus-within:bg-slate-800 transition-all">
             <input
               type="text"
               value={newMessage}
               onChange={handleTyping}
               placeholder="Type a message..."
-              className="flex-1 bg-transparent py-3 focus:outline-none text-sm font-medium text-slate-900 placeholder-slate-400"
+              className="flex-1 bg-transparent py-3 focus:outline-none text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
               style={{ fontSize: '16px' }}
             />
           </div>

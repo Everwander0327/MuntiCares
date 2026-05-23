@@ -157,9 +157,9 @@ const AdminProviders = () => {
     switch (status) {
       case 'Approved': return { bg: 'bg-green-100 text-green-700', dot: 'bg-green-500' };
       case 'Pending Approval': return { bg: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' };
-      case 'Incomplete': return { bg: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' };
+      case 'Incomplete': return { bg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', dot: 'bg-slate-400' };
       case 'Banned': return { bg: 'bg-red-100 text-red-700', dot: 'bg-red-500' };
-      default: return { bg: 'bg-slate-100 text-slate-600', dot: 'bg-slate-400' };
+      default: return { bg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', dot: 'bg-slate-400' };
     }
   };
 
@@ -177,18 +177,18 @@ const AdminProviders = () => {
           transition={{ duration: 0.4 }}
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Manage Providers</h1>
-            <p className="text-slate-500">Review, approve, and manage healthcare professionals</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Providers</h1>
+            <p className="text-slate-500 dark:text-slate-400">Review, approve, and manage healthcare professionals</p>
           </div>
           <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
               <input 
                 type="text" 
                 placeholder="Search providers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm"
+                className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
               />
             </div>
             <CustomSelect 
@@ -206,7 +206,7 @@ const AdminProviders = () => {
         </motion.div>
 
         <motion.div 
-          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -218,7 +218,7 @@ const AdminProviders = () => {
               return (
                 <motion.div 
                   key={p.id} 
-                  className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 transition-colors"
+                  className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 transition-colors dark:hover:bg-slate-700/50"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
@@ -226,12 +226,12 @@ const AdminProviders = () => {
                 >
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary">
+                      <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary dark:bg-blue-900/30">
                         {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900">{p.name}</p>
-                        <p className="text-xs text-slate-400">{p.email}</p>
+                        <p className="font-bold text-slate-900 dark:text-slate-100">{p.name}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">{p.email}</p>
                       </div>
                     </div>
                     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${style.bg}`}>
@@ -240,7 +240,7 @@ const AdminProviders = () => {
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600">{p.services.length > 0 ? p.services[0] : 'No services'}</span>
+                    <span className="text-slate-600 dark:text-slate-300">{p.services.length > 0 ? p.services[0] : 'No services'}</span>
                     <div className="flex items-center gap-1 text-yellow-500 font-bold">
                       <Star className="w-3 h-3 fill-current" />
                       {Number(p.rating).toFixed(1)}
@@ -255,7 +255,7 @@ const AdminProviders = () => {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse table-striped">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
                   <th className="px-6 py-4 font-bold">Name</th>
                   <th className="px-6 py-4 font-bold">Specialization</th>
                   <th className="px-6 py-4 font-bold">Rating</th>
@@ -278,23 +278,23 @@ const AdminProviders = () => {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary">
+                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary dark:bg-blue-900/30">
                             {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                           </div>
                           <div>
-                            <span className="font-bold text-slate-700 block">{p.name}</span>
-                            <span className="text-xs text-slate-400">{p.email}</span>
+                            <span className="font-bold text-slate-700 block dark:text-slate-200">{p.name}</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500">{p.email}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-600 text-sm">{p.services.length > 0 ? p.services.join(', ') : '—'}</td>
-                      <td className="px-6 py-4 text-slate-600">
+                      <td className="px-6 py-4 text-slate-600 text-sm dark:text-slate-300">{p.services.length > 0 ? p.services.join(', ') : '—'}</td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                         <div className="flex items-center gap-1 text-yellow-500 font-bold text-sm">
                           <Star className="w-4 h-4 fill-current" />
                           {Number(p.rating).toFixed(1)}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-500 text-sm">{p.joinDate}</td>
+                      <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{p.joinDate}</td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${style.bg}`}>
                           <span className={`w-1.5 h-1.5 rounded-full status-dot ${style.dot}`} />
@@ -316,10 +316,10 @@ const AdminProviders = () => {
             </table>
           </div>
           {filteredProviders.length === 0 && (
-            <div className="p-10 text-center text-slate-500">No providers found.</div>
+            <div className="p-10 text-center text-slate-500 dark:text-slate-400">No providers found.</div>
           )}
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Showing {filteredProviders.length} of {providers.length} providers</p>
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between dark:border-slate-700">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Showing {filteredProviders.length} of {providers.length} providers</p>
           </div>
         </motion.div>
       </div>
@@ -335,28 +335,28 @@ const AdminProviders = () => {
             onClick={() => setSelectedProvider(null)}
           >
             <motion.div 
-              className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto"
+              className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto dark:bg-slate-800"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={e => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white rounded-t-[2rem] z-10">
-                <h2 className="text-xl font-bold text-slate-900">Provider Details</h2>
-                <button onClick={() => setSelectedProvider(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                  <X className="w-5 h-5 text-slate-400" />
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white rounded-t-[2rem] z-10 dark:border-slate-700 dark:bg-slate-800">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Provider Details</h2>
+                <button onClick={() => setSelectedProvider(null)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors dark:hover:bg-slate-700">
+                  <X className="w-5 h-5 text-slate-400 dark:text-slate-500" />
                 </button>
               </div>
 
               <div className="p-6 space-y-6">
                 {/* Avatar + Name */}
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-2xl font-bold text-primary">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-2xl font-bold text-primary dark:bg-blue-900/30">
                     {selectedProvider.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900">{selectedProvider.name}</h3>
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{selectedProvider.name}</h3>
                     <p className="text-primary text-sm font-semibold">{selectedProvider.bio || 'No bio provided'}</p>
                     {(() => {
                       const style = getStatusStyle(selectedProvider.status);
@@ -372,23 +372,23 @@ const AdminProviders = () => {
 
                 {/* Contact Info */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-slate-600 text-sm">
-                    <Mail className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
+                    <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     <span>{selectedProvider.email}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-slate-600 text-sm">
-                    <Phone className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
+                    <Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     <span>{selectedProvider.phone || 'Not provided'}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-slate-600 text-sm">
-                    <MapPin className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
+                    <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     <span>{selectedProvider.location}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-slate-600 text-sm">
-                    <BookOpen className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
+                    <BookOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     <span>₱{selectedProvider.price_per_service} per service</span>
                   </div>
-                  <div className="flex items-center gap-3 text-slate-600 text-sm">
+                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
                     <Star className="w-4 h-4 text-yellow-500 fill-current" />
                     <span>{Number(selectedProvider.rating).toFixed(1)} rating</span>
                   </div>
@@ -396,20 +396,20 @@ const AdminProviders = () => {
 
                 {/* Specializations */}
                 <div>
-                  <p className="text-xs text-slate-400 font-bold uppercase mb-2">Specializations</p>
+                  <p className="text-xs text-slate-400 font-bold uppercase mb-2 dark:text-slate-500">Specializations</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedProvider.services.length > 0 ? (
                       selectedProvider.services.map((s, i) => (
-                        <span key={i} className="px-3 py-1.5 bg-blue-50 text-primary rounded-xl text-xs font-bold border border-blue-100">{s}</span>
+                        <span key={i} className="px-3 py-1.5 bg-blue-50 text-primary rounded-xl text-xs font-bold border border-blue-100 dark:bg-blue-900/30">{s}</span>
                       ))
                     ) : (
-                      <p className="text-slate-400 text-sm">No specializations listed.</p>
+                      <p className="text-slate-400 text-sm dark:text-slate-500">No specializations listed.</p>
                     )}
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">
                   {/* Approve / Revoke */}
                   {selectedProvider.status === 'Pending Approval' && (
                     <button 
@@ -450,7 +450,7 @@ const AdminProviders = () => {
                   <button 
                     onClick={() => handleRemove(selectedProvider)}
                     disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 transition-all disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 transition-all disabled:opacity-50 dark:bg-slate-800"
                   >
                     <X className="w-4 h-4" />
                     {actionLoading ? 'Processing...' : 'Permanently Remove'}

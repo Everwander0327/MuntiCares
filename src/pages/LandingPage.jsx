@@ -59,11 +59,11 @@ const Hero = () => {
               </span>
               Muntinlupa City's Trusted Network
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 leading-tight">
+            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
               Quality Home Care, <br className="hidden md:block" />
               <span className="text-primary">Right at Your Doorstep</span>
             </h1>
-            <p className="text-lg md:text-xl text-slate-600 leading-relaxed max-w-xl mx-auto md:mx-0">
+            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl mx-auto md:mx-0">
               Connecting Muntinlupa City residents with trusted, verified home care providers — fast, secure, and patient-first.
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start pt-4">
@@ -81,7 +81,7 @@ const Hero = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl animate-float border-8 border-white">
+            <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl animate-float border-8 border-white dark:border-slate-800">
               <img 
                 src={heroImage} 
                 alt="Home Care Provider" 
@@ -111,7 +111,7 @@ const StatsBanner = () => {
   };
 
   return (
-    <section className="py-12 bg-white border-y border-slate-100">
+    <section className="py-12 bg-white dark:bg-slate-800 border-y border-slate-100 dark:border-slate-700">
       <div className="container mx-auto px-6">
         <motion.div 
           className="grid grid-cols-2 md:grid-cols-4 gap-8"
@@ -129,14 +129,14 @@ const StatsBanner = () => {
               <div className="inline-flex p-3 bg-blue-50 text-primary rounded-2xl mb-2">
                 {stat.icon}
               </div>
-              <p className="text-3xl md:text-4xl font-extrabold text-slate-900">
+              <p className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-slate-100">
                 {stat.isDecimal ? (
                   <DecimalStat end={stat.value} suffix={stat.suffix} />
                 ) : (
                   <StatNumber end={stat.value} suffix={stat.suffix} />
                 )}
               </p>
-              <p className="text-slate-500 font-medium text-sm">{stat.label}</p>
+              <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">{stat.label}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -165,7 +165,7 @@ const Features = () => {
   ];
 
   return (
-    <section className="py-24 bg-white">
+    <section className="py-24 bg-white dark:bg-slate-800">
       <div className="container mx-auto px-6">
         <motion.div 
           className="text-center space-y-4 mb-16"
@@ -174,8 +174,8 @@ const Features = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Why MuntiCares?</h2>
-          <p className="text-slate-600 max-w-2xl mx-auto">We're committed to providing the safest and most efficient home care connection in the city.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100">Why MuntiCares?</h2>
+          <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">We're committed to providing the safest and most efficient home care connection in the city.</p>
         </motion.div>
         <motion.div 
           className="grid md:grid-cols-3 gap-8"
@@ -201,11 +201,11 @@ const Features = () => {
                      WebkitMaskComposite: 'xor',
                    }} 
               />
-              <div className="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-100 group-hover:bg-primary group-hover:shadow-primary/30 transition-all duration-300">
+              <div className="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-100 dark:shadow-slate-900/50 group-hover:bg-primary group-hover:shadow-primary/30 transition-all duration-300">
                 {React.cloneElement(feature.icon, { className: "w-8 h-8 text-primary group-hover:text-white transition-colors" })}
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-3">{feature.title}</h3>
-              <p className="text-slate-600 leading-relaxed">{feature.description}</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">{feature.title}</h3>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -234,7 +234,7 @@ const HowItWorks = () => {
   ];
 
   return (
-    <section className="py-24 bg-secondary/50">
+    <section className="py-24 bg-secondary/50 dark:bg-slate-800/50">
       <div className="container mx-auto px-6">
         <motion.div 
           className="text-center space-y-4 mb-16"
@@ -243,8 +243,8 @@ const HowItWorks = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900">How It Works</h2>
-          <p className="text-slate-600 max-w-2xl mx-auto">Getting the care you need is simpler than you think.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100">How It Works</h2>
+          <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">Getting the care you need is simpler than you think.</p>
         </motion.div>
         <motion.div 
           className="flex flex-col md:flex-row gap-12 relative"
@@ -258,12 +258,12 @@ const HowItWorks = () => {
           
           {/* Connecting arrows between steps */}
           <div className="hidden md:flex absolute top-1/2 left-[67%] -translate-x-1/2 -translate-y-1/2 z-10">
-            <div className="bg-white rounded-full p-1 shadow-md border border-blue-100">
+            <div className="bg-white dark:bg-slate-800 rounded-full p-1 shadow-md border border-blue-100 dark:border-slate-700">
               <ChevronRight className="w-5 h-5 text-primary" />
             </div>
           </div>
           <div className="hidden md:flex absolute top-1/2 left-[33%] -translate-x-1/2 -translate-y-1/2 z-10">
-            <div className="bg-white rounded-full p-1 shadow-md border border-blue-100">
+            <div className="bg-white dark:bg-slate-800 rounded-full p-1 shadow-md border border-blue-100 dark:border-slate-700">
               <ChevronRight className="w-5 h-5 text-primary" />
             </div>
           </div>
@@ -272,13 +272,13 @@ const HowItWorks = () => {
             <motion.div 
               key={idx} 
               variants={staggerItem}
-              className="flex-1 bg-white p-8 rounded-3xl shadow-xl shadow-blue-900/5 border border-blue-50 relative transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2"
+              className="flex-1 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-xl shadow-blue-900/5 dark:shadow-slate-900/50 border border-blue-50 dark:border-slate-700 relative transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-2"
             >
               <div className="absolute -top-6 left-8 bg-primary text-white w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg shadow-blue-200">
                 {step.number}
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-4 mt-4">{step.title}</h3>
-              <p className="text-slate-600">{step.description}</p>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4 mt-4">{step.title}</h3>
+              <p className="text-slate-600 dark:text-slate-300">{step.description}</p>
             </motion.div>
           ))}
         </motion.div>
@@ -313,7 +313,7 @@ const Testimonials = () => {
   ];
 
   return (
-    <section className="py-24 bg-white">
+    <section className="py-24 bg-white dark:bg-slate-800">
       <div className="container mx-auto px-6">
         <motion.div 
           className="text-center space-y-4 mb-16"
@@ -322,8 +322,8 @@ const Testimonials = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900">What Our Users Say</h2>
-          <p className="text-slate-600 max-w-2xl mx-auto">Real experiences from families and providers across Muntinlupa.</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-slate-900 dark:text-slate-100">What Our Users Say</h2>
+          <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">Real experiences from families and providers across Muntinlupa.</p>
         </motion.div>
         <motion.div 
           className="grid md:grid-cols-3 gap-8"
@@ -336,7 +336,7 @@ const Testimonials = () => {
             <motion.div
               key={idx}
               variants={staggerItem}
-              className="relative bg-gradient-to-br from-slate-50 to-blue-50/50 p-8 rounded-3xl border border-blue-100/50 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+              className="relative bg-gradient-to-br from-slate-50 dark:from-slate-800 to-blue-50/50 dark:to-slate-700/50 p-8 rounded-3xl border border-blue-100/50 dark:border-slate-700 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
               whileHover={{ y: -4, transition: { duration: 0.2 } }}
             >
               <Quote className="w-8 h-8 text-primary/20 mb-4" />
@@ -348,8 +348,8 @@ const Testimonials = () => {
                   {t.initials}
                 </div>
                 <div>
-                  <p className="font-bold text-slate-900">{t.name}</p>
-                  <p className="text-slate-500 text-sm">{t.location}</p>
+                  <p className="font-bold text-slate-900 dark:text-slate-100">{t.name}</p>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">{t.location}</p>
                 </div>
               </div>
               <div className="flex gap-1 mt-4">

@@ -102,18 +102,18 @@ const AdminPatients = () => {
           transition={{ duration: 0.4 }}
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Manage Patients</h1>
-            <p className="text-slate-500">Overview of all registered patients in Muntinlupa</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Patients</h1>
+            <p className="text-slate-500 dark:text-slate-400">Overview of all registered patients in Muntinlupa</p>
           </div>
           <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
               <input 
                 type="text" 
                 placeholder="Search patients..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm"
+                className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
               />
             </div>
             <CustomSelect 
@@ -129,7 +129,7 @@ const AdminPatients = () => {
         </motion.div>
 
         <motion.div 
-          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -146,12 +146,12 @@ const AdminPatients = () => {
               >
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-500">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                       {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">{p.name}</p>
-                      <p className="text-xs text-slate-400">{p.email}</p>
+                      <p className="font-bold text-slate-900 dark:text-slate-100">{p.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">{p.email}</p>
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
@@ -163,8 +163,8 @@ const AdminPatients = () => {
                     {p.status}
                   </span>
                 </div>
-                <div className="text-sm text-slate-400">Joined: {p.joinDate}</div>
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-50">
+                <div className="text-sm text-slate-400 dark:text-slate-500">Joined: {p.joinDate}</div>
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-50 dark:border-slate-700">
                   <button 
                     className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
                       p.is_banned ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100'
@@ -190,7 +190,7 @@ const AdminPatients = () => {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse table-striped">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
                   <th className="px-6 py-4 font-bold">Full Name</th>
                   <th className="px-6 py-4 font-bold">Email</th>
                   <th className="px-6 py-4 font-bold">Joined</th>
@@ -209,14 +209,14 @@ const AdminPatients = () => {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                           {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                         </div>
-                        <span className="font-bold text-slate-700">{p.name}</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{p.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 text-sm">{p.email}</td>
-                    <td className="px-6 py-4 text-slate-500 text-sm">{p.joinDate}</td>
+                    <td className="px-6 py-4 text-slate-600 text-sm dark:text-slate-300">{p.email}</td>
+                    <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{p.joinDate}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                         p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
@@ -257,10 +257,10 @@ const AdminPatients = () => {
             </table>
           </div>
           {filteredPatients.length === 0 && (
-            <div className="p-10 text-center text-slate-500">No patients found.</div>
+            <div className="p-10 text-center text-slate-500 dark:text-slate-400">No patients found.</div>
           )}
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Showing {filteredPatients.length} of {patients.length} patients</p>
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between dark:border-slate-700">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Showing {filteredPatients.length} of {patients.length} patients</p>
           </div>
         </motion.div>
       </div>

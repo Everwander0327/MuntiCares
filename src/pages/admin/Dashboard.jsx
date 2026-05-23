@@ -20,7 +20,7 @@ const StatCard = ({ label, value, icon, color }) => {
   
   return (
     <motion.div 
-      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between dark:border-slate-700 dark:shadow-slate-900/50"
       style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)' }}
       variants={staggerItem}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
@@ -31,8 +31,8 @@ const StatCard = ({ label, value, icon, color }) => {
         </div>
       </div>
       <div>
-        <p className="text-slate-500 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight">{label}</p>
-        <p className="text-lg md:text-2xl font-bold text-slate-900" ref={ref}>{count}</p>
+        <p className="text-slate-500 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight dark:text-slate-400">{label}</p>
+        <p className="text-lg md:text-2xl font-bold text-slate-900 dark:text-slate-100" ref={ref}>{count}</p>
       </div>
     </motion.div>
   );
@@ -41,8 +41,8 @@ const StatCard = ({ label, value, icon, color }) => {
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white px-4 py-2 rounded-xl shadow-lg border border-slate-100 z-50 relative">
-        <p className="text-sm font-bold text-slate-900">{label}</p>
+      <div className="bg-white px-4 py-2 rounded-xl shadow-lg border border-slate-100 z-50 relative dark:bg-slate-800 dark:border-slate-700">
+        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{label}</p>
         <p className="text-sm text-primary font-semibold">{payload[0].value} requests</p>
       </div>
     );
@@ -176,7 +176,7 @@ const AdminDashboard = () => {
             label="Total Patients" 
             value={stats.totalPatients} 
             icon={<Users />} 
-            color="bg-blue-50 text-primary" 
+            color="bg-blue-50 text-primary dark:bg-blue-900/30" 
           />
           <StatCard 
             label="Total Providers" 
@@ -206,8 +206,8 @@ const AdminDashboard = () => {
           transition={{ delay: 0.3 }}
         >
           {/* Bar Chart */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-6">Requests Per Month</h3>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50">
+            <h3 className="text-lg font-bold text-slate-900 mb-6 dark:text-slate-100">Requests Per Month</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={barChartData} barSize={32}>
@@ -222,8 +222,8 @@ const AdminDashboard = () => {
           </div>
 
           {/* Pie Chart */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6">
-            <h3 className="text-lg font-bold text-slate-900 mb-6">User Distribution</h3>
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50">
+            <h3 className="text-lg font-bold text-slate-900 mb-6 dark:text-slate-100">User Distribution</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -246,7 +246,7 @@ const AdminDashboard = () => {
                   />
                   <Legend 
                     verticalAlign="bottom"
-                    formatter={(value) => <span className="text-slate-600 font-medium text-sm">{value}</span>}
+                    formatter={(value) => <span className="text-slate-600 font-medium text-sm dark:text-slate-200">{value}</span>}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -256,18 +256,18 @@ const AdminDashboard = () => {
 
         {/* Activity Table */}
         <motion.div 
-          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-xl font-bold text-slate-900">Recent Service Requests</h3>
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between dark:border-slate-700">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Recent Service Requests</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse table-striped">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
+                <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
                   <th className="px-6 py-4 font-semibold">Patient</th>
                   <th className="px-6 py-4 font-semibold">Action</th>
                   <th className="px-6 py-4 font-semibold">Date & Time</th>
@@ -283,9 +283,9 @@ const AdminDashboard = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.5 + idx * 0.1 }}
                   >
-                    <td className="px-6 py-4 font-semibold text-slate-700">{act.user}</td>
-                    <td className="px-6 py-4 text-slate-600">{act.action}</td>
-                    <td className="px-6 py-4 text-slate-500 text-sm">{act.date}</td>
+                    <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">{act.user}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{act.action}</td>
+                    <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{act.date}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                         act.status === 'Completed' ? 'bg-green-100 text-green-700' :
@@ -305,7 +305,7 @@ const AdminDashboard = () => {
                   </motion.tr>
                 )) : (
                   <tr>
-                    <td colSpan="4" className="px-6 py-10 text-center text-slate-500">No recent activity.</td>
+                    <td colSpan="4" className="px-6 py-10 text-center text-slate-500 dark:text-slate-400">No recent activity.</td>
                   </tr>
                 )}
               </tbody>

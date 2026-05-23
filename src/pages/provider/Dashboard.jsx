@@ -21,7 +21,7 @@ const StatCard = ({ label, value, icon, color }) => {
   
   return (
     <motion.div 
-      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between dark:border-slate-700 dark:shadow-slate-900/50"
       style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)' }}
       variants={staggerItem}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
@@ -32,8 +32,8 @@ const StatCard = ({ label, value, icon, color }) => {
         </div>
       </div>
       <div>
-        <p className="text-slate-500 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight">{label}</p>
-        <p className="text-lg md:text-2xl font-bold text-slate-900" ref={ref}>{count}</p>
+        <p className="text-slate-500 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight dark:text-slate-400">{label}</p>
+        <p className="text-lg md:text-2xl font-bold text-slate-900 dark:text-slate-100" ref={ref}>{count}</p>
       </div>
     </motion.div>
   );
@@ -193,19 +193,19 @@ const ProviderDashboard = () => {
             label="Pending Requests" 
             value={String(stats.pending)} 
             icon={<Clock />} 
-            color="bg-yellow-50 text-yellow-600" 
+            color="bg-yellow-50 text-yellow-600 dark:bg-yellow-900/30" 
           />
           <StatCard 
             label="Active Patients" 
             value={String(stats.activePatients)} 
             icon={<Users />} 
-            color="bg-blue-50 text-primary" 
+            color="bg-blue-50 text-primary dark:bg-blue-900/30" 
           />
           <StatCard 
             label="Completed Services" 
             value={String(stats.completed)} 
             icon={<CheckCircle />} 
-            color="bg-green-50 text-green-600" 
+            color="bg-green-50 text-green-600 dark:bg-green-900/30" 
           />
         </motion.div>
 
@@ -248,13 +248,13 @@ const ProviderDashboard = () => {
 
         {/* Incoming Requests Table */}
         <motion.div 
-          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-xl font-bold text-slate-900">Incoming Requests</h3>
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between dark:border-slate-700">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Incoming Requests</h3>
             <Link to="/provider/requests" className="text-primary font-semibold text-sm hover:underline flex items-center gap-1">
               View All <ChevronRight className="w-4 h-4" />
             </Link>
@@ -262,7 +262,7 @@ const ProviderDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse table-striped">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
+                <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
                   <th className="px-6 py-4 font-semibold">Patient Name</th>
                   <th className="px-6 py-4 font-semibold">Service Needed</th>
                   <th className="px-6 py-4 font-semibold">Date</th>
@@ -279,23 +279,23 @@ const ProviderDashboard = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.5 + idx * 0.1 }}
                     >
-                      <td className="px-6 py-4 font-semibold text-slate-700">
+                      <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary">
+                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary dark:bg-blue-900/30">
                             {req.patient.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                           </div>
                           {req.patient}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-600">{req.service}</td>
-                      <td className="px-6 py-4 text-slate-600">{req.date}</td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{req.service}</td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{req.date}</td>
                       <td className="px-6 py-4">
                         <div className="flex gap-2">
                           <motion.button 
-                            className={`p-2 rounded-xl transition-all shadow-sm ${
+                            className={`p-2 rounded-xl transition-all shadow-sm dark:shadow-slate-900/50 ${
                               actionStates[req.id] === 'accepted' 
                                 ? 'bg-green-500 text-white' 
-                                : 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white'
+                                : 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white dark:bg-green-900/30'
                             }`}
                             onClick={() => handleAction(req.id, 'accepted')}
                             whileTap={{ scale: 0.9 }}
@@ -305,10 +305,10 @@ const ProviderDashboard = () => {
                             <Check className="w-5 h-5" />
                           </motion.button>
                           <motion.button 
-                            className={`p-2 rounded-xl transition-all shadow-sm ${
+                            className={`p-2 rounded-xl transition-all shadow-sm dark:shadow-slate-900/50 ${
                               actionStates[req.id] === 'rejected' 
                                 ? 'bg-red-500 text-white' 
-                                : 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white'
+                                : 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white dark:bg-red-900/30'
                             }`}
                             onClick={() => handleAction(req.id, 'rejected')}
                             whileTap={{ scale: 0.9 }}
@@ -323,7 +323,7 @@ const ProviderDashboard = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="px-6 py-10 text-center text-slate-400">
+                    <td colSpan="4" className="px-6 py-10 text-center text-slate-400 dark:text-slate-500">
                       No incoming requests.
                     </td>
                   </tr>

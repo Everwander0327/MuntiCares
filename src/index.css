@@ -4,13 +4,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme transition */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 /* Smooth scroll behavior */
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  @apply font-sans bg-secondary text-slate-900;
+  @apply font-sans bg-secondary text-slate-900 dark:bg-slate-900 dark:text-slate-100;
   line-height: 1.7;
 }
 
@@ -29,7 +38,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .card {
-    @apply bg-white p-8 rounded-2xl shadow-xl shadow-blue-900/5 border border-blue-50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1;
+    @apply bg-white p-8 rounded-2xl shadow-xl shadow-blue-900/5 border border-blue-50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50;
   }
 }
 
@@ -54,6 +63,10 @@ input:focus, textarea:focus, select:focus {
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s infinite;
   border-radius: 0.75rem;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
 }
 
 @keyframes skeleton-shimmer {
@@ -128,8 +141,16 @@ input:focus, textarea:focus, select:focus {
   background-color: #F8FBFF;
 }
 
+.dark .table-striped tbody tr:nth-child(even) {
+  background-color: #1e293b;
+}
+
 .table-striped tbody tr:hover {
   background-color: #EFF6FF !important;
+}
+
+.dark .table-striped tbody tr:hover {
+  background-color: #1e3a5f !important;
 }
 
 /* Mobile bottom nav */
@@ -154,6 +175,14 @@ input:focus, textarea:focus, select:focus {
   border-radius: 3px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
 }

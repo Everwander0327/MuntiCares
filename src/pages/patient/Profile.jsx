@@ -477,15 +477,15 @@ const PatientProfile = () => {
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl md:rounded-3xl p-4 md:p-6"
+            className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 dark:border-yellow-900/50 rounded-2xl md:rounded-3xl p-4 md:p-6"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-yellow-800 font-bold text-base md:text-lg">Complete Your Profile</h3>
-                <p className="text-yellow-700 text-xs md:text-sm mt-1">Your address is required so providers know where to deliver home care services.</p>
+                <h3 className="text-yellow-800 dark:text-yellow-200 font-bold text-base md:text-lg">Complete Your Profile</h3>
+                <p className="text-yellow-700 dark:text-yellow-200 text-xs md:text-sm mt-1">Your address is required so providers know where to deliver home care services.</p>
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                <div className="w-24 h-2 bg-yellow-200 rounded-full overflow-hidden">
+                <div className="w-24 h-2 bg-yellow-200 dark:bg-yellow-900/50 rounded-full overflow-hidden">
                   <motion.div 
                     className="h-full bg-yellow-500 rounded-full"
                     initial={{ width: 0 }}
@@ -493,7 +493,7 @@ const PatientProfile = () => {
                     transition={{ duration: 0.8, delay: 0.3 }}
                   />
                 </div>
-                <span className="text-yellow-700 font-bold text-sm">{completionPercent}%</span>
+                <span className="text-yellow-700 dark:text-yellow-200 font-bold text-sm">{completionPercent}%</span>
               </div>
             </div>
           </motion.div>
@@ -503,7 +503,7 @@ const PatientProfile = () => {
           {/* Profile Sidebar Card */}
           <div className="lg:col-span-1">
             <motion.div 
-              className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden"
+              className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
@@ -514,7 +514,7 @@ const PatientProfile = () => {
 
               {/* Avatar overlapping the banner */}
               <div className="px-6 md:px-8 -mt-14 md:-mt-16 relative z-10">
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center text-3xl md:text-4xl font-bold text-primary mx-auto"
+                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white dark:bg-slate-800 border-4 border-white shadow-lg flex items-center justify-center text-3xl md:text-4xl font-bold text-primary mx-auto"
                   style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)' }}
                 >
                   {profile.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
@@ -522,15 +522,15 @@ const PatientProfile = () => {
               </div>
 
               <div className="px-6 md:px-8 pt-4 pb-6 md:pb-8 text-center">
-                <h2 className="text-xl md:text-2xl font-bold text-slate-900">{profile.full_name}</h2>
-                <p className="text-slate-500 text-sm font-medium mt-1">{profile.email}</p>
+                <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">{profile.full_name}</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">{profile.email}</p>
                 
                 <div className="flex items-center justify-center gap-2 mt-3">
-                  <span className="inline-flex items-center px-3 py-1 bg-blue-50 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full border border-blue-100">
+                  <span className="inline-flex items-center px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full border border-blue-100 dark:border-blue-900/50">
                     Patient
                   </span>
                   {profile.is_profile_complete && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 font-bold text-[10px] uppercase tracking-widest rounded-full border border-green-100">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 font-bold text-[10px] uppercase tracking-widest rounded-full border border-green-100 dark:border-green-900/50">
                       <CheckCircle2 className="w-3 h-3" /> Complete
                     </span>
                   )}
@@ -538,49 +538,49 @@ const PatientProfile = () => {
 
                 {/* Quick Info */}
                 <div className="mt-6 space-y-3 text-left">
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <div className="p-2 bg-slate-50 rounded-lg shrink-0">
-                      <Mail className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
+                      <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     </div>
                     <span className="truncate">{profile.email}</span>
                   </div>
                   {profile.phone && (
-                    <div className="flex items-center gap-3 text-sm text-slate-600">
-                      <div className="p-2 bg-slate-50 rounded-lg shrink-0">
-                        <Phone className="w-4 h-4 text-slate-400" />
+                    <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
+                        <Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                       </div>
                       <span>{profile.phone}</span>
                     </div>
                   )}
                   {profile.address && (
-                    <div className="flex items-start gap-3 text-sm text-slate-600">
-                      <div className="p-2 bg-slate-50 rounded-lg shrink-0 mt-0.5">
-                        <MapPin className="w-4 h-4 text-slate-400" />
+                    <div className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-300">
+                      <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0 mt-0.5">
+                        <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                       </div>
                       <span className="line-clamp-2">{profile.address}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-3 text-sm text-slate-600">
-                    <div className="p-2 bg-slate-50 rounded-lg shrink-0">
-                      <Calendar className="w-4 h-4 text-slate-400" />
+                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
+                    <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
+                      <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     </div>
                     <span>Member since {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}</span>
                   </div>
                 </div>
 
                 {/* Download & Logout */}
-                <div className="mt-8 pt-6 border-t border-slate-100 space-y-3">
+                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 space-y-3">
                   <button 
                     onClick={generatePDF}
                     disabled={generatingPdf}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-primary bg-blue-50 hover:bg-blue-100 transition-colors text-sm disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-primary bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors text-sm disabled:opacity-50"
                   >
                     {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                     {generatingPdf ? 'Generating...' : 'Download Medical Summary'}
                   </button>
                   <button 
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors text-sm"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors text-sm"
                   >
                     <LogOut className="w-4 h-4" />
                     Logout
@@ -592,82 +592,82 @@ const PatientProfile = () => {
 
           {/* Edit Form */}
           <motion.div 
-            className="lg:col-span-2 bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden"
+            className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <div className="p-6 md:p-8 border-b border-slate-100">
-              <h3 className="text-lg md:text-xl font-bold text-slate-900">Personal & Medical Details</h3>
-              <p className="text-slate-500 text-sm mt-1">This information helps providers give you the best possible care.</p>
+            <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Personal & Medical Details</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">This information helps providers give you the best possible care.</p>
             </div>
             
             <form onSubmit={handleSave} className="p-6 md:p-8 space-y-5 md:space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Phone Number</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
                   <div className="relative group">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <input 
                       type="tel"
                       required
                       value={profile.phone}
                       onChange={e => setProfile({...profile, phone: e.target.value})}
                       placeholder="e.g., 09123456789"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Emergency Contact</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
                   <div className="relative group">
-                    <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <input 
                       type="text"
                       required
                       value={profile.emergency_contact}
                       onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
                       placeholder="Name & Number"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Home Address (Service Location)</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Home Address (Service Location)</label>
                   <div className="relative group">
-                    <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <textarea 
                       required
                       value={profile.address}
                       onChange={e => setProfile({...profile, address: e.target.value})}
                       placeholder="Full home address in Muntinlupa..."
                       rows={3}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 ml-1">Medical Notes (Allergies, Conditions)</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Medical Notes (Allergies, Conditions)</label>
                   <div className="relative group">
-                    <Activity className="absolute left-4 top-4 w-5 h-5 text-slate-400 group-focus-within:text-primary transition-colors" />
+                    <Activity className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <textarea 
                       value={profile.medical_notes}
                       onChange={e => setProfile({...profile, medical_notes: e.target.value})}
                       placeholder="Any important medical history providers should know?"
                       rows={4}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
                     />
                   </div>
                   
                   {/* Smart Suggestions */}
                   <div className="pt-2 space-y-3">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Quick Add Suggestions:</p>
+                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Quick Add Suggestions:</p>
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap gap-2">
-                        <span className="text-xs py-1.5 px-2 bg-slate-100 rounded-lg font-bold text-slate-500 mr-1 flex items-center">💊 Conditions</span>
+                        <span className="text-xs py-1.5 px-2 bg-slate-100 dark:bg-slate-700 rounded-lg font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center">💊 Conditions</span>
                         {['Diabetic', 'High Blood Pressure', 'Asthma', 'Heart Condition'].filter(s => !(profile.medical_notes || '').toLowerCase().includes(s.toLowerCase())).map(s => (
                           <motion.button
                             key={s}
@@ -678,14 +678,14 @@ const PatientProfile = () => {
                               const newNotes = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
                               setProfile({...profile, medical_notes: newNotes});
                             }}
-                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary rounded-lg text-xs font-bold border border-blue-100 transition-colors"
+                            className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-primary rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-900/50 transition-colors"
                           >
                             + {s}
                           </motion.button>
                         ))}
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        <span className="text-xs py-1.5 px-2 bg-slate-100 rounded-lg font-bold text-slate-500 mr-1 flex items-center">⚠️ Allergies/Notes</span>
+                        <span className="text-xs py-1.5 px-2 bg-slate-100 dark:bg-slate-700 rounded-lg font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center">⚠️ Allergies/Notes</span>
                         {['No known allergies', 'Penicillin Allergy', 'Needs Wheelchair'].filter(s => !(profile.medical_notes || '').toLowerCase().includes(s.toLowerCase())).map(s => (
                           <motion.button
                             key={s}
@@ -696,7 +696,7 @@ const PatientProfile = () => {
                               const newNotes = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
                               setProfile({...profile, medical_notes: newNotes});
                             }}
-                            className="px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg text-xs font-bold border border-orange-100 transition-colors"
+                            className="px-3 py-1.5 bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-300 rounded-lg text-xs font-bold border border-orange-100 dark:border-orange-900/50 transition-colors"
                           >
                             + {s}
                           </motion.button>
@@ -707,11 +707,11 @@ const PatientProfile = () => {
                 </div>
               </div>
 
-              <div className="pt-4 md:pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-3">
+              <div className="pt-4 md:pt-6 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-end gap-3">
                 <button 
                   type="button"
                   onClick={() => setProfile({...profile, medical_notes: ''})}
-                  className="px-6 py-3.5 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors text-sm"
+                  className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors text-sm"
                 >
                   Clear Notes
                 </button>
@@ -729,15 +729,15 @@ const PatientProfile = () => {
 
           {/* Documents Section */}
           <motion.div 
-            className="lg:col-span-2 lg:col-start-2 bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mt-6"
+            className="lg:col-span-2 lg:col-start-2 bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden mt-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="p-6 md:p-8 border-b border-slate-100 flex justify-between items-center">
+            <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
               <div>
-                <h3 className="text-lg md:text-xl font-bold text-slate-900">Medical Documents</h3>
-                <p className="text-slate-500 text-sm mt-1">Upload lab results, prescriptions, etc. (Max 500KB)</p>
+                <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Medical Documents</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Upload lab results, prescriptions, etc. (Max 500KB)</p>
               </div>
               <div>
                 <input 
@@ -750,7 +750,7 @@ const PatientProfile = () => {
                 />
                 <label 
                   htmlFor="doc-upload" 
-                  className={`flex items-center gap-2 px-4 py-2 bg-blue-50 text-primary font-bold rounded-xl cursor-pointer hover:bg-blue-100 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
+                  className={`flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-primary font-bold rounded-xl cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
                 >
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                   {uploading ? 'Uploading...' : 'Upload File'}
@@ -761,11 +761,11 @@ const PatientProfile = () => {
             {/* Upload Progress Indication */}
             {uploading && (
               <div className="px-6 md:px-8 pb-4">
-                <div className="flex justify-between text-xs text-slate-500 font-bold mb-1">
+                <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-bold mb-1">
                   <span>Uploading document...</span>
                   <span className="text-primary animate-pulse">Processing</span>
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                   <motion.div 
                     className="h-full bg-primary rounded-full"
                     initial={{ width: "0%" }}
@@ -779,25 +779,25 @@ const PatientProfile = () => {
             <div className="p-6 md:p-8">
               {documents.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <FileText className="w-6 h-6 text-slate-400" />
+                  <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <FileText className="w-6 h-6 text-slate-400 dark:text-slate-500" />
                   </div>
-                  <p className="text-slate-500 font-medium">No documents uploaded yet.</p>
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">No documents uploaded yet.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center gap-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                      <div className="p-2 bg-blue-100 rounded-lg text-primary">
+                    <div key={doc.id} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-primary">
                         <FileText className="w-5 h-5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-700 text-sm truncate">{doc.document_title}</p>
-                        <p className="text-xs text-slate-400">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                        <p className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{doc.document_title}</p>
+                        <p className="text-xs text-slate-400 dark:text-slate-500">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                       </div>
                       <button 
                          type="button"
-                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                         className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                          onClick={async () => {
                            if(window.confirm('Are you sure you want to delete this document?')) {
                              // 1. Delete from Storage Bucket first
@@ -828,38 +828,38 @@ const PatientProfile = () => {
 
           {/* Visit History Section */}
           <motion.div 
-            className="lg:col-span-2 lg:col-start-2 bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden mt-6"
+            className="lg:col-span-2 lg:col-start-2 bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden mt-6"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="p-6 md:p-8 border-b border-slate-100">
-              <h3 className="text-lg md:text-xl font-bold text-slate-900">Visit History & Clinical Notes</h3>
-              <p className="text-slate-500 text-sm mt-1">Past consultations, vitals, and provider notes.</p>
+            <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Visit History & Clinical Notes</h3>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Past consultations, vitals, and provider notes.</p>
             </div>
             
             <div className="p-6 md:p-8">
               {visitNotes.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Activity className="w-6 h-6 text-slate-400" />
+                  <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Activity className="w-6 h-6 text-slate-400 dark:text-slate-500" />
                   </div>
-                  <p className="text-slate-500 font-medium">No past visits recorded.</p>
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">No past visits recorded.</p>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {visitNotes.map((note) => (
-                    <div key={note.id} className="p-5 bg-slate-50 border border-slate-100 rounded-2xl space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+                    <div key={note.id} className="p-5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-600 pb-3">
                         <div>
-                          <p className="font-bold text-slate-900 text-lg">Dr. {note.provider?.full_name || 'Unknown'}</p>
-                          <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                          <p className="font-bold text-slate-900 dark:text-slate-100 text-lg">Dr. {note.provider?.full_name || 'Unknown'}</p>
+                          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-1">
                             <Calendar className="w-4 h-4" />
                             <span>{new Date(note.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
                           </div>
                         </div>
                         {note.services_rendered && (
-                          <span className="inline-flex items-center px-3 py-1 bg-blue-100 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full self-start sm:self-auto">
+                          <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full self-start sm:self-auto">
                             {note.services_rendered}
                           </span>
                         )}
@@ -868,35 +868,35 @@ const PatientProfile = () => {
                       {/* Vitals Grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {note.vitals_bp && (
-                          <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Blood Pressure</p>
-                            <p className="font-bold text-slate-700">{note.vitals_bp}</p>
+                          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Blood Pressure</p>
+                            <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_bp}</p>
                           </div>
                         )}
                         {note.vitals_temp && (
-                          <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Temperature</p>
-                            <p className="font-bold text-slate-700">{note.vitals_temp}°C</p>
+                          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Temperature</p>
+                            <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_temp}°C</p>
                           </div>
                         )}
                         {note.vitals_hr && (
-                          <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Heart Rate</p>
-                            <p className="font-bold text-slate-700">{note.vitals_hr} bpm</p>
+                          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Heart Rate</p>
+                            <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_hr} bpm</p>
                           </div>
                         )}
                         {note.vitals_spo2 && (
-                          <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">SpO2</p>
-                            <p className="font-bold text-slate-700">{note.vitals_spo2}%</p>
+                          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
+                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">SpO2</p>
+                            <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_spo2}%</p>
                           </div>
                         )}
                       </div>
 
                       {note.notes && (
-                        <div className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Clinical Notes</p>
-                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.notes}</p>
+                        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Clinical Notes</p>
+                          <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{note.notes}</p>
                         </div>
                       )}
 

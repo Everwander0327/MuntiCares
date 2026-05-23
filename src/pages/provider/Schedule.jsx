@@ -201,8 +201,8 @@ const ProviderSchedule = () => {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">My Schedule</h1>
-            <p className="text-slate-500 text-sm">Manage your home care visits and appointments</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">My Schedule</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Manage your home care visits and appointments</p>
           </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
@@ -220,43 +220,43 @@ const ProviderSchedule = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
         >
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 text-center shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center shadow-sm dark:shadow-slate-900/50 dark:bg-slate-800">
             <p className="text-2xl font-bold text-primary">{todayAppts.length}</p>
-            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Today</p>
+            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Today</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 text-center shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center shadow-sm dark:shadow-slate-900/50 dark:bg-slate-800">
             <p className="text-2xl font-bold text-amber-500">{activeVisits}</p>
-            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Active</p>
+            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Active</p>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 p-4 text-center shadow-sm">
+          <div className="bg-white rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center shadow-sm dark:shadow-slate-900/50 dark:bg-slate-800">
             <p className="text-2xl font-bold text-green-500">{completedToday}</p>
-            <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider mt-1">Done</p>
+            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Done</p>
           </div>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Calendar */}
           <motion.div
-            className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm p-4 sm:p-5"
+            className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 p-4 sm:p-5 dark:bg-slate-800"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
             {/* Calendar Header */}
             <div className="flex items-center justify-between mb-4">
-              <button onClick={prevMonth} className="p-2.5 hover:bg-slate-100 rounded-xl transition-colors active:scale-95">
-                <ChevronLeft className="w-5 h-5 text-slate-500" />
+              <button onClick={prevMonth} className="p-2.5 hover:bg-slate-100 rounded-xl transition-colors active:scale-95 dark:hover:bg-slate-700">
+                <ChevronLeft className="w-5 h-5 text-slate-500 dark:text-slate-400" />
               </button>
-              <h3 className="font-bold text-slate-800 text-base sm:text-lg">{MONTHS[month]} {year}</h3>
-              <button onClick={nextMonth} className="p-2.5 hover:bg-slate-100 rounded-xl transition-colors active:scale-95">
-                <ChevronRight className="w-5 h-5 text-slate-500" />
+              <h3 className="font-bold text-slate-800 dark:text-slate-100 text-base sm:text-lg">{MONTHS[month]} {year}</h3>
+              <button onClick={nextMonth} className="p-2.5 hover:bg-slate-100 rounded-xl transition-colors active:scale-95 dark:hover:bg-slate-700">
+                <ChevronRight className="w-5 h-5 text-slate-500 dark:text-slate-400" />
               </button>
             </div>
 
             {/* Day Names */}
             <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1">
               {DAYS.map(d => (
-                <div key={d} className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-wider py-1.5">{d}</div>
+                <div key={d} className="text-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider py-1.5">{d}</div>
               ))}
             </div>
 
@@ -284,10 +284,10 @@ const ProviderSchedule = () => {
                       ${selected 
                         ? 'bg-gradient-to-br from-primary to-blue-600 text-white shadow-lg shadow-primary/30' 
                         : today 
-                          ? 'bg-blue-50 text-primary ring-2 ring-primary/20' 
+                          ? 'bg-blue-50 text-primary ring-2 ring-primary/20 dark:bg-blue-900/30' 
                           : hasAppts 
-                            ? 'text-slate-800 hover:bg-blue-50'
-                            : 'text-slate-500 hover:bg-slate-50'}
+                            ? 'text-slate-800 dark:text-slate-100 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                            : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}
                     `}
                   >
                     {day}
@@ -308,7 +308,7 @@ const ProviderSchedule = () => {
             </div>
 
             {/* Legend */}
-            <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap gap-4 text-[10px] font-bold text-slate-400">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex flex-wrap gap-4 text-[10px] font-bold text-slate-400 dark:text-slate-500">
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> Has Visits</span>
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-200 ring-1.5 ring-primary/30" /> Today</span>
             </div>
@@ -323,20 +323,20 @@ const ProviderSchedule = () => {
           >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-bold text-slate-800 text-sm sm:text-base">{selectedDayLabel}</h3>
+                <h3 className="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base">{selectedDayLabel}</h3>
               </div>
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${selectedAppts.length > 0 ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-400'}`}>
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${selectedAppts.length > 0 ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-400 dark:text-slate-500'}`}>
                 {selectedAppts.length} visit{selectedAppts.length !== 1 ? 's' : ''}
               </span>
             </div>
 
             {selectedAppts.length === 0 ? (
-              <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Stethoscope className="w-7 h-7 text-slate-300" />
+              <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-200 dark:border-slate-600 dark:bg-slate-800">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3 dark:bg-slate-900">
+                  <Stethoscope className="w-7 h-7 text-slate-300 dark:text-slate-600" />
                 </div>
-                <p className="text-slate-600 font-bold">No Appointments</p>
-                <p className="text-sm text-slate-500 mt-1 px-4">You have no scheduled visits for this day.</p>
+                <p className="text-slate-600 dark:text-slate-300 font-bold">No Appointments</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 px-4">You have no scheduled visits for this day.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -353,10 +353,10 @@ const ProviderSchedule = () => {
                         initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.05 }}
-                        className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                        className="bg-white rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden hover:shadow-md transition-shadow dark:bg-slate-800"
                       >
                         {/* Mini Progress Bar */}
-                        <div className="h-1 bg-slate-100 flex">
+                        <div className="h-1 bg-slate-100 flex dark:bg-slate-700">
                           {STATUS_STEPS.map((step, i) => (
                             <div
                               key={step}
@@ -379,34 +379,34 @@ const ProviderSchedule = () => {
                           {/* Top row */}
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center text-primary font-bold text-sm shrink-0 border border-blue-100">
+                              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center text-primary font-bold text-sm shrink-0 border border-blue-100 dark:from-blue-900/30 dark:to-blue-900/20 dark:border-blue-900/50">
                                 {appt.patient.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                               </div>
                               <div className="min-w-0">
-                                <h4 className="font-bold text-slate-900 text-sm sm:text-base truncate">{appt.patient}</h4>
+                                <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm sm:text-base truncate">{appt.patient}</h4>
                                 <p className="text-xs text-primary font-semibold">{appt.service}</p>
                               </div>
                             </div>
-                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BADGE[appt.status] || 'bg-slate-100 text-slate-500'}`}>
+                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BADGE[appt.status] || 'bg-slate-100 text-slate-500 dark:text-slate-400 dark:bg-slate-700'}`}>
                               {appt.status}
                             </span>
                           </div>
 
                           {/* Details */}
-                          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4 text-sm text-slate-500">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4 text-sm text-slate-500 dark:text-slate-400">
                             <div className="flex items-center gap-1.5">
-                              <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
                               <span className="font-medium">{appt.timeLabel}</span>
                             </div>
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <MapPin className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
                               <span className="truncate font-medium">{appt.address}</span>
                             </div>
                           </div>
 
                           {appt.notes && (
-                            <div className="mb-4 p-3 bg-amber-50/60 border border-amber-100 rounded-xl">
-                              <p className="text-xs text-amber-800 italic leading-relaxed">"{appt.notes}"</p>
+                            <div className="mb-4 p-3 bg-amber-50/60 border border-amber-100 rounded-xl dark:bg-amber-900/30 dark:border-amber-900/50">
+                              <p className="text-xs text-amber-800 italic leading-relaxed dark:text-amber-200">"{appt.notes}"</p>
                             </div>
                           )}
 
@@ -415,21 +415,21 @@ const ProviderSchedule = () => {
                             {STATUS_STEPS.map((step, i) => (
                               <React.Fragment key={step}>
                                 <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold transition-all ${
-                                  i < currentStep ? 'bg-green-100 text-green-600' 
+                                  i < currentStep ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' 
                                   : i === currentStep ? 'bg-primary text-white shadow-md shadow-primary/30' 
-                                  : 'bg-slate-100 text-slate-400'
+: 'bg-slate-100 text-slate-400 dark:text-slate-500 dark:bg-slate-700'
                                 }`}>
                                   {i < currentStep ? '✓' : i + 1}
                                 </div>
                                 {i < STATUS_STEPS.length - 1 && (
-                                  <div className={`flex-1 h-0.5 rounded-full transition-all ${i < currentStep ? 'bg-green-200' : 'bg-slate-100'}`} />
+                                  <div className={`flex-1 h-0.5 rounded-full transition-all ${i < currentStep ? 'bg-green-200 dark:bg-green-900/50' : 'bg-slate-100 dark:bg-slate-700'}`} />
                                 )}
                               </React.Fragment>
                             ))}
                           </div>
                           <div className="flex items-center justify-between mb-4">
                             {STATUS_STEPS.map((step, i) => (
-                              <span key={step} className={`text-[8px] sm:text-[9px] font-bold ${i <= currentStep ? 'text-slate-600' : 'text-slate-300'}`}>
+                              <span key={step} className={`text-[8px] sm:text-[9px] font-bold ${i <= currentStep ? 'text-slate-600 dark:text-slate-300' : 'text-slate-300 dark:text-slate-600'}`}>
                                 {step === 'On The Way' ? 'En Route' : step}
                               </span>
                             ))}
@@ -450,7 +450,7 @@ const ProviderSchedule = () => {
                             ) : (
                               <button
                                 onClick={() => setModalPatient({ id: appt.patientId, name: appt.patient })}
-                                className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors text-sm"
+                                className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors text-sm dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
                               >
                                 <User className="w-4 h-4" /> View Record
                               </button>

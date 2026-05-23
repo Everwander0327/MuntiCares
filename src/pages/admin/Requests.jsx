@@ -73,18 +73,18 @@ const AdminRequests = () => {
           transition={{ duration: 0.4 }}
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Platform Requests</h1>
-            <p className="text-slate-500">Monitor all service interactions across Muntinlupa</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Platform Requests</h1>
+            <p className="text-slate-500 dark:text-slate-400">Monitor all service interactions across Muntinlupa</p>
           </div>
           <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
             <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
               <input 
                 type="text" 
                 placeholder="Search requests..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm"
+                className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
               />
             </div>
             <CustomSelect 
@@ -103,7 +103,7 @@ const AdminRequests = () => {
         </motion.div>
 
         <motion.div 
-          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -120,8 +120,8 @@ const AdminRequests = () => {
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="font-bold text-slate-900">{r.service}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">{r.id}</p>
+                    <p className="font-bold text-slate-900 dark:text-slate-100">{r.service}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{r.id}</p>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
                     r.status === 'Accepted' ? 'bg-blue-100 text-blue-700' :
@@ -138,12 +138,12 @@ const AdminRequests = () => {
                     {r.status}
                   </span>
                 </div>
-                <div className="text-sm text-slate-600 space-y-1">
-                  <p><span className="text-slate-400">Patient:</span> {r.patient}</p>
-                  <p><span className="text-slate-400">Provider:</span> {r.provider}</p>
+                <div className="text-sm text-slate-600 space-y-1 dark:text-slate-300">
+                  <p><span className="text-slate-400 dark:text-slate-500">Patient:</span> {r.patient}</p>
+                  <p><span className="text-slate-400 dark:text-slate-500">Provider:</span> {r.provider}</p>
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-slate-50">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold">{r.date}</span>
+                <div className="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-700">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold dark:text-slate-500">{r.date}</span>
                 </div>
               </motion.div>
             ))}
@@ -153,7 +153,7 @@ const AdminRequests = () => {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse table-striped">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
                   <th className="px-6 py-4 font-bold">Request ID</th>
                   <th className="px-6 py-4 font-bold">Patient</th>
                   <th className="px-6 py-4 font-bold">Provider</th>
@@ -171,15 +171,15 @@ const AdminRequests = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.3 + idx * 0.03 }}
                   >
-                    <td className="px-6 py-4 text-sm font-mono text-slate-400">{r.id.split('-')[0]}...</td>
+                    <td className="px-6 py-4 text-sm font-mono text-slate-400 dark:text-slate-500">{r.id.split('-')[0]}...</td>
                     <td className="px-6 py-4">
-                      <span className="font-bold text-slate-700">{r.patient}</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-200">{r.patient}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-slate-600 font-medium">{r.provider}</span>
+                      <span className="text-slate-600 font-medium dark:text-slate-300">{r.provider}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 bg-slate-50 rounded-lg text-xs text-slate-500 font-semibold">{r.service}</span>
+                      <span className="px-2 py-1 bg-slate-50 rounded-lg text-xs text-slate-500 font-semibold dark:bg-slate-800 dark:text-slate-400">{r.service}</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
@@ -197,7 +197,7 @@ const AdminRequests = () => {
                         {r.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right text-slate-500 text-sm">
+                    <td className="px-6 py-4 text-right text-slate-500 text-sm dark:text-slate-400">
                       {r.date}
                     </td>
                   </motion.tr>
@@ -206,10 +206,10 @@ const AdminRequests = () => {
             </table>
           </div>
           {filteredRequests.length === 0 && (
-            <div className="p-10 text-center text-slate-500">No requests found.</div>
+            <div className="p-10 text-center text-slate-500 dark:text-slate-400">No requests found.</div>
           )}
-          <div className="p-4 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Showing {filteredRequests.length} of {requests.length} results</p>
+          <div className="p-4 border-t border-slate-100 flex items-center justify-between dark:border-slate-700">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Showing {filteredRequests.length} of {requests.length} results</p>
           </div>
         </motion.div>
       </div>

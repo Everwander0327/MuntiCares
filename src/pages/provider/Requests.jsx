@@ -197,8 +197,8 @@ const ProviderRequests = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <h1 className="text-2xl font-bold text-slate-900">Incoming Requests</h1>
-          <p className="text-slate-500">Review and respond to new patient requests</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Incoming Requests</h1>
+          <p className="text-slate-500 dark:text-slate-400">Review and respond to new patient requests</p>
         </motion.div>
 
         {requests.length > 0 ? (
@@ -212,10 +212,10 @@ const ProviderRequests = () => {
               {requests.map((req) => (
                 <motion.div 
                   key={req.id} 
-                  className={`bg-white p-6 rounded-[2rem] border shadow-sm transition-all duration-300 ${
-                    actionStates[req.id] === 'accepted' ? 'border-green-200 bg-green-50/50' :
-                    actionStates[req.id] === 'rejected' ? 'border-red-200 bg-red-50/50' :
-                    'border-slate-100 hover:shadow-xl'
+                  className={`bg-white p-6 rounded-[2rem] border shadow-sm transition-all duration-300 dark:bg-slate-800 dark:shadow-slate-900/50 ${
+                    actionStates[req.id] === 'accepted' ? 'border-green-200 bg-green-50/50 dark:border-green-900/50 dark:bg-green-900/30' :
+                    actionStates[req.id] === 'rejected' ? 'border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-900/30' :
+                    'border-slate-100 hover:shadow-xl dark:border-slate-700'
                   }`}
                   variants={staggerItem}
                   layout
@@ -223,35 +223,35 @@ const ProviderRequests = () => {
                 >
                   <div className="flex justify-between items-start mb-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold dark:bg-blue-900/30">
                         {req.patient.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="font-bold text-slate-900">{req.patient}</h3>
+                        <h3 className="font-bold text-slate-900 dark:text-slate-100">{req.patient}</h3>
                         <p className="text-primary text-sm font-semibold">{req.service}</p>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-3 mb-6">
-                    <div className="flex items-center gap-3 text-slate-500 text-sm">
+                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
                       <Calendar className="w-4 h-4" />
                       <span>{req.date}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-slate-500 text-sm">
+                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
                       <Clock className="w-4 h-4" />
                       <span>{req.time}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-slate-500 text-sm">
+                    <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
                       <MapPin className="w-4 h-4" />
                       <span>{req.location}</span>
                     </div>
                   </div>
 
                   {req.notes && (
-                    <div className="mb-6 p-4 bg-yellow-50/50 rounded-2xl border border-yellow-100">
-                      <p className="text-xs font-bold text-yellow-800 uppercase tracking-wider mb-1">Patient Notes</p>
-                      <p className="text-sm text-yellow-900 leading-relaxed italic">"{req.notes}"</p>
+                    <div className="mb-6 p-4 bg-yellow-50/50 rounded-2xl border border-yellow-100 dark:bg-yellow-900/30 dark:border-yellow-900/50">
+                      <p className="text-xs font-bold text-yellow-800 uppercase tracking-wider mb-1 dark:text-yellow-200">Patient Notes</p>
+                      <p className="text-sm text-yellow-900 leading-relaxed italic dark:text-yellow-100">"{req.notes}"</p>
                     </div>
                   )}
 
@@ -275,7 +275,7 @@ const ProviderRequests = () => {
                       className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all ${
                         actionStates[req.id] === 'rejected'
                           ? 'bg-red-500 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600'
+                          : 'bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-red-900/20'
                       }`}
                       whileTap={{ scale: 0.95 }}
                       animate={actionStates[req.id] === 'rejected' ? { scale: [1, 1.1, 1] } : {}}
@@ -291,11 +291,11 @@ const ProviderRequests = () => {
           </motion.div>
         ) : (
           <motion.div 
-            className="text-center py-20 bg-white rounded-[2rem] border border-slate-100"
+            className="text-center py-20 bg-white rounded-[2rem] border border-slate-100 dark:bg-slate-800 dark:border-slate-700"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <p className="text-slate-500 text-lg text-center">No incoming requests at the moment.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-lg text-center">No incoming requests at the moment.</p>
           </motion.div>
         )}
       </div>

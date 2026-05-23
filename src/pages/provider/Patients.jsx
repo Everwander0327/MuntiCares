@@ -104,29 +104,29 @@ const ProviderPatients = () => {
           transition={{ duration: 0.4 }}
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">My Patients</h1>
-            <p className="text-slate-500">Manage your active patient list and completed services</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">My Patients</h1>
+            <p className="text-slate-500 dark:text-slate-400">Manage your active patient list and completed services</p>
           </div>
           <div className="relative md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input 
               type="text" 
               placeholder="Search patients..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm"
+              className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
             />
           </div>
         </motion.div>
 
         <motion.div 
-          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
           {/* Mobile Card View */}
-          <div className="block md:hidden divide-y divide-slate-50">
+          <div className="block md:hidden divide-y divide-slate-50 dark:divide-slate-700">
             {filteredPatients.map((p, idx) => (
               <motion.div 
                 key={idx} 
@@ -141,25 +141,25 @@ const ProviderPatients = () => {
                       {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">{p.name}</p>
+                      <p className="font-bold text-slate-900 dark:text-slate-100">{p.name}</p>
                       <p className="text-xs text-primary font-semibold">{p.service}</p>
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                    p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                    p.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                      p.status === 'Active' ? 'bg-green-500' : 'bg-slate-400'
+                      p.status === 'Active' ? 'bg-green-500' : 'bg-slate-400 dark:bg-slate-500'
                     }`} />
                     {p.status}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-slate-400">Date: {p.lastVisit}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">Date: {p.lastVisit}</p>
                   <div className="flex gap-2">
                     {p.rawStatus === 'Accepted' && (
                       <button 
-                        className={`p-2 bg-green-50 text-green-600 hover:text-white hover:bg-green-500 rounded-lg transition-colors ${updatingId === p.requestId ? 'opacity-50' : ''}`}
+                        className={`p-2 bg-green-50 text-green-600 hover:text-white hover:bg-green-500 rounded-lg transition-colors dark:bg-green-900/30 ${updatingId === p.requestId ? 'opacity-50' : ''}`}
                         onClick={() => handleMarkCompleted(p.requestId, p.name)}
                         disabled={updatingId === p.requestId}
                         title="Mark as Completed"
@@ -168,7 +168,7 @@ const ProviderPatients = () => {
                       </button>
                     )}
                     <button 
-                      className="p-2 bg-blue-50 text-blue-600 hover:text-white hover:bg-blue-500 rounded-lg transition-colors"
+                      className="p-2 bg-blue-50 text-blue-600 hover:text-white hover:bg-blue-500 rounded-lg transition-colors dark:bg-blue-900/30"
                       onClick={() => handleOpenRecord(p.patientId, p.name)}
                       title="View Medical Record"
                     >
@@ -184,7 +184,7 @@ const ProviderPatients = () => {
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse table-striped">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider">
+                <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
                   <th className="px-6 py-4 font-semibold">Patient Name</th>
                   <th className="px-6 py-4 font-semibold">Service</th>
                   <th className="px-6 py-4 font-semibold">Date</th>
@@ -203,20 +203,20 @@ const ProviderPatients = () => {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold">
+<div className="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold dark:bg-blue-900/30">
                           {p.name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                         </div>
-                        <span className="font-bold text-slate-700">{p.name}</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-200">{p.name}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{p.service}</td>
-                    <td className="px-6 py-4 text-slate-500 text-sm">{p.lastVisit}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{p.service}</td>
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 text-sm">{p.lastVisit}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                        p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'
+                        p.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                          p.status === 'Active' ? 'bg-green-500' : 'bg-slate-400'
+                          p.status === 'Active' ? 'bg-green-500' : 'bg-slate-400 dark:bg-slate-500'
                         }`} />
                         {p.status}
                       </span>
@@ -225,7 +225,7 @@ const ProviderPatients = () => {
                       <div className="flex justify-end gap-2">
                         {p.rawStatus === 'Accepted' && (
                           <button 
-                            className={`p-2 text-green-600 bg-green-50 hover:bg-green-500 hover:text-white rounded-xl transition-colors ${updatingId === p.requestId ? 'opacity-50' : ''}`}
+                            className={`p-2 text-green-600 bg-green-50 hover:bg-green-500 hover:text-white rounded-xl transition-colors dark:bg-green-900/30 ${updatingId === p.requestId ? 'opacity-50' : ''}`}
                             onClick={() => handleMarkCompleted(p.requestId, p.name)}
                             disabled={updatingId === p.requestId}
                             title="Mark as Completed"
@@ -234,13 +234,13 @@ const ProviderPatients = () => {
                           </button>
                         )}
                         <button 
-                          className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white rounded-xl transition-colors" 
+                          className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white rounded-xl transition-colors dark:bg-blue-900/30" 
                           onClick={() => handleOpenRecord(p.patientId, p.name)}
                           title="View Medical Record"
                         >
                           <FileText className="w-5 h-5" />
                         </button>
-                        <button className="p-2 text-slate-400 hover:text-primary transition-colors" onClick={() => alert(`Messaging ${p.name}`)}>
+                        <button className="p-2 text-slate-400 hover:text-primary transition-colors dark:text-slate-500" onClick={() => alert(`Messaging ${p.name}`)}>
                           <MessageSquare className="w-5 h-5" />
                         </button>
                       </div>
@@ -251,7 +251,7 @@ const ProviderPatients = () => {
             </table>
           </div>
           {filteredPatients.length === 0 && (
-            <div className="p-10 text-center text-slate-500">No patients found. Accept a request to add them here.</div>
+            <div className="p-10 text-center text-slate-500 dark:text-slate-400">No patients found. Accept a request to add them here.</div>
           )}
         </motion.div>
       </div>

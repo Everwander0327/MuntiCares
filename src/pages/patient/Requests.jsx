@@ -21,31 +21,31 @@ const staggerItem = {
 
 const RequestCard = ({ id, providerId, patientId, provider, service, date, time, status, price, location, onRateProvider, isRated, onManageRequest, onPreSession, presessionSubmitted }) => (
   <motion.div 
-    className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all"
+    className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 hover:shadow-md transition-all"
     variants={staggerItem}
     whileHover={{ y: -4, transition: { duration: 0.2 } }}
   >
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold text-lg">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold text-lg">
           {provider.split(' ').map(n => n[0]).join('')}
         </div>
         <div>
-          <h3 className="font-bold text-slate-900">{provider}</h3>
-          <p className="text-slate-500 text-sm">{service}</p>
+          <h3 className="font-bold text-slate-900 dark:text-slate-100">{provider}</h3>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">{service}</p>
         </div>
       </div>
       
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-slate-400 text-sm">
+        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
           <Clock className="w-4 h-4" />
           <span>{date}</span>
         </div>
-        <div className="flex items-center gap-2 text-slate-400 text-sm">
+        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
           <MapPin className="w-4 h-4" />
           <span>{location || 'Muntinlupa'}</span>
         </div>
-        <div className="font-bold text-slate-900">
+        <div className="font-bold text-slate-900 dark:text-slate-100">
           ₱{price}
         </div>
         
@@ -67,11 +67,11 @@ const RequestCard = ({ id, providerId, patientId, provider, service, date, time,
             disabled={presessionSubmitted}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
               presessionSubmitted
-                ? 'bg-green-50 text-green-700 border-green-200 cursor-default'
-                : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 hover:scale-105 active:scale-95'
+                ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 border-green-200 dark:border-green-900/50 cursor-default'
+                : 'bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 border-indigo-200 dark:border-indigo-900/50 hover:scale-105 active:scale-95'
             }`}
           >
-            <FileUp className={`w-3.5 h-3.5 ${presessionSubmitted ? 'text-green-500' : 'text-indigo-500'}`} />
+            <FileUp className={`w-3.5 h-3.5 ${presessionSubmitted ? 'text-green-500' : 'text-indigo-500 dark:text-indigo-300'}`} />
             {presessionSubmitted ? 'Info Sent' : 'Pre-Session Info'}
           </button>
         )}
@@ -80,7 +80,7 @@ const RequestCard = ({ id, providerId, patientId, provider, service, date, time,
         {['Pending', 'Accepted'].includes(status) && (
           <button
             onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date, time })}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
           >
             <XCircle className="w-3.5 h-3.5" />
             Manage
@@ -94,8 +94,8 @@ const RequestCard = ({ id, providerId, patientId, provider, service, date, time,
             disabled={isRated}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
               isRated 
-                ? 'bg-green-50 text-green-700 border-green-200 cursor-default' 
-                : 'bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200 shadow-sm shadow-yellow-100 hover:scale-105 active:scale-95'
+                ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 border-green-200 dark:border-green-900/50 cursor-default' 
+                : 'bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 text-yellow-700 dark:text-yellow-200 border-yellow-200 dark:border-yellow-900/50 shadow-sm dark:shadow-slate-900/50 shadow-yellow-100 hover:scale-105 active:scale-95'
             }`}
           >
             <Star className={`w-3.5 h-3.5 ${isRated ? 'fill-current text-green-500' : 'fill-current text-yellow-500 animate-pulse'}`} />
@@ -105,11 +105,11 @@ const RequestCard = ({ id, providerId, patientId, provider, service, date, time,
 
         {/* Status Badge */}
         <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold ${
-          ['Accepted', 'On The Way', 'Arrived'].includes(status) ? 'bg-green-100 text-green-700' :
-          status === 'Completed' ? 'bg-green-100 text-green-700' :
-          status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-          status === 'Cancelled' ? 'bg-slate-100 text-slate-500' :
-          'bg-red-100 text-red-700'
+          ['Accepted', 'On The Way', 'Arrived'].includes(status) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200' :
+          status === 'Completed' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200' :
+          status === 'Pending' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-200' :
+          status === 'Cancelled' ? 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400' :
+          'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200'
         }`}>
           <span className={`w-1.5 h-1.5 rounded-full status-dot ${
             ['Accepted', 'On The Way', 'Arrived'].includes(status) ? 'bg-green-500' :
@@ -214,8 +214,8 @@ const PatientRequests = () => {
           transition={{ duration: 0.4 }}
         >
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">My Requests</h1>
-            <p className="text-slate-500">Track and manage your service requests</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">My Requests</h1>
+            <p className="text-slate-500 dark:text-slate-400">Track and manage your service requests</p>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
             <CustomSelect 
@@ -234,7 +234,7 @@ const PatientRequests = () => {
         </motion.div>
 
         {loading ? (
-          <div className="text-center py-20 text-slate-400">Loading requests...</div>
+          <div className="text-center py-20 text-slate-400 dark:text-slate-500">Loading requests...</div>
         ) : (
           <motion.div 
             className="space-y-4"
@@ -264,7 +264,7 @@ const PatientRequests = () => {
               ))
             ) : (
               <motion.div 
-                className="p-10 text-center text-slate-500 bg-white rounded-3xl border border-slate-100"
+                className="p-10 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >

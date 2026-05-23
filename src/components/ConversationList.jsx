@@ -151,20 +151,20 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   if (filtered.length === 0) {
     if (searchTerm && conversations.length > 0) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-20">
-          <Search className="w-10 h-10 text-slate-300 mb-3" />
-          <h3 className="text-lg font-bold text-slate-900">No results found</h3>
-          <p className="text-sm text-slate-400 mt-1">No conversations match "{searchTerm}"</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-20">
+          <Search className="w-10 h-10 text-slate-300 dark:text-slate-500 mb-3" />
+          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No results found</h3>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">No conversations match "{searchTerm}"</p>
         </div>
       );
     }
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 py-20">
-        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm border border-slate-100">
-          <MessageSquareWarning className="w-8 h-8 text-slate-300" />
-        </div>
-        <h3 className="text-lg font-bold text-slate-900">No conversations yet</h3>
-        <p className="text-sm text-slate-400 mt-1">
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-20">
+          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 shadow-sm dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700">
+            <MessageSquareWarning className="w-8 h-8 text-slate-300 dark:text-slate-500" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No conversations yet</h3>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">
           {user?.role === 'patient'
             ? 'Chat with providers once a request is accepted.'
             : 'Chat with patients once you accept their request.'}
@@ -174,7 +174,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
+    <div className="flex-1 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700/50">
       {filtered.map((conv, i) => {
         const preview = getLastMessagePreview(conv.lastMessage, user.id);
         return (
@@ -184,10 +184,10 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
             onClick={() => onSelect(conv)}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
           >
             <div className="relative shrink-0">
-              <div className="w-12 h-12 rounded-full bg-blue-100 overflow-hidden">
+              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden">
                 <img src={conv.photoUrl} alt="" className="w-full h-full object-cover" />
               </div>
               {conv.unreadCount > 0 && (
@@ -199,19 +199,19 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <p className="font-bold text-sm text-slate-900 truncate">{conv.name}</p>
-                <span className="text-[10px] text-slate-400 shrink-0 font-medium">
+                <p className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{conv.name}</p>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 font-medium">
                   {formatRelativeTime(conv.lastMessage?.created_at)}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 {preview.text ? (
-                  <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-slate-700 font-semibold' : 'text-slate-400'}`}>
-                    {preview.isYou && <span className="text-slate-400">You: </span>}
+                  <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-slate-700 dark:text-slate-200 font-semibold' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {preview.isYou && <span className="text-slate-400 dark:text-slate-500">You: </span>}
                     {preview.text}
                   </p>
                 ) : (
-                  <p className="text-xs text-slate-400 italic">No messages yet</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 italic">No messages yet</p>
                 )}
                 {conv.unreadCount > 0 && (
                   <span className="w-2 h-2 bg-primary rounded-full shrink-0" />

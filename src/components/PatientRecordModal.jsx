@@ -257,27 +257,27 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
           initial={{ opacity: 0, scale: 0.95, y: 100 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 100 }}
-          className="bg-white rounded-t-3xl md:rounded-3xl w-full h-[95vh] md:h-auto max-w-4xl shadow-2xl overflow-hidden flex flex-col md:max-h-[90vh]"
+          className="bg-white dark:bg-slate-800 rounded-t-3xl md:rounded-3xl w-full h-[95vh] md:h-auto max-w-4xl shadow-2xl overflow-hidden flex flex-col md:max-h-[90vh]"
         >
           {/* Header */}
-          <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900 shrink-0">
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Medical Record</h2>
-              <p className="text-sm text-slate-500">Patient: <span className="font-bold text-primary">{patientName}</span></p>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Medical Record</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Patient: <span className="font-bold text-primary">{patientName}</span></p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
-              <X className="w-5 h-5 text-slate-500" />
+            <button onClick={onClose} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors">
+              <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
             </button>
           </div>
 
           {/* Consent Blocked Banner */}
           {consentBlocked ? (
-            <div className="flex-1 flex flex-col items-center justify-center p-10 bg-slate-50/50 text-center">
-              <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-5">
+            <div className="flex-1 flex flex-col items-center justify-center p-10 bg-slate-50/50 dark:bg-slate-900/50 text-center">
+              <div className="w-20 h-20 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-5">
                 <X className="w-10 h-10 text-red-400" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Data Access Revoked</h3>
-              <p className="text-slate-500 max-w-md mb-6">
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">Data Access Revoked</h3>
+              <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
                 <span className="font-bold">{patientName}</span> has revoked your access to their medical records. 
                 You cannot view their data until they re-enable data sharing in their consent settings.
               </p>
@@ -291,24 +291,24 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
           ) : (
             <>
               {/* Tabs */}
-              <div className="flex border-b border-slate-100 bg-white shrink-0">
+              <div className="flex border-b border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 shrink-0">
                 <button 
                   onClick={() => grantedPermissions?.medical_history !== false && setActiveTab('history')}
-                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.medical_history !== false ? activeTab === 'history' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'border-transparent text-slate-300 bg-slate-50 cursor-not-allowed'}`}
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.medical_history !== false ? activeTab === 'history' ? 'border-primary text-primary bg-blue-50/50 dark:bg-blue-900/20' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700' : 'border-transparent text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800 cursor-not-allowed'}`}
                 >
                   <Activity className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Medical History</span>
-                  {grantedPermissions?.medical_history === false && <span className="text-[8px] text-slate-300 ml-1">🔒</span>}
+                  {grantedPermissions?.medical_history === false && <span className="text-[8px] text-slate-300 dark:text-slate-600 ml-1">🔒</span>}
                 </button>
                 <button 
                   onClick={() => grantedPermissions?.documents !== false && setActiveTab('documents')}
-                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.documents !== false ? activeTab === 'documents' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'border-transparent text-slate-300 bg-slate-50 cursor-not-allowed'}`}
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.documents !== false ? activeTab === 'documents' ? 'border-primary text-primary bg-blue-50/50 dark:bg-blue-900/20' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700' : 'border-transparent text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800 cursor-not-allowed'}`}
                 >
                   <FileText className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Docs ({documents.length})</span>
-                  {grantedPermissions?.documents === false && <span className="text-[8px] text-slate-300 ml-1">🔒</span>}
+                  {grantedPermissions?.documents === false && <span className="text-[8px] text-slate-300 dark:text-slate-600 ml-1">🔒</span>}
                 </button>
                 <button 
                   onClick={() => grantedPermissions?.visit_notes !== false && setActiveTab('notes')}
-                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.visit_notes !== false ? activeTab === 'notes' ? 'border-primary text-primary bg-blue-50/50' : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-50' : 'border-transparent text-slate-300 bg-slate-50 cursor-not-allowed'}`}
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 py-3 sm:py-4 font-bold text-sm border-b-2 transition-colors ${!grantedPermissions || grantedPermissions.visit_notes !== false ? activeTab === 'notes' ? 'border-primary text-primary bg-blue-50/50 dark:bg-blue-900/20' : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700' : 'border-transparent text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800 cursor-not-allowed'}`}
                 >
                   <ClipboardList className="w-5 h-5 sm:w-4 sm:h-4" /> <span className="text-[10px] sm:text-sm leading-tight text-center">Progress Notes</span>
                   {grantedPermissions?.visit_notes === false && <span className="text-[8px] text-slate-300 ml-1">🔒</span>}
@@ -316,9 +316,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
               </div>
 
               {/* Content Area */}
-              <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+              <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-900/50">
                 {loading ? (
-              <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+              <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500">
                 <Loader2 className="w-8 h-8 animate-spin mb-2" />
                 <p>Loading patient records...</p>
               </div>
@@ -327,37 +327,37 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                 {/* TAB 1: HISTORY */}
                 {activeTab === 'history' && (
                   grantedPermissions?.medical_history === false ? (
-                    <div className="text-center py-16">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <X className="w-7 h-7 text-slate-300" />
+                      <div className="text-center py-16">
+                      <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <X className="w-7 h-7 text-slate-300 dark:text-slate-500" />
                       </div>
-                      <p className="text-slate-600 font-bold">Medical History Not Shared</p>
-                      <p className="text-sm text-slate-400 mt-1">The patient has not granted access to their medical history.</p>
+                      <p className="text-slate-600 dark:text-slate-300 font-bold">Medical History Not Shared</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">The patient has not granted access to their medical history.</p>
                     </div>
                   ) : (
                   <div className="space-y-6">
                     {(!history?.allergies && !history?.chronic_conditions && !history?.past_surgeries) ? (
-                      <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
-                        <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Activity className="w-6 h-6 text-slate-300" />
+                      <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600">
+                        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Activity className="w-6 h-6 text-slate-300 dark:text-slate-500" />
                         </div>
-                        <p className="text-slate-600 font-bold">No Medical History</p>
-                        <p className="text-sm text-slate-500 mt-1">The patient has not updated their medical profile yet.</p>
+                        <p className="text-slate-600 dark:text-slate-300 font-bold">No Medical History</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">The patient has not updated their medical profile yet.</p>
                       </div>
                     ) : (
                       <>
-                        <div className="bg-red-50/50 border border-red-100 rounded-2xl p-5">
-                          <h3 className="text-red-800 font-bold mb-2 flex items-center gap-2">⚠️ Allergies</h3>
-                          <p className="text-red-700 font-medium">{history?.allergies || 'No known allergies reported.'}</p>
+                        <div className="bg-red-50/50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-2xl p-5">
+                          <h3 className="text-red-800 dark:text-red-200 font-bold mb-2 flex items-center gap-2">⚠️ Allergies</h3>
+                          <p className="text-red-700 dark:text-red-300 font-medium">{history?.allergies || 'No known allergies reported.'}</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                            <h3 className="text-slate-800 font-bold mb-2">Chronic Conditions</h3>
-                            <p className="text-slate-600">{history?.chronic_conditions || 'None reported.'}</p>
+                          <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm dark:shadow-slate-900/50">
+                            <h3 className="text-slate-800 dark:text-slate-100 font-bold mb-2">Chronic Conditions</h3>
+                            <p className="text-slate-600 dark:text-slate-300">{history?.chronic_conditions || 'None reported.'}</p>
                           </div>
-                          <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm">
-                            <h3 className="text-slate-800 font-bold mb-2">Past Surgeries</h3>
-                            <p className="text-slate-600">{history?.past_surgeries || 'None reported.'}</p>
+                          <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm dark:shadow-slate-900/50">
+                            <h3 className="text-slate-800 dark:text-slate-100 font-bold mb-2">Past Surgeries</h3>
+                            <p className="text-slate-600 dark:text-slate-300">{history?.past_surgeries || 'None reported.'}</p>
                           </div>
                         </div>
                       </>
@@ -370,36 +370,36 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                 {activeTab === 'documents' && (
                   grantedPermissions?.documents === false ? (
                     <div className="text-center py-16">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <X className="w-7 h-7 text-slate-300" />
+                      <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <X className="w-7 h-7 text-slate-300 dark:text-slate-500" />
                       </div>
-                      <p className="text-slate-600 font-bold">Documents Not Shared</p>
-                      <p className="text-sm text-slate-400 mt-1">The patient has not granted access to their documents.</p>
+                      <p className="text-slate-600 dark:text-slate-300 font-bold">Documents Not Shared</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">The patient has not granted access to their documents.</p>
                     </div>
                   ) : (
                   <div>
                     {documents.length === 0 ? (
                       <div className="text-center py-12">
-                        <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                        <p className="text-slate-500 font-medium">No documents uploaded by the patient yet.</p>
+                        <FileText className="w-12 h-12 text-slate-300 dark:text-slate-500 mx-auto mb-3" />
+                        <p className="text-slate-500 dark:text-slate-400 font-medium">No documents uploaded by the patient yet.</p>
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {documents.map(doc => (
-                          <div key={doc.id} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-4 hover:border-primary/30 transition-colors">
-                            <div className="w-12 h-12 bg-blue-50 text-primary rounded-xl flex items-center justify-center shrink-0">
+                          <div key={doc.id} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl p-4 flex items-center gap-4 hover:border-primary/30 transition-colors">
+                            <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-primary rounded-xl flex items-center justify-center shrink-0">
                               <FileText className="w-6 h-6" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-bold text-slate-800 truncate">{doc.document_title}</p>
-                              <p className="text-xs text-slate-500">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                              <p className="font-bold text-slate-800 dark:text-slate-100 truncate">{doc.document_title}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                             </div>
                             <button
                               onClick={async () => {
                                 const url = await getFileUrl(doc.file_path);
                                 if (url) window.open(url, '_blank');
                               }}
-                              className="p-2 text-primary hover:bg-blue-50 rounded-lg transition-colors"
+                              className="p-2 text-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
                               title="View Document"
                             >
                               <ExternalLink className="w-5 h-5" />
@@ -416,76 +416,76 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                 {activeTab === 'notes' && (
                   grantedPermissions?.visit_notes === false ? (
                     <div className="text-center py-16">
-                      <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <X className="w-7 h-7 text-slate-300" />
+                      <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <X className="w-7 h-7 text-slate-300 dark:text-slate-500" />
                       </div>
-                      <p className="text-slate-600 font-bold">Progress Notes Not Shared</p>
-                      <p className="text-sm text-slate-400 mt-1">The patient has not granted access to their visit notes.</p>
+                      <p className="text-slate-600 dark:text-slate-300 font-bold">Progress Notes Not Shared</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">The patient has not granted access to their visit notes.</p>
                     </div>
                   ) : (
                   <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     {/* Add Note Form */}
                     <div className="lg:col-span-2">
-                      <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm sticky top-0">
-                        <h3 className="font-bold text-slate-800 mb-4">Add Progress Note</h3>
+                      <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl p-5 shadow-sm dark:shadow-slate-900/50 sticky top-0">
+                        <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-4">Add Progress Note</h3>
                         <form onSubmit={handleSaveNote} className="space-y-4">
-                          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
                             <div className="col-span-2 sm:col-span-3">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Vital Signs</p>
+                              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Vital Signs</p>
                             </div>
                             <div>
-                              <label className="text-[10px] font-bold text-slate-500">BP (mmHg)</label>
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">BP (mmHg)</label>
                               <input 
                                 type="text" placeholder="120/80" value={newNote.bp} onChange={e => setNewNote({...newNote, bp: e.target.value})}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none"
                               />
                             </div>
                             <div>
-                              <label className="text-[10px] font-bold text-slate-500">Temp (°C)</label>
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Temp (°C)</label>
                               <input 
                                 type="text" placeholder="36.5" value={newNote.temp} onChange={e => setNewNote({...newNote, temp: e.target.value})}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none"
                               />
                             </div>
                             <div>
-                              <label className="text-[10px] font-bold text-slate-500">Heart Rate</label>
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Heart Rate</label>
                               <input 
                                 type="number" placeholder="80" value={newNote.hr} onChange={e => setNewNote({...newNote, hr: e.target.value})}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none"
                               />
                             </div>
                             <div>
-                              <label className="text-[10px] font-bold text-slate-500">Resp Rate</label>
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Resp Rate</label>
                               <input 
                                 type="number" placeholder="16" value={newNote.rr} onChange={e => setNewNote({...newNote, rr: e.target.value})}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none"
                               />
                             </div>
                             <div>
-                              <label className="text-[10px] font-bold text-slate-500">SpO2 (%)</label>
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">SpO2 (%)</label>
                               <input 
                                 type="number" placeholder="98" value={newNote.spo2} onChange={e => setNewNote({...newNote, spo2: e.target.value})}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none"
                               />
                             </div>
                             <div className="col-span-2 sm:col-span-1">
-                              <label className="text-[10px] font-bold text-slate-500 text-orange-600">Pain Scale (1-10)</label>
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 text-orange-600">Pain Scale (1-10)</label>
                               <input 
                                 type="number" min="0" max="10" placeholder="0" value={newNote.pain} onChange={e => setNewNote({...newNote, pain: e.target.value})}
-                                className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs outline-none"
+                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none"
                               />
                             </div>
                           </div>
 
                           <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Services Rendered</label>
+                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Services Rendered</label>
                             <div className="flex flex-wrap gap-1.5 mt-1.5">
                               {availableServices.map(service => (
                                 <button
                                   key={service} type="button"
                                   onClick={() => toggleService(service)}
                                   className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-colors ${
-                                    newNote.services.includes(service) ? 'bg-primary text-white border-primary' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                                    newNote.services.includes(service) ? 'bg-primary text-white border-primary' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'
                                   }`}
                                 >
                                   {service}
@@ -495,11 +495,11 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                           </div>
 
                           <div>
-                            <label className="text-xs font-bold text-slate-500">Assessment & Plan</label>
+                            <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Assessment & Plan</label>
                             <textarea 
                               required rows={3} placeholder="Type your clinical notes here..."
                               value={newNote.text} onChange={e => setNewNote({...newNote, text: e.target.value})}
-                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none mt-1"
+                              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none resize-none mt-1"
                             />
                           </div>
 
@@ -517,7 +517,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                 }
                               }}
                             />
-                            <label htmlFor="note-attachment" className="flex items-center gap-2 text-xs font-bold text-primary cursor-pointer hover:bg-blue-50 px-3 py-2 rounded-lg border border-dashed border-blue-200 w-full justify-center transition-colors">
+                            <label htmlFor="note-attachment" className="flex items-center gap-2 text-xs font-bold text-primary cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 px-3 py-2 rounded-lg border border-dashed border-blue-200 dark:border-blue-900/30 w-full justify-center transition-colors">
                               <Paperclip className="w-3 h-3" />
                               {newNote.file ? newNote.file.name : 'Attach Photo/Document (Max 2MB)'}
                             </label>
@@ -537,37 +537,37 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
                     {/* Timeline */}
                     <div className="lg:col-span-3 space-y-4">
-                      <h3 className="font-bold text-slate-800">Visit History</h3>
+                      <h3 className="font-bold text-slate-800 dark:text-slate-100">Visit History</h3>
                       {notes.length === 0 ? (
-                        <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-slate-200">
-                          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <ClipboardList className="w-6 h-6 text-slate-300" />
+                        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600">
+                          <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <ClipboardList className="w-6 h-6 text-slate-300 dark:text-slate-500" />
                           </div>
-                          <p className="text-slate-600 font-bold">No Visit History</p>
-                          <p className="text-sm text-slate-500 mt-1">There are no progress notes for this patient yet.</p>
+                          <p className="text-slate-600 dark:text-slate-300 font-bold">No Visit History</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">There are no progress notes for this patient yet.</p>
                         </div>
                       ) : (
                         <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
                           {notes.map((note, idx) => (
                             <div key={note.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-blue-100 text-primary shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm relative z-10">
+                              <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-blue-100 dark:bg-blue-900/30 text-primary shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm dark:shadow-slate-900/50 relative z-10">
                                 <ClipboardList className="w-4 h-4" />
                               </div>
-                              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                              <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
                                 <div className="flex justify-between items-start mb-2">
-                                  <h4 className="font-bold text-slate-800 text-sm">Dr. {note.provider?.full_name || 'Provider'}</h4>
+                                  <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Dr. {note.provider?.full_name || 'Provider'}</h4>
                                   <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-full">
+                                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-full">
                                       {new Date(note.created_at).toLocaleDateString()}
                                     </span>
                                     {note.provider_id === user.id && (
-                                      <button onClick={() => handleDeleteNote(note.id, note.attachment_url)} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete Note">
+                                      <button onClick={() => handleDeleteNote(note.id, note.attachment_url)} className="p-1 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors" title="Delete Note">
                                         <Trash2 className="w-3 h-3" />
                                       </button>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex flex-wrap gap-2 mb-2 text-[10px] font-bold text-slate-500 bg-slate-50 p-2 rounded-lg">
+                                <div className="flex flex-wrap gap-2 mb-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 p-2 rounded-lg">
                                   {note.vitals_bp && <span>🩸 BP: {note.vitals_bp}</span>}
                                   {note.vitals_temp && <span>🌡️ T: {note.vitals_temp}°C</span>}
                                   {note.vitals_hr && <span>❤️ HR: {note.vitals_hr}</span>}
@@ -577,14 +577,14 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                 </div>
                                 {note.services_rendered && (
                                   <div className="mb-2">
-                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Services:</span>
-                                    <span className="text-xs font-semibold text-primary bg-blue-50 px-2 py-1 rounded-lg">{note.services_rendered}</span>
+                                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Services:</span>
+                                    <span className="text-xs font-semibold text-primary bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-lg">{note.services_rendered}</span>
                                   </div>
                                 )}
-                                <p className="text-sm text-slate-700 whitespace-pre-wrap">{note.notes}</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{note.notes}</p>
                                 
                                 {note.attachment_url && (
-                                  <a href={getFileUrl(note.attachment_url)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg transition-colors">
+                                  <a href={getFileUrl(note.attachment_url)} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/20 px-3 py-2 rounded-lg transition-colors">
                                     <Paperclip className="w-3 h-3" /> View Attached File
                                   </a>
                                 )}

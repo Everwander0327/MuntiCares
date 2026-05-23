@@ -105,13 +105,13 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
   return (
     <AnimatePresence>
       <motion.div 
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
         <motion.div 
-          className="bg-white rounded-[2.5rem] p-8 max-w-md w-full border border-slate-100 shadow-2xl relative"
+          className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-md w-full border border-slate-100 dark:border-slate-700 shadow-2xl relative"
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
@@ -120,23 +120,23 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           {/* Close button */}
           <button 
             onClick={onClose} 
-            className="absolute right-6 top-6 p-2 hover:bg-slate-100 rounded-full transition-colors"
+            className="absolute right-6 top-6 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
           >
-            <X className="w-5 h-5 text-slate-400" />
+            <X className="w-5 h-5 text-slate-400 dark:text-slate-500" />
           </button>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="text-center">
               <span className="text-3xl">🎉</span>
-              <h2 className="text-xl font-bold text-slate-900 mt-2">Rate Your Visit</h2>
-              <p className="text-sm text-slate-500 mt-1">How was your care session with <span className="font-bold text-primary">{request.providerName}</span>?</p>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-2">Rate Your Visit</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">How was your care session with <span className="font-bold text-primary">{request.providerName}</span>?</p>
             </div>
 
             {/* Category Ratings */}
             <div className="space-y-4">
               {CATEGORIES.map(cat => (
                 <div key={cat.key} className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-700">{cat.label}</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{cat.label}</span>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map(star => {
                       const active = star <= (hovered[cat.key] || ratings[cat.key]);
@@ -150,7 +150,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                           className="p-0.5 hover:scale-110 active:scale-95 transition-transform"
                         >
                           <Star className={`w-5 h-5 transition-colors ${
-                            active ? 'fill-amber-400 text-amber-400' : 'text-slate-200 fill-none'
+                            active ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-600 fill-none'
                           }`} />
                         </button>
                       );
@@ -162,13 +162,13 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
 
             {/* Comment Box */}
             <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Share your feedback (Optional)</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Share your feedback (Optional)</label>
               <textarea
                 value={comment}
                 onChange={e => setComment(e.target.value)}
                 placeholder="Write about the provider's professionalism, care, or anything else..."
                 rows={4}
-                className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm resize-none text-slate-800 placeholder-slate-400"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm resize-none text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
               />
             </div>
 
@@ -177,7 +177,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-3 border border-slate-100 hover:bg-slate-50 rounded-2xl font-bold text-slate-600 transition-all text-sm"
+                className="w-full py-3 border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-2xl font-bold text-slate-600 dark:text-slate-300 transition-all text-sm"
               >
                 Cancel
               </button>

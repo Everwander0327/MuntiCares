@@ -316,7 +316,7 @@ const PatientProviders = () => {
           transition={{ duration: 0.4 }}
         >
           <div className="relative flex-1 w-full" ref={searchRef}>
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 w-5 h-5" />
             <input 
               type="text" 
               placeholder="Search for providers or services..."
@@ -324,20 +324,20 @@ const PatientProviders = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               onFocus={() => setShowHistory(true)}
               onBlur={() => setTimeout(() => setShowHistory(false), 200)}
-              className="w-full bg-white border border-slate-100 rounded-2xl py-4 pl-12 pr-4 shadow-sm focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all outline-none"
+              className="w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl py-4 pl-12 pr-4 shadow-sm dark:shadow-slate-900/50 focus:ring-2 focus:ring-primary/10 focus:border-primary transition-all outline-none"
             />
 
             {/* Search History Dropdown */}
             {showHistory && !searchTerm && searchHistory.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-100 shadow-xl z-40 p-3">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-xl z-40 p-3">
                 <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Recent Searches</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Recent Searches</span>
                   <button
                     onClick={() => {
                       setSearchHistory([]);
                       if (user) localStorage.removeItem(`search_history_${user.id}`);
                     }}
-                    className="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors"
+                    className="text-[10px] font-bold text-slate-400 dark:text-slate-500 hover:text-red-500 dark:text-red-300 transition-colors"
                   >
                     Clear All
                   </button>
@@ -350,7 +350,7 @@ const PatientProviders = () => {
                         setSearchTerm(term);
                         setShowHistory(false);
                       }}
-                      className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl text-xs font-semibold text-slate-600 transition-all"
+                      className="px-3 py-1.5 bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-100 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 transition-all"
                     >
                       {term}
                     </button>
@@ -359,7 +359,7 @@ const PatientProviders = () => {
               </div>
                     )}
                     {bookingForm.errors.time && bookingForm.touched.time && (
-                      <p className="text-xs text-red-500 mt-1 ml-1">{bookingForm.errors.time}</p>
+                      <p className="text-xs text-red-500 dark:text-red-300 mt-1 ml-1">{bookingForm.errors.time}</p>
                     )}
                   </div>
           <CustomSelect 
@@ -379,21 +379,21 @@ const PatientProviders = () => {
             {filteredProviders.map((p) => (
               <motion.div 
                 key={p.id} 
-                className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300"
+                className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 hover:shadow-xl transition-all duration-300"
                 variants={staggerItem}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
               >
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-xl font-bold text-primary shadow-inner">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-xl font-bold text-primary shadow-inner">
                     {p.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-bold text-slate-900 text-lg">{p.full_name}</h3>
+                    <h3 className="font-bold text-slate-900 dark:text-slate-100 text-lg">{p.full_name}</h3>
                     <div className="flex items-center gap-1 text-yellow-500">
                       {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={`w-4 h-4 ${i < Math.floor(p.rating || 0) ? 'fill-current' : 'text-slate-300'}`} />
+                        <Star key={i} className={`w-4 h-4 ${i < Math.floor(p.rating || 0) ? 'fill-current' : 'text-slate-300 dark:text-slate-600'}`} />
                       ))}
-                      <span className="text-slate-400 text-sm ml-1 font-medium">{(p.rating || 0).toFixed(1)}</span>
+                      <span className="text-slate-400 dark:text-slate-500 text-sm ml-1 font-medium">{(p.rating || 0).toFixed(1)}</span>
                     </div>
                   </div>
                 </div>
@@ -401,31 +401,31 @@ const PatientProviders = () => {
                 <div className="space-y-4">
                   <div className="flex flex-wrap gap-2">
                     {(p.services || []).map((s, i) => (
-                      <span key={i} className="px-3 py-1 bg-slate-50 text-slate-600 rounded-lg text-xs font-semibold border border-slate-100">
+                      <span key={i} className="px-3 py-1 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-semibold border border-slate-100 dark:border-slate-700">
                         {s}
                       </span>
                     ))}
                     {(!p.services || p.services.length === 0) && (
-                      <span className="px-3 py-1 bg-slate-50 text-slate-400 rounded-lg text-xs font-semibold border border-slate-100">
+                      <span className="px-3 py-1 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 rounded-lg text-xs font-semibold border border-slate-100 dark:border-slate-700">
                         No services listed
                       </span>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2 text-slate-400 text-sm">
+                  <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
                     <MapPin className="w-4 h-4" />
                     <span>{p.location || 'Muntinlupa City'}</span>
                   </div>
 
                   {p.price_per_service > 0 && (
-                    <div className="text-sm font-bold text-slate-700">
+                    <div className="text-sm font-bold text-slate-700 dark:text-slate-200">
                       ₱{Number(p.price_per_service).toLocaleString()} per service
                     </div>
                   )}
 
                   <motion.button 
                     onClick={() => setViewingProvider(p)}
-                    className={`w-full py-3 rounded-2xl text-sm font-bold shadow-lg transition-all ${requested.includes(p.id) ? 'bg-green-50 text-green-600 border border-green-100 shadow-none' : 'btn-primary shadow-primary/20'}`}
+                    className={`w-full py-3 rounded-2xl text-sm font-bold shadow-lg transition-all ${requested.includes(p.id) ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-300 border border-green-100 dark:border-green-900/50 shadow-none' : 'btn-primary shadow-primary/20'}`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.97 }}
                   >
@@ -437,11 +437,11 @@ const PatientProviders = () => {
           </motion.div>
         ) : (
           <motion.div 
-            className="text-center py-20 bg-white rounded-[2rem] border border-slate-100"
+            className="text-center py-20 bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <p className="text-slate-500 text-lg">No providers found matching your search.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-lg">No providers found matching your search.</p>
           </motion.div>
         )}
       </div>
@@ -459,7 +459,7 @@ const PatientProviders = () => {
             }}
           >
             <motion.div 
-              className="bg-white rounded-[2.5rem] shadow-2xl max-w-lg w-full p-8 relative my-8"
+              className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl max-w-lg w-full p-8 relative my-8"
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -473,32 +473,32 @@ const PatientProviders = () => {
                     setSelectedProvider(null);
                   }
                 }}
-                className="absolute top-6 right-6 p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors"
+                className="absolute top-6 right-6 p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
 
               <div className="mb-6 pr-12">
-                <h2 className="text-2xl font-bold text-slate-900">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                   {bookingStep === 'form' ? 'Book Appointment' : 'Confirm Booking'}
                 </h2>
-                <p className="text-slate-500 mt-1">with <span className="font-bold text-primary">{selectedProvider.full_name}</span></p>
+                <p className="text-slate-500 dark:text-slate-400 mt-1">with <span className="font-bold text-primary">{selectedProvider.full_name}</span></p>
               </div>
 
               {/* Step Progress */}
               <div className="flex items-center gap-2 mb-6 px-1">
-                <div className={`flex items-center gap-2 ${bookingStep === 'form' ? 'text-primary' : 'text-green-600'}`}>
+                <div className={`flex items-center gap-2 ${bookingStep === 'form' ? 'text-primary' : 'text-green-600 dark:text-green-300'}`}>
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                    bookingStep === 'confirm' ? 'bg-green-100 text-green-600' : 'bg-primary text-white'
+                    bookingStep === 'confirm' ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300' : 'bg-primary text-white'
                   }`}>
                     {bookingStep === 'confirm' ? '✓' : '1'}
                   </div>
                   <span className="text-xs font-semibold">Details</span>
                 </div>
-                <div className={`flex-1 h-0.5 rounded-full ${bookingStep === 'confirm' ? 'bg-green-200' : 'bg-slate-200'}`} />
-                <div className={`flex items-center gap-2 ${bookingStep === 'confirm' ? 'text-primary' : 'text-slate-400'}`}>
+                <div className={`flex-1 h-0.5 rounded-full ${bookingStep === 'confirm' ? 'bg-green-200' : 'bg-slate-200 dark:bg-slate-600'}`} />
+                <div className={`flex items-center gap-2 ${bookingStep === 'confirm' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                    bookingStep === 'confirm' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-400'
+                    bookingStep === 'confirm' ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
                   }`}>
                     2
                   </div>
@@ -510,13 +510,13 @@ const PatientProviders = () => {
               {bookingStep === 'form' && (
                 <form onSubmit={handleReviewBooking} className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 ml-1">Select Service</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Select Service</label>
                     <select 
                       required
                       value={bookingForm.values.service}
                       onChange={e => bookingForm.handleChange('service', e.target.value)}
                       onBlur={() => bookingForm.handleBlur('service')}
-                      className={`w-full bg-slate-50 border rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none ${bookingForm.errors.service && bookingForm.touched.service ? 'border-red-300' : 'border-slate-200'}`}
+                      className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none ${bookingForm.errors.service && bookingForm.touched.service ? 'border-red-300' : 'border-slate-200 dark:border-slate-600'}`}
                     >
                       {selectedProvider.services?.length > 0 ? (
                         selectedProvider.services.map(s => (
@@ -527,14 +527,14 @@ const PatientProviders = () => {
                       )}
                     </select>
                     {bookingForm.errors.service && bookingForm.touched.service && (
-                      <p className="text-xs text-red-500 mt-1 ml-1">{bookingForm.errors.service}</p>
+                      <p className="text-xs text-red-500 dark:text-red-300 mt-1 ml-1">{bookingForm.errors.service}</p>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 ml-1">Date</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Date</label>
                     <div className="relative">
-                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500" />
                       <input 
                         type="date" 
                         required
@@ -545,23 +545,23 @@ const PatientProviders = () => {
                           bookingForm.handleChange('time', '');
                         }}
                         onBlur={() => bookingForm.handleBlur('date')}
-                        className={`w-full bg-slate-50 border rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${bookingForm.errors.date && bookingForm.touched.date ? 'border-red-300' : 'border-slate-200'}`}
+                        className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all ${bookingForm.errors.date && bookingForm.touched.date ? 'border-red-300' : 'border-slate-200 dark:border-slate-600'}`}
                       />
                     </div>
                     {bookingForm.errors.date && bookingForm.touched.date && (
-                      <p className="text-xs text-red-500 mt-1 ml-1">{bookingForm.errors.date}</p>
+                      <p className="text-xs text-red-500 dark:text-red-300 mt-1 ml-1">{bookingForm.errors.date}</p>
                     )}
                   </div>
 
                   {/* Time Slot Selection */}
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 ml-1">Available Time Slots</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Available Time Slots</label>
                     {!bookingForm.values.date ? (
-                      <p className="text-sm text-slate-400 ml-1">Select a date to see available slots.</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 ml-1">Select a date to see available slots.</p>
                     ) : loadingSlots ? (
-                      <p className="text-sm text-slate-400 ml-1">Checking availability...</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 ml-1">Checking availability...</p>
                     ) : availableSlots.length === 0 ? (
-                      <p className="text-sm text-slate-400 ml-1">No available slots for this date.</p>
+                      <p className="text-sm text-slate-400 dark:text-slate-500 ml-1">No available slots for this date.</p>
                     ) : (
                       <div className="grid grid-cols-3 gap-2">
                         {availableSlots.map(slot => (
@@ -574,8 +574,8 @@ const PatientProviders = () => {
                               bookingForm.values.time === slot.time
                                 ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                                 : slot.available
-                                  ? 'bg-slate-50 text-slate-700 border-slate-200 hover:border-primary hover:text-primary'
-                                  : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed line-through'
+                                  ? 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:border-primary hover:text-primary'
+                                  : 'bg-slate-100 dark:bg-slate-700 text-slate-300 dark:text-slate-600 border-slate-100 dark:border-slate-700 cursor-not-allowed line-through'
                             }`}
                           >
                             {new Date(`2000-01-01T${slot.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
@@ -586,20 +586,20 @@ const PatientProviders = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700 ml-1">Message for Provider (Optional)</label>
+                    <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Message for Provider (Optional)</label>
                     <div className="relative">
-                      <FileText className="absolute left-4 top-4 w-5 h-5 text-slate-400" />
+                      <FileText className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500" />
                       <textarea 
                         value={bookingForm.values.notes}
                         onChange={e => bookingForm.handleChange('notes', e.target.value)}
                         placeholder="Any specific instructions, conditions, or details?"
                         rows={3}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
                       />
                     </div>
                   </div>
 
-                  <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-2xl flex items-start gap-3">
+                  <div className="bg-blue-50/50 border border-blue-100 dark:border-blue-900/50 p-4 rounded-2xl flex items-start gap-3">
                     <div className="pt-0.5">
                       <input 
                         type="checkbox" 
@@ -611,11 +611,11 @@ const PatientProviders = () => {
                         className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
                       />
                     </div>
-                    <label htmlFor="consent" className="text-sm text-slate-600 leading-tight cursor-pointer">
+                    <label htmlFor="consent" className="text-sm text-slate-600 dark:text-slate-300 leading-tight cursor-pointer">
                       I consent to sharing my medical profile and home address with <span className="font-bold">{selectedProvider.full_name}</span> for the purpose of this home care service.
                     </label>
                     {bookingForm.errors.consent && bookingForm.touched.consent && (
-                      <p className="text-xs text-red-500 mt-1 ml-1">{bookingForm.errors.consent}</p>
+                      <p className="text-xs text-red-500 dark:text-red-300 mt-1 ml-1">{bookingForm.errors.consent}</p>
                     )}
                   </div>
 
@@ -634,50 +634,50 @@ const PatientProviders = () => {
               {/* Step 2: Confirmation */}
               {bookingStep === 'confirm' && (
                 <div className="space-y-6">
-                  <div className="bg-slate-50 rounded-2xl p-5 space-y-4 border border-slate-100">
-                    <div className="flex items-center gap-3 pb-3 border-b border-slate-200">
-                      <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-primary font-bold">
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-5 space-y-4 border border-slate-100 dark:border-slate-700">
+                    <div className="flex items-center gap-3 pb-3 border-b border-slate-200 dark:border-slate-600">
+                      <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold">
                         {selectedProvider.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900">{selectedProvider.full_name}</p>
-                        <p className="text-sm text-slate-500">{selectedProvider.location || 'Muntinlupa City'}</p>
+                        <p className="font-bold text-slate-900 dark:text-slate-100">{selectedProvider.full_name}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">{selectedProvider.location || 'Muntinlupa City'}</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Service</p>
-                        <p className="font-bold text-slate-800 mt-0.5">{bookingForm.values.service}</p>
+                        <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Service</p>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{bookingForm.values.service}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Fee</p>
-                        <p className="font-bold text-slate-800 mt-0.5">₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}</p>
+                        <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Fee</p>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Date</p>
-                        <p className="font-bold text-slate-800 mt-0.5">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Date</p>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
                           {new Date(bookingForm.values.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Time</p>
-                        <p className="font-bold text-slate-800 mt-0.5">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Time</p>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
                           {new Date(`2000-01-01T${bookingForm.values.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                         </p>
                       </div>
                     </div>
 
                     {bookingForm.values.notes && (
-                      <div className="pt-3 border-t border-slate-200">
-                        <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Your Message</p>
-                        <p className="text-sm text-slate-600 italic">"{bookingForm.values.notes}"</p>
+                      <div className="pt-3 border-t border-slate-200 dark:border-slate-600">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-1">Your Message</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{bookingForm.values.notes}"</p>
                       </div>
                     )}
 
-                    <div className="pt-3 border-t border-slate-200 flex items-center gap-2 text-sm">
+                    <div className="pt-3 border-t border-slate-200 dark:border-slate-600 flex items-center gap-2 text-sm">
                       <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-green-700 font-semibold">Data sharing consent provided</span>
+                      <span className="text-green-700 dark:text-green-200 font-semibold">Data sharing consent provided</span>
                     </div>
                   </div>
 
@@ -686,7 +686,7 @@ const PatientProviders = () => {
                       type="button"
                       onClick={() => setBookingStep('form')}
                       disabled={bookingLoading}
-                      className="w-full py-4 border border-slate-100 hover:bg-slate-50 rounded-2xl font-bold text-slate-600 transition-all text-sm disabled:opacity-50"
+                      className="w-full py-4 border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-2xl font-bold text-slate-600 dark:text-slate-300 transition-all text-sm disabled:opacity-50"
                     >
                       Go Back
                     </button>
@@ -721,7 +721,7 @@ const PatientProviders = () => {
             onClick={() => setViewingProvider(null)}
           >
             <motion.div 
-              className="bg-white rounded-[2.5rem] shadow-2xl max-w-xl w-full p-8 relative my-8"
+              className="bg-white dark:bg-slate-800 rounded-[2.5rem] shadow-2xl max-w-xl w-full p-8 relative my-8"
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -729,56 +729,56 @@ const PatientProviders = () => {
             >
               <button 
                 onClick={() => setViewingProvider(null)}
-                className="absolute top-6 right-6 p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors"
+                className="absolute top-6 right-6 p-2 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
 
               {/* Header profile info */}
               <div className="flex items-start gap-4 mb-6 pr-10">
-                <div className="w-18 h-18 rounded-2xl bg-blue-50 flex items-center justify-center text-2xl font-bold text-primary shadow-inner shrink-0">
+                <div className="w-18 h-18 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl font-bold text-primary shadow-inner shrink-0">
                   {viewingProvider.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900">{viewingProvider.full_name}</h2>
-                  <p className="text-slate-500 text-sm font-semibold mt-0.5">{viewingProvider.location}</p>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{viewingProvider.full_name}</h2>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold mt-0.5">{viewingProvider.location}</p>
                   
                   {/* Rating display */}
                   <div className="flex items-center gap-1 text-yellow-500 mt-1">
                     {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`w-4 h-4 ${i < Math.floor(viewingProvider.rating || 0) ? 'fill-current' : 'text-slate-300'}`} />
+                      <Star key={i} className={`w-4 h-4 ${i < Math.floor(viewingProvider.rating || 0) ? 'fill-current' : 'text-slate-300 dark:text-slate-600'}`} />
                     ))}
-                    <span className="text-slate-700 text-sm font-bold ml-1">{(viewingProvider.rating || 0).toFixed(1)}</span>
+                    <span className="text-slate-700 dark:text-slate-200 text-sm font-bold ml-1">{(viewingProvider.rating || 0).toFixed(1)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Provider Info Grid */}
-              <div className="grid grid-cols-2 gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+              <div className="grid grid-cols-2 gap-4 mb-6 bg-slate-50 dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
                 <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Consultation Fee</p>
-                  <p className="text-base font-bold text-slate-800 mt-0.5">₱{Number(viewingProvider.price_per_service).toLocaleString()}</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Consultation Fee</p>
+                  <p className="text-base font-bold text-slate-800 dark:text-slate-200 mt-0.5">₱{Number(viewingProvider.price_per_service).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400">Barangay Coverage</p>
-                  <p className="text-sm font-bold text-slate-800 mt-0.5 truncate">{viewingProvider.location.split(',')[0]}</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Barangay Coverage</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200 mt-0.5 truncate">{viewingProvider.location.split(',')[0]}</p>
                 </div>
               </div>
 
               {/* Bio */}
               <div className="mb-6">
-                <h4 className="text-xs uppercase font-bold text-slate-400 mb-2">About Me</h4>
-                <p className="text-sm text-slate-600 leading-relaxed bg-white border border-slate-100 p-4 rounded-2xl">
+                <h4 className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-2">About Me</h4>
+                <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-4 rounded-2xl">
                   {viewingProvider.bio}
                 </p>
               </div>
 
               {/* Services Offered */}
               <div className="mb-6">
-                <h4 className="text-xs uppercase font-bold text-slate-400 mb-2">Specializations & Services</h4>
+                <h4 className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-2">Specializations & Services</h4>
                 <div className="flex flex-wrap gap-2">
                   {viewingProvider.services.map((s, i) => (
-                    <span key={i} className="px-3 py-1.5 bg-blue-50 text-primary border border-blue-100 rounded-xl text-xs font-bold">
+                    <span key={i} className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-primary border border-blue-100 dark:border-blue-900/50 rounded-xl text-xs font-bold">
                       {s}
                     </span>
                   ))}
@@ -787,39 +787,39 @@ const PatientProviders = () => {
 
               {/* Patient Reviews Section */}
               <div className="mb-8">
-                <h4 className="text-xs uppercase font-bold text-slate-400 mb-3 flex items-center gap-1.5">
+                <h4 className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-3 flex items-center gap-1.5">
                   <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
                   What patients say
                 </h4>
                 
                 <div className="max-h-[160px] overflow-y-auto space-y-3 pr-2 scrollbar-thin">
                   {reviewsLoading ? (
-                    <p className="text-xs text-slate-400 italic">Loading patient feedback...</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 italic">Loading patient feedback...</p>
                   ) : providerReviews.length > 0 ? (
                     providerReviews.map((rev, i) => (
-                      <div key={i} className="p-3 bg-slate-50 border border-slate-100/50 rounded-2xl space-y-1">
+                      <div key={i} className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100/50 rounded-2xl space-y-1">
                         <div className="flex justify-between items-center">
-                          <p className="text-xs font-bold text-slate-700">{rev.patient?.full_name || 'Anonymous'}</p>
+                          <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{rev.patient?.full_name || 'Anonymous'}</p>
                           <div className="flex gap-0.5 text-yellow-500">
                             {[...Array(5)].map((_, idx) => (
-                              <Star key={idx} className={`w-3 h-3 ${idx < rev.rating ? 'fill-current' : 'text-slate-200'}`} />
+                              <Star key={idx} className={`w-3 h-3 ${idx < rev.rating ? 'fill-current' : 'text-slate-200 dark:text-slate-600'}`} />
                             ))}
                           </div>
                         </div>
-                        <p className="text-xs text-slate-600 italic">"{rev.review_text || 'Excellent consultation!'}"</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-300 italic">"{rev.review_text || 'Excellent consultation!'}"</p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-xs text-slate-400 italic py-2">No written reviews yet. Be the first to book and rate!</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 italic py-2">No written reviews yet. Be the first to book and rate!</p>
                   )}
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-100 dark:border-slate-700">
                 <button
                   onClick={() => setViewingProvider(null)}
-                  className="w-full py-3.5 border border-slate-100 hover:bg-slate-50 rounded-2xl font-bold text-slate-600 transition-all text-sm"
+                  className="w-full py-3.5 border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-2xl font-bold text-slate-600 dark:text-slate-300 transition-all text-sm"
                 >
                   Close Profile
                 </button>
@@ -831,7 +831,7 @@ const PatientProviders = () => {
                   disabled={requested.includes(viewingProvider.id)}
                   className={`w-full py-3.5 rounded-2xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-1.5 ${
                     requested.includes(viewingProvider.id) 
-                      ? 'bg-green-100 text-green-600 cursor-not-allowed shadow-none' 
+                      ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300 cursor-not-allowed shadow-none' 
                       : 'btn-primary shadow-primary/20'
                   }`}
                 >

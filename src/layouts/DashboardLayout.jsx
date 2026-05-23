@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
+import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../lib/supabase';
 import { 
   LayoutDashboard, 
@@ -25,7 +26,7 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
   <Link 
     to={to} 
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 hover:bg-blue-50 hover:text-primary'}`}
+    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-primary'}`}
   >
     <motion.div
       className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-primary rounded-r-full"
@@ -56,7 +57,7 @@ const MobileNavItem = ({ icon, label, to, active, badge }) => (
     <div className="relative">
       {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-primary' : 'text-slate-400'}` })}
       {badge > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[7px] font-bold text-white px-0.5">
+        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center text-[7px] font-bold text-white px-0.5">
           {badge > 9 ? '9+' : badge}
         </span>
       )}
@@ -162,12 +163,12 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
   }, [location.pathname, fetchCounts]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.div 
-            className="fixed inset-0 bg-slate-900/50 z-40 lg:hidden backdrop-blur-sm"
+            className="fixed inset-0 bg-slate-900/50 dark:bg-black/50 z-40 lg:hidden backdrop-blur-sm"
             onClick={() => setIsSidebarOpen(false)}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -177,7 +178,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white border-r border-slate-100 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:translate-x-0`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:translate-x-0`}>
         <div className="h-full flex flex-col p-6">
           {/* Logo */}
           <div className="flex items-center justify-between mb-8">
@@ -187,7 +188,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
               </div>
               <span className="text-xl font-bold text-primary tracking-tight">MuntiCares</span>
             </Link>
-            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 p-2 hover:bg-slate-50 rounded-xl transition-colors">
+            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -221,15 +222,15 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </nav>
 
           {/* Divider */}
-          <div className="border-t border-slate-100 my-4" />
+          <div className="border-t border-slate-100 dark:border-slate-700 my-4" />
 
           {/* User Info */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-2xl mb-3">
+          <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-900 rounded-2xl mb-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
               {user.initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-slate-900 text-sm truncate">{user.name}</p>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{user.name}</p>
               <span className="inline-flex items-center px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase tracking-wider">
                 {user.badge}
               </span>
@@ -242,9 +243,9 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
               logout();
               navigate('/login');
             }}
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 hover:bg-red-50 hover:text-red-500 transition-all w-full group"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-slate-700 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
           >
-            <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500" />
+            <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500 dark:group-hover:text-red-400" />
             <span className="font-semibold">Logout</span>
           </button>
         </div>
@@ -252,23 +253,24 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 h-screen">
-        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-10 shrink-0">
+        <header className="h-20 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between px-4 lg:px-10 shrink-0">
           <div className="flex items-center gap-4 min-w-0">
             <div className="min-w-0">
-              <h2 className="text-sm md:text-lg font-bold text-slate-900 truncate max-w-[200px] md:max-w-none">
+              <h2 className="text-sm md:text-lg font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] md:max-w-none">
                 Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
+            <ThemeToggle />
             <NotificationBell />
             <Link 
               to={`/${currentRole}/profile`} 
-              className="w-10 h-10 rounded-2xl bg-blue-100 flex items-center justify-center text-primary font-bold shadow-sm border border-white shrink-0 hover:bg-blue-200 transition-colors cursor-pointer"
+              className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold shadow-sm border border-white dark:border-slate-800 shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
             >
               {user.initials}
             </Link>
@@ -287,7 +289,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-slate-100 shadow-lg shadow-slate-200/50">
+      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
         <div className="flex items-center justify-around px-1 py-1">
           {links.slice(0, 5).map((link) => {
             let badge = 0;

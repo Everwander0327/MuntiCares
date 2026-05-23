@@ -25,18 +25,18 @@ const staggerItem = {
 const ProviderCard = ({ providerName, service, lastAccess, isEnabled, permissions, onToggle, onPermChange, loading, expanded, onToggleExpand }) => {
   return (
     <motion.div
-      className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+      className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
       variants={staggerItem}
     >
       <div className="flex items-center justify-between p-6">
         <div className="flex items-center gap-4 min-w-0 flex-1">
-          <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-lg font-bold text-slate-400 shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-lg font-bold text-slate-400 dark:text-slate-500 shrink-0">
             {providerName.split(' ').map(n => n[0]).join('')}
           </div>
           <div className="min-w-0">
-            <h4 className="font-bold text-slate-900 truncate">{providerName}</h4>
-            <p className="text-slate-500 text-sm truncate">{service}</p>
-            <div className="flex items-center gap-1 text-slate-400 text-xs mt-1">
+            <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{providerName}</h4>
+            <p className="text-slate-500 dark:text-slate-400 text-sm truncate">{service}</p>
+            <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-xs mt-1">
               <Calendar className="w-3 h-3 shrink-0" />
               <span className="truncate">Last access: {lastAccess || 'Never'}</span>
             </div>
@@ -45,18 +45,18 @@ const ProviderCard = ({ providerName, service, lastAccess, isEnabled, permission
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={onToggleExpand}
-            className="p-2 text-slate-400 hover:text-primary hover:bg-blue-50 rounded-xl transition-colors"
+            className="p-2 text-slate-400 dark:text-slate-500 hover:text-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
           >
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
           <motion.button
             onClick={onToggle}
             disabled={loading}
-            className={`w-14 h-8 rounded-full p-1 relative overflow-hidden transition-colors duration-300 ${isEnabled ? 'bg-green-500' : 'bg-slate-200'} ${loading ? 'opacity-50' : ''}`}
+            className={`w-14 h-8 rounded-full p-1 relative overflow-hidden transition-colors duration-300 ${isEnabled ? 'bg-green-500' : 'bg-slate-200 dark:bg-slate-600'} ${loading ? 'opacity-50' : ''}`}
             whileTap={{ scale: 0.95 }}
           >
             <motion.div
-              className="w-6 h-6 bg-white rounded-full shadow-sm"
+              className="w-6 h-6 bg-white dark:bg-slate-800 rounded-full shadow-sm dark:shadow-slate-900/50"
               animate={{ x: isEnabled ? 18 : 0 }}
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             />
@@ -73,8 +73,8 @@ const ProviderCard = ({ providerName, service, lastAccess, isEnabled, permission
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-6 pt-2 border-t border-slate-50">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+            <div className="px-6 pb-6 pt-2 border-t border-slate-50 dark:border-slate-700">
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
                 Data Sharing Permissions
               </p>
               <div className="space-y-2">
@@ -82,7 +82,7 @@ const ProviderCard = ({ providerName, service, lastAccess, isEnabled, permission
                   <label
                     key={key}
                     className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors ${
-                      isEnabled ? 'hover:bg-slate-50' : 'opacity-50 cursor-not-allowed'
+                      isEnabled ? 'hover:bg-slate-50 dark:hover:bg-slate-700' : 'opacity-50 cursor-not-allowed'
                     }`}
                   >
                     <div
@@ -93,17 +93,17 @@ const ProviderCard = ({ providerName, service, lastAccess, isEnabled, permission
                       className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
                         permissions[key]
                           ? 'bg-primary border-primary text-white'
-                          : 'border-slate-300 bg-white'
+                          : 'border-slate-300 bg-white dark:bg-slate-800'
                       }`}
                     >
                       {permissions[key] && <Check className="w-3 h-3" />}
                     </div>
-                    <span className="text-sm font-semibold text-slate-700">{label}</span>
+                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
                   </label>
                 ))}
               </div>
               {!isEnabled && (
-                <p className="text-xs text-slate-400 mt-2">Enable data sharing to modify permissions.</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Enable data sharing to modify permissions.</p>
               )}
             </div>
           </motion.div>
@@ -265,19 +265,19 @@ const PatientConsent = () => {
 
   const getActionIcon = (action) => {
     switch (action) {
-      case 'Granted': return <Check className="w-3.5 h-3.5 text-green-600" />;
-      case 'Revoked': return <X className="w-3.5 h-3.5 text-red-500" />;
-      case 'Updated': return <Clock className="w-3.5 h-3.5 text-amber-500" />;
-      default: return <History className="w-3.5 h-3.5 text-slate-400" />;
+      case 'Granted': return <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-300" />;
+      case 'Revoked': return <X className="w-3.5 h-3.5 text-red-500 dark:text-red-300" />;
+      case 'Updated': return <Clock className="w-3.5 h-3.5 text-amber-500 dark:text-amber-300" />;
+      default: return <History className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />;
     }
   };
 
   const getActionBadge = (action) => {
     switch (action) {
-      case 'Granted': return 'bg-green-100 text-green-700';
-      case 'Revoked': return 'bg-red-100 text-red-600';
+      case 'Granted': return 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200';
+      case 'Revoked': return 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300';
       case 'Updated': return 'bg-amber-100 text-amber-700';
-      default: return 'bg-slate-100 text-slate-600';
+      default: return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
     }
   };
 
@@ -290,12 +290,12 @@ const PatientConsent = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="p-3 bg-blue-100 text-primary rounded-2xl">
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-primary rounded-2xl">
             <ShieldCheck className="w-8 h-8" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Manage Your Health Data Access</h1>
-            <p className="text-slate-500">Securely control which providers can view your medical information.</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Your Health Data Access</h1>
+            <p className="text-slate-500 dark:text-slate-400">Securely control which providers can view your medical information.</p>
           </div>
         </motion.div>
 
@@ -308,7 +308,7 @@ const PatientConsent = () => {
           <div className="p-2 bg-primary text-white rounded-xl mt-1">
             <Info className="w-4 h-4" />
           </div>
-          <div className="text-slate-700">
+          <div className="text-slate-700 dark:text-slate-200">
             <p className="font-bold text-primary mb-1">Privacy Notice</p>
             <p className="text-sm leading-relaxed">
               You have full control over who can access your health information and what they can see.
@@ -319,7 +319,7 @@ const PatientConsent = () => {
         </motion.div>
 
         {loading ? (
-          <div className="text-center py-10 text-slate-400">Loading consent settings...</div>
+          <div className="text-center py-10 text-slate-400 dark:text-slate-500">Loading consent settings...</div>
         ) : (
           <>
             {/* Provider Cards */}
@@ -329,7 +329,7 @@ const PatientConsent = () => {
               initial="initial"
               animate="animate"
             >
-              <h3 className="text-lg font-bold text-slate-900 px-2">Authorized Providers</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 px-2">Authorized Providers</h3>
               {consents.length > 0 ? (
                 consents.map((c) => (
                   <ProviderCard
@@ -347,7 +347,7 @@ const PatientConsent = () => {
                   />
                 ))
               ) : (
-                <div className="p-10 text-center text-slate-500 bg-white rounded-3xl border border-slate-100">
+                <div className="p-10 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
                   No providers to manage yet. Request a service from a provider first!
                 </div>
               )}
@@ -356,19 +356,19 @@ const PatientConsent = () => {
             {/* Privacy Activity Section */}
             {consents.length > 0 && (
               <motion.div
-                className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+                className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.2 }}
               >
                 {/* Tabs */}
-                <div className="flex border-b border-slate-100">
+                <div className="flex border-b border-slate-100 dark:border-slate-700">
                   <button
                     onClick={() => setActiveTab('history')}
                     className={`flex-1 flex items-center justify-center gap-2 py-4 font-bold text-sm border-b-2 transition-colors ${
                       activeTab === 'history'
                         ? 'border-primary text-primary bg-blue-50/50'
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                        : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-300'
                     }`}
                   >
                     <History className="w-4 h-4" />
@@ -379,7 +379,7 @@ const PatientConsent = () => {
                     className={`flex-1 flex items-center justify-center gap-2 py-4 font-bold text-sm border-b-2 transition-colors ${
                       activeTab === 'access'
                         ? 'border-primary text-primary bg-blue-50/50'
-                        : 'border-transparent text-slate-400 hover:text-slate-600'
+                        : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-300'
                     }`}
                   >
                     <Eye className="w-4 h-4" />
@@ -391,28 +391,28 @@ const PatientConsent = () => {
                 {activeTab === 'history' && (
                   <div className="p-6 max-h-80 overflow-y-auto">
                     {consentHistory.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400">
+                      <div className="text-center py-8 text-slate-400 dark:text-slate-500">
                         <History className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No consent changes recorded yet.</p>
-                        <p className="text-xs text-slate-300 mt-1">Toggle data sharing to see activity here.</p>
+                        <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Toggle data sharing to see activity here.</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
                         {consentHistory.map((entry, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                            <div className={`p-1.5 rounded-lg ${entry.action === 'Granted' ? 'bg-green-100' : entry.action === 'Revoked' ? 'bg-red-100' : 'bg-amber-100'}`}>
+                          <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
+                            <div className={`p-1.5 rounded-lg ${entry.action === 'Granted' ? 'bg-green-100 dark:bg-green-900/40' : entry.action === 'Revoked' ? 'bg-red-100 dark:bg-red-900/40' : 'bg-amber-100'}`}>
                               {getActionIcon(entry.action)}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-bold text-slate-800 text-sm truncate">{entry.providerName}</span>
+                                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{entry.providerName}</span>
                                 <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getActionBadge(entry.action)}`}>
                                   {entry.action}
                                 </span>
                               </div>
-                              <p className="text-xs text-slate-500 mt-0.5">{entry.details}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{entry.details}</p>
                             </div>
-                            <span className="text-[10px] text-slate-400 shrink-0">{formatTimestamp(entry.timestamp)}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">{formatTimestamp(entry.timestamp)}</span>
                           </div>
                         ))}
                       </div>
@@ -424,10 +424,10 @@ const PatientConsent = () => {
                 {activeTab === 'access' && (
                   <div className="p-6 max-h-80 overflow-y-auto">
                     {consents.filter(c => c.lastAccessRaw).length === 0 ? (
-                      <div className="text-center py-8 text-slate-400">
+                      <div className="text-center py-8 text-slate-400 dark:text-slate-500">
                         <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <p className="text-sm">No data access recorded yet.</p>
-                        <p className="text-xs text-slate-300 mt-1">When a provider views your records, it will be logged here.</p>
+                        <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">When a provider views your records, it will be logged here.</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -435,20 +435,20 @@ const PatientConsent = () => {
                           .filter(c => c.lastAccessRaw)
                           .sort((a, b) => new Date(b.lastAccessRaw) - new Date(a.lastAccessRaw))
                           .map((c) => (
-                            <div key={c.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                              <div className="p-1.5 bg-blue-100 text-primary rounded-lg">
+                            <div key={c.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
+                              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 text-primary rounded-lg">
                                 <Eye className="w-3.5 h-3.5" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-800 text-sm truncate">{c.providerName}</p>
-                                <p className="text-xs text-slate-500">
+                                <p className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{c.providerName}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
                                   Viewed your {Object.entries(PERMISSION_LABELS)
                                     .filter(([k]) => c.permissions?.[k])
                                     .map(([, v]) => v)
                                     .join(', ') || 'records'}
                                 </p>
                               </div>
-                              <span className="text-[10px] text-slate-400 shrink-0">
+                              <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
                                 {new Date(c.lastAccessRaw).toLocaleDateString('en-US', {
                                   month: 'short', day: 'numeric', year: 'numeric',
                                   hour: '2-digit', minute: '2-digit'

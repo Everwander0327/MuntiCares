@@ -225,8 +225,8 @@ const NotificationBell = () => {
 
           toast(
             <div>
-              <p className="font-bold text-slate-900 text-xs">{notif.title}</p>
-              <p className="text-slate-500 text-[11px] font-normal mt-0.5">{notif.message}</p>
+              <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">{notif.title}</p>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] font-normal mt-0.5">{notif.message}</p>
             </div>,
             {
               icon,
@@ -346,7 +346,7 @@ const NotificationBell = () => {
             Notification.requestPermission();
           }
         }}
-        className="p-2 text-slate-400 hover:text-primary transition-colors relative"
+        className="p-2 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors relative"
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
@@ -365,15 +365,15 @@ const NotificationBell = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-20 sm:top-full mt-2 w-auto sm:w-96 bg-white rounded-2xl border border-slate-100 shadow-2xl z-50 overflow-hidden"
+            className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-20 sm:top-full mt-2 w-auto sm:w-96 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-2xl z-50 overflow-hidden"
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-900">Notifications</h3>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+              <h3 className="font-bold text-slate-900 dark:text-slate-100">Notifications</h3>
               {unreadCount > 0 && (
                 <button
                   onClick={markAllRead}
@@ -385,13 +385,13 @@ const NotificationBell = () => {
             </div>
 
             {/* Notification List */}
-            <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-50">
+            <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700/50">
               {unreadNotifications.length > 0 ? (
                 unreadNotifications.map((notif) => {
                   return (
                     <div
                       key={notif.id}
-                      className="w-full text-left px-5 py-3.5 flex items-start gap-3 transition-colors hover:bg-slate-50/80 bg-blue-50/20 relative group cursor-pointer"
+                      className="w-full text-left px-5 py-3.5 flex items-start gap-3 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/80 bg-blue-50/20 dark:bg-blue-900/10 relative group cursor-pointer"
                       onClick={() => handleNotifClick(notif)}
                     >
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${getNotifBg(notif.type)}`}>
@@ -399,13 +399,13 @@ const NotificationBell = () => {
                       </div>
                       <div className="flex-1 min-w-0 pr-6">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm truncate font-bold text-slate-900">
+                          <p className="text-sm truncate font-bold text-slate-900 dark:text-slate-100">
                             {notif.title}
                           </p>
                           <span className="w-1.5 h-1.5 bg-primary rounded-full shrink-0" />
                         </div>
-                        <p className="text-xs text-slate-500 truncate mt-0.5">{notif.message}</p>
-                        <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{notif.message}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {timeAgo(notif.time)}
                         </p>
@@ -414,7 +414,7 @@ const NotificationBell = () => {
                       {/* X / Dismiss Button on Hover */}
                       <button
                         onClick={(e) => dismissNotification(e, notif.id)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100/80 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-700/80 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
                         title="Dismiss"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -425,16 +425,16 @@ const NotificationBell = () => {
               ) : (
                 <div className="p-8 text-center">
                   <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2 animate-bounce" />
-                  <p className="text-sm text-slate-500 font-bold">You're all caught up!</p>
-                  <p className="text-xs text-slate-400 mt-1">No unread notifications at the moment.</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-bold">You're all caught up!</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">No unread notifications at the moment.</p>
                 </div>
               )}
             </div>
 
             {/* Footer */}
             {unreadNotifications.length > 0 && (
-              <div className="px-5 py-3 border-t border-slate-100 text-center">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 text-center">
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
                   Showing latest {unreadNotifications.length} notifications
                 </p>
               </div>

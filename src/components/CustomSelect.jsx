@@ -21,14 +21,14 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option" 
     <div className="relative w-full md:w-auto min-w-[160px]" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-white border border-slate-100 px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 hover:bg-slate-50 transition-all shadow-sm group"
+        className="w-full bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 px-4 py-2.5 rounded-xl flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm dark:shadow-slate-900/50 group"
       >
-        <span className="font-semibold text-slate-700 truncate">{selectedOption.label}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="font-semibold text-slate-700 dark:text-slate-200 truncate">{selectedOption.label}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-100 rounded-2xl shadow-xl z-[100] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl shadow-xl z-[100] py-2 animate-in fade-in slide-in-from-top-2 duration-200">
           {options.map((option) => (
             <button
               key={option.value}
@@ -36,8 +36,8 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option" 
                 onChange(option.value);
                 setIsOpen(false);
               }}
-              className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-blue-50 hover:text-primary ${
-                value === option.value ? 'bg-blue-50 text-primary' : 'text-slate-600'
+              className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-primary ${
+                value === option.value ? 'bg-blue-50 dark:bg-blue-900/30 text-primary' : 'text-slate-600 dark:text-slate-300'
               }`}
             >
               {option.label}

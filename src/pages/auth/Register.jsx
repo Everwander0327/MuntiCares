@@ -99,16 +99,15 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 pt-32 pb-20 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-6 pt-32 pb-20 relative overflow-hidden">
       {/* Animated floating blobs */}
       <div className="absolute top-10 right-20 w-80 h-80 bg-blue-200/25 rounded-full blur-3xl blob-1 pointer-events-none" />
       <div className="absolute bottom-10 left-20 w-96 h-96 bg-blue-300/20 rounded-full blur-3xl blob-2 pointer-events-none" />
       <div className="absolute top-1/3 left-1/4 w-64 h-64 bg-primary/5 rounded-full blur-3xl blob-3 pointer-events-none" />
 
       <motion.div 
-        className={`relative z-10 w-full max-w-2xl rounded-[2.5rem] p-8 md:p-12 border border-white/50 ${shake ? 'animate-shake' : ''}`}
+        className={`relative z-10 w-full max-w-2xl rounded-[2.5rem] p-8 md:p-12 border border-white/50 dark:bg-slate-900/80 dark:border-slate-700 bg-white/80 ${shake ? 'animate-shake' : ''}`}
         style={{
-          background: 'rgba(255, 255, 255, 0.8)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
           boxShadow: '0 8px 32px rgba(30, 111, 191, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5)',
@@ -124,8 +123,8 @@ const RegisterPage = () => {
             </div>
             <span className="text-2xl font-bold text-primary tracking-tight">MuntiCares</span>
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900">Create Account</h1>
-          <p className="text-slate-500 mt-2">Join Muntinlupa's home care network</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Create Account</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-2">Join Muntinlupa's home care network</p>
         </div>
 
         <form className="space-y-8" onSubmit={handleRegister}>
@@ -133,7 +132,7 @@ const RegisterPage = () => {
             {/* Patient Role Card */}
             <motion.div 
               onClick={() => setRole('patient')}
-              className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-3 relative overflow-hidden ${role === 'patient' ? 'border-primary bg-blue-50/80 shadow-lg shadow-primary/10' : 'border-slate-200/50 bg-white/50 hover:border-slate-300'}`}
+              className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-3 relative overflow-hidden ${role === 'patient' ? 'border-primary bg-blue-50/80 shadow-lg shadow-primary/10' : 'border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'}`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
             >
@@ -145,27 +144,27 @@ const RegisterPage = () => {
                     exit={{ scale: 0, opacity: 0 }}
                     className="absolute top-3 right-3"
                   >
-                    <CheckCircle2 className="w-6 h-6 text-primary fill-blue-100" />
+                    <CheckCircle2 className="w-6 h-6 text-primary fill-blue-100 dark:fill-blue-900" />
                   </motion.div>
                 )}
               </AnimatePresence>
               <motion.div 
-                className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${role === 'patient' ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'}`}
+                className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${role === 'patient' ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}
                 animate={{ scale: role === 'patient' ? 1.1 : 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
                 🧑‍⚕️
               </motion.div>
               <div>
-                <p className="font-bold text-slate-900">I'm a Patient</p>
-                <p className="text-xs text-slate-500 mt-1">Looking for care services</p>
+                <p className="font-bold text-slate-900 dark:text-slate-100">I'm a Patient</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Looking for care services</p>
               </div>
             </motion.div>
 
             {/* Provider Role Card */}
             <motion.div 
               onClick={() => setRole('provider')}
-              className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-3 relative overflow-hidden ${role === 'provider' ? 'border-primary bg-blue-50/80 shadow-lg shadow-primary/10' : 'border-slate-200/50 bg-white/50 hover:border-slate-300'}`}
+              className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-3 relative overflow-hidden ${role === 'provider' ? 'border-primary bg-blue-50/80 shadow-lg shadow-primary/10' : 'border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'}`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
             >
@@ -177,20 +176,20 @@ const RegisterPage = () => {
                     exit={{ scale: 0, opacity: 0 }}
                     className="absolute top-3 right-3"
                   >
-                    <CheckCircle2 className="w-6 h-6 text-primary fill-blue-100" />
+                    <CheckCircle2 className="w-6 h-6 text-primary fill-blue-100 dark:fill-blue-900" />
                   </motion.div>
                 )}
               </AnimatePresence>
               <motion.div 
-                className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${role === 'provider' ? 'bg-primary text-white' : 'bg-slate-200 text-slate-500'}`}
+                className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl ${role === 'provider' ? 'bg-primary text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}
                 animate={{ scale: role === 'provider' ? 1.1 : 1 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 20 }}
               >
                 👨‍⚕️
               </motion.div>
               <div>
-                <p className="font-bold text-slate-900">I'm a Provider</p>
-                <p className="text-xs text-slate-500 mt-1">Offering professional care</p>
+                <p className="font-bold text-slate-900 dark:text-slate-100">I'm a Provider</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Offering professional care</p>
               </div>
             </motion.div>
           </div>
@@ -206,7 +205,7 @@ const RegisterPage = () => {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-600 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
             </div>
@@ -221,7 +220,7 @@ const RegisterPage = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-600 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
               </div>
             </div>
@@ -236,12 +235,12 @@ const RegisterPage = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-600 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -258,12 +257,12 @@ const RegisterPage = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
-                  className="w-full bg-white/70 border border-slate-200 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-600 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 >
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
@@ -289,7 +288,7 @@ const RegisterPage = () => {
         </form>
 
         <div className="mt-8 text-center">
-          <p className="text-slate-500">
+          <p className="text-slate-500 dark:text-slate-400">
             Already have an account? <Link to="/login" className="text-primary font-bold hover:underline">Login</Link>
           </p>
         </div>
