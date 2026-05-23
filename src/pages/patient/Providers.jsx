@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Star, MapPin, X, Calendar, Clock, FileText, CheckCircle2 } from 'lucide-react';
+import { Search, Star, MapPin, X, Calendar, Clock, FileText, CheckCircle2, Shield, ShieldCheck, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,6 +9,12 @@ import { SkeletonPage } from '../../components/Skeleton';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useFormValidation from '../../hooks/useFormValidation';
+
+const getProfessionalIdUrl = (filePath) => {
+  if (!filePath) return null;
+  const { data } = supabase.storage.from('provider-docs').getPublicUrl(filePath);
+  return data?.publicUrl || null;
+};
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
@@ -38,6 +44,7 @@ const PatientProviders = () => {
   const [viewingProvider, setViewingProvider] = useState(null);
   const [providerReviews, setProviderReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [viewingProviderIdUrls, setViewingProviderIdUrls] = useState([]);
   const bookingForm = useFormValidation([
     { name: 'service', rules: [(v) => v ? '' : 'Please select a service.'] },
     { name: 'date', rules: ['required'] },
@@ -65,7 +72,7 @@ const PatientProviders = () => {
       try {
         const { data, error } = await supabase
           .from('providers')
-          .select('id, user_id, services, rating, location, price_per_service, is_approved, bio, phone, user:user_id(id, full_name, email)')
+          .select('id, user_id, services, rating, location, price_per_service, is_approved, bio, phone, professional_id_path, professional_id_paths, professional_id_status, trust_score, user:user_id(id, full_name, email)')
           .eq('is_approved', true);
 
         if (error) throw error;
@@ -80,6 +87,10 @@ const PatientProviders = () => {
           rating: p.rating || 0,
           location: p.location || 'Muntinlupa City',
           price_per_service: p.price_per_service || 0,
+          professional_id_path: p.professional_id_path || null,
+          professional_id_paths: p.professional_id_paths || [],
+          professional_id_status: p.professional_id_status || 'none',
+          trust_score: p.trust_score || 0,
         }));
 
         setProviders(shaped);
@@ -115,9 +126,16 @@ const PatientProviders = () => {
   }, [user]);
 
   useEffect(() => {
-    const fetchProviderReviews = async () => {
+    const fetchProviderDetails = async () => {
       if (!viewingProvider) return;
       setReviewsLoading(true);
+      setViewingProviderIdUrls([]);
+
+      const paths = (viewingProvider.professional_id_paths && viewingProvider.professional_id_paths.length > 0)
+        ? viewingProvider.professional_id_paths
+        : (viewingProvider.professional_id_path ? [viewingProvider.professional_id_path] : []);
+      const urls = paths.map(p => getProfessionalIdUrl(p)).filter(Boolean);
+      setViewingProviderIdUrls(urls);
       try {
         const { data, error } = await supabase
           .from('provider_reviews')
@@ -138,7 +156,7 @@ const PatientProviders = () => {
         setReviewsLoading(false);
       }
     };
-    fetchProviderReviews();
+    fetchProviderDetails();
   }, [viewingProvider]);
 
   useEffect(() => {
@@ -395,6 +413,24 @@ const PatientProviders = () => {
                       ))}
                       <span className="text-slate-400 dark:text-slate-500 text-sm ml-1 font-medium">{(p.rating || 0).toFixed(1)}</span>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold ${
+                      p.trust_score >= 70
+                        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                        : p.trust_score >= 40
+                          ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                          : 'bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400'
+                    }`}>
+                      <Shield className="w-3 h-3" />
+                      Trust: {p.trust_score}/100
+                    </div>
+                    {p.professional_id_status === 'verified' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                        <ShieldCheck className="w-3 h-3" />
+                        Verified
+                      </span>
+                    )}
                   </div>
                 </div>
                 
@@ -783,6 +819,56 @@ const PatientProviders = () => {
                     </span>
                   ))}
                 </div>
+              </div>
+
+              {/* Trust Score & Verification */}
+              <div className="mb-6">
+                <h4 className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-2">Trust & Verification</h4>
+                <div className="flex flex-wrap gap-2">
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border ${
+                    viewingProvider.trust_score >= 70
+                      ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-900/50'
+                      : viewingProvider.trust_score >= 40
+                        ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-900/50'
+                        : 'bg-slate-50 text-slate-500 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-700'
+                  }`}>
+                    <Shield className="w-3.5 h-3.5" />
+                    Trust Score: {viewingProvider.trust_score}/100
+                  </div>
+                  {viewingProvider.professional_id_status === 'verified' ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900/50">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Verified Professional
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border bg-slate-50 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-500 dark:border-slate-700">
+                      Not Yet Verified
+                    </span>
+                  )}
+                </div>
+
+                {/* Professional ID Preview */}
+                {viewingProvider.professional_id_status === 'verified' && viewingProviderIdUrls.length > 0 && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {viewingProviderIdUrls.map((url, i) => (
+                      <div key={i} className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 p-1">
+                        {url.endsWith('.pdf') ? (
+                          <div className="flex items-center gap-2 p-2">
+                            <FileText className="w-5 h-5 text-primary shrink-0" />
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0">
+                              <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                            </a>
+                          </div>
+                        ) : (
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+                            <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-lg" />
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Patient Reviews Section */}

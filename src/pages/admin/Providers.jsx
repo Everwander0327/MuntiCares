@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, ShieldCheck, Star, ChevronLeft, ChevronRight, X, MapPin, Phone, Mail, BookOpen, Award, Check, Ban } from 'lucide-react';
+import { Search, ShieldCheck, Star, ChevronLeft, ChevronRight, X, MapPin, Phone, Mail, BookOpen, Award, Check, Ban, Clock, ExternalLink, Shield, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
+
+const getProfessionalIdUrl = (filePath) => {
+  if (!filePath) return null;
+  const { data } = supabase.storage.from('provider-docs').getPublicUrl(filePath);
+  return data?.publicUrl || null;
+};
 
 const AdminProviders = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,13 +19,15 @@ const AdminProviders = () => {
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [professionalIdPreviews, setProfessionalIdPreviews] = useState([]);
+  const [docActionLoading, setDocActionLoading] = useState(false);
 
   const fetchProviders = async () => {
     try {
-      const { data, error } = await supabase
-        .from('providers')
-        .select('*, user:user_id(id, full_name, email, is_banned, created_at)')
-        .order('created_at', { ascending: false });
+        const { data, error } = await supabase
+          .from('providers')
+          .select('*, user:user_id(id, full_name, email, is_banned, created_at)')
+          .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -47,6 +55,10 @@ const AdminProviders = () => {
           is_profile_complete: p.is_profile_complete,
           is_approved: p.is_approved,
           is_banned: p.user?.is_banned || false,
+          professional_id_path: p.professional_id_path || null,
+          professional_id_paths: p.professional_id_paths || [],
+          professional_id_status: p.professional_id_status || 'none',
+          trust_score: p.trust_score || 0,
           joinDate: p.user?.created_at ? new Date(p.user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
           status
         };
@@ -63,6 +75,13 @@ const AdminProviders = () => {
   useEffect(() => {
     fetchProviders();
   }, []);
+
+  useEffect(() => {
+    const paths = (selectedProvider?.professional_id_paths && selectedProvider.professional_id_paths.length > 0)
+      ? selectedProvider.professional_id_paths
+      : (selectedProvider?.professional_id_path ? [selectedProvider.professional_id_path] : []);
+    setProfessionalIdPreviews(paths.map(p => getProfessionalIdUrl(p)).filter(Boolean));
+  }, [selectedProvider]);
 
   const handleApprove = async (provider) => {
     setActionLoading(true);
@@ -124,6 +143,55 @@ const AdminProviders = () => {
       alert(`Failed to ${action} provider.`);
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleVerifyDocument = async (provider) => {
+    setDocActionLoading(true);
+    try {
+      let newScore = 0;
+      if (provider.is_approved) newScore += 30;
+      newScore += 30;
+      if (provider.is_profile_complete) newScore += 20;
+      if (provider.rating && provider.rating >= 4.0) newScore += 20;
+      newScore = Math.min(100, newScore);
+
+      const { error } = await supabase
+        .from('providers')
+        .update({ professional_id_status: 'verified', trust_score: newScore })
+        .eq('id', provider.id);
+      if (error) throw error;
+      setSelectedProvider(null);
+      await fetchProviders();
+    } catch (err) {
+      console.error('Error verifying document:', err);
+      alert('Failed to verify document.');
+    } finally {
+      setDocActionLoading(false);
+    }
+  };
+
+  const handleRejectDocument = async (provider) => {
+    setDocActionLoading(true);
+    try {
+      let newScore = 0;
+      if (provider.is_approved) newScore += 30;
+      if (provider.is_profile_complete) newScore += 20;
+      if (provider.rating && provider.rating >= 4.0) newScore += 20;
+      newScore = Math.min(100, newScore);
+
+      const { error } = await supabase
+        .from('providers')
+        .update({ professional_id_status: 'rejected', trust_score: newScore })
+        .eq('id', provider.id);
+      if (error) throw error;
+      setSelectedProvider(null);
+      await fetchProviders();
+    } catch (err) {
+      console.error('Error rejecting document:', err);
+      alert('Failed to reject document.');
+    } finally {
+      setDocActionLoading(false);
     }
   };
 
@@ -245,6 +313,21 @@ const AdminProviders = () => {
                       {Number(p.rating).toFixed(1)}
                     </div>
                   </div>
+                  <div className="pt-1">
+                    {p.professional_id_status === 'verified' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                        <ShieldCheck className="w-3 h-3" /> Verified
+                      </span>
+                    ) : p.professional_id_status === 'pending' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                        <Clock className="w-3 h-3" /> ID Pending
+                      </span>
+                    ) : p.professional_id_status === 'rejected' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                        <X className="w-3 h-3" /> Rejected
+                      </span>
+                    ) : null}
+                  </div>
                 </motion.div>
               );
             })}
@@ -258,6 +341,7 @@ const AdminProviders = () => {
                   <th className="px-6 py-4 font-bold">Name</th>
                   <th className="px-6 py-4 font-bold">Specialization</th>
                   <th className="px-6 py-4 font-bold">Rating</th>
+                  <th className="px-6 py-4 font-bold">Documents</th>
                   <th className="px-6 py-4 font-bold">Joined</th>
                   <th className="px-6 py-4 font-bold">Status</th>
                   <th className="px-6 py-4 font-bold text-right">Action</th>
@@ -292,6 +376,23 @@ const AdminProviders = () => {
                           <Star className="w-4 h-4 fill-current" />
                           {Number(p.rating).toFixed(1)}
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {p.professional_id_status === 'verified' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            <ShieldCheck className="w-3 h-3" /> Verified
+                          </span>
+                        ) : p.professional_id_status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                            <Clock className="w-3 h-3" /> Pending
+                          </span>
+                        ) : p.professional_id_status === 'rejected' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                            <X className="w-3 h-3" /> Rejected
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{p.joinDate}</td>
                       <td className="px-6 py-4">
@@ -406,6 +507,68 @@ const AdminProviders = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Professional ID Verification */}
+                {(selectedProvider.professional_id_paths?.length > 0 || selectedProvider.professional_id_path) && (
+                  <div>
+                    <p className="text-xs text-slate-400 font-bold uppercase mb-2 dark:text-slate-500">Professional ID</p>
+                    {professionalIdPreviews.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        {professionalIdPreviews.map((url, i) => (
+                          <div key={i} className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 p-1">
+                            {url.endsWith('.pdf') ? (
+                              <div className="flex items-center gap-2 p-2">
+                                <FileText className="w-5 h-5 text-primary shrink-0" />
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0">
+                                  <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                                </a>
+                              </div>
+                            ) : (
+                              <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+                                <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-lg" />
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400 p-2 mb-3">Loading preview...</p>
+                    )}
+                    {selectedProvider.professional_id_status === 'pending' && (
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <button
+                          onClick={() => handleVerifyDocument(selectedProvider)}
+                          disabled={docActionLoading}
+                          className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-200 transition-all disabled:opacity-50"
+                        >
+                          <Check className="w-4 h-4" />
+                          {docActionLoading ? '...' : 'Verify ID'}
+                        </button>
+                        <button
+                          onClick={() => handleRejectDocument(selectedProvider)}
+                          disabled={docActionLoading}
+                          className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-all disabled:opacity-50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 dark:border-red-900/50"
+                        >
+                          <X className="w-4 h-4" />
+                          {docActionLoading ? '...' : 'Reject ID'}
+                        </button>
+                      </div>
+                    )}
+                    {selectedProvider.professional_id_status === 'verified' && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-xl text-xs font-medium text-green-700 dark:text-green-300 mb-3">
+                        <ShieldCheck className="w-4 h-4 shrink-0" />
+                        Professional ID has been verified.
+                      </div>
+                    )}
+                    {selectedProvider.professional_id_status === 'rejected' && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-medium text-red-700 dark:text-red-300 mb-3">
+                        <X className="w-4 h-4 shrink-0" />
+                        Professional ID was rejected.
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">

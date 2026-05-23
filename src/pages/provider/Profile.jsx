@@ -1,20 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Camera, Mail, Phone, MapPin, Award, BookOpen, Clock, LogOut, Calendar, CheckCircle2, ShieldCheck, Save } from 'lucide-react';
+import { Camera, Mail, Phone, MapPin, Award, BookOpen, Clock, LogOut, Calendar, CheckCircle2, ShieldCheck, Save, Upload, ExternalLink, Shield, FileText, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+
+const PROFESSIONAL_ID_BUCKET = 'provider-docs';
+
+const getProfessionalIdUrl = (filePath) => {
+  if (!filePath) return null;
+  const { data } = supabase.storage.from(PROFESSIONAL_ID_BUCKET).getPublicUrl(filePath);
+  return data?.publicUrl || null;
+};
 import { SkeletonPage } from '../../components/Skeleton';
 import { useNavigate } from 'react-router-dom';
+
+const calculateTrustScore = (data) => {
+  let score = 0;
+  if (data.is_approved) score += 30;
+  if (data.professional_id_status === 'verified') score += 30;
+  if (data.is_profile_complete) score += 20;
+  if (data.rating && data.rating >= 4.0) score += 20;
+  return Math.min(100, score);
+};
+
+const getTrustLevel = (score) => {
+  if (score >= 90) return { label: 'Highly Trusted', color: 'text-emerald-600 dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-900/50' };
+  if (score >= 70) return { label: 'Trusted', color: 'text-green-600 dark:text-green-300', bg: 'bg-green-50 dark:bg-green-900/30', border: 'border-green-200 dark:border-green-900/50' };
+  if (score >= 40) return { label: 'Developing', color: 'text-amber-600 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-900/50' };
+  return { label: 'Needs Improvement', color: 'text-red-600 dark:text-red-300', bg: 'bg-red-50 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-900/50' };
+};
 
 const ProviderProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+  const [uploading, setUploading] = useState(false);
+  const [professionalIdPreviews, setProfessionalIdPreviews] = useState([]);
+  const fileInputRef = useRef(null);
+
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
+
   const [profile, setProfile] = useState({
     full_name: '',
     email: '',
@@ -25,6 +52,11 @@ const ProviderProfile = () => {
     price_per_service: 0,
     is_profile_complete: false,
     is_approved: false,
+    professional_id_path: null,
+    professional_id_paths: [],
+    professional_id_status: 'none',
+    trust_score: 0,
+    rating: 0,
     created_at: ''
   });
 
@@ -40,7 +72,7 @@ const ProviderProfile = () => {
           .select('full_name, email, created_at')
           .eq('id', user.id)
           .single();
-          
+
         if (userError) throw userError;
 
         const { data: provData, error: provError } = await supabase
@@ -61,12 +93,28 @@ const ProviderProfile = () => {
           price_per_service: provData.price_per_service || 0,
           is_profile_complete: provData.is_profile_complete,
           is_approved: provData.is_approved,
+          professional_id_path: provData.professional_id_path || null,
+          professional_id_paths: provData.professional_id_paths || [],
+          professional_id_status: provData.professional_id_status || 'none',
+          trust_score: provData.trust_score || 0,
+          rating: provData.rating || 0,
           created_at: userData.created_at
         };
+
+        const computedScore = calculateTrustScore(fullProfile);
+        fullProfile.trust_score = computedScore;
 
         setProfile(fullProfile);
         setEditForm(fullProfile);
         setServicesInput((provData.services || []).join(', '));
+
+        const paths = (provData.professional_id_paths && provData.professional_id_paths.length > 0)
+          ? provData.professional_id_paths
+          : (provData.professional_id_path ? [provData.professional_id_path] : []);
+        setProfessionalIdPreviews(paths.map(p => getProfessionalIdUrl(p)).filter(Boolean));
+        if (paths.length > 0 && (!provData.professional_id_paths || provData.professional_id_paths.length === 0)) {
+          supabase.from('providers').update({ professional_id_paths: paths }).eq('user_id', user.id);
+        }
       } catch (err) {
         console.error('Error fetching profile:', err);
       } finally {
@@ -78,7 +126,7 @@ const ProviderProfile = () => {
 
   const handleSave = async () => {
     const servicesList = servicesInput.split(',').map(s => s.trim()).filter(s => s);
-    
+
     if (!editForm.phone.trim() || !editForm.location.trim() || !editForm.bio.trim() || servicesList.length === 0) {
       alert('Please fill out all fields (Phone, Location, Bio, and at least one Specialization) to complete your profile.');
       return;
@@ -86,16 +134,26 @@ const ProviderProfile = () => {
 
     setSaving(true);
     try {
+      const updatedData = {
+        phone: editForm.phone,
+        location: editForm.location,
+        bio: editForm.bio,
+        services: servicesList,
+        price_per_service: editForm.price_per_service,
+        is_profile_complete: true,
+      };
+
+      const newScore = calculateTrustScore({
+        ...profile,
+        ...updatedData,
+        professional_id_path: profile.professional_id_path,
+        rating: profile.rating,
+      });
+      updatedData.trust_score = newScore;
+
       const { error } = await supabase
         .from('providers')
-        .update({
-          phone: editForm.phone,
-          location: editForm.location,
-          bio: editForm.bio,
-          services: servicesList,
-          price_per_service: editForm.price_per_service,
-          is_profile_complete: true
-        })
+        .update(updatedData)
         .eq('user_id', user.id);
 
       if (error) throw error;
@@ -103,7 +161,8 @@ const ProviderProfile = () => {
       setProfile({
         ...editForm,
         services: servicesList,
-        is_profile_complete: true
+        is_profile_complete: true,
+        trust_score: newScore,
       });
       setIsEditing(false);
       alert('Profile updated successfully!');
@@ -115,10 +174,99 @@ const ProviderProfile = () => {
     }
   };
 
+  const handleProfessionalIdUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
+    for (const f of files) {
+      if (!allowed.includes(f.type)) {
+        alert(`"${f.name}" has an unsupported file type. Please use JPG, PNG, or PDF.`);
+        e.target.value = '';
+        return;
+      }
+      if (f.size > 2 * 1024 * 1024) {
+        alert(`"${f.name}" exceeds the 2MB limit.`);
+        e.target.value = '';
+        return;
+      }
+    }
+
+    setUploading(true);
+    try {
+      const newPaths = [...(profile.professional_id_paths || [])];
+
+      for (const file of files) {
+        const ext = file.name.split('.').pop();
+        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const filePath = `${user.id}/${uniqueName}.${ext}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('provider-docs')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+        newPaths.push(filePath);
+      }
+
+      const newScore = calculateTrustScore({
+        ...profile,
+        professional_id_paths: newPaths,
+        professional_id_path: newPaths[0] || null,
+      });
+
+      const { error: updateError } = await supabase
+        .from('providers')
+        .update({ professional_id_paths: newPaths, professional_id_path: newPaths[0] || null, professional_id_status: 'pending', trust_score: newScore })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfessionalIdPreviews(newPaths.map(p => getProfessionalIdUrl(p)).filter(Boolean));
+      setProfile(prev => ({ ...prev, professional_id_paths: newPaths, professional_id_path: newPaths[0] || null, professional_id_status: 'pending', trust_score: newScore }));
+      alert('Professional ID uploaded successfully! It will be reviewed by an admin.');
+    } catch (err) {
+      console.error('Error uploading professional ID:', err);
+      alert('Failed to upload. Please try again.');
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveProfessionalId = async () => {
+    const allPaths = profile.professional_id_paths || [];
+    if (allPaths.length === 0 && !profile.professional_id_path) return;
+
+    try {
+      await supabase.storage
+        .from('provider-docs')
+        .remove(allPaths);
+
+      const newScore = calculateTrustScore({ ...profile, professional_id_paths: [], professional_id_path: null });
+
+      const { error } = await supabase
+        .from('providers')
+        .update({ professional_id_paths: [], professional_id_path: null, professional_id_status: 'none', trust_score: newScore })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setProfessionalIdPreviews([]);
+      setProfile(prev => ({ ...prev, professional_id_paths: [], professional_id_path: null, professional_id_status: 'none', trust_score: newScore }));
+      alert('Professional ID removed.');
+    } catch (err) {
+      console.error('Error removing professional ID:', err);
+      alert('Failed to remove. Please try again.');
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const trustLevel = getTrustLevel(profile.trust_score);
 
   if (loading) {
     return <DashboardLayout role="provider"><SkeletonPage /></DashboardLayout>;
@@ -179,7 +327,7 @@ const ProviderProfile = () => {
               <div className="px-6 md:px-8 pt-4 pb-6 md:pb-8 text-center">
                 <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">{profile.full_name}</h2>
                 <p className="text-primary text-sm font-semibold mt-1">{profile.bio || 'No bio provided'}</p>
-                
+
                 <div className="flex items-center justify-center flex-wrap gap-2 mt-3">
                   <span className="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 font-bold text-[10px] uppercase tracking-widest rounded-full border border-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-900/50">
                     Healthcare Provider
@@ -193,6 +341,12 @@ const ProviderProfile = () => {
                       <Clock className="w-3 h-3" /> Under Review
                     </span>
                   ) : null}
+                </div>
+
+                {/* Trust Score Badge */}
+                <div className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl ${trustLevel.bg} ${trustLevel.border} border`}>
+                  <Shield className={`w-4 h-4 ${trustLevel.color}`} />
+                  <span className={`text-sm font-bold ${trustLevel.color}`}>Trust Score: {profile.trust_score}/100</span>
                 </div>
 
                 {/* Quick Info */}
@@ -357,6 +511,108 @@ const ProviderProfile = () => {
                       <p className="text-slate-700 dark:text-slate-200 font-medium truncate">{profile.email}</p>
                     </div>
                   </div>
+
+                  {/* Professional ID Upload (Edit Mode) / Status (View Mode) */}
+                  <div className="sm:col-span-2">
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Professional ID / License</p>
+                    {isEditing ? (
+                      <>
+                        {(profile.professional_id_paths?.length > 0 || profile.professional_id_path) ? (
+                          <div className="space-y-3">
+                            {profile.professional_id_status === 'rejected' && (
+                              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-medium text-red-700 dark:text-red-300">
+                                <X className="w-4 h-4 shrink-0" />
+                                Your ID was not approved. Please upload a valid professional ID.
+                              </div>
+                            )}
+                            {professionalIdPreviews.length > 0 && (
+                              <div className="grid grid-cols-2 gap-2">
+                                {professionalIdPreviews.map((url, i) => (
+                                  <div key={i} className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 p-1">
+                                    {url.endsWith('.pdf') ? (
+                                      <div className="flex items-center gap-2 p-2">
+                                        <FileText className="w-5 h-5 text-primary shrink-0" />
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
+                                        <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0">
+                                          <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                                        </a>
+                                      </div>
+                                    ) : (
+                                      <a href={url} target="_blank" rel="noopener noreferrer">
+                                        <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-lg" />
+                                      </a>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                              >
+                                <Upload className="w-4 h-4" />
+                                {uploading ? 'Uploading...' : 'Add More'}
+                              </button>
+                              <button
+                                onClick={handleRemoveProfessionalId}
+                                disabled={uploading}
+                                className="px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                              >
+                                Remove All
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-6 text-center hover:border-primary transition-colors">
+                            <Upload className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                            <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Upload your Professional ID</p>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Accepted: JPG, PNG, or PDF (max 2MB each)</p>
+                            <button
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploading}
+                              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                            >
+                              <Upload className="w-4 h-4" />
+                              {uploading ? 'Uploading...' : 'Choose Files'}
+                            </button>
+                          </div>
+                        )}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,application/pdf"
+                          onChange={handleProfessionalIdUpload}
+                          hidden
+                          multiple
+                          disabled={uploading}
+                        />
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Shield className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
+                        {profile.professional_id_status === 'verified' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-900/50">
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            Verified
+                          </span>
+                        ) : profile.professional_id_status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-900/50">
+                            <Clock className="w-3.5 h-3.5" />
+                            Pending Review
+                          </span>
+                        ) : profile.professional_id_status === 'rejected' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-900/50">
+                            <X className="w-3.5 h-3.5" />
+                            Rejected
+                          </span>
+                        ) : (
+                          <p className="text-slate-500 dark:text-slate-400 text-sm">Not uploaded</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -384,7 +640,7 @@ const ProviderProfile = () => {
                         className="w-full h-28 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 text-sm resize-none transition-all"
                       />
                     </div>
-                    
+
                     <div>
                       <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Suggested Services to Add:</p>
                       <div className="flex flex-wrap gap-2">
@@ -427,6 +683,43 @@ const ProviderProfile = () => {
                     )}
                   </div>
                 )}
+              </div>
+            </motion.div>
+
+            {/* Trust Score Breakdown */}
+            <motion.div 
+              className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden dark:bg-slate-800"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
+                <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Trust Score Breakdown</h3>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">How your trust score is calculated</p>
+              </div>
+              <div className="p-6 md:p-8">
+                <div className="space-y-2">
+                  {[
+                    { label: 'Profile completed', met: profile.is_profile_complete, points: 20 },
+                    { label: 'Professional ID verified', met: profile.professional_id_status === 'verified', points: 30 },
+                    { label: 'Approved by admin', met: profile.is_approved, points: 30 },
+                    { label: 'Rating 4.0 or higher', met: profile.rating >= 4.0, points: 20 },
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.met ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                          {item.met && <CheckCircle2 className="w-3 h-3 text-white" />}
+                        </div>
+                        <span className="text-sm text-slate-600 dark:text-slate-300">{item.label}</span>
+                      </div>
+                      <span className={`text-xs font-bold ${item.met ? 'text-green-600 dark:text-green-300' : 'text-slate-400 dark:text-slate-500'}`}>+{item.points}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-slate-700">
+                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Total Trust Score</span>
+                    <span className={`text-lg font-bold ${trustLevel.color}`}>{profile.trust_score}/100</span>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
