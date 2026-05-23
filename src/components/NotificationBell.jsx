@@ -22,15 +22,15 @@ const getNotifIcon = (type) => {
 
 const getNotifBg = (type) => {
   switch (type) {
-    case 'request_accepted': return 'bg-green-50';
-    case 'request_rejected': return 'bg-red-50';
-    case 'status_on_the_way': return 'bg-amber-50';
-    case 'status_arrived': return 'bg-purple-50';
-    case 'status_completed': return 'bg-green-50';
-    case 'new_request': return 'bg-blue-50';
-    case 'new_message': return 'bg-blue-50';
-    case 'request_cancelled': return 'bg-slate-50';
-    default: return 'bg-slate-50';
+    case 'request_accepted': return 'bg-green-50 dark:bg-green-900/30';
+    case 'request_rejected': return 'bg-red-50 dark:bg-red-900/30';
+    case 'status_on_the_way': return 'bg-amber-50 dark:bg-amber-900/30';
+    case 'status_arrived': return 'bg-purple-50 dark:bg-purple-900/30';
+    case 'status_completed': return 'bg-green-50 dark:bg-green-900/30';
+    case 'new_request': return 'bg-blue-50 dark:bg-blue-900/30';
+    case 'new_message': return 'bg-blue-50 dark:bg-blue-900/30';
+    case 'request_cancelled': return 'bg-slate-50 dark:bg-slate-800';
+    default: return 'bg-slate-50 dark:bg-slate-800';
   }
 };
 

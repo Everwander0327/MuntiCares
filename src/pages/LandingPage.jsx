@@ -52,7 +52,7 @@ const Hero = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <div className="inline-flex items-center gap-2 bg-blue-100 text-primary px-4 py-2 rounded-full text-sm font-semibold animate-fade-in">
+            <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-primary px-4 py-2 rounded-full text-sm font-semibold animate-fade-in">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
@@ -126,7 +126,7 @@ const StatsBanner = () => {
               variants={staggerItem}
               className="text-center space-y-2"
             >
-              <div className="inline-flex p-3 bg-blue-50 text-primary rounded-2xl mb-2">
+              <div className="inline-flex p-3 bg-blue-50 dark:bg-blue-900/30 text-primary rounded-2xl mb-2">
                 {stat.icon}
               </div>
               <p className="text-3xl md:text-4xl font-extrabold text-slate-900 dark:text-slate-100">
@@ -201,7 +201,7 @@ const Features = () => {
                      WebkitMaskComposite: 'xor',
                    }} 
               />
-              <div className="bg-blue-50 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-100 dark:shadow-slate-900/50 group-hover:bg-primary group-hover:shadow-primary/30 transition-all duration-300">
+              <div className="bg-blue-50 dark:bg-blue-900/30 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-100 dark:shadow-slate-900/50 group-hover:bg-primary group-hover:shadow-primary/30 transition-all duration-300">
                 {React.cloneElement(feature.icon, { className: "w-8 h-8 text-primary group-hover:text-white transition-colors" })}
               </div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">{feature.title}</h3>
@@ -254,7 +254,7 @@ const HowItWorks = () => {
           viewport={{ once: true, amount: 0.2 }}
         >
           {/* Connecting line between steps */}
-          <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-blue-100 -z-10"></div>
+          <div className="hidden md:block absolute top-1/2 left-0 right-0 h-0.5 bg-blue-100 dark:bg-blue-900/50 -z-10"></div>
           
           {/* Connecting arrows between steps */}
           <div className="hidden md:flex absolute top-1/2 left-[67%] -translate-x-1/2 -translate-y-1/2 z-10">

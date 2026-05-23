@@ -109,7 +109,7 @@ const AdminRequests = () => {
           transition={{ delay: 0.2 }}
         >
           {/* Mobile Card View */}
-          <div className="block md:hidden divide-y divide-slate-50">
+          <div className="block md:hidden divide-y divide-slate-50 dark:divide-slate-700">
             {filteredRequests.map((r, idx) => (
               <motion.div 
                 key={r.id} 
@@ -124,10 +124,10 @@ const AdminRequests = () => {
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{r.id}</p>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                    r.status === 'Accepted' ? 'bg-blue-100 text-blue-700' :
-                    r.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                    r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
+                    r.status === 'Accepted' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                    r.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                    r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full status-dot ${
                       r.status === 'Accepted' ? 'bg-blue-500' :
@@ -183,10 +183,10 @@ const AdminRequests = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                        r.status === 'Accepted' ? 'bg-blue-100 text-blue-700' :
-                        r.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                        r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-red-100 text-red-700'
+                        r.status === 'Accepted' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
+                        r.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
+                        r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full status-dot ${
                           r.status === 'Accepted' ? 'bg-blue-500' :

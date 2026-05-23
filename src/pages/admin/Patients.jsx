@@ -135,7 +135,7 @@ const AdminPatients = () => {
           transition={{ delay: 0.2 }}
         >
           {/* Mobile Card View */}
-          <div className="block md:hidden divide-y divide-slate-50">
+          <div className="block md:hidden divide-y divide-slate-50 dark:divide-slate-700">
             {filteredPatients.map((p, idx) => (
               <motion.div 
                 key={p.id} 
@@ -155,7 +155,7 @@ const AdminPatients = () => {
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                    p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    p.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full status-dot ${
                       p.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
@@ -167,7 +167,7 @@ const AdminPatients = () => {
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-50 dark:border-slate-700">
                   <button 
                     className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
-                      p.is_banned ? 'text-green-600 bg-green-50 hover:bg-green-100' : 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100'
+                      p.is_banned ? 'text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50' : 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'
                     }`}
                     onClick={() => handleBan(p)}
                     disabled={actionLoading}
@@ -175,7 +175,7 @@ const AdminPatients = () => {
                     {p.is_banned ? 'Unban' : 'Ban'}
                   </button>
                   <button 
-                    className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors"
+                    className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
                     onClick={() => handleRemove(p)}
                     disabled={actionLoading}
                   >
@@ -219,7 +219,7 @@ const AdminPatients = () => {
                     <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{p.joinDate}</td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                        p.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        p.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full status-dot ${
                           p.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
@@ -232,8 +232,8 @@ const AdminPatients = () => {
                         <button 
                           className={`p-2 rounded-xl transition-all ${
                             p.is_banned 
-                              ? 'text-green-600 bg-green-50 hover:bg-green-100' 
-                              : 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100'
+                              ? 'text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50' 
+                              : 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'
                           }`}
                           onClick={() => handleBan(p)}
                           disabled={actionLoading}
@@ -242,7 +242,7 @@ const AdminPatients = () => {
                           <Ban className="w-4 h-4" />
                         </button>
                         <button 
-                          className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                          className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
                           onClick={() => handleRemove(p)}
                           disabled={actionLoading}
                           title="Remove Permanently"

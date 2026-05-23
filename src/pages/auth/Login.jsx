@@ -170,7 +170,7 @@ const LoginPage = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-500 p-4 rounded-xl text-sm font-medium text-center">
+            <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 p-4 rounded-xl text-sm font-medium text-center">
               {error}
             </div>
           )}

@@ -283,7 +283,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
             className="absolute top-4 inset-x-4 z-[150] bg-white dark:bg-slate-800 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 p-4 flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center animate-pulse shrink-0">
+              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center animate-pulse shrink-0">
                 <Video className="w-6 h-6 text-green-600" />
               </div>
               <div>

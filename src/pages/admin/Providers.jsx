@@ -155,10 +155,9 @@ const AdminProviders = () => {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'Approved': return { bg: 'bg-green-100 text-green-700', dot: 'bg-green-500' };
-      case 'Pending Approval': return { bg: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500' };
-      case 'Incomplete': return { bg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', dot: 'bg-slate-400' };
-      case 'Banned': return { bg: 'bg-red-100 text-red-700', dot: 'bg-red-500' };
+      case 'Approved': return { bg: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', dot: 'bg-green-500' };
+      case 'Pending Approval': return { bg: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', dot: 'bg-yellow-500' };
+      case 'Banned': return { bg: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', dot: 'bg-red-500' };
       default: return { bg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', dot: 'bg-slate-400' };
     }
   };
@@ -212,7 +211,7 @@ const AdminProviders = () => {
           transition={{ delay: 0.2 }}
         >
           {/* Mobile Card View */}
-          <div className="block md:hidden divide-y divide-slate-50">
+          <div className="block md:hidden divide-y divide-slate-50 dark:divide-slate-700">
             {filteredProviders.map((p, idx) => {
               const style = getStatusStyle(p.status);
               return (
@@ -270,7 +269,7 @@ const AdminProviders = () => {
                   return (
                     <motion.tr 
                       key={p.id} 
-                      className="transition-colors cursor-pointer hover:bg-blue-50/30"
+                      className="transition-colors cursor-pointer hover:bg-blue-50/30 dark:hover:bg-blue-900/20"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.3 + idx * 0.03 }}
@@ -425,7 +424,7 @@ const AdminProviders = () => {
                     <button 
                       onClick={() => handleReject(selectedProvider)}
                       disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 transition-all disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 transition-all disabled:opacity-50 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50 dark:border-yellow-900/50"
                     >
                       <ShieldCheck className="w-4 h-4" />
                       {actionLoading ? 'Processing...' : 'Revoke Approval'}
@@ -438,8 +437,8 @@ const AdminProviders = () => {
                     disabled={actionLoading}
                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all disabled:opacity-50 ${
                       selectedProvider.is_banned 
-                        ? 'text-green-700 bg-green-50 hover:bg-green-100 border border-green-200' 
-                        : 'text-red-700 bg-red-50 hover:bg-red-100 border border-red-200'
+                        ? 'text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50 dark:border-green-900/50' 
+                        : 'text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 dark:border-red-900/50'
                     }`}
                   >
                     <Ban className="w-4 h-4" />
@@ -450,7 +449,7 @@ const AdminProviders = () => {
                   <button 
                     onClick={() => handleRemove(selectedProvider)}
                     disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 transition-all disabled:opacity-50 dark:bg-slate-800"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 transition-all disabled:opacity-50 dark:bg-slate-800 dark:text-red-300 dark:hover:bg-red-900/30 dark:border-red-900/50"
                   >
                     <X className="w-4 h-4" />
                     {actionLoading ? 'Processing...' : 'Permanently Remove'}

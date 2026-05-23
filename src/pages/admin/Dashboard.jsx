@@ -20,8 +20,7 @@ const StatCard = ({ label, value, icon, color }) => {
   
   return (
     <motion.div 
-      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between dark:border-slate-700 dark:shadow-slate-900/50"
-      style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)' }}
+      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between dark:border-slate-700 dark:shadow-slate-900/50 bg-gradient-to-br from-blue-50 to-white dark:from-slate-800 dark:to-slate-800"
       variants={staggerItem}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
     >
@@ -182,19 +181,19 @@ const AdminDashboard = () => {
             label="Total Providers" 
             value={stats.totalProviders} 
             icon={<Briefcase />} 
-            color="bg-purple-50 text-purple-600" 
+            color="bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300" 
           />
           <StatCard 
             label="Total Requests" 
             value={stats.totalRequests} 
             icon={<FileText />} 
-            color="bg-orange-50 text-orange-600" 
+            color="bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300" 
           />
           <StatCard 
             label="Pending Approvals" 
             value={stats.pendingApprovals} 
             icon={<ShieldAlert />} 
-            color="bg-red-50 text-red-600" 
+            color="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300" 
           />
         </motion.div>
 
@@ -242,7 +241,7 @@ const AdminDashboard = () => {
                   </Pie>
                   <Tooltip 
                     formatter={(value, name) => [`${value} users`, name]}
-                    contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', zIndex: 100 }}
+                    contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', zIndex: 100, background: 'var(--tooltip-bg, #fff)', color: 'var(--tooltip-color, #1e293b)' }}
                   />
                   <Legend 
                     verticalAlign="bottom"

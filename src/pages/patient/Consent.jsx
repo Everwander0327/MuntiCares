@@ -276,7 +276,7 @@ const PatientConsent = () => {
     switch (action) {
       case 'Granted': return 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200';
       case 'Revoked': return 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300';
-      case 'Updated': return 'bg-amber-100 text-amber-700';
+      case 'Updated': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
       default: return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
     }
   };
@@ -400,7 +400,7 @@ const PatientConsent = () => {
                       <div className="space-y-3">
                         {consentHistory.map((entry, idx) => (
                           <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
-                            <div className={`p-1.5 rounded-lg ${entry.action === 'Granted' ? 'bg-green-100 dark:bg-green-900/40' : entry.action === 'Revoked' ? 'bg-red-100 dark:bg-red-900/40' : 'bg-amber-100'}`}>
+                            <div className={`p-1.5 rounded-lg ${entry.action === 'Granted' ? 'bg-green-100 dark:bg-green-900/40' : entry.action === 'Revoked' ? 'bg-red-100 dark:bg-red-900/40' : 'bg-amber-100 dark:bg-amber-900/40'}`}>
                               {getActionIcon(entry.action)}
                             </div>
                             <div className="flex-1 min-w-0">

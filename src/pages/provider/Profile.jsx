@@ -166,8 +166,7 @@ const ProviderProfile = () => {
               {/* Avatar */}
               <div className="px-6 md:px-8 -mt-14 md:-mt-16 relative z-10">
                 <div className="relative inline-block">
-                  <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white border-4 border-white shadow-lg flex items-center justify-center text-3xl md:text-4xl font-bold text-primary mx-auto"
-                    style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)' }}
+                  <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white dark:bg-slate-800 border-4 border-white shadow-lg flex items-center justify-center text-3xl md:text-4xl font-bold text-primary mx-auto bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-800"
                   >
                     {profile.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
                   </div>

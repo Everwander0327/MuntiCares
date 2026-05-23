@@ -230,7 +230,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
           {mode !== 'choose' && (
             <div className="flex items-center gap-2 mb-6 px-1">
               <button onClick={() => setMode('choose')} className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors">
-                <div className="w-7 h-7 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold">
+                <div className="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300 flex items-center justify-center text-xs font-bold">
                   ✓
                 </div>
                 <span className="text-xs font-semibold">Choose Action</span>

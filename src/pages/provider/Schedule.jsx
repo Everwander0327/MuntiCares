@@ -18,10 +18,10 @@ const STATUS_FLOW = {
 };
 
 const STATUS_BADGE = {
-  Accepted: 'bg-blue-100 text-blue-700',
-  'On The Way': 'bg-amber-100 text-amber-700',
-  Arrived: 'bg-purple-100 text-purple-700',
-  Completed: 'bg-green-100 text-green-700',
+  Accepted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  'On The Way': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  Arrived: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  Completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
 };
 
 const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];

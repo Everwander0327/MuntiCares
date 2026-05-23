@@ -291,7 +291,7 @@ const ProviderRequests = () => {
           </motion.div>
         ) : (
           <motion.div 
-            className="text-center py-20 bg-white rounded-[2rem] border border-slate-100 dark:bg-slate-800 dark:border-slate-700"
+            className="text-center py-20 bg-white rounded-[2rem] border border-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50 shadow-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >

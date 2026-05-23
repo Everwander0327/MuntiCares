@@ -112,8 +112,7 @@ const AdminProfile = () => {
           {/* Avatar */}
           <div className="px-6 md:px-8 -mt-16 md:-mt-18 relative z-10 flex justify-center">
             <div className="relative">
-              <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-white border-4 border-white shadow-xl flex items-center justify-center text-4xl md:text-5xl font-bold text-slate-700 dark:bg-slate-800 dark:border-slate-800 dark:text-slate-200"
-                style={{ background: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)' }}
+              <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-white border-4 border-white shadow-xl flex items-center justify-center text-4xl md:text-5xl font-bold text-slate-700 dark:bg-slate-800 dark:border-slate-800 dark:text-slate-200 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800"
               >
                 {profile.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
               </div>
@@ -147,19 +146,19 @@ const AdminProfile = () => {
                 label="Patients" 
                 value={stats.patients} 
                 icon={<Users />} 
-                color="bg-blue-100 text-primary" 
+                color="bg-blue-100 text-primary dark:bg-blue-900/30" 
               />
               <QuickStat 
                 label="Providers" 
                 value={stats.providers} 
                 icon={<Briefcase />} 
-                color="bg-purple-100 text-purple-600" 
+                color="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300" 
               />
               <QuickStat 
                 label="Requests" 
                 value={stats.requests} 
                 icon={<FileText />} 
-                color="bg-orange-100 text-orange-600" 
+                color="bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300" 
               />
             </div>
           </div>
@@ -168,7 +167,7 @@ const AdminProfile = () => {
           <div className="px-6 md:px-8 pt-8 pb-6 md:pb-8">
             <button 
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors text-sm border border-red-100"
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors text-sm border border-red-100 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 dark:border-red-900/50"
             >
               <LogOut className="w-4 h-4" />
               Logout from Admin Panel

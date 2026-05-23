@@ -132,7 +132,7 @@ const RegisterPage = () => {
             {/* Patient Role Card */}
             <motion.div 
               onClick={() => setRole('patient')}
-              className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-3 relative overflow-hidden ${role === 'patient' ? 'border-primary bg-blue-50/80 shadow-lg shadow-primary/10' : 'border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'}`}
+              className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-3 relative overflow-hidden ${role === 'patient' ? 'border-primary bg-blue-50/80 dark:bg-blue-900/40 shadow-lg shadow-primary/10' : 'border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'}`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
             >
@@ -164,7 +164,7 @@ const RegisterPage = () => {
             {/* Provider Role Card */}
             <motion.div 
               onClick={() => setRole('provider')}
-              className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-3 relative overflow-hidden ${role === 'provider' ? 'border-primary bg-blue-50/80 shadow-lg shadow-primary/10' : 'border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'}`}
+              className={`cursor-pointer p-6 rounded-2xl border-2 transition-all flex flex-col items-center text-center gap-3 relative overflow-hidden ${role === 'provider' ? 'border-primary bg-blue-50/80 dark:bg-blue-900/40 shadow-lg shadow-primary/10' : 'border-slate-200/50 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 hover:border-slate-300 dark:hover:border-slate-600'}`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.97 }}
             >
@@ -271,7 +271,7 @@ const RegisterPage = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-500 p-4 rounded-xl text-sm font-medium text-center">
+            <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 p-4 rounded-xl text-sm font-medium text-center">
               {error}
             </div>
           )}
