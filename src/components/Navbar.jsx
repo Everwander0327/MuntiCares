@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Heart, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -7,6 +7,9 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);    
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -42,8 +45,8 @@ const Navbar = () => {
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8">
           <div className="flex gap-6">
-            <Link to="/" className="text-slate-600 dark:text-slate-300 hover:text-primary font-medium transition-colors">Home</Link>
-            <Link to="/patient/providers" className="text-slate-600 dark:text-slate-300 hover:text-primary font-medium transition-colors">Find Providers</Link>
+            <Link to="/" className={`font-medium transition-colors ${isActive('/') ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`}>Home</Link>
+            <Link to="/patient/providers" className={`font-medium transition-colors ${isActive('/patient/providers') ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`}>Find Providers</Link>
             <a href="#footer" onClick={scrollToFooter} className="text-slate-600 dark:text-slate-300 hover:text-primary font-medium transition-colors">About</a>
           </div>
           <div className="flex items-center gap-4 border-l pl-8 border-slate-200 dark:border-slate-600">
@@ -84,8 +87,8 @@ const Navbar = () => {
             exit={{ opacity: 0, y: -10, height: 0 }}
             transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
-            <Link to="/" className="text-slate-600 dark:text-slate-300 font-medium py-2 hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
-            <Link to="/patient/providers" className="text-slate-600 dark:text-slate-300 font-medium py-2 hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>Find Providers</Link>
+            <Link to="/" className={`font-medium py-2 transition-colors ${isActive('/') ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`} onClick={() => setIsMobileMenuOpen(false)}>Home</Link>
+            <Link to="/patient/providers" className={`font-medium py-2 transition-colors ${isActive('/patient/providers') ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`} onClick={() => setIsMobileMenuOpen(false)}>Find Providers</Link>
             <a href="#footer" onClick={scrollToFooter} className="text-slate-600 dark:text-slate-300 font-medium py-2 hover:text-primary transition-colors">About</a>
             <hr className="border-slate-100 dark:border-slate-700" />
             <Link to="/login" className="text-primary font-semibold py-2 text-left" onClick={() => setIsMobileMenuOpen(false)}>Login</Link>

@@ -448,12 +448,13 @@ const ProviderSchedule = () => {
                                 {statusAction.label}
                               </motion.button>
                             ) : (
-                              <button
+                              <motion.button
+                                whileTap={{ scale: 0.96 }}
                                 onClick={() => setModalPatient({ id: appt.patientId, name: appt.patient })}
-                                className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-colors text-sm dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+                                className="flex-1 flex items-center justify-center gap-2 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-200 transition-all text-sm dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
                               >
                                 <User className="w-4 h-4" /> View Record
-                              </button>
+                              </motion.button>
                             )}
                           </div>
                         </div>

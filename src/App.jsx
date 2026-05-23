@@ -1,11 +1,13 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence } from 'framer-motion';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import AnimatedPage from './components/AnimatedPage';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -35,48 +37,63 @@ import AdminProviders from './pages/admin/Providers';
 import AdminRequests from './pages/admin/Requests';
 import AdminProfile from './pages/admin/Profile';
 
-function App() {
+function AppContent() {
+  const location = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.querySelector('main')?.scrollTo(0, 0);
+  }, [location.pathname]);
+
   return (
-    <Router>
-      <Toaster position="top-right" />
-      <Routes>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
         {/* Public Routes with Main Navbar/Footer */}
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<LandingPage />} />
-          <Route path="login" element={<LoginPage />} />
-          <Route path="register" element={<RegisterPage />} />
+          <Route index element={<AnimatedPage><LandingPage /></AnimatedPage>} />
+          <Route path="login" element={<AnimatedPage><LoginPage /></AnimatedPage>} />
+          <Route path="register" element={<AnimatedPage><RegisterPage /></AnimatedPage>} />
         </Route>
 
         {/* Dashboard Routes with Sidebar */}
         <Route path="/patient" element={<ProtectedRoute allowedRole="patient" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><PatientDashboard /></ErrorBoundary>} />
-          <Route path="providers" element={<ErrorBoundary><PatientProviders /></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><PatientRequests /></ErrorBoundary>} />
-          <Route path="messages" element={<ErrorBoundary><PatientMessages /></ErrorBoundary>} />
-          <Route path="consent" element={<ErrorBoundary><PatientConsent /></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><PatientProfile /></ErrorBoundary>} />
+          <Route path="dashboard" element={<ErrorBoundary><AnimatedPage><PatientDashboard /></AnimatedPage></ErrorBoundary>} />
+          <Route path="providers" element={<ErrorBoundary><AnimatedPage><PatientProviders /></AnimatedPage></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><AnimatedPage><PatientRequests /></AnimatedPage></ErrorBoundary>} />
+          <Route path="messages" element={<ErrorBoundary><AnimatedPage><PatientMessages /></AnimatedPage></ErrorBoundary>} />
+          <Route path="consent" element={<ErrorBoundary><AnimatedPage><PatientConsent /></AnimatedPage></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><AnimatedPage><PatientProfile /></AnimatedPage></ErrorBoundary>} />
         </Route>
 
         <Route path="/provider" element={<ProtectedRoute allowedRole="provider" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><ProviderDashboard /></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><ProviderRequests /></ErrorBoundary>} />
-          <Route path="patients" element={<ErrorBoundary><ProviderPatients /></ErrorBoundary>} />
-          <Route path="schedule" element={<ErrorBoundary><ProviderSchedule /></ErrorBoundary>} />
-          <Route path="messages" element={<ErrorBoundary><ProviderMessages /></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><ProviderProfile /></ErrorBoundary>} />
+          <Route path="dashboard" element={<ErrorBoundary><AnimatedPage><ProviderDashboard /></AnimatedPage></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><AnimatedPage><ProviderRequests /></AnimatedPage></ErrorBoundary>} />
+          <Route path="patients" element={<ErrorBoundary><AnimatedPage><ProviderPatients /></AnimatedPage></ErrorBoundary>} />
+          <Route path="schedule" element={<ErrorBoundary><AnimatedPage><ProviderSchedule /></AnimatedPage></ErrorBoundary>} />
+          <Route path="messages" element={<ErrorBoundary><AnimatedPage><ProviderMessages /></AnimatedPage></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><AnimatedPage><ProviderProfile /></AnimatedPage></ErrorBoundary>} />
         </Route>
 
         <Route path="/admin" element={<ProtectedRoute allowedRole="admin" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><AdminDashboard /></ErrorBoundary>} />
-          <Route path="patients" element={<ErrorBoundary><AdminPatients /></ErrorBoundary>} />
-          <Route path="providers" element={<ErrorBoundary><AdminProviders /></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><AdminRequests /></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><AdminProfile /></ErrorBoundary>} />
+          <Route path="dashboard" element={<ErrorBoundary><AnimatedPage><AdminDashboard /></AnimatedPage></ErrorBoundary>} />
+          <Route path="patients" element={<ErrorBoundary><AnimatedPage><AdminPatients /></AnimatedPage></ErrorBoundary>} />
+          <Route path="providers" element={<ErrorBoundary><AnimatedPage><AdminProviders /></AnimatedPage></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><AnimatedPage><AdminRequests /></AnimatedPage></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><AnimatedPage><AdminProfile /></AnimatedPage></ErrorBoundary>} />
         </Route>
       </Routes>
+    </AnimatePresence>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <Toaster position="top-right" />
+      <AppContent />
     </Router>
   );
 }

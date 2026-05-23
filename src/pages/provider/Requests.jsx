@@ -6,6 +6,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import toast from 'react-hot-toast';
+import EmptyState from '../../components/EmptyState';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -295,7 +296,7 @@ const ProviderRequests = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <p className="text-slate-500 dark:text-slate-400 text-lg text-center">No incoming requests at the moment.</p>
+            <EmptyState icon="inbox" title="No incoming requests" message="New service requests from patients will appear here." />
           </motion.div>
         )}
       </div>

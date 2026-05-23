@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Search, Star, MapPin, X, Calendar, Clock, FileText, CheckCircle2, Shield, ShieldCheck, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import CustomSelect from '../../components/CustomSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -9,6 +10,7 @@ import { SkeletonPage } from '../../components/Skeleton';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import useFormValidation from '../../hooks/useFormValidation';
+import EmptyState from '../../components/EmptyState';
 
 const getProfessionalIdUrl = (filePath) => {
   if (!filePath) return null;
@@ -312,6 +314,7 @@ const PatientProviders = () => {
       setRequested([...requested, selectedProvider.id]);
       setSelectedProvider(null);
       toast.success('Booking request sent successfully!');
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
       setTimeout(() => navigate('/patient/dashboard'), 1500);
     } catch (err) {
       console.error('Error sending request:', err);
@@ -397,7 +400,7 @@ const PatientProviders = () => {
             {filteredProviders.map((p) => (
               <motion.div 
                 key={p.id} 
-                className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 hover:shadow-xl transition-all duration-300"
+                className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 hover:shadow-2xl hover:border-primary/20 dark:hover:border-primary/40 transition-all duration-300"
                 variants={staggerItem}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
               >
@@ -477,7 +480,7 @@ const PatientProviders = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <p className="text-slate-500 dark:text-slate-400 text-lg">No providers found matching your search.</p>
+            <EmptyState icon="search" title="No providers found" message="No providers match your search. Try adjusting your filter or search terms." />
           </motion.div>
         )}
       </div>

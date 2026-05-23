@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import heroImage from '../assets/hero.png';
 import useCountUp from '../hooks/useCountUp';
 
@@ -36,6 +37,26 @@ const staggerItem = {
   },
 };
 
+const heroStagger = {
+  animate: {
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+};
+
+const heroItem = {
+  initial: { opacity: 0, y: 30 },
+  animate: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.25, 0.46, 0.45, 0.94],
+    },
+  },
+};
+
 const StatNumber = ({ end, suffix = '' }) => {
   const { count, ref } = useCountUp(end, 2000);
   return <span ref={ref}>{count}{suffix}</span>;
@@ -47,39 +68,43 @@ const Hero = () => {
       <div className="container mx-auto px-6">
         <div className="flex flex-col md:flex-row items-center gap-12">
           <motion.div 
-            className="flex-1 text-center md:text-left space-y-8 max-w-2xl"
-            initial={{ opacity: 0, x: -40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="flex-1 text-center md:text-left max-w-2xl"
+            variants={heroStagger}
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true, margin: "-100px" }}
           >
-            <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-primary px-4 py-2 rounded-full text-sm font-semibold animate-fade-in">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-              Muntinlupa City's Trusted Network
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
-              Quality Home Care, <br className="hidden md:block" />
-              <span className="text-primary">Right at Your Doorstep</span>
-            </h1>
-            <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl mx-auto md:mx-0">
-              Connecting Muntinlupa City residents with trusted, verified home care providers — fast, secure, and patient-first.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start pt-4">
-              <Link to="/patient/providers" className="btn-primary flex items-center gap-2 w-full sm:w-auto justify-center group">
-                Find a Provider <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link to="/register" className="btn-outline w-full sm:w-auto justify-center">
-                Register as Provider
-              </Link>
-            </div>
+            <motion.div variants={heroItem} className="space-y-8">
+              <div className="inline-flex items-center gap-2 bg-blue-100 dark:bg-blue-900/30 text-primary px-4 py-2 rounded-full text-sm font-semibold">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                </span>
+                Muntinlupa City's Trusted Network
+              </div>
+              <h1 className="text-4xl md:text-6xl font-bold text-slate-900 dark:text-slate-100 leading-tight">
+                Quality Home Care, <br className="hidden md:block" />
+                <span className="text-primary">Right at Your Doorstep</span>
+              </h1>
+              <p className="text-lg md:text-xl text-slate-600 dark:text-slate-300 leading-relaxed max-w-xl mx-auto md:mx-0">
+                Connecting Muntinlupa City residents with trusted, verified home care providers — fast, secure, and patient-first.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start pt-4">
+                <Link to="/patient/providers" className="btn-primary flex items-center gap-2 w-full sm:w-auto justify-center group">
+                  Find a Provider <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Link>
+                <Link to="/register" className="btn-outline w-full sm:w-auto justify-center">
+                  Register as Provider
+                </Link>
+              </div>
+            </motion.div>
           </motion.div>
           <motion.div 
             className="flex-1 relative w-full max-w-xl mx-auto"
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
+            initial={{ opacity: 0, x: 40, scale: 0.95 }}
+            whileInView={{ opacity: 1, x: 0, scale: 1 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.7, delay: 0.2, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             <div className="relative z-10 rounded-3xl overflow-hidden shadow-2xl animate-float border-8 border-white dark:border-slate-800">
               <img 
@@ -88,8 +113,16 @@ const Hero = () => {
                 className="w-full h-auto object-cover"
               />
             </div>
-            <div className="absolute -top-10 -right-10 w-64 h-64 bg-blue-200 rounded-full blur-3xl opacity-30 -z-10"></div>
-            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-blue-300 rounded-full blur-3xl opacity-30 -z-10"></div>
+            <motion.div 
+              className="absolute -top-10 -right-10 w-64 h-64 bg-blue-200 rounded-full blur-3xl opacity-30 -z-10"
+              animate={{ y: [0, -15, 0], x: [0, 10, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.div 
+              className="absolute -bottom-10 -left-10 w-64 h-64 bg-blue-300 rounded-full blur-3xl opacity-30 -z-10"
+              animate={{ y: [0, 15, 0], x: [0, -10, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+            />
           </motion.div>
         </div>
       </div>

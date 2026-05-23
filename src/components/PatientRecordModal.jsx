@@ -4,6 +4,7 @@ import { X, Activity, FileText, ClipboardList, Send, Loader2, ExternalLink, Tras
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import EmptyState from './EmptyState';
 
 const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
   const { user } = useAuth();
@@ -120,11 +121,11 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
     setLoading(true);
     try {
       // 1. Fetch History
-      const { data: histData } = await supabase
+      const { data: histRows } = await supabase
         .from('medical_histories')
         .select('*')
-        .eq('patient_id', patientId)
-        .single();
+        .eq('patient_id', patientId);
+      const histData = histRows?.[0] || null;
       
       setHistory(histData || { allergies: '', chronic_conditions: '', past_surgeries: '' });
 
@@ -337,12 +338,8 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                   ) : (
                   <div className="space-y-6">
                     {(!history?.allergies && !history?.chronic_conditions && !history?.past_surgeries) ? (
-                      <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600">
-                        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Activity className="w-6 h-6 text-slate-300 dark:text-slate-500" />
-                        </div>
-                        <p className="text-slate-600 dark:text-slate-300 font-bold">No Medical History</p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">The patient has not updated their medical profile yet.</p>
+                      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-600">
+                        <EmptyState icon="activity" title="No Medical History" message="The patient has not updated their medical profile yet." variant="compact" />
                       </div>
                     ) : (
                       <>
@@ -379,10 +376,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                   ) : (
                   <div>
                     {documents.length === 0 ? (
-                      <div className="text-center py-12">
-                        <FileText className="w-12 h-12 text-slate-300 dark:text-slate-500 mx-auto mb-3" />
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">No documents uploaded by the patient yet.</p>
-                      </div>
+                      <EmptyState icon="document" title="No documents uploaded" message="The patient has not uploaded any documents yet." variant="compact" />
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {documents.map(doc => (

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
+import EmptyState from '../../components/EmptyState';
 
 const AdminRequests = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -206,7 +207,7 @@ const AdminRequests = () => {
             </table>
           </div>
           {filteredRequests.length === 0 && (
-            <div className="p-10 text-center text-slate-500 dark:text-slate-400">No requests found.</div>
+            <EmptyState icon="inbox" title="No requests found" message="No requests match your current search or filter." variant="compact" />
           )}
           <div className="p-4 border-t border-slate-100 flex items-center justify-between dark:border-slate-700">
             <p className="text-sm text-slate-500 dark:text-slate-400">Showing {filteredRequests.length} of {requests.length} results</p>

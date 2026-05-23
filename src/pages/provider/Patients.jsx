@@ -6,6 +6,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import PatientRecordModal from '../../components/PatientRecordModal';
+import toast from 'react-hot-toast';
+import EmptyState from '../../components/EmptyState';
 
 const ProviderPatients = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,7 +77,7 @@ const ProviderPatients = () => {
       ));
     } catch (err) {
       console.error('Error updating status:', err);
-      alert('Failed to mark as completed.');
+      toast.error('Failed to mark as completed.');
     } finally {
       setUpdatingId(null);
     }
@@ -157,23 +159,25 @@ const ProviderPatients = () => {
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-slate-400 dark:text-slate-500">Date: {p.lastVisit}</p>
                   <div className="flex gap-2">
-                    {p.rawStatus === 'Accepted' && (
-                      <button 
-                        className={`p-2 bg-green-50 text-green-600 hover:text-white hover:bg-green-500 rounded-lg transition-colors dark:bg-green-900/30 ${updatingId === p.requestId ? 'opacity-50' : ''}`}
-                        onClick={() => handleMarkCompleted(p.requestId, p.name)}
-                        disabled={updatingId === p.requestId}
-                        title="Mark as Completed"
+                      {p.rawStatus === 'Accepted' && (
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          className={`p-2 bg-green-50 text-green-600 hover:text-white hover:bg-green-500 rounded-lg transition-all dark:bg-green-900/30 ${updatingId === p.requestId ? 'opacity-50' : ''}`}
+                          onClick={() => handleMarkCompleted(p.requestId, p.name)}
+                          disabled={updatingId === p.requestId}
+                          title="Mark as Completed"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </motion.button>
+                      )}
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        className="p-2 bg-blue-50 text-blue-600 hover:text-white hover:bg-blue-500 rounded-lg transition-all dark:bg-blue-900/30"
+                        onClick={() => handleOpenRecord(p.patientId, p.name)}
+                        title="View Medical Record"
                       >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                    )}
-                    <button 
-                      className="p-2 bg-blue-50 text-blue-600 hover:text-white hover:bg-blue-500 rounded-lg transition-colors dark:bg-blue-900/30"
-                      onClick={() => handleOpenRecord(p.patientId, p.name)}
-                      title="View Medical Record"
-                    >
-                      <FileText className="w-4 h-4" />
-                    </button>
+                        <FileText className="w-4 h-4" />
+                      </motion.button>
                   </div>
                 </div>
               </motion.div>
@@ -224,25 +228,31 @@ const ProviderPatients = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
                         {p.rawStatus === 'Accepted' && (
-                          <button 
-                            className={`p-2 text-green-600 bg-green-50 hover:bg-green-500 hover:text-white rounded-xl transition-colors dark:bg-green-900/30 ${updatingId === p.requestId ? 'opacity-50' : ''}`}
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            className={`p-2 text-green-600 bg-green-50 hover:bg-green-500 hover:text-white rounded-xl transition-all dark:bg-green-900/30 ${updatingId === p.requestId ? 'opacity-50' : ''}`}
                             onClick={() => handleMarkCompleted(p.requestId, p.name)}
                             disabled={updatingId === p.requestId}
                             title="Mark as Completed"
                           >
                             <CheckCircle className="w-5 h-5" />
-                          </button>
+                          </motion.button>
                         )}
-                        <button 
-                          className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white rounded-xl transition-colors dark:bg-blue-900/30" 
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          className="p-2 text-blue-600 bg-blue-50 hover:bg-blue-500 hover:text-white rounded-xl transition-all dark:bg-blue-900/30" 
                           onClick={() => handleOpenRecord(p.patientId, p.name)}
                           title="View Medical Record"
                         >
                           <FileText className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-primary transition-colors dark:text-slate-500" onClick={() => alert(`Messaging ${p.name}`)}>
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          className="p-2 text-slate-400 hover:text-primary transition-all dark:text-slate-500"
+                          onClick={() => toast('Messaging coming soon!', { icon: '💬' })}
+                        >
                           <MessageSquare className="w-5 h-5" />
-                        </button>
+                        </motion.button>
                       </div>
                     </td>
                   </motion.tr>
@@ -251,7 +261,7 @@ const ProviderPatients = () => {
             </table>
           </div>
           {filteredPatients.length === 0 && (
-            <div className="p-10 text-center text-slate-500 dark:text-slate-400">No patients found. Accept a request to add them here.</div>
+            <EmptyState icon="users" title="No patients yet" message="Accept a request to add them here." variant="compact" />
           )}
         </motion.div>
       </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { supabase } from '../../lib/supabase';
 import { sha256Hex } from '../../lib/hash';
 import { toast } from 'react-hot-toast';
@@ -84,6 +85,7 @@ const RegisterPage = () => {
       if (data && data[0]) {
         login(data[0]);
         toast.success('Account created');
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
       }
 
       if (role === 'patient') navigate('/patient/dashboard');

@@ -6,10 +6,11 @@ import CustomSelect from '../../components/CustomSelect';
 import { useAuth } from '../../contexts/AuthContext';
 import usePatientRequests from '../../hooks/usePatientRequests';
 import { supabase } from '../../lib/supabase';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ReviewModal from '../../components/ReviewModal';
 import CancelRescheduleModal from '../../components/CancelRescheduleModal';
 import PreSessionUploadModal from '../../components/PreSessionUploadModal';
+import EmptyState from '../../components/EmptyState';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -135,13 +136,28 @@ const PatientRequests = () => {
   const [ratedRequests, setRatedRequests] = useState({});
   const [presessionSubmitted, setPresessionSubmitted] = useState({});
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const rated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
-    setRatedRequests(rated);
+    const localRated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
     const presession = JSON.parse(localStorage.getItem('presession_submitted') || '{}');
     setPresessionSubmitted(presession);
-  }, []);
+
+    if (user) {
+      supabase
+        .from('provider_reviews')
+        .select('request_id')
+        .eq('patient_id', user.id)
+        .then(({ data }) => {
+          const dbRated = {};
+          (data || []).forEach(r => { dbRated[r.request_id] = true; });
+          setRatedRequests({ ...dbRated, ...localRated });
+        })
+        .catch(() => setRatedRequests(localRated));
+    } else {
+      setRatedRequests(localRated);
+    }
+  }, [user]);
 
   const fetchRequests = async () => {
     if (!user) return;
@@ -264,11 +280,16 @@ const PatientRequests = () => {
               ))
             ) : (
               <motion.div 
-                className="p-10 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700"
+                className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                {requests.length === 0 ? 'No requests yet. Find a provider to get started!' : 'No requests found for this filter.'}
+                <EmptyState
+                  icon="inbox"
+                  title={requests.length === 0 ? 'No requests yet' : 'No matching requests'}
+                  message={requests.length === 0 ? 'Find a provider to get started!' : 'No requests found for this filter.'}
+                  action={requests.length === 0 ? { label: 'Browse Providers', onClick: () => navigate('/patient/providers') } : undefined}
+                />
               </motion.div>
             )}
           </motion.div>

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
+import toast from 'react-hot-toast';
+import EmptyState from '../../components/EmptyState';
 
 const AdminPatients = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -57,7 +59,7 @@ const AdminPatients = () => {
       await fetchPatients();
     } catch (err) {
       console.error(`Error ${action}ning patient:`, err);
-      alert(`Failed to ${action} patient.`);
+      toast.error(`Failed to ${action} patient.`);
     } finally {
       setActionLoading(false);
     }
@@ -75,7 +77,7 @@ const AdminPatients = () => {
       await fetchPatients();
     } catch (err) {
       console.error('Error removing patient:', err);
-      alert('Failed to remove patient.');
+      toast.error('Failed to remove patient.');
     } finally {
       setActionLoading(false);
     }
@@ -165,22 +167,24 @@ const AdminPatients = () => {
                 </div>
                 <div className="text-sm text-slate-400 dark:text-slate-500">Joined: {p.joinDate}</div>
                 <div className="flex justify-end gap-2 pt-2 border-t border-slate-50 dark:border-slate-700">
-                  <button 
-                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-colors ${
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
                       p.is_banned ? 'text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50' : 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50'
                     }`}
                     onClick={() => handleBan(p)}
                     disabled={actionLoading}
                   >
                     {p.is_banned ? 'Unban' : 'Ban'}
-                  </button>
-                  <button 
-                    className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-all dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
                     onClick={() => handleRemove(p)}
                     disabled={actionLoading}
                   >
                     Remove
-                  </button>
+                  </motion.button>
                 </div>
               </motion.div>
             ))}
@@ -229,7 +233,8 @@ const AdminPatients = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button 
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
                           className={`p-2 rounded-xl transition-all ${
                             p.is_banned 
                               ? 'text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50' 
@@ -240,15 +245,16 @@ const AdminPatients = () => {
                           title={p.is_banned ? 'Unban' : 'Ban'}
                         >
                           <Ban className="w-4 h-4" />
-                        </button>
-                        <button 
-                          className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-colors dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-xl transition-all dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50"
                           onClick={() => handleRemove(p)}
                           disabled={actionLoading}
                           title="Remove Permanently"
                         >
                           <X className="w-4 h-4" />
-                        </button>
+                        </motion.button>
                       </div>
                     </td>
                   </motion.tr>
@@ -257,7 +263,7 @@ const AdminPatients = () => {
             </table>
           </div>
           {filteredPatients.length === 0 && (
-            <div className="p-10 text-center text-slate-500 dark:text-slate-400">No patients found.</div>
+            <EmptyState icon="users" title="No patients found" message="No patients match your current search or filter." variant="compact" />
           )}
           <div className="p-4 border-t border-slate-100 flex items-center justify-between dark:border-slate-700">
             <p className="text-sm text-slate-500 dark:text-slate-400">Showing {filteredPatients.length} of {patients.length} patients</p>

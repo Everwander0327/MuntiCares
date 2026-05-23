@@ -6,6 +6,24 @@ import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
+const playChime = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.frequency.value = 880;
+    oscillator.type = 'sine';
+    gain.gain.setValueAtTime(0.8, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.4);
+  } catch {
+    // Web Audio API not available
+  }
+};
+
 const getNotifIcon = (type) => {
   switch (type) {
     case 'request_accepted': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
@@ -214,6 +232,7 @@ const NotificationBell = () => {
       if (prevNotifsRef.current.length > 0) {
         const newlyAdded = notifs.filter(n => !prevNotifsRef.current.some(pn => pn.id === n.id));
         newlyAdded.forEach(notif => {
+          playChime();
           let icon = '🔔';
           if (notif.type === 'request_accepted') icon = '✅';
           else if (notif.type === 'status_on_the_way') icon = '🚗';

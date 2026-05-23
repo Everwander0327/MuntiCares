@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
+import toast from 'react-hot-toast';
+import EmptyState from '../../components/EmptyState';
 
 const getProfessionalIdUrl = (filePath) => {
   if (!filePath) return null;
@@ -95,7 +97,7 @@ const AdminProviders = () => {
       await fetchProviders();
     } catch (err) {
       console.error('Error approving provider:', err);
-      alert('Failed to approve provider.');
+      toast.error('Failed to approve provider.');
     } finally {
       setActionLoading(false);
     }
@@ -114,7 +116,7 @@ const AdminProviders = () => {
       await fetchProviders();
     } catch (err) {
       console.error('Error rejecting provider:', err);
-      alert('Failed to revoke approval.');
+      toast.error('Failed to revoke approval.');
     } finally {
       setActionLoading(false);
     }
@@ -140,7 +142,7 @@ const AdminProviders = () => {
       await fetchProviders();
     } catch (err) {
       console.error(`Error ${action}ning provider:`, err);
-      alert(`Failed to ${action} provider.`);
+      toast.error(`Failed to ${action} provider.`);
     } finally {
       setActionLoading(false);
     }
@@ -165,7 +167,7 @@ const AdminProviders = () => {
       await fetchProviders();
     } catch (err) {
       console.error('Error verifying document:', err);
-      alert('Failed to verify document.');
+      toast.error('Failed to verify document.');
     } finally {
       setDocActionLoading(false);
     }
@@ -189,7 +191,7 @@ const AdminProviders = () => {
       await fetchProviders();
     } catch (err) {
       console.error('Error rejecting document:', err);
-      alert('Failed to reject document.');
+      toast.error('Failed to reject document.');
     } finally {
       setDocActionLoading(false);
     }
@@ -208,7 +210,7 @@ const AdminProviders = () => {
       await fetchProviders();
     } catch (err) {
       console.error('Error removing provider:', err);
-      alert('Failed to remove provider.');
+      toast.error('Failed to remove provider.');
     } finally {
       setActionLoading(false);
     }
@@ -402,12 +404,13 @@ const AdminProviders = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button 
-                          className="text-primary font-bold text-xs hover:underline"
-                          onClick={(e) => { e.stopPropagation(); setSelectedProvider(p); }}
-                        >
-                          Review
-                        </button>
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        className="text-primary font-bold text-xs hover:underline"
+                        onClick={(e) => { e.stopPropagation(); setSelectedProvider(p); }}
+                      >
+                        Review
+                      </motion.button>
                       </td>
                     </motion.tr>
                   );
@@ -416,7 +419,7 @@ const AdminProviders = () => {
             </table>
           </div>
           {filteredProviders.length === 0 && (
-            <div className="p-10 text-center text-slate-500 dark:text-slate-400">No providers found.</div>
+            <EmptyState icon="users" title="No providers found" message="No providers match your current search or filter." variant="compact" />
           )}
           <div className="p-4 border-t border-slate-100 flex items-center justify-between dark:border-slate-700">
             <p className="text-sm text-slate-500 dark:text-slate-400">Showing {filteredProviders.length} of {providers.length} providers</p>
@@ -537,22 +540,24 @@ const AdminProviders = () => {
                     )}
                     {selectedProvider.professional_id_status === 'pending' && (
                       <div className="grid grid-cols-2 gap-2 mb-3">
-                        <button
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
                           onClick={() => handleVerifyDocument(selectedProvider)}
                           disabled={docActionLoading}
-                          className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-200 transition-all disabled:opacity-50"
+                          className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-200 hover:shadow-xl hover:shadow-green-200 transition-all disabled:opacity-50"
                         >
                           <Check className="w-4 h-4" />
                           {docActionLoading ? '...' : 'Verify ID'}
-                        </button>
-                        <button
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
                           onClick={() => handleRejectDocument(selectedProvider)}
                           disabled={docActionLoading}
                           className="flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-all disabled:opacity-50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 dark:border-red-900/50"
                         >
                           <X className="w-4 h-4" />
                           {docActionLoading ? '...' : 'Reject ID'}
-                        </button>
+                        </motion.button>
                       </div>
                     )}
                     {selectedProvider.professional_id_status === 'verified' && (
@@ -574,28 +579,31 @@ const AdminProviders = () => {
                 <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">
                   {/* Approve / Revoke */}
                   {selectedProvider.status === 'Pending Approval' && (
-                    <button 
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => handleApprove(selectedProvider)}
                       disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-200 transition-all disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-200 hover:shadow-xl hover:shadow-green-200 transition-all disabled:opacity-50"
                     >
                       <Check className="w-4 h-4" />
                       {actionLoading ? 'Processing...' : 'Approve Provider'}
-                    </button>
+                    </motion.button>
                   )}
                   {selectedProvider.status === 'Approved' && (
-                    <button 
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => handleReject(selectedProvider)}
                       disabled={actionLoading}
                       className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 transition-all disabled:opacity-50 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50 dark:border-yellow-900/50"
                     >
                       <ShieldCheck className="w-4 h-4" />
                       {actionLoading ? 'Processing...' : 'Revoke Approval'}
-                    </button>
+                    </motion.button>
                   )}
 
                   {/* Ban / Unban */}
-                  <button 
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
                     onClick={() => handleBan(selectedProvider)}
                     disabled={actionLoading}
                     className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all disabled:opacity-50 ${
@@ -606,17 +614,18 @@ const AdminProviders = () => {
                   >
                     <Ban className="w-4 h-4" />
                     {actionLoading ? 'Processing...' : selectedProvider.is_banned ? 'Unban Provider' : 'Ban Provider'}
-                  </button>
+                  </motion.button>
 
                   {/* Delete */}
-                  <button 
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
                     onClick={() => handleRemove(selectedProvider)}
                     disabled={actionLoading}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 transition-all disabled:opacity-50 dark:bg-slate-800 dark:text-red-300 dark:hover:bg-red-900/30 dark:border-red-900/50"
                   >
                     <X className="w-4 h-4" />
                     {actionLoading ? 'Processing...' : 'Permanently Remove'}
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             </motion.div>

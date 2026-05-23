@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Clock, Users, CheckCircle, Check, X, TrendingUp, Calendar, ChevronRight } from 'lucide-react';
+import { Clock, Users, CheckCircle, Check, X, TrendingUp, Calendar, ChevronRight, Star, MessageCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useCountUp from '../../hooks/useCountUp';
 import { SkeletonPage } from '../../components/Skeleton';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import EmptyState from '../../components/EmptyState';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.1 } },
@@ -45,6 +47,7 @@ const ProviderDashboard = () => {
   const [stats, setStats] = useState({ pending: 0, activePatients: 0, completed: 0 });
   const [schedule, setSchedule] = useState([]);
   const [incomingRequests, setIncomingRequests] = useState([]);
+  const [reviews, setReviews] = useState([]);
   
   const { user } = useAuth();
 
@@ -102,6 +105,14 @@ const ProviderDashboard = () => {
             date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
           }));
         setIncomingRequests(incoming);
+
+        const { data: reviewData } = await supabase
+          .from('provider_reviews')
+          .select('id, rating, review_text, created_at, patient:patient_id(full_name)')
+          .eq('provider_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        setReviews(reviewData || []);
 
       } catch (err) {
         console.error('Error fetching dashboard:', err);
@@ -162,7 +173,7 @@ const ProviderDashboard = () => {
       }, 800);
     } catch (err) {
       console.error('Error updating request:', err);
-      alert('Failed to update request.');
+      toast.error('Failed to update request.');
       setActionStates(prev => {
         const next = { ...prev };
         delete next[id];
@@ -238,7 +249,7 @@ const ProviderDashboard = () => {
                 ))
               ) : (
                 <div className="bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
-                  <p>No upcoming scheduled services.</p>
+                  <p className="text-white/70 text-sm">No upcoming scheduled services.</p>
                 </div>
               )}
             </div>
@@ -322,13 +333,57 @@ const ProviderDashboard = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="px-6 py-10 text-center text-slate-400 dark:text-slate-500">
-                      No incoming requests.
+                    <td colSpan="4" className="px-6 py-10">
+                      <EmptyState icon="inbox" title="No incoming requests" variant="compact" />
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+        </motion.div>
+
+        {/* Recent Feedback */}
+        <motion.div
+          className="bg-white rounded-3xl border border-slate-100 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <div className="p-6 border-b border-slate-100 flex items-center gap-2 dark:border-slate-700">
+            <MessageCircle className="w-5 h-5 text-primary" />
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Recent Feedback</h3>
+          </div>
+          <div className="p-6">
+            {reviews.length > 0 ? (
+              <div className="space-y-4">
+                {reviews.map((review, idx) => (
+                  <div key={review.id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0 dark:border-slate-700">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-semibold text-slate-800 dark:text-slate-200">
+                        {review.patient?.full_name || 'Anonymous'}
+                      </span>
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <Star
+                            key={star}
+                            className={`w-4 h-4 ${star <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200 dark:text-slate-600'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {review.review_text && (
+                      <p className="text-sm text-slate-600 dark:text-slate-400">{review.review_text}</p>
+                    )}
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      {new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState icon="star" title="No feedback yet" message="Reviews from patients will appear here." variant="compact" />
+            )}
           </div>
         </motion.div>
       </div>

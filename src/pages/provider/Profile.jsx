@@ -13,6 +13,7 @@ const getProfessionalIdUrl = (filePath) => {
   return data?.publicUrl || null;
 };
 import { SkeletonPage } from '../../components/Skeleton';
+import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 const calculateTrustScore = (data) => {
@@ -128,7 +129,7 @@ const ProviderProfile = () => {
     const servicesList = servicesInput.split(',').map(s => s.trim()).filter(s => s);
 
     if (!editForm.phone.trim() || !editForm.location.trim() || !editForm.bio.trim() || servicesList.length === 0) {
-      alert('Please fill out all fields (Phone, Location, Bio, and at least one Specialization) to complete your profile.');
+      toast.error('Please fill out all fields (Phone, Location, Bio, and at least one Specialization) to complete your profile.');
       return;
     }
 
@@ -165,10 +166,10 @@ const ProviderProfile = () => {
         trust_score: newScore,
       });
       setIsEditing(false);
-      alert('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
     } catch (err) {
       console.error('Error saving profile:', err);
-      alert('Failed to save profile. Please try again.');
+      toast.error('Failed to save profile. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -181,12 +182,12 @@ const ProviderProfile = () => {
     const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
     for (const f of files) {
       if (!allowed.includes(f.type)) {
-        alert(`"${f.name}" has an unsupported file type. Please use JPG, PNG, or PDF.`);
+        toast.error(`"${f.name}" has an unsupported file type. Please use JPG, PNG, or PDF.`);
         e.target.value = '';
         return;
       }
       if (f.size > 2 * 1024 * 1024) {
-        alert(`"${f.name}" exceeds the 2MB limit.`);
+        toast.error(`"${f.name}" exceeds the 2MB limit.`);
         e.target.value = '';
         return;
       }
@@ -224,10 +225,10 @@ const ProviderProfile = () => {
 
       setProfessionalIdPreviews(newPaths.map(p => getProfessionalIdUrl(p)).filter(Boolean));
       setProfile(prev => ({ ...prev, professional_id_paths: newPaths, professional_id_path: newPaths[0] || null, professional_id_status: 'pending', trust_score: newScore }));
-      alert('Professional ID uploaded successfully! It will be reviewed by an admin.');
+      toast.success('Professional ID uploaded successfully! It will be reviewed by an admin.');
     } catch (err) {
       console.error('Error uploading professional ID:', err);
-      alert('Failed to upload. Please try again.');
+      toast.error('Failed to upload. Please try again.');
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -254,10 +255,10 @@ const ProviderProfile = () => {
 
       setProfessionalIdPreviews([]);
       setProfile(prev => ({ ...prev, professional_id_paths: [], professional_id_path: null, professional_id_status: 'none', trust_score: newScore }));
-      alert('Professional ID removed.');
+      toast.success('Professional ID removed.');
     } catch (err) {
       console.error('Error removing professional ID:', err);
-      alert('Failed to remove. Please try again.');
+      toast.error('Failed to remove. Please try again.');
     }
   };
 
@@ -381,13 +382,14 @@ const ProviderProfile = () => {
 
                 {/* Logout — very bottom */}
                 <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
-                  <button 
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-colors text-sm dark:bg-red-900/30 dark:hover:bg-red-900/20"
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-all text-sm dark:bg-red-900/30 dark:hover:bg-red-900/20"
                   >
                     <LogOut className="w-4 h-4" />
                     Logout
-                  </button>
+                  </motion.button>
                 </div>
               </div>
             </motion.div>
@@ -547,21 +549,23 @@ const ProviderProfile = () => {
                               </div>
                             )}
                             <div className="flex gap-2">
-                              <button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                              >
-                                <Upload className="w-4 h-4" />
-                                {uploading ? 'Uploading...' : 'Add More'}
-                              </button>
-                              <button
-                                onClick={handleRemoveProfessionalId}
-                                disabled={uploading}
-                                className="px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                              >
-                                Remove All
-                              </button>
+                            <motion.button
+                              whileTap={{ scale: 0.96 }}
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={uploading}
+                              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                            >
+                              <Upload className="w-4 h-4" />
+                              {uploading ? 'Uploading...' : 'Add More'}
+                            </motion.button>
+                            <motion.button
+                              whileTap={{ scale: 0.96 }}
+                              onClick={handleRemoveProfessionalId}
+                              disabled={uploading}
+                              className="px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
+                            >
+                              Remove All
+                            </motion.button>
                             </div>
                           </div>
                         ) : (
@@ -569,14 +573,15 @@ const ProviderProfile = () => {
                             <Upload className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
                             <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Upload your Professional ID</p>
                             <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Accepted: JPG, PNG, or PDF (max 2MB each)</p>
-                            <button
+                            <motion.button
+                              whileTap={{ scale: 0.96 }}
                               onClick={() => fileInputRef.current?.click()}
                               disabled={uploading}
                               className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
                             >
                               <Upload className="w-4 h-4" />
                               {uploading ? 'Uploading...' : 'Choose Files'}
-                            </button>
+                            </motion.button>
                           </div>
                         )}
                         <input

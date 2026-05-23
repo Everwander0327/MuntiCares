@@ -1,5 +1,23 @@
 import React from 'react';
 
+const SkeletonText = ({ width = 'w-24', className = '' }) => (
+  <div className={`h-3 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse ${width} ${className}`} />
+);
+
+const SkeletonAvatar = ({ size = 'w-10 h-10', className = '' }) => (
+  <div className={`${size} bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse ${className}`} />
+);
+
+const SkeletonListItem = ({ className = '' }) => (
+  <div className={`flex items-center gap-3 p-3 animate-pulse ${className}`}>
+    <SkeletonAvatar />
+    <div className="flex-1 space-y-2">
+      <SkeletonText width="w-32" />
+      <SkeletonText width="w-20" />
+    </div>
+  </div>
+);
+
 const SkeletonCard = () => (
   <div className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 animate-pulse">
     <div className="flex items-center gap-4">
@@ -43,5 +61,5 @@ const SkeletonPage = () => (
   </div>
 );
 
-export { SkeletonCard, SkeletonTable, SkeletonPage };
+export { SkeletonText, SkeletonAvatar, SkeletonListItem, SkeletonCard, SkeletonTable, SkeletonPage };
 export default SkeletonPage;

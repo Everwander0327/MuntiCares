@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Star, X, Check } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 
@@ -41,6 +42,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
     const submittedCb = onReviewSubmitted;
     close();
     toast.success('Thank you! Your review has been submitted.');
+    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
     if (submittedCb) submittedCb(request.id);
     const rated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
     rated[request.id] = true;

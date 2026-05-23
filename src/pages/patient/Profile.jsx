@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import { getSignedUrl } from '../../lib/supabaseHelpers';
+import EmptyState from '../../components/EmptyState';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -27,6 +28,9 @@ const PatientProfile = () => {
     address: '',
     medical_notes: '',
     emergency_contact: '',
+    allergies: '',
+    chronic_conditions: '',
+    past_surgeries: '',
     is_profile_complete: false,
     created_at: ''
   });
@@ -60,9 +64,27 @@ const PatientProfile = () => {
           address: patData?.address || '',
           medical_notes: patData?.medical_notes || '',
           emergency_contact: patData?.emergency_contact || '',
+          allergies: '',
+          chronic_conditions: '',
+          past_surgeries: '',
           is_profile_complete: patData?.is_profile_complete || false,
           created_at: userData.created_at
         });
+
+        // Fetch Medical History
+        const { data: histRows } = await supabase
+          .from('medical_histories')
+          .select('allergies, chronic_conditions, past_surgeries')
+          .eq('patient_id', user.id);
+        const mh = histRows?.[0];
+        if (mh) {
+          setProfile(prev => ({
+            ...prev,
+            allergies: mh.allergies || '',
+            chronic_conditions: mh.chronic_conditions || '',
+            past_surgeries: mh.past_surgeries || '',
+          }));
+        }
 
         // Fetch Documents
         const { data: docs, error: docsError } = await supabase
@@ -110,6 +132,33 @@ const PatientProfile = () => {
         }, { onConflict: 'user_id' });
 
       if (error) throw error;
+
+      const { data: existingMH } = await supabase
+        .from('medical_histories')
+        .select('id')
+        .eq('patient_id', user.id);
+      const hasExisting = existingMH && existingMH.length > 0;
+
+      const mhPayload = {
+        patient_id: user.id,
+        allergies: profile.allergies,
+        chronic_conditions: profile.chronic_conditions,
+        past_surgeries: profile.past_surgeries,
+      };
+
+      if (hasExisting) {
+        const { error: mhError } = await supabase
+          .from('medical_histories')
+          .update(mhPayload)
+          .eq('patient_id', user.id);
+        if (mhError) throw mhError;
+      } else {
+        const { error: mhError } = await supabase
+          .from('medical_histories')
+          .insert(mhPayload);
+        if (mhError) throw mhError;
+      }
+
       setProfile(prev => ({ ...prev, is_profile_complete: true }));
       toast.success('Profile updated successfully!');
     } catch (err) {
@@ -189,11 +238,11 @@ const PatientProfile = () => {
     setGeneratingPdf(true);
     try {
       // Fetch medical history
-      const { data: histData } = await supabase
+      const { data: histRows } = await supabase
         .from('medical_histories')
         .select('*')
-        .eq('patient_id', user.id)
-        .maybeSingle();
+        .eq('patient_id', user.id);
+      const histData = histRows?.[0] || null;
 
       // Fetch visit notes
       const { data: notesData } = await supabase
@@ -569,21 +618,23 @@ const PatientProfile = () => {
 
                 {/* Download & Logout */}
                 <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 space-y-3">
-                  <button 
-                    onClick={generatePDF}
-                    disabled={generatingPdf}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-primary bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors text-sm disabled:opacity-50"
-                  >
-                    {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                    {generatingPdf ? 'Generating...' : 'Download Medical Summary'}
-                  </button>
-                  <button 
-                    onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors text-sm"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Logout
-                  </button>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={generatePDF}
+                  disabled={generatingPdf}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-primary bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all text-sm disabled:opacity-50"
+                >
+                  {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {generatingPdf ? 'Generating...' : 'Download Medical Summary'}
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={handleLogout}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all text-sm"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Logout
+                </motion.button>
                 </div>
               </div>
             </motion.div>
@@ -649,79 +700,119 @@ const PatientProfile = () => {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Medical Notes (Allergies, Conditions)</label>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Medical Notes</label>
                   <div className="relative group">
                     <Activity className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <textarea 
                       value={profile.medical_notes}
                       onChange={e => setProfile({...profile, medical_notes: e.target.value})}
-                      placeholder="Any important medical history providers should know?"
-                      rows={4}
+                      placeholder="Any additional notes providers should know?"
+                      rows={3}
                       className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
                     />
                   </div>
-                  
-                  {/* Smart Suggestions */}
-                  <div className="pt-2 space-y-3">
-                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Quick Add Suggestions:</p>
-                    <div className="flex flex-col gap-2">
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-xs py-1.5 px-2 bg-slate-100 dark:bg-slate-700 rounded-lg font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center">💊 Conditions</span>
-                        {['Diabetic', 'High Blood Pressure', 'Asthma', 'Heart Condition'].filter(s => !(profile.medical_notes || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                          <motion.button
-                            key={s}
-                            type="button"
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => {
-                              const curr = (profile.medical_notes || '').trim();
-                              const newNotes = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
-                              setProfile({...profile, medical_notes: newNotes});
-                            }}
-                            className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-primary rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-900/50 transition-colors"
-                          >
-                            + {s}
-                          </motion.button>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-xs py-1.5 px-2 bg-slate-100 dark:bg-slate-700 rounded-lg font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center">⚠️ Allergies/Notes</span>
-                        {['No known allergies', 'Penicillin Allergy', 'Needs Wheelchair'].filter(s => !(profile.medical_notes || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                          <motion.button
-                            key={s}
-                            type="button"
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => {
-                              const curr = (profile.medical_notes || '').trim();
-                              const newNotes = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
-                              setProfile({...profile, medical_notes: newNotes});
-                            }}
-                            className="px-3 py-1.5 bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-orange-600 dark:text-orange-300 rounded-lg text-xs font-bold border border-orange-100 dark:border-orange-900/50 transition-colors"
-                          >
-                            + {s}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Allergies</label>
+                  <textarea
+                    value={profile.allergies}
+                    onChange={e => setProfile({...profile, allergies: e.target.value})}
+                    placeholder="List any allergies (e.g., Penicillin, Latex, Peanuts)"
+                    rows={2}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {['No known allergies', 'Penicillin', 'Sulfa', 'Iodine', 'Latex', 'Peanuts'].filter(s => !(profile.allergies || '').toLowerCase().includes(s.toLowerCase())).map(s => (
+                      <motion.button
+                        key={s}
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          const curr = (profile.allergies || '').trim();
+                          setProfile({...profile, allergies: curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s });
+                        }}
+                        className="px-2.5 py-1 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 rounded-lg text-xs font-bold border border-red-100 dark:border-red-900/50 transition-colors"
+                      >
+                        + {s}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Chronic Conditions</label>
+                  <textarea
+                    value={profile.chronic_conditions}
+                    onChange={e => setProfile({...profile, chronic_conditions: e.target.value})}
+                    placeholder="List any chronic conditions (e.g., Diabetes, High Blood Pressure)"
+                    rows={2}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Diabetes', 'High Blood Pressure', 'Asthma', 'Heart Disease', 'Arthritis', 'None'].filter(s => !(profile.chronic_conditions || '').toLowerCase().includes(s.toLowerCase())).map(s => (
+                      <motion.button
+                        key={s}
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          const curr = (profile.chronic_conditions || '').trim();
+                          setProfile({...profile, chronic_conditions: curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s });
+                        }}
+                        className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-primary rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-900/50 transition-colors"
+                      >
+                        + {s}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Past Surgeries</label>
+                  <textarea
+                    value={profile.past_surgeries}
+                    onChange={e => setProfile({...profile, past_surgeries: e.target.value})}
+                    placeholder="List any past surgeries (e.g., Appendectomy, C-Section)"
+                    rows={2}
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                  />
+                  <div className="flex flex-wrap gap-1.5">
+                    {['Appendectomy', 'C-Section', 'Gallbladder Removal', 'Knee Surgery', 'Tonsillectomy', 'None'].filter(s => !(profile.past_surgeries || '').toLowerCase().includes(s.toLowerCase())).map(s => (
+                      <motion.button
+                        key={s}
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          const curr = (profile.past_surgeries || '').trim();
+                          setProfile({...profile, past_surgeries: curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s });
+                        }}
+                        className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-300 rounded-lg text-xs font-bold border border-purple-100 dark:border-purple-900/50 transition-colors"
+                      >
+                        + {s}
+                      </motion.button>
+                    ))}
                   </div>
                 </div>
               </div>
 
               <div className="pt-4 md:pt-6 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-end gap-3">
-                <button 
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
                   type="button"
                   onClick={() => setProfile({...profile, medical_notes: ''})}
-                  className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors text-sm"
+                  className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all text-sm"
                 >
                   Clear Notes
-                </button>
-                <button 
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
                   type="submit"
                   disabled={saving}
                   className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-xl md:rounded-2xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all disabled:opacity-50 w-full sm:w-auto"
                 >
                   <Save className="w-5 h-5" />
                   {saving ? 'Saving...' : 'Save Profile'}
-                </button>
+                </motion.button>
               </div>
             </form>
           </motion.div>
@@ -777,12 +868,7 @@ const PatientProfile = () => {
             
             <div className="p-6 md:p-8">
               {documents.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <FileText className="w-6 h-6 text-slate-400 dark:text-slate-500" />
-                  </div>
-                  <p className="text-slate-500 dark:text-slate-400 font-medium">No documents uploaded yet.</p>
-                </div>
+                <EmptyState icon="document" title="No documents uploaded yet" message="Upload lab results, prescriptions, or other medical documents." variant="compact" />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {documents.map((doc) => (
@@ -794,9 +880,10 @@ const PatientProfile = () => {
                         <p className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{doc.document_title}</p>
                         <p className="text-xs text-slate-400 dark:text-slate-500">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                       </div>
-                      <button 
+                      <motion.button
+                         whileTap={{ scale: 0.96 }}
                          type="button"
-                         className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                         className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                          onClick={async () => {
                            if(window.confirm('Are you sure you want to delete this document?')) {
                              // 1. Delete from Storage Bucket first
@@ -817,7 +904,7 @@ const PatientProfile = () => {
                          }}
                       >
                          <X className="w-4 h-4" />
-                      </button>
+                      </motion.button>
                     </div>
                   ))}
                 </div>
@@ -900,7 +987,8 @@ const PatientProfile = () => {
                       )}
 
                        {note.attachment_url && (
-                         <button
+                         <motion.button
+                           whileTap={{ scale: 0.96 }}
                            type="button"
                            onClick={async () => {
                              const url = await getSignedUrl(note.attachment_url, 3600);
@@ -910,7 +998,7 @@ const PatientProfile = () => {
                          >
                            <FileText className="w-4 h-4" />
                            View Attachment
-                         </button>
+                         </motion.button>
                        )}
                     </div>
                   ))}
