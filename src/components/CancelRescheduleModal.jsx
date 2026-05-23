@@ -8,11 +8,22 @@ const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
 const SLOT_DURATION_MINUTES = 60;
 
+const CANCEL_REASONS = [
+  'Schedule conflict',
+  'Found another provider',
+  'Emergency / health issue',
+  'Transportation issue',
+  'Not feeling ready',
+  'Changed my mind',
+  'Other',
+];
+
 const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) => {
   const [mode, setMode] = useState('choose'); // 'choose' | 'cancel' | 'reschedule'
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [cancelReason, setCancelReason] = useState('');
+  const [selectedReason, setSelectedReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -234,15 +245,36 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                 <p className="text-sm text-slate-500 mt-1">This action cannot be undone.</p>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Reason (optional)</label>
-                <textarea
-                  value={cancelReason}
-                  onChange={e => setCancelReason(e.target.value)}
-                  placeholder="Let the provider know why you're cancelling..."
-                  rows={3}
-                  className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-red-100 transition-all text-sm resize-none text-slate-800 placeholder-slate-400"
-                />
+              <div className="space-y-3">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400">Reason for cancelling</label>
+                <div className="flex flex-wrap gap-2">
+                  {CANCEL_REASONS.map(reason => (
+                    <button
+                      key={reason}
+                      type="button"
+                      onClick={() => {
+                        setSelectedReason(reason);
+                        setCancelReason(reason === 'Other' ? '' : reason);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                        selectedReason === reason
+                          ? 'bg-red-500 text-white border-red-500 shadow-sm'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-red-300 hover:text-red-600'
+                      }`}
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+                {selectedReason === 'Other' && (
+                  <textarea
+                    value={cancelReason}
+                    onChange={e => setCancelReason(e.target.value)}
+                    placeholder="Let the provider know why you're cancelling..."
+                    rows={2}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-3 outline-none focus:ring-2 focus:ring-red-100 transition-all text-sm resize-none text-slate-800 placeholder-slate-400"
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

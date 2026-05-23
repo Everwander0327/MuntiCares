@@ -4,18 +4,33 @@ import { Star, X, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 
+const CATEGORIES = [
+  { key: 'overall', label: 'Overall Experience', required: true },
+  { key: 'service', label: 'Service Quality' },
+  { key: 'communication', label: 'Communication' },
+  { key: 'punctuality', label: 'Punctuality' },
+];
+
 const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
+  const [ratings, setRatings] = useState({
+    overall: 0,
+    service: 0,
+    communication: 0,
+    punctuality: 0,
+  });
+  const [hovered, setHovered] = useState({ overall: 0, service: 0, communication: 0, punctuality: 0 });
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   if (!isOpen || !request) return null;
 
+  const setRating = (key, val) => setRatings(prev => ({ ...prev, [key]: val }));
+  const setHover = (key, val) => setHovered(prev => ({ ...prev, [key]: val }));
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (rating === 0) {
-      toast.error('Please select a star rating.');
+    if (ratings.overall === 0) {
+      toast.error('Please select an overall star rating.');
       return;
     }
 
@@ -28,13 +43,13 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           patient_id: request.patientId || null,
           provider_id: request.providerId,
           request_id: request.id,
-          rating: rating,
-          review_text: comment
+          rating: ratings.overall,
+          review_text: `[Service: ${ratings.service || 0}/5 | Comm: ${ratings.communication || 0}/5 | Punctual: ${ratings.punctuality || 0}/5] ${comment}`
         }]);
 
       if (reviewError) {
         console.warn('provider_reviews insert failed, falling back to direct provider rating update...', reviewError);
-        
+
         // Fallback: Directly update the provider rating in providers table using moving average
         const { data: providerData } = await supabase
           .from('providers')
@@ -43,7 +58,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           .single();
 
         const currentRating = providerData?.rating || 0;
-        const updatedRating = currentRating === 0 ? rating : ((currentRating * 4) + rating) / 5;
+        const updatedRating = currentRating === 0 ? ratings.overall : ((currentRating * 4) + ratings.overall) / 5;
 
         const { error: updateError } = await supabase
           .from('providers')
@@ -114,25 +129,31 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
               <p className="text-sm text-slate-500 mt-1">How was your care session with <span className="font-bold text-primary">{request.providerName}</span>?</p>
             </div>
 
-            {/* Stars Selector */}
-            <div className="flex justify-center gap-2 py-4">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  type="button"
-                  key={star}
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoverRating(star)}
-                  onMouseLeave={() => setHoverRating(0)}
-                  className="p-1 hover:scale-110 active:scale-95 transition-transform"
-                >
-                  <Star 
-                    className={`w-10 h-10 transition-colors ${
-                      star <= (hoverRating || rating) 
-                        ? 'fill-amber-400 text-amber-400' 
-                        : 'text-slate-200 fill-none'
-                    }`}
-                  />
-                </button>
+            {/* Category Ratings */}
+            <div className="space-y-4">
+              {CATEGORIES.map(cat => (
+                <div key={cat.key} className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-700">{cat.label}</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map(star => {
+                      const active = star <= (hovered[cat.key] || ratings[cat.key]);
+                      return (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRating(cat.key, star)}
+                          onMouseEnter={() => setHover(cat.key, star)}
+                          onMouseLeave={() => setHover(cat.key, 0)}
+                          className="p-0.5 hover:scale-110 active:scale-95 transition-transform"
+                        >
+                          <Star className={`w-5 h-5 transition-colors ${
+                            active ? 'fill-amber-400 text-amber-400' : 'text-slate-200 fill-none'
+                          }`} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
 

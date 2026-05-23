@@ -1,8 +1,27 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, FileText, Image, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+
+const CHECKLIST_ITEMS = [
+  { key: 'id', label: 'Prepare your medical ID or identification card' },
+  { key: 'medications', label: 'List your current medications and dosages' },
+  { key: 'insurance', label: 'Have your insurance card ready' },
+  { key: 'questions', label: 'Prepare questions for your provider' },
+  { key: 'space', label: 'Clear a space in your home for the visit' },
+  { key: 'companion', label: 'Ensure a family member or friend can be present' },
+];
+
+const loadChecklist = (requestId) => {
+  try {
+    return JSON.parse(localStorage.getItem(`presession_checklist_${requestId}`) || '{}');
+  } catch { return {}; }
+};
+
+const saveChecklist = (requestId, checklist) => {
+  localStorage.setItem(`presession_checklist_${requestId}`, JSON.stringify(checklist));
+};
 
 const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
   const [files, setFiles] = useState([]);
@@ -14,7 +33,14 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
     hr: '',
     weight: ''
   });
+  const [checklist, setChecklist] = useState({});
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && request?.id) {
+      setChecklist(loadChecklist(request.id));
+    }
+  }, [isOpen, request?.id]);
 
   if (!isOpen || !request) return null;
 
@@ -144,6 +170,44 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
               <p className="text-sm text-slate-500 mt-1">
                 Help <span className="font-bold text-primary">{request.providerName}</span> prepare for your visit
               </p>
+            </div>
+
+            {/* Preparation Checklist */}
+            <div className="space-y-3">
+              <h4 className="text-xs uppercase font-bold text-slate-400 tracking-wider">Preparation Checklist</h4>
+              <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-4 space-y-2">
+                {CHECKLIST_ITEMS.map(item => (
+                  <label
+                    key={item.key}
+                    className="flex items-center gap-3 py-1 cursor-pointer group"
+                  >
+                    <div
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setChecklist(prev => {
+                          const next = { ...prev, [item.key]: !prev[item.key] };
+                          saveChecklist(request.id, next);
+                          return next;
+                        });
+                      }}
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                        checklist[item.key]
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : 'border-slate-300 bg-white group-hover:border-primary/40'
+                      }`}
+                    >
+                      {checklist[item.key] && (
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                    <span className={`text-sm transition-colors ${checklist[item.key] ? 'text-slate-500 line-through' : 'text-slate-700'}`}>
+                      {item.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
 
             {/* Self-Measured Vitals */}
