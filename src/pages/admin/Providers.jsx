@@ -148,9 +148,20 @@ const AdminProviders = () => {
     }
   };
 
+  const deleteProfessionalIdFiles = async (provider) => {
+    const paths = provider.professional_id_paths?.length > 0
+      ? provider.professional_id_paths
+      : (provider.professional_id_path ? [provider.professional_id_path] : []);
+    if (paths.length === 0) return;
+    const { error } = await supabase.storage.from('provider-docs').remove(paths);
+    if (error) console.error('Error deleting ID files:', error);
+  };
+
   const handleVerifyDocument = async (provider) => {
     setDocActionLoading(true);
     try {
+      await deleteProfessionalIdFiles(provider);
+
       let newScore = 0;
       if (provider.is_approved) newScore += 30;
       newScore += 30;
@@ -160,11 +171,12 @@ const AdminProviders = () => {
 
       const { error } = await supabase
         .from('providers')
-        .update({ professional_id_status: 'verified', trust_score: newScore })
+        .update({ professional_id_status: 'verified', professional_id_paths: [], professional_id_path: null, trust_score: newScore })
         .eq('id', provider.id);
       if (error) throw error;
       setSelectedProvider(null);
       await fetchProviders();
+      toast.success('Document verified. ID files have been removed from storage.');
     } catch (err) {
       console.error('Error verifying document:', err);
       toast.error('Failed to verify document.');
@@ -176,6 +188,8 @@ const AdminProviders = () => {
   const handleRejectDocument = async (provider) => {
     setDocActionLoading(true);
     try {
+      await deleteProfessionalIdFiles(provider);
+
       let newScore = 0;
       if (provider.is_approved) newScore += 30;
       if (provider.is_profile_complete) newScore += 20;
@@ -184,11 +198,12 @@ const AdminProviders = () => {
 
       const { error } = await supabase
         .from('providers')
-        .update({ professional_id_status: 'rejected', trust_score: newScore })
+        .update({ professional_id_status: 'rejected', professional_id_paths: [], professional_id_path: null, trust_score: newScore })
         .eq('id', provider.id);
       if (error) throw error;
       setSelectedProvider(null);
       await fetchProviders();
+      toast.success('Document rejected. ID files have been removed from storage.');
     } catch (err) {
       console.error('Error rejecting document:', err);
       toast.error('Failed to reject document.');

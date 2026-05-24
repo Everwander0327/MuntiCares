@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { MessageSquareWarning, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { usePresence } from '../contexts/PresenceContext';
 
 const formatRelativeTime = (dateStr) => {
   if (!dateStr) return '';
@@ -29,6 +30,7 @@ const getLastMessagePreview = (msg, userId) => {
 };
 
 const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
+  const { isUserOnline } = usePresence();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,26 +77,19 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
           .order('created_at', { ascending: false })
           .limit(100);
 
-        const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
-        const unreadCounts = {};
         const lastMsgMap = {};
 
         (msgData || []).forEach(msg => {
           const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
           if (!partnerMap[partnerId]) return;
-
           if (!lastMsgMap[partnerId]) lastMsgMap[partnerId] = msg;
-
-          if (msg.receiver_id === user.id && !readIds.has(msg.id)) {
-            unreadCounts[partnerId] = (unreadCounts[partnerId] || 0) + 1;
-          }
         });
 
         const list = partnerIds
           .map(id => ({
             ...partnerMap[id],
             lastMessage: lastMsgMap[id] || null,
-            unreadCount: unreadCounts[id] || 0,
+            unreadCount: 0,
           }))
           .sort((a, b) => {
             const ta = a.lastMessage?.created_at || '';
@@ -112,10 +107,13 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
     fetchData();
 
     const fetchUnreadCounts = async () => {
+      if (!user) return;
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('messages')
         .select('id, sender_id')
-        .eq('receiver_id', user.id);
+        .eq('receiver_id', user.id)
+        .gte('created_at', yesterday);
 
       if (!data) return;
       const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
@@ -131,9 +129,24 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, fetchUnreadCounts)
       .subscribe();
 
-    const pollInterval = setInterval(fetchUnreadCounts, 5000);
+    fetchUnreadCounts();
 
-    return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
+    const onMessagesRead = () => fetchUnreadCounts();
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible') fetchUnreadCounts(); };
+    const onWindowFocus = () => fetchUnreadCounts();
+    window.addEventListener('messages-read', onMessagesRead);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onWindowFocus);
+
+    const pollInterval = setInterval(fetchUnreadCounts, 2000);
+
+    return () => {
+      clearInterval(pollInterval);
+      supabase.removeChannel(channel);
+      window.removeEventListener('messages-read', onMessagesRead);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onWindowFocus);
+    };
   }, [user]);
 
   const filtered = searchTerm
@@ -190,6 +203,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
               <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden">
                 <img src={conv.photoUrl} alt="" className="w-full h-full object-cover" />
               </div>
+              <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-800 transition-colors ${isUserOnline(conv.id) ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
               {conv.unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white px-1">
                   {conv.unreadCount > 9 ? '9+' : conv.unreadCount}

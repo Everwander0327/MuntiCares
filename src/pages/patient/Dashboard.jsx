@@ -150,10 +150,12 @@ const PatientDashboard = () => {
     if (!user) return;
 
     const fetchUnreadCount = async () => {
+      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('messages')
         .select('id')
-        .eq('receiver_id', user.id);
+        .eq('receiver_id', user.id)
+        .gte('created_at', yesterday);
 
       if (!error) {
         const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
@@ -174,11 +176,21 @@ const PatientDashboard = () => {
       }, () => fetchUnreadCount())
       .subscribe();
 
-    const pollInterval = setInterval(fetchUnreadCount, 5000);
+    const onMessagesRead = () => fetchUnreadCount();
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible') fetchUnreadCount(); };
+    const onWindowFocus = () => fetchUnreadCount();
+    window.addEventListener('messages-read', onMessagesRead);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onWindowFocus);
+
+    const pollInterval = setInterval(fetchUnreadCount, 2000);
 
     return () => {
       clearInterval(pollInterval);
       supabase.removeChannel(channel);
+      window.removeEventListener('messages-read', onMessagesRead);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onWindowFocus);
     };
   }, [user]);
 

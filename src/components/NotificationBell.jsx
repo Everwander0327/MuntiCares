@@ -227,7 +227,35 @@ const NotificationBell = () => {
       if (error) throw error;
 
       const notifs = generateNotifications(data || [], user.role);
-      
+
+      // Also fetch unread messages for notification bell
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: msgData } = await supabase
+        .from('messages')
+        .select('id, content, created_at, sender:sender_id(full_name)')
+        .eq('receiver_id', user.id)
+        .gte('created_at', oneDayAgo)
+        .order('created_at', { ascending: false });
+      if (msgData) {
+        const readMsgIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
+        const unreadMsgs = msgData.filter(m => !readMsgIds.has(m.id));
+        const seenSenders = new Set();
+        unreadMsgs.forEach(msg => {
+          const senderName = msg.sender?.full_name || 'Someone';
+          if (!seenSenders.has(msg.sender_id)) {
+            seenSenders.add(msg.sender_id);
+            notifs.push({
+              id: `msg-${msg.id}`,
+              type: 'new_message',
+              title: `New Message from ${senderName}`,
+              message: msg.content?.substring(0, 80),
+              time: msg.created_at,
+              link: user.role === 'patient' ? '/patient/messages' : '/provider/messages',
+            });
+          }
+        });
+      }
+
       // Compare with previous fetch to trigger real-time toasts on updates (essential for anon auth)
       if (prevNotifsRef.current.length > 0) {
         const newlyAdded = notifs.filter(n => !prevNotifsRef.current.some(pn => pn.id === n.id));
@@ -241,6 +269,7 @@ const NotificationBell = () => {
           else if (notif.type === 'request_rejected') icon = '❌';
           else if (notif.type === 'new_request') icon = '📋';
           else if (notif.type === 'request_cancelled') icon = '🚫';
+          else if (notif.type === 'new_message') icon = '💬';
 
           toast(
             <div>
@@ -313,9 +342,26 @@ const NotificationBell = () => {
       )
       .subscribe();
 
+    const msgChannel = supabase
+      .channel('notification-bell-msgs')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${user.id}`
+        },
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
     return () => {
       clearInterval(pollInterval);
       supabase.removeChannel(channel);
+      supabase.removeChannel(msgChannel);
     };
   }, [user]);
 

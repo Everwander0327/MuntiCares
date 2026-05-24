@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
+import { unlockAudio } from './lib/audio';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
@@ -44,6 +45,12 @@ function AppContent() {
     window.scrollTo(0, 0);
     document.querySelector('main')?.scrollTo(0, 0);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const handler = () => { unlockAudio(); document.removeEventListener('pointerdown', handler); };
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
+  }, []);
 
   return (
     <AnimatePresence mode="wait">

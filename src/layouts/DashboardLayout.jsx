@@ -124,6 +124,15 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     badge: authUser?.role ? authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1) : userInfo[currentRole]?.badge,
   };
 
+  const deleteOldMessages = useCallback(async () => {
+    if (!authUser) return;
+    const { error } = await supabase
+      .from('messages')
+      .delete()
+      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    if (error) console.warn('Message cleanup error:', error);
+  }, [authUser]);
+
   const fetchCounts = useCallback(async () => {
     if (!authUser) return;
     const pendingRes = await supabase
@@ -133,10 +142,12 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       .eq('status', 'Pending');
     if (!pendingRes.error) setPendingCount(pendingRes.count || 0);
 
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: msgData, error: msgError } = await supabase
       .from('messages')
       .select('id')
-      .eq('receiver_id', authUser.id);
+      .eq('receiver_id', authUser.id)
+      .gte('created_at', yesterday);
     if (!msgError) {
       const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${authUser.id}`) || '[]'));
       const unreadCount = (msgData || []).filter(m => !readIds.has(m.id)).length;
@@ -146,6 +157,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
   useEffect(() => {
     fetchCounts();
+    deleteOldMessages();
 
     const channel = supabase
       .channel('layout-counts')
@@ -153,17 +165,32 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, () => fetchCounts())
       .subscribe();
 
-    const pollInterval = setInterval(fetchCounts, 5000);
+    const onMessagesRead = () => fetchCounts();
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible') fetchCounts(); };
+    const onWindowFocus = () => fetchCounts();
+    window.addEventListener('messages-read', onMessagesRead);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('focus', onWindowFocus);
 
-    return () => { clearInterval(pollInterval); supabase.removeChannel(channel); };
-  }, [authUser, fetchCounts]);
+    const pollInterval = setInterval(fetchCounts, 2000);
+    const cleanupInterval = setInterval(deleteOldMessages, 60000);
+
+    return () => {
+      clearInterval(pollInterval);
+      clearInterval(cleanupInterval);
+      supabase.removeChannel(channel);
+      window.removeEventListener('messages-read', onMessagesRead);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('focus', onWindowFocus);
+    };
+  }, [authUser, fetchCounts, deleteOldMessages]);
 
   useEffect(() => {
     fetchCounts();
   }, [location.pathname, fetchCounts]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex overflow-hidden">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
         {isSidebarOpen && (
@@ -289,7 +316,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
+      <div id="mobile-bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
         <div className="flex items-center justify-around px-1 py-1">
           {links.slice(0, 5).map((link) => {
             let badge = 0;

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Send, UserCircle, Loader2, Check, CheckCheck, Video, X, ArrowLeft, Clock } from 'lucide-react';
+import { Send, UserCircle, Loader2, Check, CheckCheck, Video, X, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Phone, PhoneOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { JitsiMeeting } from '@jitsi/react-sdk';
+import { useCalls } from '../contexts/CallContext';
 
 const addReadMsgIds = (userId, ids) => {
   if (!ids.length) return;
@@ -13,6 +14,7 @@ const addReadMsgIds = (userId, ids) => {
     ids.forEach(id => set.add(id));
     const arr = Array.from(set).slice(-500);
     localStorage.setItem(key, JSON.stringify(arr));
+    window.dispatchEvent(new Event('messages-read'));
   } catch {}
 };
 
@@ -33,31 +35,28 @@ const shouldShowTimestamp = (msg, nextMsg) => {
   return diff > 5 * 60 * 1000;
 };
 
-const ChatWindow = ({ currentUser, otherUser, onBack }) => {
+const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
+  const { startCallBroadcast, sendCallEnded, callDeclinedByPeer } = useCalls();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
-  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
-  const [incomingCall, setIncomingCall] = useState(false);
+  const [callStatus, setCallStatus] = useState('idle'); // idle | connecting | connected | ended
   const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [callTimer, setCallTimer] = useState(0);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isCameraOff, setIsCameraOff] = useState(true);
+  const [showDeclinedCall, setShowDeclinedCall] = useState(false);
+  const [jitsiReady, setJitsiReady] = useState(false);
+  const [jitsiError, setJitsiError] = useState(null);
 
   const messagesEndRef = useRef(null);
   const scrollRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const channelRef = useRef(null);
-  const ringtoneRef = useRef(null);
-
-  useEffect(() => {
-    ringtoneRef.current = new Audio('https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg');
-    ringtoneRef.current.loop = true;
-    return () => {
-      if (ringtoneRef.current) {
-        ringtoneRef.current.pause();
-      }
-    };
-  }, []);
+  const jitsiApiRef = useRef(null);
+  const locallyEndingRef = useRef(false);
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -75,10 +74,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
     const fetchMessages = async () => {
       setLoading(true);
 
-      await supabase
-        .from('messages')
-        .delete()
-        .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+      try {
+        await supabase
+          .from('messages')
+          .delete()
+          .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+      } catch (err) {
+        console.warn('Chat cleanup error:', err);
+      }
 
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
@@ -101,7 +104,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
 
     fetchMessages();
 
-    const roomName = `chat_${currentUser.id}_${otherUser.id}`;
+    const roomName = `chat_${[currentUser.id, otherUser.id].sort().join('_')}`;
     const channel = supabase.channel(roomName, {
       config: { presence: { key: currentUser.id }, broadcast: { self: true } }
     });
@@ -157,11 +160,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
           setTimeout(scrollToBottom, 50);
         }
       })
-      .on('broadcast', { event: 'incoming_call' }, (payload) => {
-        if (payload.payload.sender_id === otherUser.id && payload.payload.receiver_id === currentUser.id) {
-          setIncomingCall(true);
-          ringtoneRef.current?.play().catch(e => console.log('Audio play blocked:', e));
-        }
+      .on('broadcast', { event: 'call_accepted' }, () => {
+        // Peer accepted the call — if we're still connecting, transition
+      })
+      .on('broadcast', { event: 'call_ended' }, () => {
+        setCallStatus('ended');
+        setIsMuted(true);
+        setIsCameraOff(true);
+        setJitsiReady(false);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
@@ -241,16 +247,113 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
     await sendMessage(msgText);
   };
 
-  const startVideoCall = () => {
-    setIsVideoCallActive(true);
-    sendMessage("📞 I've started a video consultation. Please click the Video icon at the top right to join the call!");
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'incoming_call',
-        payload: { sender_id: currentUser.id, receiver_id: otherUser.id }
-      });
+  useEffect(() => {
+    if (callStatus !== 'connected') return;
+    setCallTimer(0);
+    const interval = setInterval(() => setCallTimer(t => t + 1), 1000);
+    return () => clearInterval(interval);
+  }, [callStatus]);
+
+  useEffect(() => {
+    if (autoStartVideo && otherUser?.id && currentUser) {
+      setCallStatus('connecting');
     }
+  }, [autoStartVideo]);
+
+  useEffect(() => {
+    if (callStatus !== 'connecting') {
+      setJitsiError(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      if (!jitsiReady) {
+        setJitsiError('Timed out waiting for video connection. The meeting server may be unreachable on this network.');
+      }
+    }, 20000);
+    return () => clearTimeout(timer);
+  }, [callStatus, jitsiReady]);
+
+  useEffect(() => {
+    if (callDeclinedByPeer) {
+      setShowDeclinedCall(true);
+      setCallStatus('idle');
+      setIsMuted(true);
+      setIsCameraOff(true);
+      setJitsiReady(false);
+      setTimeout(() => setShowDeclinedCall(false), 3000);
+    }
+  }, [callDeclinedByPeer]);
+
+  const formatTime = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  const startVideoCall = () => {
+    setCallTimer(0);
+    setCallStatus('connecting');
+    sendMessage("📞 I've started a video consultation. Please click the Video icon at the top right to join the call!");
+    if (otherUser?.id && currentUser) {
+      startCallBroadcast(otherUser.id, currentUser.name);
+    }
+  };
+
+  const endVideoCall = () => {
+    if (locallyEndingRef.current) return;
+    locallyEndingRef.current = true;
+    channelRef.current?.send({
+      type: 'broadcast',
+      event: 'call_ended',
+      payload: { sender_id: currentUser.id }
+    });
+    if (otherUser?.id) {
+      sendCallEnded(otherUser.id);
+    }
+    jitsiApiRef.current?.executeCommand('hangup');
+    setCallStatus('ended');
+    setIsMuted(true);
+    setIsCameraOff(true);
+    setJitsiReady(false);
+  };
+
+  const closeVideoOverlay = () => {
+    locallyEndingRef.current = false;
+    setCallStatus('idle');
+    setJitsiReady(false);
+  };
+
+  const toggleMute = () => {
+    const next = !isMuted;
+    setIsMuted(next);
+    jitsiApiRef.current?.executeCommand('toggleAudio');
+  };
+
+  const toggleCamera = () => {
+    const next = !isCameraOff;
+    setIsCameraOff(next);
+    jitsiApiRef.current?.executeCommand('toggleVideo');
+  };
+
+  const handleJitsiReady = (api) => {
+    jitsiApiRef.current = api;
+    setJitsiReady(true);
+    setCallStatus('connected');
+
+    api.addListener('participantLeft', () => {
+      if (locallyEndingRef.current) return;
+      if (api.getNumberOfParticipants() <= 1) {
+        channelRef.current?.send({
+          type: 'broadcast',
+          event: 'call_ended',
+          payload: { sender_id: currentUser.id }
+        });
+        setCallStatus('ended');
+        setIsMuted(true);
+        setIsCameraOff(true);
+        setJitsiReady(false);
+      }
+    });
   };
 
   if (loading) {
@@ -273,52 +376,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-800 relative overflow-hidden">
-      {/* Incoming Call Overlay */}
-      <AnimatePresence>
-        {incomingCall && (
-          <motion.div
-            initial={{ opacity: 0, y: -50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -50, scale: 0.9 }}
-            className="absolute top-4 inset-x-4 z-[150] bg-white dark:bg-slate-800 rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.15)] dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 p-4 flex items-center justify-between"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center animate-pulse shrink-0">
-                <Video className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h3 className="font-bold text-slate-900 dark:text-slate-100 leading-tight">Incoming Video Call...</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{otherUser.name} is calling you</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  ringtoneRef.current?.pause();
-                  setIncomingCall(false);
-                  setIsVideoCallActive(true);
-                }}
-                className="w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center hover:bg-green-600 transition-colors shadow-lg shadow-green-500/30 hover:scale-105"
-              >
-                <Check className="w-6 h-6" />
-              </button>
-              <button
-                onClick={() => {
-                  ringtoneRef.current?.pause();
-                  setIncomingCall(false);
-                }}
-                className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg shadow-red-500/30 hover:scale-105"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Video Call Overlay */}
       <AnimatePresence>
-        {isVideoCallActive && (
+        {callStatus !== 'idle' && (
           <motion.div
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
@@ -326,53 +386,197 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="absolute inset-0 z-[100] bg-slate-900 flex flex-col"
           >
-            <div className="flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 text-white shrink-0 shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                  <Video className="w-5 h-5 text-blue-400" />
-                </div>
-                <div>
-                  <h3 className="font-bold">Teleconsultation</h3>
-                  <p className="text-xs text-slate-400">with {otherUser.name}</p>
-                </div>
+            {/* Connecting Screen */}
+            {callStatus === 'connecting' && (
+              <div className="flex-1 flex flex-col items-center justify-center px-6">
+                {jitsiError ? (
+                  <>
+                    <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
+                      <PhoneOff className="w-9 h-9 text-red-400" />
+                    </div>
+                    <h3 className="text-white text-lg font-bold">Connection Failed</h3>
+                    <p className="text-slate-400 text-sm mt-2 text-center max-w-xs">{jitsiError}</p>
+                    <p className="text-slate-500 text-xs mt-3 text-center max-w-xs">
+                      Make sure the app is served over HTTPS (required for camera/mic access on mobile browsers).
+                    </p>
+                    <button
+                      onClick={() => { endVideoCall(); closeVideoOverlay(); }}
+                      className="mt-8 px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm transition-all active:scale-95 backdrop-blur-sm"
+                    >
+                      Close
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative w-24 h-24 mb-6">
+                      <motion.div
+                        className="absolute inset-0 rounded-full border-2 border-blue-400"
+                        animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                      <div className="absolute inset-1 rounded-full bg-blue-500/20 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-blue-400">
+                          {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                        </span>
+                      </div>
+                    </div>
+                    <h3 className="text-white text-lg font-bold">Connecting...</h3>
+                    <p className="text-slate-400 text-sm mt-1">{otherUser?.name || 'User'}</p>
+                    <div className="flex items-center gap-2 mt-6">
+                      <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                      <span className="text-slate-400 text-sm">Establishing secure connection</span>
+                    </div>
+                    <button
+                      onClick={() => { endVideoCall(); closeVideoOverlay(); }}
+                      className="mt-10 w-14 h-14 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30 active:scale-90"
+                      title="Cancel Call"
+                    >
+                      <PhoneOff className="w-6 h-6" />
+                    </button>
+                  </>
+                )}
               </div>
-              <button
-                onClick={() => setIsVideoCallActive(false)}
-                className="p-2 hover:bg-red-500/20 hover:text-red-400 rounded-full transition-colors flex items-center gap-2 text-sm font-bold bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-                End Call
-              </button>
+            )}
+
+            {/* Jitsi always mounts here but is hidden behind connecting/ended overlays */}
+            <div className={`absolute inset-0 flex flex-col ${callStatus === 'connected' ? 'z-0' : 'z-[-1] opacity-0 pointer-events-none'}`}>
+              <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-white shrink-0 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                    <Video className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm">Teleconsultation</h3>
+                    <p className="text-[11px] text-slate-400 font-mono font-medium">{formatTime(callTimer)}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={endVideoCall}
+                  className="w-9 h-9 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30 active:scale-90"
+                  title="End Call"
+                >
+                  <PhoneOff className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="flex-1 w-full bg-black relative">
+                {!jitsiReady && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+                    <div className="text-center">
+                      <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
+                      <p className="text-slate-400 text-sm">Connecting to video...</p>
+                    </div>
+                  </div>
+                )}
+                <JitsiMeeting
+                  domain="meet.jit.si"
+                  roomName={roomName}
+                  configOverwrite={{
+                    startWithAudioMuted: true,
+                    startWithVideoMuted: true,
+                    disableInitialGUM: true,
+                    disableModeratorIndicator: true,
+                    enableEmailInStats: false,
+                    prejoinPageEnabled: false,
+                    hideConferenceSubject: true,
+                    hideParticipantsStats: true,
+                    disableFilmstripAutohiding: false,
+                    disableDeepLinking: true,
+                  }}
+                  interfaceConfigOverwrite={{
+                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+                    SHOW_JITSI_WATERMARK: false,
+                    SHOW_WATERMARK_FOR_GUESTS: false,
+                    SHOW_BRAND_WATERMARK: false,
+                    TOOLBAR_BUTTONS: [],
+                    FILM_STRIP_MAX_HEIGHT: 0,
+                    SHOW_CHROME_EXTENSION_BANNER: false,
+                    SHOW_POWERED_BY: false,
+                    SHOW_PROMOTIONAL_CLOSE_PAGE: false,
+                    MOBILE_APP_PROMO: false,
+                  }}
+                  userInfo={{ displayName: currentUser.name }}
+                  getIFrameRef={(iframeRef) => {
+                    iframeRef.style.height = '100%';
+                    iframeRef.style.width = '100%';
+                    iframeRef.style.border = 'none';
+                    iframeRef.setAttribute('allow', 'camera *; microphone *; display-capture *');
+                  }}
+                  onApiReady={handleJitsiReady}
+                />
+              </div>
+
+              {/* Bottom Controls */}
+              <div className="px-6 py-4 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex items-center justify-center gap-6 shrink-0">
+                <button
+                  onClick={toggleMute}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 ${isMuted ? 'bg-red-500/20 text-red-400' : 'bg-slate-700/60 text-white hover:bg-slate-600'}`}
+                  title={isMuted ? 'Unmute' : 'Mute'}
+                >
+                  {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={toggleCamera}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 ${isCameraOff ? 'bg-red-500/20 text-red-400' : 'bg-slate-700/60 text-white hover:bg-slate-600'}`}
+                  title={isCameraOff ? 'Turn Camera On' : 'Turn Camera Off'}
+                >
+                  {isCameraOff ? <CameraOff className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+                </button>
+                <button
+                  onClick={endVideoCall}
+                  className="w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30 active:scale-90"
+                  title="End Call"
+                >
+                  <PhoneOff className="w-6 h-6" />
+                </button>
+              </div>
             </div>
-            <div className="flex-1 w-full bg-black relative">
-              <JitsiMeeting
-                domain="meet.jit.si"
-                roomName={roomName}
-                configOverwrite={{
-                  startWithAudioMuted: false,
-                  startWithVideoMuted: false,
-                  disableModeratorIndicator: true,
-                  enableEmailInStats: false,
-                  prejoinPageEnabled: false,
-                }}
-                interfaceConfigOverwrite={{
-                  DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-                  TOOLBAR_BUTTONS: [
-                    'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                    'fodeviceselection', 'hangup', 'profile', 'chat', 'settings', 'raisehand',
-                    'videoquality', 'filmstrip', 'shortcuts', 'tileview'
-                  ]
-                }}
-                userInfo={{ displayName: currentUser.name }}
-                getIFrameRef={(iframeRef) => {
-                  iframeRef.style.height = '100%';
-                  iframeRef.style.width = '100%';
-                }}
-              />
-            </div>
+
+            {/* Ended Screen */}
+            {callStatus === 'ended' && (
+              <div className="flex-1 flex flex-col items-center justify-center px-6">
+                <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-5 border border-slate-700">
+                  <PhoneOff className="w-9 h-9 text-slate-400" />
+                </div>
+                <h3 className="text-white text-xl font-bold">Call Ended</h3>
+                {callTimer > 0 && (
+                  <p className="text-slate-400 text-sm mt-1 font-mono">
+                    Duration: {formatTime(callTimer)}
+                  </p>
+                )}
+                <p className="text-slate-500 text-xs mt-4 text-center max-w-xs">
+                  {otherUser?.name || 'The other party'} has left the call
+                </p>
+                <button
+                  onClick={closeVideoOverlay}
+                  className="mt-8 px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm transition-all active:scale-95 backdrop-blur-sm"
+                >
+                  Return to Chat
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showDeclinedCall && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="absolute inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center"
+        >
+          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-xs w-full mx-4 shadow-2xl border border-slate-100 dark:border-slate-700 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <PhoneOff className="w-9 h-9 text-red-500" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Call Declined</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+              {otherUser?.name || 'The other party'} declined the call
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Chat Header */}
       <div className="px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3 shrink-0 z-10">
@@ -400,13 +604,17 @@ const ChatWindow = ({ currentUser, otherUser, onBack }) => {
             {isOnline ? 'Active now' : 'Offline'}
           </p>
         </div>
-        <button
+        <motion.button
           onClick={startVideoCall}
-          className="w-11 h-11 rounded-full bg-blue-50 dark:bg-blue-900/30 text-primary flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all shrink-0 border border-blue-100 dark:border-blue-900/30 hover:scale-105"
+          className="w-11 h-11 rounded-full bg-blue-50 dark:bg-blue-900/30 text-primary flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all shrink-0 border border-blue-100 dark:border-blue-900/30"
           title="Start Teleconsultation"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
+          animate={{ scale: [1, 1.04, 1] }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
         >
           <Video className="w-5 h-5 fill-current" />
-        </button>
+        </motion.button>
       </div>
 
       {/* Messages Area */}

@@ -2,11 +2,19 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { sha256Hex } from '../../lib/hash';
 import { toast } from 'react-hot-toast';
-import useFormValidation from '../../hooks/useFormValidation';
+import { FormInput } from '../../components/ui/form-input';
+
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(6, 'At least 6 characters'),
+});
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -15,10 +23,10 @@ const LoginPage = () => {
   const [shake, setShake] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const form = useFormValidation([
-    { name: 'email', rules: ['required', 'email'] },
-    { name: 'password', rules: ['required', (v) => v.length >= 6 || 'At least 6 characters'] },
-  ]);
+
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(loginSchema),
+  });
 
   // Redirect if already logged in
   React.useEffect(() => {
@@ -30,17 +38,9 @@ const LoginPage = () => {
     }
   }, [user, navigate]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleLogin = async (data) => {
     setError('');
-
-    if (!form.validateAll()) {
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      return;
-    }
-
-    const { email, password } = form.values;
+    const { email, password } = data;
 
     try {
       setLoading(true);
@@ -125,39 +125,28 @@ const LoginPage = () => {
           <p className="text-slate-500 dark:text-slate-400 mt-2">Login to manage your home care</p>
         </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input 
-                type="email" 
-                placeholder="juan.delacruz@example.com"
-                value={form.values.email}
-                onChange={(e) => form.handleChange('email', e.target.value)}
-                onBlur={() => form.handleBlur('email')}
-                className={`w-full bg-white/70 dark:bg-slate-800/70 border rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${form.errors.email && form.touched.email ? 'border-red-300' : 'border-slate-200 dark:border-slate-600'}`}
-              />
-              {form.errors.email && form.touched.email && (
-                <p className="text-xs text-red-500 mt-1 ml-1">{form.errors.email}</p>
-              )}
-            </div>
-          </div>
+        <form className="space-y-6" onSubmit={handleSubmit(handleLogin)}>
+          <FormInput
+            label="Email Address"
+            type="email"
+            placeholder="juan.delacruz@example.com"
+            icon={Mail}
+            error={errors.email?.message}
+            {...register('email')}
+          />
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+            <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Password</label>
             <div className="relative">
               <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input 
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                value={form.values.password}
-                onChange={(e) => form.handleChange('password', e.target.value)}
-                onBlur={() => form.handleBlur('password')}
-                className={`w-full bg-white/70 dark:bg-slate-800/70 border rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${form.errors.password && form.touched.password ? 'border-red-300' : 'border-slate-200 dark:border-slate-600'}`}
+                className={`w-full bg-white/70 dark:bg-slate-800/70 border rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${errors.password ? 'border-red-300 dark:border-red-500' : 'border-slate-200 dark:border-slate-600'}`}
+                {...register('password')}
               />
-              {form.errors.password && form.touched.password && (
-                <p className="text-xs text-red-500 mt-1 ml-1">{form.errors.password}</p>
+              {errors.password && (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1 ml-1">{errors.password.message}</p>
               )}
               <button
                 type="button"

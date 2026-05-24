@@ -1,8 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Upload, FileText, Image, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
+import { Upload, FileText, Image, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 const CHECKLIST_ITEMS = [
   { key: 'id', label: 'Prepare your medical ID or identification card' },
@@ -41,8 +48,6 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
       setChecklist(loadChecklist(request.id));
     }
   }, [isOpen, request?.id]);
-
-  if (!isOpen || !request) return null;
 
   const handleFileSelect = (e) => {
     const selected = Array.from(e.target.files);
@@ -140,37 +145,21 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
     }
   };
 
-  return (
-    <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      >
-        <motion.div
-          className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-lg w-full border border-slate-100 dark:border-slate-700 shadow-2xl relative my-8"
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          onClick={e => e.stopPropagation()}
-        >
-          <button
-            onClick={onClose}
-            className="absolute right-6 top-6 p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
-          >
-            <X className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-          </button>
+  if (!request) return null;
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="text-center pr-8">
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-lg p-8 overflow-y-auto max-h-[90vh]">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <DialogHeader>
+            <div className="text-center">
               <span className="text-3xl">🩺</span>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-2">Pre-Session Information</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <DialogTitle className="mt-2">Pre-Session Information</DialogTitle>
+              <DialogDescription className="mt-1">
                 Help <span className="font-bold text-primary">{request.providerName}</span> prepare for your visit
-              </p>
+              </DialogDescription>
             </div>
+          </DialogHeader>
 
             {/* Preparation Checklist */}
             <div className="space-y-3">
@@ -320,38 +309,22 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
               )}
             </div>
 
-            {/* Submit */}
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="w-full py-3 border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-2xl font-bold text-slate-600 dark:text-slate-300 transition-all text-sm"
-              >
+              <Button type="button" variant="secondary" onClick={onClose}>
                 Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={uploading}
-                className="w-full py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 text-white rounded-2xl font-bold transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 text-sm"
-              >
+              </Button>
+              <Button type="submit" disabled={uploading}>
                 {uploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Uploading...
-                  </>
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
                 ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    Submit Info
-                  </>
+                  <><CheckCircle2 className="w-4 h-4" /> Submit Info</>
                 )}
-              </button>
+              </Button>
             </div>
           </form>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};
+        </DialogContent>
+      </Dialog>
+    );
+  };
 
 export default PreSessionUploadModal;

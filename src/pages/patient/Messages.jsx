@@ -6,6 +6,8 @@ import { MessageCircle, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatWindow from '../../components/ChatWindow';
 import ConversationList from '../../components/ConversationList';
+import IncomingCallOverlay from '../../components/IncomingCallOverlay';
+import { CallProvider } from '../../contexts/CallContext';
 import { useLocation } from 'react-router-dom';
 import useMediaQuery from '../../hooks/useMediaQuery';
 
@@ -23,6 +25,7 @@ const PatientMessages = () => {
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [currentUserData, setCurrentUserData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [autoStartVideo, setAutoStartVideo] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -42,25 +45,33 @@ const PatientMessages = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const targetId = params.get('provider');
+    const targetId = params.get('provider') || params.get('partner');
     if (targetId && currentUserData) {
-      setSelectedPartner({ id: targetId });
+      const partnerName = params.get('name') || undefined;
+      setSelectedPartner({ id: targetId, name: partnerName });
       setView('chat');
+      if (params.get('startVideo') === '1') {
+        setAutoStartVideo(true);
+      }
+      window.history.replaceState({}, '', location.pathname);
     }
   }, [location.search, currentUserData]);
 
   const handleSelect = (partner) => {
     setSelectedPartner(partner);
     setView('chat');
+    setAutoStartVideo(false);
   };
 
   const handleBack = () => {
     setView('list');
     setSelectedPartner(null);
+    setAutoStartVideo(false);
   };
 
   return (
-    <>
+    <CallProvider>
+      <IncomingCallOverlay />
       <DashboardLayout role="patient">
         {view === 'list' ? (
           <div className="max-w-6xl h-[calc(100vh-120px)] md:h-[calc(100vh-80px)] flex flex-col mx-auto">
@@ -104,6 +115,7 @@ const PatientMessages = () => {
             currentUser={currentUserData}
             otherUser={selectedPartner}
             onBack={handleBack}
+            autoStartVideo={autoStartVideo}
           />
         ) : null}
       </DashboardLayout>
@@ -114,10 +126,11 @@ const PatientMessages = () => {
             currentUser={currentUserData}
             otherUser={selectedPartner}
             onBack={handleBack}
+            autoStartVideo={autoStartVideo}
           />
         </div>
       )}
-    </>
+    </CallProvider>
   );
 };
 

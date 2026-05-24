@@ -2,26 +2,40 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import confetti from 'canvas-confetti';
 import { supabase } from '../../lib/supabase';
 import { sha256Hex } from '../../lib/hash';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { FormInput } from '../../components/ui/form-input';
+
+const registerSchema = z.object({
+  fullName: z.string().min(2, 'Enter your full name').regex(/^[a-zA-Z\s'-]+$/, 'Letters only'),
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(6, 'At least 6 characters'),
+  confirmPassword: z.string(),
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
 
 const RegisterPage = () => {
   const [role, setRole] = useState('patient');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [shake, setShake] = useState(false);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, login } = useAuth();
-  
+
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(registerSchema),
+  });
+
   // Redirect if already logged in
   React.useEffect(() => {
     if (user) {
@@ -32,58 +46,39 @@ const RegisterPage = () => {
     }
   }, [user, navigate]);
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
+  const handleRegister = async (data) => {
     setError('');
-
-    if (!fullName || !email || !password || !confirmPassword) {
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-      return;
-    }
 
     try {
       setLoading(true);
-      // Hash password client-side before inserting (interim measure)
-      const hashed = await sha256Hex(password);
-      // Insert user directly into the custom 'users' table without Supabase Auth
-      const { data, error: insertError } = await supabase
+      const hashed = await sha256Hex(data.password);
+
+      const { data: newUser, error: insertError } = await supabase
         .from('users')
         .insert([
           { 
-            full_name: fullName, 
-            email: email, 
+            full_name: data.fullName, 
+            email: data.email, 
             password: hashed, 
             role: role 
           }
         ])
         .select();
 
-      if (insertError) {
-        throw insertError;
-      }
+      if (insertError) throw insertError;
 
-      // If registering as a provider, also create a row in the providers table
-      if (role === 'provider' && data && data[0]) {
+      if (role === 'provider' && newUser && newUser[0]) {
         const { error: providerError } = await supabase
           .from('providers')
-          .insert([{ user_id: data[0].id }]);
+          .insert([{ user_id: newUser[0].id }]);
 
         if (providerError) {
           console.error('Error creating provider profile:', providerError);
         }
       }
 
-      // Store basic info in context 
-      if (data && data[0]) {
-        login(data[0]);
+      if (newUser && newUser[0]) {
+        login(newUser[0]);
         toast.success('Account created');
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
       }
@@ -129,7 +124,7 @@ const RegisterPage = () => {
           <p className="text-slate-500 dark:text-slate-400 mt-2">Join Muntinlupa's home care network</p>
         </div>
 
-        <form className="space-y-8" onSubmit={handleRegister}>
+        <form className="space-y-8" onSubmit={handleSubmit(handleRegister)}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Patient Role Card */}
             <motion.div 
@@ -197,47 +192,32 @@ const RegisterPage = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Juan Dela Cruz"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-600 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
-              </div>
-            </div>
+            <FormInput
+              label="Full Name"
+              placeholder="Juan Dela Cruz"
+              icon={User}
+              error={errors.fullName?.message}
+              {...register('fullName')}
+            />
+
+            <FormInput
+              label="Email Address"
+              type="email"
+              placeholder="juan@example.com"
+              icon={Mail}
+              error={errors.email?.message}
+              {...register('email')}
+            />
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input 
-                  type="email" 
-                  placeholder="juan@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-600 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Password</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input 
+                <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-600 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className={`w-full bg-white/70 dark:bg-slate-800/70 border rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${errors.password ? 'border-red-300 dark:border-red-500' : 'border-slate-200 dark:border-slate-600'}`}
+                  {...register('password')}
                 />
                 <button
                   type="button"
@@ -247,19 +227,18 @@ const RegisterPage = () => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {errors.password && <p className="text-xs text-red-500 dark:text-red-400 mt-1 ml-1">{errors.password.message}</p>}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700 ml-1">Confirm Password</label>
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Confirm Password</label>
               <div className="relative">
                 <UserCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input 
+                <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  className="w-full bg-white/70 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-600 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                  className={`w-full bg-white/70 dark:bg-slate-800/70 border rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all ${errors.confirmPassword ? 'border-red-300 dark:border-red-500' : 'border-slate-200 dark:border-slate-600'}`}
+                  {...register('confirmPassword')}
                 />
                 <button
                   type="button"
@@ -269,6 +248,7 @@ const RegisterPage = () => {
                   {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {errors.confirmPassword && <p className="text-xs text-red-500 dark:text-red-400 mt-1 ml-1">{errors.confirmPassword.message}</p>}
             </div>
           </div>
 
