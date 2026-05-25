@@ -4,6 +4,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Theme transition */
 html {
   transition: background-color 0.3s ease, color 0.3s ease;
@@ -35,15 +47,82 @@ h1, h2, h3, h4, h5, h6 {
 
 @layer components {
   .btn-primary {
-    @apply bg-primary text-white px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg hover:scale-[1.02] active:scale-[0.97];
+    @apply relative overflow-hidden bg-primary text-white px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 hover:bg-opacity-90 hover:shadow-lg hover:shadow-primary/25 hover:scale-[1.02] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
   }
-  
+
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.2);
+    border-radius: inherit;
+    transform: scale(0);
+    pointer-events: none;
+  }
+
+  .btn-primary:active::after {
+    animation: ripple 0.4s ease-out;
+  }
+
   .btn-outline {
-    @apply border-2 border-primary text-primary px-6 py-2 rounded-lg font-medium transition-all duration-300 hover:bg-primary hover:text-white hover:scale-[1.02] active:scale-[0.97];
+    @apply relative overflow-hidden border-2 border-primary text-primary px-6 py-2.5 rounded-xl font-semibold transition-all duration-300 hover:bg-primary hover:text-white hover:scale-[1.02] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+
+  .btn-outline::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(30,111,191,0.15);
+    border-radius: inherit;
+    transform: scale(0);
+    pointer-events: none;
+  }
+
+  .btn-outline:active::after {
+    animation: ripple 0.4s ease-out;
   }
 
   .card {
-    @apply bg-white p-8 rounded-2xl shadow-xl shadow-blue-900/5 border border-blue-50 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50;
+    @apply bg-white/70 p-6 md:p-8 rounded-2xl shadow shadow-blue-900/5 border border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 dark:bg-slate-800/70 dark:border-slate-700/50;
+  }
+
+  @media (min-width: 768px) {
+    .card {
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+  }
+}
+
+/* Button ripple */
+@keyframes ripple {
+  from { transform: scale(0); opacity: 1; }
+  to { transform: scale(2.5); opacity: 0; }
+}
+
+/* Animated underline for links */
+.link-underline {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-size: 0% 2px;
+  background-repeat: no-repeat;
+  background-position: left bottom;
+  transition: background-size 0.3s ease;
+}
+
+.link-underline:hover {
+  background-size: 100% 2px;
+}
+
+/* Card icon hover animation */
+@keyframes icon-bounce {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.15) rotate(-4deg); }
+  75% { transform: scale(1.15) rotate(4deg); }
+}
+
+@media (hover: hover) {
+  .group:hover .card-icon-animate {
+    animation: icon-bounce 0.6s ease-in-out;
   }
 }
 
@@ -51,6 +130,13 @@ h1, h2, h3, h4, h5, h6 {
 input:focus, textarea:focus, select:focus {
   border-color: #1E6FBF !important;
   box-shadow: 0 0 0 3px rgba(30, 111, 191, 0.15) !important;
+}
+
+/* Focus-visible for all interactive elements */
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(30, 111, 191, 0.4);
+  border-radius: inherit;
 }
 
 /* Skeleton loading animation */
@@ -95,6 +181,62 @@ input:focus, textarea:focus, select:focus {
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float {
+    animation: none;
+  }
+}
+
+/* Animated gradient background */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Gradient text animation */
+@keyframes gradient-text-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-text {
+  background-size: 200% auto;
+  animation: gradient-text-shift 4s ease infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Floating particles */
+@keyframes particle-float {
+  0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-100vh) translateX(30px) scale(0); opacity: 0; }
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #1E6FBF;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Blur-up image loading */
+@keyframes blur-load {
+  from { filter: blur(20px); }
+  to { filter: blur(0); }
 }
 
 /* Shake animation for form errors */

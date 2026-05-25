@@ -4,8 +4,52 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Connecting Muntinlupa City residents with trusted, verified home care providers." />
-    <title>MuntiCares</title>
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="MuntiCares — Connecting Muntinlupa City residents with trusted, verified home care providers. Fast, secure, and patient-first." />
+    <meta name="keywords" content="home care Muntinlupa, caregiver, elderly care, home health, MuntiCares, verified providers, Muntinlupa City healthcare" />
+
+    <!-- Prevent FOUC -->
+    <script>
+      (function() {
+        var theme = localStorage.getItem('mc_theme');
+        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="MuntiCares — Home Care, Right at Your Doorstep" />
+    <meta property="og:description" content="Connecting Muntinlupa City residents with trusted, verified home care providers. Fast, secure, and patient-first." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mntcares.vercel.app" />
+    <meta property="og:image" content="/og-image.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MuntiCares — Home Care, Right at Your Doorstep" />
+    <meta name="twitter:description" content="Connecting Muntinlupa City residents with trusted, verified home care providers." />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "MuntiCares",
+        "description": "Home care provider marketplace connecting Muntinlupa City residents with trusted, verified caregivers.",
+        "url": "https://mntcares.vercel.app",
+        "areaServed": {
+          "@type": "City",
+          "name": "Muntinlupa City"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "customer support"
+        }
+      }
+    </script>
+
+    <title>MuntiCares — Home Care, Right at Your Doorstep</title>
   </head>
   <body>
     <div id="root"></div>

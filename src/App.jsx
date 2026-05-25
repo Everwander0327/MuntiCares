@@ -9,6 +9,7 @@ import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import AnimatedPage from './components/AnimatedPage';
+import CookieConsent from './components/CookieConsent';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -101,6 +102,7 @@ function App() {
     <Router>
       <Toaster position="top-right" />
       <AppContent />
+      <CookieConsent />
     </Router>
   );
 }

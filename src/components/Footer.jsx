@@ -21,18 +21,18 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-bold mb-6">Quick Links</h4>
             <ul className="space-y-4 text-slate-400">
-              <li><Link to="/" className="hover:text-primary transition-colors">Home</Link></li>
-              <li><a href="#" className="hover:text-primary transition-colors">About Us</a></li>
-              <li><Link to="/patient/providers" className="hover:text-primary transition-colors">Find Providers</Link></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Contact</a></li>
+              <li><Link to="/" className="link-underline hover:text-primary transition-colors">Home</Link></li>
+              <li><a href="#" className="link-underline hover:text-primary transition-colors">About Us</a></li>
+              <li><Link to="/patient/providers" className="link-underline hover:text-primary transition-colors">Find Providers</Link></li>
+              <li><a href="#" className="link-underline hover:text-primary transition-colors">Contact</a></li>
             </ul>
           </div>
           <div>
             <h4 className="text-lg font-bold mb-6">Support</h4>
             <ul className="space-y-4 text-slate-400">
-              <li><a href="#" className="hover:text-primary transition-colors">Help Center</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-primary transition-colors">Terms of Service</a></li>
+              <li><a href="#" className="link-underline hover:text-primary transition-colors">Help Center</a></li>
+              <li><a href="#" className="link-underline hover:text-primary transition-colors">Privacy Policy</a></li>
+              <li><a href="#" className="link-underline hover:text-primary transition-colors">Terms of Service</a></li>
             </ul>
           </div>
         </div>
