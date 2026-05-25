@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import {
   Dialog,
   DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from './ui/dialog';

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 import { unlockAudio } from './lib/audio';
+import { useTheme } from './contexts/ThemeContext';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
@@ -13,8 +14,7 @@ import CookieConsent from './components/CookieConsent';
 
 // Pages
 import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/auth/Login';
-import RegisterPage from './pages/auth/Register';
+import AuthPage from './pages/auth/AuthPage';
 
 // Patient Pages
 import PatientDashboard from './pages/patient/Dashboard';
@@ -41,6 +41,7 @@ import AdminProfile from './pages/admin/Profile';
 
 function AppContent() {
   const location = useLocation();
+  const { dark } = useTheme();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -56,11 +57,11 @@ function AppContent() {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Public Routes with Main Navbar/Footer */}
+        {/* Public Routes */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<AnimatedPage><LandingPage /></AnimatedPage>} />
-          <Route path="login" element={<AnimatedPage><LoginPage /></AnimatedPage>} />
-          <Route path="register" element={<AnimatedPage><RegisterPage /></AnimatedPage>} />
+          <Route path="login" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
+          <Route path="register" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
         </Route>
 
         {/* Dashboard Routes with Sidebar */}
@@ -93,6 +94,29 @@ function AppContent() {
           <Route path="profile" element={<ErrorBoundary><AnimatedPage><AdminProfile /></AnimatedPage></ErrorBoundary>} />
         </Route>
       </Routes>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: dark ? '#1e293b' : '#fff',
+            color: dark ? '#f1f5f9' : '#0f172a',
+            border: dark ? '1px solid #334155' : '1px solid #e2e8f0',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            fontSize: '14px',
+            boxShadow: dark
+              ? '0 8px 32px rgba(0,0,0,0.4)'
+              : '0 8px 32px rgba(0,0,0,0.1)',
+          },
+          success: {
+            iconTheme: { primary: '#22c55e', secondary: '#fff' },
+          },
+          error: {
+            iconTheme: { primary: '#ef4444', secondary: '#fff' },
+          },
+        }}
+      />
     </AnimatePresence>
   );
 }
@@ -100,7 +124,6 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <Toaster position="top-right" />
       <AppContent />
       <CookieConsent />
     </Router>

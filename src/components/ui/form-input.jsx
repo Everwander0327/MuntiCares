@@ -1,7 +1,7 @@
 import React from 'react';
 import { cn } from '../../lib/utils';
 
-const FormInput = React.forwardRef(({ label, error, icon: Icon, className, ...props }, ref) => {
+const FormInput = React.forwardRef(({ label, error, icon: Icon, rightElement, className, ...props }, ref) => {
   return (
     <div className="space-y-2">
       {label && <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">{label}</label>}
@@ -11,13 +11,19 @@ const FormInput = React.forwardRef(({ label, error, icon: Icon, className, ...pr
           ref={ref}
           className={cn(
             "w-full bg-white/70 dark:bg-slate-800/70 border rounded-2xl py-4",
-            Icon ? "pl-12 pr-4" : "px-4",
+            Icon ? "pl-12" : "px-4",
+            rightElement ? "pr-12" : "pr-4",
             "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all",
             error ? "border-red-300 dark:border-red-500" : "border-slate-200 dark:border-slate-600",
             className
           )}
           {...props}
         />
+        {rightElement && (
+          <div className="absolute inset-y-0 right-4 flex items-center">
+            {rightElement}
+          </div>
+        )}
       </div>
       {error && <p className="text-xs text-red-500 dark:text-red-400 mt-1 ml-1">{error}</p>}
     </div>
@@ -45,7 +51,7 @@ const FormTextarea = React.forwardRef(({ label, error, className, ...props }, re
 
 FormTextarea.displayName = 'FormTextarea';
 
-const FormCheckbox = React.forwardRef(({ label, error, className, ...props }, ref) => (
+const FormCheckbox = React.forwardRef(({ label, error, className, labelClassName, ...props }, ref) => (
   <div className="space-y-1">
     <label className="flex items-center gap-3 cursor-pointer group">
       <input
@@ -59,7 +65,7 @@ const FormCheckbox = React.forwardRef(({ label, error, className, ...props }, re
         )}
         {...props}
       />
-      <span className="text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors">
+      <span className={cn("text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors", labelClassName)}>
         {label}
       </span>
     </label>
