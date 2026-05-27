@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, ShieldCheck, Star, ChevronLeft, ChevronRight, X, MapPin, Phone, Mail, BookOpen, Award, Check, Ban, Clock, ExternalLink, Shield, FileText } from 'lucide-react';
+import { Search, ShieldCheck, Star, X, MapPin, Phone, Mail, BookOpen, Check, Ban, Clock, ExternalLink, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import { supabase } from '../../lib/supabase';

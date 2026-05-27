@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { MessageSquareWarning, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -43,7 +43,6 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
         const filterCol = isPatient ? 'patient_id' : 'provider_id';
         const otherCol = isPatient ? 'provider_id' : 'patient_id';
 
-        const partnerAlias = isPatient ? 'partner' : 'partner';
         const { data: reqData } = await supabase
           .from('requests')
           .select(`${otherCol}, partner:${otherCol}(full_name, email)`)
@@ -167,7 +166,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
         <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-20">
           <Search className="w-10 h-10 text-slate-300 dark:text-slate-500 mb-3" />
           <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No results found</h3>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">No conversations match "{searchTerm}"</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">No conversations match {'\u201C'}{searchTerm}{'\u201D'}</p>
         </div>
       );
     }

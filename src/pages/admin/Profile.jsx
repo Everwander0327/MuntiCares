@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { LogOut, Shield, Mail, Calendar, Users, Briefcase, FileText } from 'lucide-react';
+import { LogOut, Shield, Calendar, Users, Briefcase, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';

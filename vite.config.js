@@ -1,3 +1,4 @@
+/* eslint-env node */
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
@@ -13,12 +14,23 @@ export default defineConfig({
     allowedHosts: true,
   },
   build: {
-    sourcemap: false, // Prevents original source code from being visible in the browser
-    minify: true,    // Ensures code is compressed and obfuscated
+    sourcemap: false,
+    minify: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined, // Default behavior
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          vendorUi: ['framer-motion', 'lucide-react', 'react-hot-toast'],
+          vendorData: ['@supabase/supabase-js', '@hookform/resolvers', 'react-hook-form', 'zod'],
+          vendorMedical: ['jspdf'],
+          vendorJitsi: ['@jitsi/react-sdk'],
+        },
       }
     }
-  }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+  },
 })

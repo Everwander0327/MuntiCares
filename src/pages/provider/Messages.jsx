@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -55,7 +55,7 @@ const ProviderMessages = () => {
       }
       window.history.replaceState({}, '', location.pathname);
     }
-  }, [location.search, currentUserData]);
+  }, [location.search, currentUserData, location.pathname]);
 
   const handleSelect = (partner) => {
     setSelectedPartner(partner);

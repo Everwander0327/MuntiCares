@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Phone, PhoneOff, Video } from 'lucide-react';
+import { useEffect } from 'react';
+import { Phone, PhoneOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCalls } from '../contexts/CallContext';
 import { useAuth } from '../contexts/AuthContext';

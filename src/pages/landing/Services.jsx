@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+ 
 import { Heart, Stethoscope, Activity, Users, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from './animations';

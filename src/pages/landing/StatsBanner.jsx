@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+ 
 import { Users, ShieldCheck, Star, Headphones } from 'lucide-react';
 import { motion } from 'framer-motion';
 import useCountUp from '../../hooks/useCountUp';

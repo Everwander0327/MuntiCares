@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { MessageSquare, Phone, ChevronRight, Search, ChevronLeft, CheckCircle, FileText } from 'lucide-react';
+import { MessageSquare, Search, CheckCircle, FileText } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';

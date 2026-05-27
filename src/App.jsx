@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
@@ -11,33 +11,32 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import AnimatedPage from './components/AnimatedPage';
 import CookieConsent from './components/CookieConsent';
+import { SkeletonPage } from './components/Skeleton';
 
-// Pages
+// Pages (eager — critical path)
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/auth/AuthPage';
 
-// Patient Pages
-import PatientDashboard from './pages/patient/Dashboard';
-import PatientProviders from './pages/patient/Providers';
-import PatientConsent from './pages/patient/Consent';
-import PatientRequests from './pages/patient/Requests';
-import PatientProfile from './pages/patient/Profile';
-import PatientMessages from './pages/patient/Messages';
+// Dashboard pages (lazy — only loaded after login)
+const PatientDashboard = lazy(() => import('./pages/patient/Dashboard'));
+const PatientProviders = lazy(() => import('./pages/patient/Providers'));
+const PatientConsent = lazy(() => import('./pages/patient/Consent'));
+const PatientRequests = lazy(() => import('./pages/patient/Requests'));
+const PatientProfile = lazy(() => import('./pages/patient/Profile'));
+const PatientMessages = lazy(() => import('./pages/patient/Messages'));
 
-// Provider Pages
-import ProviderDashboard from './pages/provider/Dashboard';
-import ProviderRequests from './pages/provider/Requests';
-import ProviderPatients from './pages/provider/Patients';
-import ProviderSchedule from './pages/provider/Schedule';
-import ProviderProfile from './pages/provider/Profile';
-import ProviderMessages from './pages/provider/Messages';
+const ProviderDashboard = lazy(() => import('./pages/provider/Dashboard'));
+const ProviderRequests = lazy(() => import('./pages/provider/Requests'));
+const ProviderPatients = lazy(() => import('./pages/provider/Patients'));
+const ProviderSchedule = lazy(() => import('./pages/provider/Schedule'));
+const ProviderProfile = lazy(() => import('./pages/provider/Profile'));
+const ProviderMessages = lazy(() => import('./pages/provider/Messages'));
 
-// Admin Pages
-import AdminDashboard from './pages/admin/Dashboard';
-import AdminPatients from './pages/admin/Patients';
-import AdminProviders from './pages/admin/Providers';
-import AdminRequests from './pages/admin/Requests';
-import AdminProfile from './pages/admin/Profile';
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const AdminPatients = lazy(() => import('./pages/admin/Patients'));
+const AdminProviders = lazy(() => import('./pages/admin/Providers'));
+const AdminRequests = lazy(() => import('./pages/admin/Requests'));
+const AdminProfile = lazy(() => import('./pages/admin/Profile'));
 
 function AppContent() {
   const location = useLocation();
@@ -64,34 +63,34 @@ function AppContent() {
           <Route path="register" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
         </Route>
 
-        {/* Dashboard Routes with Sidebar */}
+        {/* Dashboard Routes with Sidebar (lazy loaded) */}
         <Route path="/patient" element={<ProtectedRoute allowedRole="patient" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><AnimatedPage><PatientDashboard /></AnimatedPage></ErrorBoundary>} />
-          <Route path="providers" element={<ErrorBoundary><AnimatedPage><PatientProviders /></AnimatedPage></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><AnimatedPage><PatientRequests /></AnimatedPage></ErrorBoundary>} />
-          <Route path="messages" element={<ErrorBoundary><AnimatedPage><PatientMessages /></AnimatedPage></ErrorBoundary>} />
-          <Route path="consent" element={<ErrorBoundary><AnimatedPage><PatientConsent /></AnimatedPage></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><AnimatedPage><PatientProfile /></AnimatedPage></ErrorBoundary>} />
+          <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientDashboard /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="providers" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientProviders /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientMessages /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="consent" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientConsent /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
         </Route>
 
         <Route path="/provider" element={<ProtectedRoute allowedRole="provider" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><AnimatedPage><ProviderDashboard /></AnimatedPage></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><AnimatedPage><ProviderRequests /></AnimatedPage></ErrorBoundary>} />
-          <Route path="patients" element={<ErrorBoundary><AnimatedPage><ProviderPatients /></AnimatedPage></ErrorBoundary>} />
-          <Route path="schedule" element={<ErrorBoundary><AnimatedPage><ProviderSchedule /></AnimatedPage></ErrorBoundary>} />
-          <Route path="messages" element={<ErrorBoundary><AnimatedPage><ProviderMessages /></AnimatedPage></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><AnimatedPage><ProviderProfile /></AnimatedPage></ErrorBoundary>} />
+          <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderDashboard /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="patients" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderPatients /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="schedule" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderSchedule /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderMessages /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
         </Route>
 
         <Route path="/admin" element={<ProtectedRoute allowedRole="admin" />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><AnimatedPage><AdminDashboard /></AnimatedPage></ErrorBoundary>} />
-          <Route path="patients" element={<ErrorBoundary><AnimatedPage><AdminPatients /></AnimatedPage></ErrorBoundary>} />
-          <Route path="providers" element={<ErrorBoundary><AnimatedPage><AdminProviders /></AnimatedPage></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><AnimatedPage><AdminRequests /></AnimatedPage></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><AnimatedPage><AdminProfile /></AnimatedPage></ErrorBoundary>} />
+          <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminDashboard /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="patients" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminPatients /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="providers" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminProviders /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
         </Route>
       </Routes>
       <Toaster

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { ShieldCheck, Info, Calendar, ChevronDown, ChevronUp, History, Eye, Check, X, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -121,7 +121,6 @@ const PatientConsent = () => {
   const [expandedId, setExpandedId] = useState(null);
   const [activeTab, setActiveTab] = useState('history');
   const [consentHistory, setConsentHistory] = useState([]);
-  const [accessLogs, setAccessLogs] = useState([]);
 
   const getHistoryKey = () => `consent_history_${user?.id}`;
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, ShieldCheck, Calendar, ChevronLeft, ChevronRight, Navigation, Home, Stethoscope, MapPin, MessageSquare, MessageCircle, RefreshCw, Star, RotateCcw } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, TrendingUp, TrendingDown, Search, FileText, Calendar, ChevronLeft, ChevronRight, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, Star, RotateCcw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useCountUp from '../../hooks/useCountUp';
@@ -402,10 +402,10 @@ const PatientDashboard = () => {
               const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
               const STEP_LABELS = ['Confirmed', 'En Route', 'Arrived', 'Done'];
               const STEP_ICONS = [
-                <CheckCircle2 className="w-3.5 h-3.5" />,
-                <Navigation className="w-3.5 h-3.5" />,
-                <Home className="w-3.5 h-3.5" />,
-                <Stethoscope className="w-3.5 h-3.5" />,
+                <CheckCircle2 key="confirmed" className="w-3.5 h-3.5" />,
+                <Navigation key="enroute" className="w-3.5 h-3.5" />,
+                <Home key="arrived" className="w-3.5 h-3.5" />,
+                <Stethoscope key="done" className="w-3.5 h-3.5" />,
               ];
               const STEP_COLORS = ['bg-blue-500', 'bg-amber-500', 'bg-purple-500', 'bg-green-500'];
               const currentStep = STATUS_STEPS.indexOf(activeVisit.status);
@@ -494,7 +494,7 @@ const PatientDashboard = () => {
                 </div>
                 <p className="text-slate-800 dark:text-slate-200 font-bold text-lg">No Active Visits</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xs mx-auto">
-                  You don't have any upcoming visits. Browse available providers and book a home care service to get started.
+                  You don{'\u2019'}t have any upcoming visits. Browse available providers and book a home care service to get started.
                 </p>
                 <div className="mt-5 flex flex-col sm:flex-row gap-3 justify-center">
                   <Link

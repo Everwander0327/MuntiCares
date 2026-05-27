@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Bell, FileText, MessageCircle, Star, CheckCircle2, XCircle, Navigation, Clock, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -210,7 +210,7 @@ const NotificationBell = () => {
     return notifs.slice(0, 20); // Cap at 20
   };
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!user) return;
 
     try {
@@ -304,7 +304,7 @@ const NotificationBell = () => {
     } catch (err) {
       console.error('Error fetching notifications:', err);
     }
-  };
+  }, [user]);
 
   const fireBrowserNotification = (title, body) => {
     try {
@@ -363,7 +363,7 @@ const NotificationBell = () => {
       supabase.removeChannel(channel);
       supabase.removeChannel(msgChannel);
     };
-  }, [user]);
+  }, [user, fetchNotifications]);
 
   const markAllRead = () => {
     if (!user) return;
@@ -490,7 +490,7 @@ const NotificationBell = () => {
               ) : (
                 <div className="p-8 text-center">
                   <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2 animate-bounce" />
-                  <p className="text-sm text-slate-500 dark:text-slate-400 font-bold">You're all caught up!</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 font-bold">You{'\u2019'}re all caught up!</p>
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">No unread notifications at the moment.</p>
                 </div>
               )}

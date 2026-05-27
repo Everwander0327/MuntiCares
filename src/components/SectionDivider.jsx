@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+ 
 const SectionDivider = ({ variant = 'wave' }) => {
   if (variant === 'wave') {
     return (

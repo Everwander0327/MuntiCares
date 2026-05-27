@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Camera, Mail, Phone, MapPin, Award, BookOpen, Clock, LogOut, Calendar, CheckCircle2, ShieldCheck, Save, Upload, ExternalLink, Shield, FileText, X } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -684,7 +684,7 @@ const ProviderProfile = () => {
                         </motion.span>
                       ))
                     ) : (
-                      <p className="text-slate-500 dark:text-slate-400 text-sm">No specializations added yet. Click "Edit Profile" to add your services.</p>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm">No specializations added yet. Click {'\u201C'}Edit Profile{'\u201D'} to add your services.</p>
                     )}
                   </div>
                 )}

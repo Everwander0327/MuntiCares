@@ -1,4 +1,4 @@
-/* eslint-disable react/prop-types */
+ 
 import { cloneElement } from 'react';
 import { Calendar, ShieldCheck, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';

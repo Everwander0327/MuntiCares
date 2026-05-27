@@ -1,4 +1,4 @@
-import React from 'react';
+
 
 const SkeletonText = ({ width = 'w-24', className = '' }) => (
   <div className={`h-3 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse ${width} ${className}`} />
