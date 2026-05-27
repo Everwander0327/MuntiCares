@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Send, UserCircle, Loader2, Check, CheckCheck, Video, X, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, Phone, PhoneOff } from 'lucide-react';
+import { Send, UserCircle, Loader2, Check, CheckCheck, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, PhoneOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { JitsiMeeting } from '@jitsi/react-sdk';
 import { useCalls } from '../contexts/CallContext';
+import { usePresence } from '../contexts/PresenceContext';
 
 const addReadMsgIds = (userId, ids) => {
   if (!ids.length) return;
@@ -37,11 +38,11 @@ const shouldShowTimestamp = (msg, nextMsg) => {
 
 const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
   const { startCallBroadcast, sendCallEnded, callDeclinedByPeer } = useCalls();
+  const { isUserOnline } = usePresence();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
-  const [isOnline, setIsOnline] = useState(false);
   const [callStatus, setCallStatus] = useState('idle'); // idle | connecting | connected | ended
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [callTimer, setCallTimer] = useState(0);
@@ -139,11 +140,6 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => {
         setMessages(prev => prev.map(m => m.id === payload.new.id ? { ...payload.new, status: payload.new.is_read ? 'read' : 'sent' } : m));
-      })
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const otherUserPresent = Object.values(state).flat().some(p => p.presence_ref === otherUser.id || p.user_id === otherUser.id || state[otherUser.id]);
-        setIsOnline(!!state[otherUser.id] || otherUserPresent);
       })
       .on('broadcast', { event: 'typing' }, (payload) => {
         if (payload.payload.sender_id === otherUser.id && payload.payload.receiver_id === currentUser.id) {
@@ -258,7 +254,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
     if (autoStartVideo && otherUser?.id && currentUser) {
       setCallStatus('connecting');
     }
-  }, [autoStartVideo]);
+  }, [autoStartVideo, currentUser, otherUser?.id]);
 
   useEffect(() => {
     if (callStatus !== 'connecting') {
@@ -596,12 +592,12 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
               <UserCircle className="w-6 h-6" />
             )}
           </div>
-          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white transition-colors duration-300 ${isOnline ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
+          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white transition-colors duration-300 ${isUserOnline(otherUser.id) ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">{otherUser.name}</h3>
-          <p className={`text-xs font-medium transition-colors duration-300 ${isOnline ? 'text-green-500' : 'text-slate-400 dark:text-slate-500'}`}>
-            {isOnline ? 'Active now' : 'Offline'}
+          <p className={`text-xs font-medium transition-colors duration-300 ${isUserOnline(otherUser.id) ? 'text-green-500' : 'text-slate-400 dark:text-slate-500'}`}>
+            {isUserOnline(otherUser.id) ? 'Active now' : 'Offline'}
           </p>
         </div>
         <motion.button

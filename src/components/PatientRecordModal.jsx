@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Activity, FileText, ClipboardList, Send, Loader2, ExternalLink, Trash2, Paperclip } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,11 +33,43 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
   const availableServices = ['Routine Checkup', 'Wound Care', 'IV Therapy', 'Physical Therapy', 'Medication Admin'];
 
+  const checkConsentThenLoad = useCallback(async () => {
+    setLoading(true);
+    setConsentBlocked(false);
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('consent_access')
+        .select('is_enabled, permissions')
+        .eq('patient_id', patientId)
+        .eq('provider_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+
+      if (!data || !data.is_enabled) {
+        setConsentBlocked(true);
+        setLoading(false);
+        return;
+      }
+
+      setGrantedPermissions(data.permissions || { medical_history: true, documents: true, visit_notes: true });
+      fetchPatientData();
+      logDataAccess();
+    } catch (err) {
+      console.warn('Consent check failed:', err.message);
+      setGrantedPermissions({ medical_history: true, documents: true, visit_notes: true });
+      fetchPatientData();
+      logDataAccess();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientId, user]);
+
   useEffect(() => {
     if (isOpen && patientId) {
       checkConsentThenLoad();
     }
-  }, [isOpen, patientId]);
+  }, [isOpen, patientId, checkConsentThenLoad]);
 
   useEffect(() => {
     if (!isOpen || !patientId || !user) return;
@@ -74,37 +106,6 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
     return () => { clearInterval(interval); supabase.removeChannel(channel); };
   }, [isOpen, patientId, user]);
-
-  const checkConsentThenLoad = async () => {
-    setLoading(true);
-    setConsentBlocked(false);
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('consent_access')
-        .select('is_enabled, permissions')
-        .eq('patient_id', patientId)
-        .eq('provider_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (!data || !data.is_enabled) {
-        setConsentBlocked(true);
-        setLoading(false);
-        return;
-      }
-
-      setGrantedPermissions(data.permissions || { medical_history: true, documents: true, visit_notes: true });
-      fetchPatientData();
-      logDataAccess();
-    } catch (err) {
-      console.warn('Consent check failed:', err.message);
-      setGrantedPermissions({ medical_history: true, documents: true, visit_notes: true });
-      fetchPatientData();
-      logDataAccess();
-    }
-  };
 
   const logDataAccess = async () => {
     if (!user) return;
@@ -443,7 +444,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                     <input type="number" placeholder="98" value={newNote.spo2} onChange={e => setNewNote({...newNote, spo2: e.target.value})} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none" />
                                   </div>
                                   <div className="col-span-2 sm:col-span-1">
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 text-orange-600">Pain Scale (1-10)</label>
+                                    <label className="text-[10px] font-bold text-orange-600 dark:text-orange-400">Pain Scale (1-10)</label>
                                     <input type="number" min="0" max="10" placeholder="0" value={newNote.pain} onChange={e => setNewNote({...newNote, pain: e.target.value})} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none" />
                                   </div>
                                 </div>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Check, X, MapPin, Calendar, Clock } from 'lucide-react';
+import { Check, X, MapPin, Calendar, Clock, Wallet, Banknote, CreditCard } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -29,7 +29,7 @@ const ProviderRequests = () => {
       try {
         const { data, error } = await supabase
           .from('requests')
-          .select('id, patient_id, service, date, time, notes, status, patient:patient_id(full_name)')
+          .select('id, patient_id, service, date, time, notes, status, payment_status, patient:patient_id(full_name)')
           .eq('provider_id', user.id)
           .eq('status', 'Pending')
           .order('created_at', { ascending: false });
@@ -53,6 +53,7 @@ const ProviderRequests = () => {
             date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
             time: timeString,
             notes: r.notes || '',
+            paymentStatus: r.payment_status || 'unpaid',
             location: profile?.address || 'Address pending profile completion'
           };
         });
@@ -78,16 +79,40 @@ const ProviderRequests = () => {
           filter: `provider_id=eq.${user.id}`,
         },
         (payload) => {
-          const newStatus = payload.new?.status;
-          const deletedId = payload.old?.id;
+          const newRow = payload.new;
+          const oldRow = payload.old;
+          const newStatus = newRow?.status;
+          const deletedId = oldRow?.id;
 
-          if (payload.eventType === 'DELETE' || newStatus === 'Cancelled' || newStatus === 'Rejected') {
-            setRequests(prev => prev.filter(r => r.id !== deletedId && r.id !== payload.new?.id));
+          if (payload.eventType === 'DELETE' || newStatus === 'Cancelled' || newStatus === 'Rejected' || newStatus === 'Completed' || newStatus === 'Accepted') {
+            setRequests(prev => prev.filter(r => r.id !== deletedId && r.id !== newRow?.id));
             return;
           }
 
-          if (newStatus && newStatus !== 'Pending') {
-            setRequests(prev => prev.filter(r => r.id !== payload.new?.id));
+          // INSERT — new Pending request
+          if (payload.eventType === 'INSERT' && newStatus === 'Pending') {
+            const mapped = {
+              id: newRow.id,
+              patient: newRow.patient?.full_name || 'Unknown Patient',
+              service: newRow.service,
+              date: new Date(newRow.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              time: new Date(`2000-01-01T${newRow.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+              notes: newRow.notes || '',
+              paymentStatus: newRow.payment_status || 'unpaid',
+              location: 'Muntinlupa',
+            };
+            setRequests(prev => {
+              if (prev.find(r => r.id === mapped.id)) return prev;
+              return [mapped, ...prev];
+            });
+            return;
+          }
+
+          // Payment status update (e.g., unpaid → pending_cash or unpaid → paid)
+          if (payload.eventType === 'UPDATE' && newRow?.payment_status !== oldRow?.payment_status) {
+            setRequests(prev => prev.map(r =>
+              r.id === newRow.id ? { ...r, paymentStatus: newRow.payment_status } : r
+            ));
           }
         }
       )
@@ -98,7 +123,7 @@ const ProviderRequests = () => {
     };
   }, [user]);
 
-  const handleAccept = async (id, name) => {
+  const handleAccept = async (id) => {
     const { data: current } = await supabase
       .from('requests')
       .select('status')
@@ -140,20 +165,6 @@ const ProviderRequests = () => {
   };
 
   const handleReject = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to reject ${name}'s request?`)) return;
-
-    const { data: current } = await supabase
-      .from('requests')
-      .select('status')
-      .eq('id', id)
-      .single();
-
-    if (!current || current.status !== 'Pending') {
-      toast.error('This request is no longer available.');
-      setRequests(prev => prev.filter(r => r.id !== id));
-      return;
-    }
-
     setActionStates(prev => ({ ...prev, [id]: 'rejected' }));
     try {
       const { error } = await supabase
@@ -163,6 +174,7 @@ const ProviderRequests = () => {
 
       if (error) throw error;
 
+      toast.success(`Rejected ${name}'s request.`, { icon: '👋' });
       setTimeout(() => {
         setRequests(prev => prev.filter(r => r.id !== id));
         setActionStates(prev => {
@@ -189,6 +201,22 @@ const ProviderRequests = () => {
       </DashboardLayout>
     );
   }
+
+  const paymentIcon = (status) => {
+    switch (status) {
+      case 'paid': return <Check className="w-3.5 h-3.5" />;
+      case 'pending_cash': return <Banknote className="w-3.5 h-3.5" />;
+      default: return <Clock className="w-3.5 h-3.5" />;
+    }
+  };
+
+  const paymentLabel = (status) => {
+    switch (status) {
+      case 'paid': return 'Paid';
+      case 'pending_cash': return 'Cash';
+      default: return 'Awaiting Payment';
+    }
+  };
 
   return (
     <DashboardLayout role="provider">
@@ -232,6 +260,15 @@ const ProviderRequests = () => {
                         <p className="text-primary text-sm font-semibold">{req.service}</p>
                       </div>
                     </div>
+                    {/* Payment badge */}
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${
+                      req.paymentStatus === 'paid'
+                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200'
+                        : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200'
+                    }`}>
+                      {paymentIcon(req.paymentStatus)}
+                      {paymentLabel(req.paymentStatus)}
+                    </span>
                   </div>
 
                   <div className="space-y-3 mb-6">
@@ -247,22 +284,34 @@ const ProviderRequests = () => {
                       <MapPin className="w-4 h-4" />
                       <span>{req.location}</span>
                     </div>
+                    <div className="flex items-center gap-3 text-sm">
+                      <Wallet className={`w-4 h-4 ${req.paymentStatus === 'paid' ? 'text-green-500' : 'text-amber-500'}`} />
+                      <span className={`font-semibold ${req.paymentStatus === 'paid' ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                        {req.paymentStatus === 'paid' ? 'Paid' : req.paymentStatus === 'pending_cash' ? 'Cash on visit' : 'Awaiting Payment'}
+                      </span>
+                    </div>
                   </div>
 
                   {req.notes && (
                     <div className="mb-6 p-4 bg-yellow-50/50 rounded-2xl border border-yellow-100 dark:bg-yellow-900/30 dark:border-yellow-900/50">
                       <p className="text-xs font-bold text-yellow-800 uppercase tracking-wider mb-1 dark:text-yellow-200">Patient Notes</p>
-                      <p className="text-sm text-yellow-900 leading-relaxed italic dark:text-yellow-100">"{req.notes}"</p>
+                      <p className="text-sm text-yellow-900 leading-relaxed italic dark:text-yellow-100">{'\u201C'}{req.notes}{'\u201D'}</p>
                     </div>
                   )}
 
                   <div className="grid grid-cols-2 gap-3">
                     <motion.button 
-                      onClick={() => handleAccept(req.id, req.patient)}
+                      onClick={() => {
+                        if (req.paymentStatus === 'paid' || req.paymentStatus === 'pending_cash') {
+                          handleAccept(req.id);
+                        } else {
+                          toast('Awaiting payment from patient.', { icon: '⏳' });
+                        }
+                      }}
                       className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all shadow-lg ${
                         actionStates[req.id] === 'accepted' 
-                          ? 'bg-green-500 text-white shadow-green-200' 
-                          : 'bg-green-500 text-white hover:bg-green-600 shadow-green-200'
+                          ? 'bg-green-500 text-white shadow-green-200 dark:shadow-green-900/50' 
+                          : 'bg-green-500 text-white hover:bg-green-600 shadow-green-200 dark:shadow-green-900/50'
                       }`}
                       whileTap={{ scale: 0.95 }}
                       animate={actionStates[req.id] === 'accepted' ? { scale: [1, 1.1, 1] } : {}}
@@ -276,7 +325,7 @@ const ProviderRequests = () => {
                       className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all ${
                         actionStates[req.id] === 'rejected'
                           ? 'bg-red-500 text-white'
-                          : 'bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-red-900/20'
+                          : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30'
                       }`}
                       whileTap={{ scale: 0.95 }}
                       animate={actionStates[req.id] === 'rejected' ? { scale: [1, 1.1, 1] } : {}}

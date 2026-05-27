@@ -15,6 +15,7 @@ import { z } from 'zod';
 import EmptyState from '../../components/EmptyState';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '../../components/ui/sheet';
 import { usePresence } from '../../contexts/PresenceContext';
+import PaymentModal from '../../components/PaymentModal';
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
@@ -31,11 +32,9 @@ const bookingSchema = z.object({
 const PatientProviders = () => {
   const { isUserOnline } = usePresence();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('All');
   const [requested, setRequested] = useState([]);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [serviceOptions, setServiceOptions] = useState([{ value: 'All', label: 'All Services' }]);
   const [searchHistory, setSearchHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const searchRef = React.useRef(null);
@@ -44,7 +43,7 @@ const PatientProviders = () => {
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [viewingProvider, setViewingProvider] = useState(null);
   const [providerReviews, setProviderReviews] = useState([]);
-  const { register, handleSubmit, formState: { errors }, watch, setValue, getValues, reset, trigger } = useForm({
+  const { register, handleSubmit, formState: { errors }, watch, setValue, getValues, reset } = useForm({
     resolver: zodResolver(bookingSchema),
     defaultValues: { service: '', date: '', time: '', notes: '', consent: false },
   });
@@ -54,6 +53,7 @@ const PatientProviders = () => {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const watchedDate = watch('date');
 
+  const [pendingPaymentRequest, setPendingPaymentRequest] = useState(null);
   const [sortBy, setSortBy] = useState('popular');
   const [activeCategory, setActiveCategory] = useState('All');
 
@@ -93,15 +93,6 @@ const PatientProviders = () => {
         }));
 
         setProviders(shaped);
-
-        const allServices = new Set();
-        (data || []).forEach(p => {
-          (p.services || []).forEach(s => allServices.add(s));
-        });
-        setServiceOptions([
-          { value: 'All', label: 'All Services' },
-          ...[...allServices].map(s => ({ value: s, label: s })),
-        ]);
 
         if (user) {
           const { data: existingRequests } = await supabase
@@ -254,7 +245,7 @@ const PatientProviders = () => {
     });
   };
 
-  const handleReviewBooking = (data) => {
+  const handleReviewBooking = () => {
     if (!user || !selectedProvider) return;
     setBookingStep('confirm');
   };
@@ -296,36 +287,55 @@ const PatientProviders = () => {
         return;
       }
 
-      // 1. Send the request
-      const { error: reqError } = await supabase
+      // 1. Capture provider info before it gets cleared
+      const providerId = selectedProvider.id;
+      const providerName = selectedProvider.full_name;
+      const amount = selectedProvider.price_per_service || 0;
+
+      // 2. Send the request
+      const { data: newRequest, error: reqError } = await supabase
         .from('requests')
         .insert([{
           patient_id: user.id,
-          provider_id: selectedProvider.id,
+          provider_id: providerId,
           service: values.service,
           date: values.date,
           time: values.time + ':00',
           status: 'Pending',
-          price: String(selectedProvider.price_per_service || 0),
+          price: String(amount),
           notes: values.notes
-        }]);
+        }])
+        .select();
 
       if (reqError) throw reqError;
 
-      // 2. Enable Data Sharing (Consent)
+      const createdRequest = newRequest[0];
+
+      // 3. Enable Data Sharing (Consent)
       await supabase
         .from('consent_access')
         .upsert([{
           patient_id: user.id,
-          provider_id: selectedProvider.id,
+          provider_id: providerId,
           is_enabled: true,
         }], { onConflict: 'patient_id,provider_id' });
 
-      setRequested([...requested, selectedProvider.id]);
+      setRequested([...requested, providerId]);
       setSelectedProvider(null);
-      toast.success('Booking request sent successfully!');
+      toast.success('Booking confirmed! Complete payment to secure your appointment.');
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
-      setTimeout(() => navigate('/patient/dashboard'), 1500);
+
+      // 4. Open payment modal
+      setPendingPaymentRequest({
+        id: createdRequest.id,
+        providerId,
+        providerName,
+        patientId: user.id,
+        amount,
+        service: values.service,
+        date: values.date,
+        time: values.time,
+      });
     } catch (err) {
       console.error('Error sending request:', err);
       toast.error('Failed to send booking request. Please try again.');
@@ -759,7 +769,7 @@ const PatientProviders = () => {
                     {vals.notes && (
                       <div className="pt-2.5 border-t border-slate-200 dark:border-slate-600">
                         <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-0.5">Message</p>
-                        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 italic">"{vals.notes}"</p>
+                        <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 italic">{'\u201C'}{vals.notes}{'\u201D'}</p>
                       </div>
                     )}
 
@@ -918,7 +928,7 @@ const PatientProviders = () => {
                           ))}
                         </div>
                       </div>
-                      <p className="text-[11px] md:text-xs text-slate-600 dark:text-slate-300 italic">"{rev.review_text || 'Excellent consultation!'}"</p>
+                      <p className="text-[11px] md:text-xs text-slate-600 dark:text-slate-300 italic">{'\u201C'}{rev.review_text || 'Excellent consultation!'}{'\u201D'}</p>
                     </div>
                   ))
                 ) : (
@@ -954,6 +964,20 @@ const PatientProviders = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={!!pendingPaymentRequest}
+        onClose={() => {
+          setPendingPaymentRequest(null);
+          navigate('/patient/dashboard');
+        }}
+        request={pendingPaymentRequest}
+        onPaymentComplete={() => {
+          setPendingPaymentRequest(null);
+          navigate('/patient/dashboard');
+        }}
+      />
     </DashboardLayout>
   );
 };

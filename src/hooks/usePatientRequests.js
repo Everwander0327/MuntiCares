@@ -24,8 +24,6 @@ export default function usePatientRequests(patientId) {
 
       if (error) throw error;
 
-      const providerIds = (data || []).map(r => r.provider_id);
-
       const formatted = (data || []).map(req => ({
         id: req.id,
         providerId: req.provider_id,
@@ -35,6 +33,7 @@ export default function usePatientRequests(patientId) {
         time: req.time,
         status: req.status,
         price: req.price || '0',
+        paymentStatus: req.payment_status || 'unpaid',
         location: req.provider?.location || 'Unknown',
         originalNotes: req.notes || '',
       }));
@@ -60,7 +59,6 @@ export default function usePatientRequests(patientId) {
       .channel('patient-requests-hook')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'requests', filter: `patient_id=eq.${patientId}` }, payload => {
         try {
-          const { eventType } = payload;
           // Supabase/v1 payloads use "event" and new/old records; normalize
           const type = payload.event || payload.eventType || (payload.type || '');
 
@@ -77,6 +75,7 @@ export default function usePatientRequests(patientId) {
               time: newRow.time,
               status: newRow.status,
               price: newRow.price || '0',
+              paymentStatus: newRow.payment_status || 'unpaid',
               location: newRow.provider?.location || 'Unknown',
               originalNotes: newRow.notes || '',
             };

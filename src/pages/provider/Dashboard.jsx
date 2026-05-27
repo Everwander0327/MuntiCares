@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Clock, Users, CheckCircle, Check, X, TrendingUp, Calendar, ChevronRight, Star, MessageCircle } from 'lucide-react';
+import { Clock, Users, CheckCircle, Check, X, Calendar, ChevronRight, Star, MessageCircle, Banknote } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -59,7 +59,7 @@ const ProviderDashboard = () => {
       try {
         const { data, error } = await supabase
           .from('requests')
-          .select('id, patient_id, service, date, time, status, patient:patient_id(full_name)')
+          .select('id, patient_id, service, date, time, status, payment_status, patient:patient_id(full_name)')
           .eq('provider_id', user.id)
           .order('date', { ascending: true });
 
@@ -86,12 +86,14 @@ const ProviderDashboard = () => {
         const upcoming = allRequests
           .filter(r => r.status === 'Accepted')
           .map(r => ({
+            id: r.id,
             patient: r.patient?.full_name || 'Unknown',
-            time: r.time ? r.time.substring(0, 5) : '09:00', // simple format
+            time: r.time ? r.time.substring(0, 5) : '09:00',
             service: r.service,
-            date: new Date(r.date).toLocaleDateString()
+            date: new Date(r.date).toLocaleDateString(),
+            paymentStatus: r.payment_status || 'unpaid',
           }))
-          .slice(0, 5); // limit to 5
+          .slice(0, 5);
         setSchedule(upcoming);
 
         // Incoming requests
@@ -145,6 +147,33 @@ const ProviderDashboard = () => {
       if (channel) supabase.removeChannel(channel);
     };
   }, [user]);
+
+  const handleMarkCollected = async (id) => {
+    setActionStates(prev => ({ ...prev, [`collected_${id}`]: true }));
+    try {
+      await supabase
+        .from('requests')
+        .update({ payment_status: 'paid', status: 'Completed' })
+        .eq('id', id);
+
+      await supabase
+        .from('transactions')
+        .update({ status: 'collected', paid_at: new Date().toISOString() })
+        .eq('request_id', id);
+
+      toast.success('Marked as collected!');
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Error marking as collected:', err);
+      toast.error('Failed to mark as collected.');
+    } finally {
+      setActionStates(prev => {
+        const next = { ...prev };
+        delete next[`collected_${id}`];
+        return next;
+      });
+    }
+  };
 
   const handleAction = async (id, action) => {
     setActionStates(prev => ({ ...prev, [id]: action }));
@@ -236,15 +265,36 @@ const ProviderDashboard = () => {
               {schedule.length > 0 ? (
                 schedule.map((appt, idx) => (
                   <div key={idx} className="flex items-center gap-4 bg-white/10 rounded-2xl p-4 backdrop-blur-sm">
-                    <div className="text-center w-20">
+                    <div className="text-center w-20 shrink-0">
                       <p className="text-lg font-bold">{appt.time}</p>
                       <p className="text-xs text-blue-200">{appt.date}</p>
                     </div>
-                    <div className="w-px h-10 bg-white/20" />
-                    <div>
-                      <p className="font-bold">{appt.patient}</p>
-                      <p className="text-blue-200 text-sm">{appt.service}</p>
+                    <div className="w-px h-10 bg-white/20 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold truncate">{appt.patient}</p>
+                      <p className="text-blue-200 text-sm truncate">{appt.service}</p>
+                      {appt.paymentStatus === 'pending_cash' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-200 mt-1">
+                          <Banknote className="w-3 h-3" /> Cash on visit
+                        </span>
+                      )}
+                      {appt.paymentStatus === 'paid' && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-200 mt-1">
+                          <Check className="w-3 h-3" /> Paid
+                        </span>
+                      )}
                     </div>
+                    {appt.paymentStatus === 'pending_cash' && (
+                      <motion.button
+                        onClick={() => handleMarkCollected(appt.id)}
+                        className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-lg"
+                        whileTap={{ scale: 0.95 }}
+                        disabled={actionStates[`collected_${appt.id}`]}
+                      >
+                        <Check className="w-3 h-3" />
+                        Mark Collected
+                      </motion.button>
+                    )}
                   </div>
                 ))
               ) : (
@@ -357,7 +407,7 @@ const ProviderDashboard = () => {
           <div className="p-6">
             {reviews.length > 0 ? (
               <div className="space-y-4">
-                {reviews.map((review, idx) => (
+                {reviews.map((review) => (
                   <div key={review.id} className="border-b border-slate-100 pb-4 last:border-0 last:pb-0 dark:border-slate-700">
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-semibold text-slate-800 dark:text-slate-200">

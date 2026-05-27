@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { ChevronLeft, ChevronRight, MapPin, Clock, Navigation, Home, CheckCircle2, Loader2, User, CalendarDays, Stethoscope } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Clock, Navigation, Home, CheckCircle2, Loader2, User, CalendarDays, Stethoscope, Banknote, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import PatientRecordModal from '../../components/PatientRecordModal';
+import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
 import toast from 'react-hot-toast';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -36,6 +37,7 @@ const ProviderSchedule = () => {
 
   // Modal state
   const [modalPatient, setModalPatient] = useState(null);
+  const [cashModalAppt, setCashModalAppt] = useState(null);
 
   useEffect(() => {
     let channel;
@@ -44,7 +46,7 @@ const ProviderSchedule = () => {
       try {
         const { data, error } = await supabase
           .from('requests')
-          .select('id, patient_id, service, date, time, status, notes, patient:patient_id(full_name)')
+          .select('id, patient_id, service, date, time, status, payment_status, price, notes, patient:patient_id(full_name)')
           .eq('provider_id', user.id)
           .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed']);
 
@@ -73,6 +75,8 @@ const ProviderSchedule = () => {
             time: r.time,
             timeLabel: timeStr,
             status: r.status,
+            paymentStatus: r.payment_status || 'unpaid',
+            price: r.price,
             notes: r.notes || '',
             address: profile?.address || 'Address not provided',
           };
@@ -156,6 +160,14 @@ const ProviderSchedule = () => {
   const handleStatusUpdate = async (appointmentId, newStatus) => {
     setUpdatingId(appointmentId);
     try {
+      const appt = appointments.find(a => a.id === appointmentId);
+
+      if (newStatus === 'Completed' && appt?.paymentStatus === 'pending_cash') {
+        setCashModalAppt(appt);
+        setUpdatingId(null);
+        return;
+      }
+
       const { error } = await supabase
         .from('requests')
         .update({ status: newStatus })
@@ -166,7 +178,6 @@ const ProviderSchedule = () => {
       setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: newStatus } : a));
 
       if (newStatus === 'Completed') {
-        const appt = appointments.find(a => a.id === appointmentId);
         if (appt) {
           toast.success('Visit completed! Opening patient record...');
           setTimeout(() => {
@@ -406,7 +417,7 @@ const ProviderSchedule = () => {
 
                           {appt.notes && (
                             <div className="mb-4 p-3 bg-amber-50/60 border border-amber-100 rounded-xl dark:bg-amber-900/30 dark:border-amber-900/50">
-                              <p className="text-xs text-amber-800 italic leading-relaxed dark:text-amber-200">"{appt.notes}"</p>
+                              <p className="text-xs text-amber-800 italic leading-relaxed dark:text-amber-200">{'\u201C'}{appt.notes}{'\u201D'}</p>
                             </div>
                           )}
 
@@ -467,6 +478,61 @@ const ProviderSchedule = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Cash Collection Modal */}
+      <Dialog open={!!cashModalAppt} onOpenChange={(open) => { if (!open) setCashModalAppt(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+            <Banknote className="w-5 h-5 text-amber-500" />
+            Collect Cash Payment
+          </DialogTitle>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Did <strong className="text-slate-900 dark:text-slate-100">{cashModalAppt?.patient}</strong> pay{' '}
+            <strong className="text-slate-900 dark:text-slate-100">₱{Number(cashModalAppt?.price || 0).toLocaleString()}</strong>{' '}
+            in cash?
+          </p>
+          <div className="flex gap-3 justify-end mt-4">
+            <button
+              onClick={() => {
+                setCashModalAppt(null);
+                toast.success('Mark as collected later from the Dashboard.');
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+            >
+              Not yet
+            </button>
+            <button
+              onClick={async () => {
+                const appt = cashModalAppt;
+                setCashModalAppt(null);
+                try {
+                  await supabase
+                    .from('requests')
+                    .update({ status: 'Completed', payment_status: 'paid' })
+                    .eq('id', appt.id);
+
+                  await supabase
+                    .from('transactions')
+                    .update({ status: 'collected', paid_at: new Date().toISOString() })
+                    .eq('request_id', appt.id);
+
+                  setAppointments(prev => prev.map(a => a.id === appt.id ? { ...a, status: 'Completed', paymentStatus: 'paid' } : a));
+                  toast.success('Visit completed — cash collected!');
+                  setTimeout(() => {
+                    setModalPatient({ id: appt.patientId, name: appt.patient });
+                  }, 600);
+                } catch (err) {
+                  console.error(err);
+                  toast.error('Failed to process cash collection.');
+                }
+              }}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors"
+            >
+              Yes, Cash Collected
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Patient Record Modal */}
       {modalPatient && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Clock, MapPin, MessageSquare, Star, XCircle, FileUp } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -10,6 +10,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import ReviewModal from '../../components/ReviewModal';
 import CancelRescheduleModal from '../../components/CancelRescheduleModal';
 import PreSessionUploadModal from '../../components/PreSessionUploadModal';
+import PaymentModal from '../../components/PaymentModal';
 import EmptyState from '../../components/EmptyState';
 
 const staggerContainer = {
@@ -20,7 +21,7 @@ const staggerItem = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
 };
 
-const RequestCard = ({ id, providerId, patientId, provider, service, date, time, status, price, location, onRateProvider, isRated, onManageRequest, onPreSession, presessionSubmitted }) => (
+const RequestCard = ({ id, providerId, patientId, provider, service, date, time, status, price, paymentStatus, location, onRateProvider, isRated, onManageRequest, onPreSession, onPay, presessionSubmitted }) => (
   <motion.div 
     className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 hover:shadow-md transition-all"
     variants={staggerItem}
@@ -77,6 +78,16 @@ const RequestCard = ({ id, providerId, patientId, provider, service, date, time,
           </button>
         )}
 
+        {/* Pay Now - only for unpaid Pending */}
+        {status === 'Pending' && paymentStatus === 'unpaid' && (
+          <button
+            onClick={() => onPay({ id, providerId, patientId, providerName: provider, amount: parseInt(price.replace(/[^0-9]/g, '')) || 0 })}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-900/50 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
+          >
+            Pay Now
+          </button>
+        )}
+
         {/* Cancel/Reschedule - only for Pending or Accepted */}
         {['Pending', 'Accepted'].includes(status) && (
           <button
@@ -102,6 +113,20 @@ const RequestCard = ({ id, providerId, patientId, provider, service, date, time,
             <Star className={`w-3.5 h-3.5 ${isRated ? 'fill-current text-green-500' : 'fill-current text-yellow-500 animate-pulse'}`} />
             {isRated ? 'Reviewed' : 'Rate & Review'}
           </button>
+        )}
+
+        {/* Payment Status Badge */}
+        {paymentStatus === 'paid' && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            Paid
+          </span>
+        )}
+        {paymentStatus === 'pending_cash' && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Cash
+          </span>
         )}
 
         {/* Status Badge */}
@@ -133,6 +158,7 @@ const PatientRequests = () => {
   const [selectedReviewReq, setSelectedReviewReq] = useState(null);
   const [selectedManageReq, setSelectedManageReq] = useState(null);
   const [selectedPreSessionReq, setSelectedPreSessionReq] = useState(null);
+  const [paymentModalRequest, setPaymentModalRequest] = useState(null);
   const [ratedRequests, setRatedRequests] = useState({});
   const [presessionSubmitted, setPresessionSubmitted] = useState({});
   const { user } = useAuth();
@@ -194,6 +220,7 @@ const PatientRequests = () => {
         date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         status: req.status,
         price: req.price || '0',
+        paymentStatus: req.payment_status || 'unpaid',
         location: providerLocations[req.provider_id] || 'Muntinlupa',
         originalNotes: req.notes || '',
       }));
@@ -207,7 +234,7 @@ const PatientRequests = () => {
   };
 
   // Use the shared hook for fetching and realtime
-  const { requests: fetchedRequests, loading: requestsLoading, refetch } = usePatientRequests(user?.id || null);
+  const { requests: fetchedRequests, loading: requestsLoading } = usePatientRequests(user?.id || null);
 
   useEffect(() => {
     if (!requestsLoading) {
@@ -270,12 +297,14 @@ const PatientRequests = () => {
                   date={req.date}
                   status={req.status}
                   price={req.price}
+                  paymentStatus={req.paymentStatus}
                   location={req.location}
                   isRated={!!ratedRequests[req.id]}
                   presessionSubmitted={!!presessionSubmitted[req.id]}
                   onRateProvider={setSelectedReviewReq}
                   onManageRequest={setSelectedManageReq}
                   onPreSession={setSelectedPreSessionReq}
+                  onPay={setPaymentModalRequest}
                 />
               ))
             ) : (
@@ -324,6 +353,14 @@ const PatientRequests = () => {
           setSelectedPreSessionReq(null);
         }}
         request={selectedPreSessionReq}
+      />
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={!!paymentModalRequest}
+        onClose={() => setPaymentModalRequest(null)}
+        request={paymentModalRequest}
+        onPaymentComplete={() => setPaymentModalRequest(null)}
       />
     </DashboardLayout>
   );

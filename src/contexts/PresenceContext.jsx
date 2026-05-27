@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
@@ -10,45 +10,71 @@ export const PresenceProvider = ({ children }) => {
   const { user } = useAuth();
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const channelRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setOnlineUsers(new Set());
+      return;
+    }
 
-    const channel = supabase.channel('global-presence', {
-      config: { presence: { key: user.id }, broadcast: { self: true } }
-    });
+    let cancelled = false;
 
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const userIds = new Set(Object.keys(state));
-        setOnlineUsers(userIds);
-      })
-      .on('presence', { event: 'join' }, ({ key }) => {
-        setOnlineUsers(prev => new Set(prev).add(key));
-      })
-      .on('presence', { event: 'leave' }, ({ key }) => {
-        setOnlineUsers(prev => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            user_id: user.id,
-            full_name: user.full_name,
-            online_at: new Date().toISOString(),
-          });
-        }
+    const setupPresence = () => {
+      if (cancelled) return;
+
+      const channel = supabase.channel('global-presence', {
+        config: { presence: { key: user.id }, broadcast: { self: true } }
       });
 
-    channelRef.current = channel;
+      channel
+        .on('presence', { event: 'sync' }, () => {
+          if (cancelled) return;
+          const state = channel.presenceState();
+          const userIds = new Set(Object.keys(state));
+          setOnlineUsers(userIds);
+        })
+        .on('presence', { event: 'join' }, ({ key }) => {
+          if (cancelled) return;
+          setOnlineUsers(prev => new Set(prev).add(key));
+        })
+        .on('presence', { event: 'leave' }, ({ key }) => {
+          if (cancelled) return;
+          setOnlineUsers(prev => {
+            const next = new Set(prev);
+            next.delete(key);
+            return next;
+          });
+        })
+        .subscribe(async (status) => {
+          if (cancelled) return;
+
+          if (status === 'SUBSCRIBED') {
+            await channel.track({
+              user_id: user.id,
+              full_name: user.full_name,
+              online_at: new Date().toISOString(),
+            });
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            // Auto-reconnect after 3 seconds
+            reconnectTimeoutRef.current = setTimeout(() => {
+              if (!cancelled) setupPresence();
+            }, 3000);
+          }
+        });
+
+      channelRef.current = channel;
+    };
+
+    setupPresence();
 
     return () => {
-      supabase.removeChannel(channel);
-      channelRef.current = null;
+      cancelled = true;
+      clearTimeout(reconnectTimeoutRef.current);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [user]);
 
