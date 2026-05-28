@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { MessageSquare, Search, CheckCircle, FileText } from 'lucide-react';
+import { MessageSquare, Search, CheckCircle, FileText, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
+import { useNavigate } from 'react-router-dom';
 import PatientRecordModal from '../../components/PatientRecordModal';
 import toast from 'react-hot-toast';
 import EmptyState from '../../components/EmptyState';
@@ -20,6 +21,7 @@ const ProviderPatients = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPatients = async () => {
@@ -178,6 +180,14 @@ const ProviderPatients = () => {
                       >
                         <FileText className="w-4 h-4" />
                       </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        className="p-2 bg-purple-50 text-purple-600 hover:text-white hover:bg-purple-500 rounded-lg transition-all dark:bg-purple-900/30"
+                        onClick={() => navigate(`/provider/patients/${p.patientId}/profile`)}
+                        title="View Profile"
+                      >
+                        <User className="w-4 h-4" />
+                      </motion.button>
                   </div>
                 </div>
               </motion.div>
@@ -245,6 +255,14 @@ const ProviderPatients = () => {
                           title="View Medical Record"
                         >
                           <FileText className="w-5 h-5" />
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          className="p-2 text-purple-600 bg-purple-50 hover:bg-purple-500 hover:text-white rounded-xl transition-all dark:bg-purple-900/30"
+                          onClick={() => navigate(`/provider/patients/${p.patientId}/profile`)}
+                          title="View Profile"
+                        >
+                          <User className="w-5 h-5" />
                         </motion.button>
                         <motion.button
                           whileTap={{ scale: 0.96 }}

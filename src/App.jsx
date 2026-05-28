@@ -24,6 +24,7 @@ const PatientConsent = lazy(() => import('./pages/patient/Consent'));
 const PatientRequests = lazy(() => import('./pages/patient/Requests'));
 const PatientProfile = lazy(() => import('./pages/patient/Profile'));
 const PatientMessages = lazy(() => import('./pages/patient/Messages'));
+const ProviderProfileView = lazy(() => import('./pages/patient/ProviderProfileView'));
 
 const ProviderDashboard = lazy(() => import('./pages/provider/Dashboard'));
 const ProviderRequests = lazy(() => import('./pages/provider/Requests'));
@@ -31,6 +32,7 @@ const ProviderPatients = lazy(() => import('./pages/provider/Patients'));
 const ProviderSchedule = lazy(() => import('./pages/provider/Schedule'));
 const ProviderProfile = lazy(() => import('./pages/provider/Profile'));
 const ProviderMessages = lazy(() => import('./pages/provider/Messages'));
+const PatientProfileView = lazy(() => import('./pages/provider/PatientProfileView'));
 
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminPatients = lazy(() => import('./pages/admin/Patients'));
@@ -54,7 +56,7 @@ function AppContent() {
   }, []);
 
   return (
-    <AnimatePresence mode="wait">
+    <><AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Public Routes */}
         <Route path="/" element={<MainLayout />}>
@@ -68,6 +70,7 @@ function AppContent() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientDashboard /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="providers" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientProviders /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="providers/:id/profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderProfileView /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientMessages /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="consent" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientConsent /></AnimatedPage></Suspense></ErrorBoundary>} />
@@ -79,6 +82,7 @@ function AppContent() {
           <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderDashboard /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="patients" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderPatients /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="patients/:id/profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientProfileView /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="schedule" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderSchedule /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderMessages /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
@@ -93,30 +97,31 @@ function AppContent() {
           <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
         </Route>
       </Routes>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: dark ? '#1e293b' : '#fff',
-            color: dark ? '#f1f5f9' : '#0f172a',
-            border: dark ? '1px solid #334155' : '1px solid #e2e8f0',
-            borderRadius: '16px',
-            padding: '16px 20px',
-            fontSize: '14px',
-            boxShadow: dark
-              ? '0 8px 32px rgba(0,0,0,0.4)'
-              : '0 8px 32px rgba(0,0,0,0.1)',
-          },
-          success: {
-            iconTheme: { primary: '#22c55e', secondary: '#fff' },
-          },
-          error: {
-            iconTheme: { primary: '#ef4444', secondary: '#fff' },
-          },
-        }}
-      />
     </AnimatePresence>
+    <Toaster
+      position="top-right"
+      toastOptions={{
+        duration: 4000,
+        style: {
+          background: dark ? '#1e293b' : '#fff',
+          color: dark ? '#f1f5f9' : '#0f172a',
+          border: dark ? '1px solid #334155' : '1px solid #e2e8f0',
+          borderRadius: '16px',
+          padding: '16px 20px',
+          fontSize: '14px',
+          boxShadow: dark
+            ? '0 8px 32px rgba(0,0,0,0.4)'
+            : '0 8px 32px rgba(0,0,0,0.1)',
+        },
+        success: {
+          iconTheme: { primary: '#22c55e', secondary: '#fff' },
+        },
+        error: {
+          iconTheme: { primary: '#ef4444', secondary: '#fff' },
+        },
+      }}
+    />
+  </>
   );
 }
 

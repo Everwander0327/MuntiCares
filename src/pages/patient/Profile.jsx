@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download } from 'lucide-react';
+import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download, User, Stethoscope, FolderOpen, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
@@ -10,6 +11,7 @@ import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import { getSignedUrl } from '../../lib/supabaseHelpers';
 import EmptyState from '../../components/EmptyState';
+import ProfilePhotoUpload from '../../components/ProfilePhotoUpload';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -21,6 +23,8 @@ const PatientProfile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
   const [profile, setProfile] = useState({
     full_name: '',
     email: '',
@@ -70,6 +74,14 @@ const PatientProfile = () => {
           is_profile_complete: patData?.is_profile_complete || false,
           created_at: userData.created_at
         });
+        try {
+          const { data: avData } = await supabase
+            .from('users')
+            .select('avatar_url')
+            .eq('id', user.id)
+            .single();
+          if (avData?.avatar_url) setAvatarUrl(avData.avatar_url);
+        } catch {} // column may not exist yet
 
         // Fetch Medical History
         const { data: histRows } = await supabase
@@ -563,10 +575,12 @@ const PatientProfile = () => {
 
               {/* Avatar overlapping the banner */}
               <div className="px-6 md:px-8 -mt-14 md:-mt-16 relative z-10">
-                <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white dark:bg-slate-800 border-4 border-white shadow-lg flex items-center justify-center text-3xl md:text-4xl font-bold text-primary mx-auto bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-800"
-                >
-                  {profile.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
-                </div>
+                <ProfilePhotoUpload
+                  userId={user.id}
+                  fullName={profile.full_name}
+                  currentUrl={avatarUrl}
+                  onUpdate={setAvatarUrl}
+                />
               </div>
 
               <div className="px-6 md:px-8 pt-4 pb-6 md:pb-8 text-center">
@@ -640,371 +654,324 @@ const PatientProfile = () => {
             </motion.div>
           </div>
 
-          {/* Edit Form */}
+          {/* Tabbed Content */}
           <motion.div 
-            className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
+            className="lg:col-span-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Personal & Medical Details</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">This information helps providers give you the best possible care.</p>
-            </div>
-            
-            <form onSubmit={handleSave} className="p-6 md:p-8 space-y-5 md:space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
-                  <div className="relative group">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                    <input 
-                      type="tel"
-                      required
-                      value={profile.phone}
-                      onChange={e => setProfile({...profile, phone: e.target.value})}
-                      placeholder="e.g., 09123456789"
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
-                    />
+              <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+                <Tabs.List className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-2xl mb-6">
+                  {[
+                    { value: 'overview', icon: User, label: 'Overview' },
+                    { value: 'medical', icon: Stethoscope, label: 'Medical' },
+                    { value: 'documents', icon: FolderOpen, label: 'Documents' },
+                    { value: 'history', icon: Clock, label: 'History' },
+                  ].map(tab => (
+                    <Tabs.Trigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={`flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2.5 rounded-xl text-2xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-slate-500 dark:data-[state=inactive]:text-slate-400`}
+                    >
+                      <tab.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${activeTab === tab.value ? 'text-primary' : ''}`} />
+                      <span>{tab.label}</span>
+                    </Tabs.Trigger>
+                  ))}
+                </Tabs.List>
+
+              {/* Overview Tab */}
+              <Tabs.Content value="overview" className="outline-none">
+                <form onSubmit={handleSave} className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
+                  <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
+                    <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Personal Information</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Your contact details and medical notes.</p>
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
-                  <div className="relative group">
-                    <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                    <input 
-                      type="text"
-                      required
-                      value={profile.emergency_contact}
-                      onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
-                      placeholder="Name & Number"
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Home Address (Service Location)</label>
-                  <div className="relative group">
-                    <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                    <textarea 
-                      required
-                      value={profile.address}
-                      onChange={e => setProfile({...profile, address: e.target.value})}
-                      placeholder="Full home address in Muntinlupa..."
-                      rows={3}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Medical Notes</label>
-                  <div className="relative group">
-                    <Activity className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                    <textarea 
-                      value={profile.medical_notes}
-                      onChange={e => setProfile({...profile, medical_notes: e.target.value})}
-                      placeholder="Any additional notes providers should know?"
-                      rows={3}
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Allergies</label>
-                  <textarea
-                    value={profile.allergies}
-                    onChange={e => setProfile({...profile, allergies: e.target.value})}
-                    placeholder="List any allergies (e.g., Penicillin, Latex, Peanuts)"
-                    rows={2}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
-                  />
-                  <div className="flex flex-wrap gap-1.5">
-                    {['No known allergies', 'Penicillin', 'Sulfa', 'Iodine', 'Latex', 'Peanuts'].filter(s => !(profile.allergies || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                      <motion.button
-                        key={s}
-                        type="button"
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => {
-                          const curr = (profile.allergies || '').trim();
-                          setProfile({...profile, allergies: curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s });
-                        }}
-                        className="px-2.5 py-1 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 rounded-lg text-xs font-bold border border-red-100 dark:border-red-900/50 transition-colors"
-                      >
-                        + {s}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Chronic Conditions</label>
-                  <textarea
-                    value={profile.chronic_conditions}
-                    onChange={e => setProfile({...profile, chronic_conditions: e.target.value})}
-                    placeholder="List any chronic conditions (e.g., Diabetes, High Blood Pressure)"
-                    rows={2}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
-                  />
-                  <div className="flex flex-wrap gap-1.5">
-                    {['Diabetes', 'High Blood Pressure', 'Asthma', 'Heart Disease', 'Arthritis', 'None'].filter(s => !(profile.chronic_conditions || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                      <motion.button
-                        key={s}
-                        type="button"
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => {
-                          const curr = (profile.chronic_conditions || '').trim();
-                          setProfile({...profile, chronic_conditions: curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s });
-                        }}
-                        className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-primary rounded-lg text-xs font-bold border border-blue-100 dark:border-blue-900/50 transition-colors"
-                      >
-                        + {s}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Past Surgeries</label>
-                  <textarea
-                    value={profile.past_surgeries}
-                    onChange={e => setProfile({...profile, past_surgeries: e.target.value})}
-                    placeholder="List any past surgeries (e.g., Appendectomy, C-Section)"
-                    rows={2}
-                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
-                  />
-                  <div className="flex flex-wrap gap-1.5">
-                    {['Appendectomy', 'C-Section', 'Gallbladder Removal', 'Knee Surgery', 'Tonsillectomy', 'None'].filter(s => !(profile.past_surgeries || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                      <motion.button
-                        key={s}
-                        type="button"
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => {
-                          const curr = (profile.past_surgeries || '').trim();
-                          setProfile({...profile, past_surgeries: curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s });
-                        }}
-                        className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-300 rounded-lg text-xs font-bold border border-purple-100 dark:border-purple-900/50 transition-colors"
-                      >
-                        + {s}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 md:pt-6 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-end gap-3">
-                <motion.button
-                  whileTap={{ scale: 0.96 }}
-                  type="button"
-                  onClick={() => setProfile({...profile, medical_notes: ''})}
-                  className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all text-sm"
-                >
-                  Clear Notes
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.96 }}
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-xl md:rounded-2xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all disabled:opacity-50 w-full sm:w-auto"
-                >
-                  <Save className="w-5 h-5" />
-                  {saving ? 'Saving...' : 'Save Profile'}
-                </motion.button>
-              </div>
-            </form>
-          </motion.div>
-
-          {/* Documents Section */}
-          <motion.div 
-            className="lg:col-span-2 lg:col-start-2 bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden mt-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
-              <div>
-                <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Medical Documents</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Upload lab results, prescriptions, etc. (Max 500KB)</p>
-              </div>
-              <div>
-                <input 
-                  type="file" 
-                  id="doc-upload" 
-                  className="hidden" 
-                  accept="image/jpeg, image/png, application/pdf"
-                  onChange={handleFileUpload}
-                  disabled={uploading}
-                />
-                <label 
-                  htmlFor="doc-upload" 
-                  className={`flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-primary font-bold rounded-xl cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''}`}
-                >
-                  {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  {uploading ? 'Uploading...' : 'Upload File'}
-                </label>
-              </div>
-            </div>
-
-            {/* Upload Progress Indication */}
-            {uploading && (
-              <div className="px-6 md:px-8 pb-4">
-                <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-bold mb-1">
-                  <span>Uploading document...</span>
-                  <span className="text-primary animate-pulse">Processing</span>
-                </div>
-                <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
-                  <motion.div 
-                    className="h-full bg-primary rounded-full"
-                    initial={{ width: "0%" }}
-                    animate={{ width: "100%" }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  />
-                </div>
-              </div>
-            )}
-            
-            <div className="p-6 md:p-8">
-              {documents.length === 0 ? (
-                <EmptyState icon="document" title="No documents uploaded yet" message="Upload lab results, prescriptions, or other medical documents." variant="compact" />
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-primary">
-                        <FileText className="w-5 h-5" />
+                  <div className="p-6 md:p-8 space-y-5 md:space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
+                        <div className="relative group">
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                          <input 
+                            type="tel" name="phone" required
+                            value={profile.phone}
+                            onChange={e => setProfile({...profile, phone: e.target.value})}
+                            placeholder="e.g., 09123456789"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
+                          />
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">{doc.document_title}</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
+                        <div className="relative group">
+                          <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                          <input 
+                            type="text" name="emergency_contact" required
+                            value={profile.emergency_contact}
+                            onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
+                            placeholder="Name & Number"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
+                          />
+                        </div>
                       </div>
-                      <motion.button
-                         whileTap={{ scale: 0.96 }}
-                         type="button"
-                         className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                         onClick={async () => {
-                           if(window.confirm('Are you sure you want to delete this document?')) {
-                             // 1. Delete from Storage Bucket first
-                             await supabase.storage
-                               .from('medical_documents')
-                               .remove([doc.file_path]);
-                               
-                             // 2. Delete from Database
-                             await supabase
-                               .from('patient_documents')
-                               .delete()
-                               .eq('id', doc.id);
-                               
-                             // 3. Update UI
-                             setDocuments(documents.filter(d => d.id !== doc.id));
-                             toast.success('Document deleted!');
-                           }
-                         }}
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Home Address</label>
+                        <div className="relative group">
+                          <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                          <textarea name="address" required value={profile.address}
+                            onChange={e => setProfile({...profile, address: e.target.value})}
+                            placeholder="Full home address in Muntinlupa..." rows={3}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Medical Notes</label>
+                        <div className="relative group">
+                          <Activity className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                          <textarea name="medical_notes" value={profile.medical_notes}
+                            onChange={e => setProfile({...profile, medical_notes: e.target.value})}
+                            placeholder="Any additional notes providers should know?" rows={3}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="pt-4 md:pt-6 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-end gap-3">
+                      <motion.button whileTap={{ scale: 0.96 }} type="button"
+                        onClick={() => setProfile({...profile, medical_notes: ''})}
+                        className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all text-sm"
                       >
-                         <X className="w-4 h-4" />
+                        Clear Notes
+                      </motion.button>
+                      <motion.button whileTap={{ scale: 0.96 }} type="submit" disabled={saving}
+                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-xl md:rounded-2xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all disabled:opacity-50 w-full sm:w-auto"
+                      >
+                        <Save className="w-5 h-5" />
+                        {saving ? 'Saving...' : 'Save Profile'}
                       </motion.button>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          {/* Visit History Section */}
-          <motion.div 
-            className="lg:col-span-2 lg:col-start-2 bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden mt-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Visit History & Clinical Notes</h3>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Past consultations, vitals, and provider notes.</p>
-            </div>
-            
-            <div className="p-6 md:p-8">
-              {visitNotes.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Activity className="w-6 h-6 text-slate-400 dark:text-slate-500" />
                   </div>
-                  <p className="text-slate-500 dark:text-slate-400 font-medium">No past visits recorded.</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {visitNotes.map((note) => (
-                    <div key={note.id} className="p-5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl space-y-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-600 pb-3">
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-slate-100 text-lg">Dr. {note.provider?.full_name || 'Unknown'}</p>
-                          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{new Date(note.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
-                          </div>
-                        </div>
-                        {note.services_rendered && (
-                          <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-primary font-bold text-2xs uppercase tracking-widest rounded-full self-start sm:self-auto">
-                            {note.services_rendered}
-                          </span>
-                        )}
+                </form>
+              </Tabs.Content>
+
+              {/* Medical Tab */}
+              <Tabs.Content value="medical" className="outline-none">
+                <form onSubmit={handleSave} className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
+                  <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
+                    <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Medical History</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Your allergies, conditions, and past surgeries.</p>
+                  </div>
+                  <div className="p-6 md:p-8 space-y-5 md:space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Allergies</label>
+                      <textarea name="allergies" value={profile.allergies}
+                        onChange={e => setProfile({...profile, allergies: e.target.value})}
+                        placeholder="List any allergies..." rows={2}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                      />
+                      <div className="flex flex-wrap gap-1.5">
+                        {['No known allergies', 'Penicillin', 'Sulfa', 'Iodine', 'Latex', 'Peanuts'].filter(s => !(profile.allergies || '').toLowerCase().includes(s.toLowerCase())).map(s => (
+                          <motion.button key={s} type="button" whileTap={{ scale: 0.9 }}
+                            onClick={() => setProfile({...profile, allergies: ((profile.allergies || '').trim() ? `${profile.allergies.replace(/,\s*$/, '')}, ${s}` : s)})}
+                            className="px-2.5 py-1 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 rounded-lg text-xs font-semibold border border-red-100 dark:border-red-900/50 transition-colors"
+                          >+ {s}</motion.button>
+                        ))}
                       </div>
-
-                      {/* Vitals Grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {note.vitals_bp && (
-                          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                            <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase">Blood Pressure</p>
-                            <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_bp}</p>
-                          </div>
-                        )}
-                        {note.vitals_temp && (
-                          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                            <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase">Temperature</p>
-                            <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_temp}°C</p>
-                          </div>
-                        )}
-                        {note.vitals_hr && (
-                          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                            <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase">Heart Rate</p>
-                            <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_hr} bpm</p>
-                          </div>
-                        )}
-                        {note.vitals_spo2 && (
-                          <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                            <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase">SpO2</p>
-                            <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_spo2}%</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {note.notes && (
-                        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                          <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Clinical Notes</p>
-                          <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{note.notes}</p>
-                        </div>
-                      )}
-
-                       {note.attachment_url && (
-                         <motion.button
-                           whileTap={{ scale: 0.96 }}
-                           type="button"
-                           onClick={async () => {
-                             const url = await getSignedUrl(note.attachment_url, 3600);
-                             if (url) window.open(url, '_blank');
-                           }}
-                           className="inline-flex items-center gap-2 text-sm text-primary font-bold hover:underline"
-                         >
-                           <FileText className="w-4 h-4" />
-                           View Attachment
-                         </motion.button>
-                       )}
                     </div>
-                  ))}
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Chronic Conditions</label>
+                      <textarea name="chronic_conditions" value={profile.chronic_conditions}
+                        onChange={e => setProfile({...profile, chronic_conditions: e.target.value})}
+                        placeholder="List any chronic conditions..." rows={2}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                      />
+                      <div className="flex flex-wrap gap-1.5">
+                        {['Diabetes', 'High Blood Pressure', 'Asthma', 'Heart Disease', 'Arthritis', 'None'].filter(s => !(profile.chronic_conditions || '').toLowerCase().includes(s.toLowerCase())).map(s => (
+                          <motion.button key={s} type="button" whileTap={{ scale: 0.9 }}
+                            onClick={() => setProfile({...profile, chronic_conditions: ((profile.chronic_conditions || '').trim() ? `${profile.chronic_conditions.replace(/,\s*$/, '')}, ${s}` : s)})}
+                            className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-primary rounded-lg text-xs font-semibold border border-blue-100 dark:border-blue-900/50 transition-colors"
+                          >+ {s}</motion.button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Past Surgeries</label>
+                      <textarea name="past_surgeries" value={profile.past_surgeries}
+                        onChange={e => setProfile({...profile, past_surgeries: e.target.value})}
+                        placeholder="List any past surgeries..." rows={2}
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                      />
+                      <div className="flex flex-wrap gap-1.5">
+                        {['Appendectomy', 'C-Section', 'Gallbladder Removal', 'Knee Surgery', 'Tonsillectomy', 'None'].filter(s => !(profile.past_surgeries || '').toLowerCase().includes(s.toLowerCase())).map(s => (
+                          <motion.button key={s} type="button" whileTap={{ scale: 0.9 }}
+                            onClick={() => setProfile({...profile, past_surgeries: ((profile.past_surgeries || '').trim() ? `${profile.past_surgeries.replace(/,\s*$/, '')}, ${s}` : s)})}
+                            className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-300 rounded-lg text-xs font-semibold border border-purple-100 dark:border-purple-900/50 transition-colors"
+                          >+ {s}</motion.button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+                      <motion.button whileTap={{ scale: 0.96 }} type="submit" disabled={saving}
+                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-xl md:rounded-2xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all disabled:opacity-50"
+                      >
+                        <Save className="w-5 h-5" />
+                        {saving ? 'Saving...' : 'Save Medical History'}
+                      </motion.button>
+                    </div>
+                  </div>
+                </form>
+              </Tabs.Content>
+
+              {/* Documents Tab */}
+              <Tabs.Content value="documents" className="outline-none">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
+                  <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Medical Documents</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Upload lab results, prescriptions, etc. (Max 500KB)</p>
+                    </div>
+                    <div>
+                      <input type="file" id="doc-upload" className="hidden" accept="image/jpeg, image/png, application/pdf"
+                        onChange={handleFileUpload} disabled={uploading} />
+                      <label htmlFor="doc-upload"
+                        className={`flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-primary font-semibold rounded-xl cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        {uploading ? 'Uploading...' : 'Upload File'}
+                      </label>
+                    </div>
+                  </div>
+                  {uploading && (
+                    <div className="px-6 md:px-8 pb-4">
+                      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                        <span>Uploading document...</span>
+                        <span className="text-primary animate-pulse">Processing</span>
+                      </div>
+                      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                        <motion.div className="h-full bg-primary rounded-full"
+                          initial={{ width: "0%" }} animate={{ width: "100%" }}
+                          transition={{ duration: 1.5, repeat: Infinity }} />
+                      </div>
+                    </div>
+                  )}
+                  <div className="p-6 md:p-8">
+                    {documents.length === 0 ? (
+                      <EmptyState icon="document" title="No documents uploaded yet" message="Upload lab results, prescriptions, or other medical documents." variant="compact" />
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {documents.map((doc) => (
+                          <div key={doc.id} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl">
+                            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-primary">
+                              <FileText className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate">{doc.document_title}</p>
+                              <p className="text-xs text-slate-400 dark:text-slate-500">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                            </div>
+                            <motion.button whileTap={{ scale: 0.96 }} type="button"
+                              className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                              onClick={async () => {
+                                if(window.confirm('Delete this document?')) {
+                                  await supabase.storage.from('medical_documents').remove([doc.file_path]);
+                                  await supabase.from('patient_documents').delete().eq('id', doc.id);
+                                  setDocuments(documents.filter(d => d.id !== doc.id));
+                                  toast.success('Document deleted!');
+                                }
+                              }}
+                            >
+                              <X className="w-4 h-4" />
+                            </motion.button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              </Tabs.Content>
+
+              {/* History Tab */}
+              <Tabs.Content value="history" className="outline-none">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
+                  <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
+                    <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Visit History</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Past consultations, vitals, and provider notes.</p>
+                  </div>
+                  <div className="p-6 md:p-8">
+                    {visitNotes.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Activity className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                        </div>
+                        <p className="text-slate-500 dark:text-slate-400 font-medium">No past visits recorded.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        {visitNotes.map((note) => (
+                          <div key={note.id} className="p-5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-600 pb-3">
+                              <div>
+                                <p className="font-bold text-slate-900 dark:text-slate-100 text-lg">Dr. {note.provider?.full_name || 'Unknown'}</p>
+                                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>{new Date(note.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                                </div>
+                              </div>
+                              {note.services_rendered && (
+                                <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-primary font-semibold text-2xs uppercase tracking-widest rounded-full self-start sm:self-auto">
+                                  {note.services_rendered}
+                                </span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              {note.vitals_bp && (
+                                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                  <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase">BP</p>
+                                  <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_bp}</p>
+                                </div>
+                              )}
+                              {note.vitals_temp && (
+                                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                  <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase">Temp</p>
+                                  <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_temp}°C</p>
+                                </div>
+                              )}
+                              {note.vitals_hr && (
+                                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                  <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase">HR</p>
+                                  <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_hr} bpm</p>
+                                </div>
+                              )}
+                              {note.vitals_spo2 && (
+                                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                  <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase">SpO2</p>
+                                  <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_spo2}%</p>
+                                </div>
+                              )}
+                            </div>
+                            {note.notes && (
+                              <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-1">Notes</p>
+                                <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{note.notes}</p>
+                              </div>
+                            )}
+                            {note.attachment_url && (
+                              <motion.button whileTap={{ scale: 0.96 }} type="button"
+                                onClick={async () => { const url = await getSignedUrl(note.attachment_url, 3600); if (url) window.open(url, '_blank'); }}
+                                className="inline-flex items-center gap-2 text-sm text-primary font-medium hover:underline"
+                              >
+                                <FileText className="w-4 h-4" /> View Attachment
+                              </motion.button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Tabs.Content>
+            </Tabs.Root>
           </motion.div>
         </div>
       </div>

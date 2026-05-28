@@ -938,12 +938,21 @@ const PatientProviders = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 md:gap-3 pt-3 md:pt-4 border-t border-slate-100 dark:border-slate-700">
+            <div className="grid grid-cols-3 gap-2 md:gap-3 pt-3 md:pt-4 border-t border-slate-100 dark:border-slate-700">
               <button
                 onClick={() => setViewingProvider(null)}
                 className="w-full py-3.5 border border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl md:rounded-2xl font-bold text-slate-600 dark:text-slate-300 transition-all text-xs md:text-sm"
               >
                 Close
+              </button>
+              <button
+                onClick={() => {
+                  setViewingProvider(null);
+                  navigate(`/patient/providers/${viewingProvider.id}/profile`);
+                }}
+                className="w-full py-3.5 border border-primary/30 text-primary hover:bg-primary hover:text-white rounded-xl md:rounded-2xl font-bold transition-all text-xs md:text-sm"
+              >
+                View Profile
               </button>
               <button
                 onClick={() => {

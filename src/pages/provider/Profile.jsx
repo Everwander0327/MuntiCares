@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Camera, Mail, Phone, MapPin, Award, BookOpen, Clock, LogOut, Calendar, CheckCircle2, ShieldCheck, Save, Upload, ExternalLink, Shield, FileText, X } from 'lucide-react';
+import { Mail, Phone, MapPin, Award, BookOpen, Clock, LogOut, Calendar, CheckCircle2, ShieldCheck, Save, Upload, ExternalLink, Shield, FileText, X, User, FolderOpen } from 'lucide-react';
 import { motion } from 'framer-motion';
+import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
@@ -15,6 +16,7 @@ const getProfessionalIdUrl = (filePath) => {
 import { SkeletonPage } from '../../components/Skeleton';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import ProfilePhotoUpload from '../../components/ProfilePhotoUpload';
 
 const calculateTrustScore = (data) => {
   let score = 0;
@@ -33,7 +35,6 @@ const getTrustLevel = (score) => {
 };
 
 const ProviderProfile = () => {
-  const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -63,6 +64,10 @@ const ProviderProfile = () => {
 
   const [editForm, setEditForm] = useState({ ...profile });
   const [servicesInput, setServicesInput] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [editingOverview, setEditingOverview] = useState(false);
+  const [editingSpecializations, setEditingSpecializations] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -75,6 +80,15 @@ const ProviderProfile = () => {
           .single();
 
         if (userError) throw userError;
+
+        try {
+          const { data: avData } = await supabase
+            .from('users')
+            .select('avatar_url')
+            .eq('id', user.id)
+            .single();
+          if (avData?.avatar_url) setAvatarUrl(avData.avatar_url);
+        } catch {} // column may not exist yet
 
         const { data: provData, error: provError } = await supabase
           .from('providers')
@@ -125,11 +139,9 @@ const ProviderProfile = () => {
     fetchProfile();
   }, [user]);
 
-  const handleSave = async () => {
-    const servicesList = servicesInput.split(',').map(s => s.trim()).filter(s => s);
-
-    if (!editForm.phone.trim() || !editForm.location.trim() || !editForm.bio.trim() || servicesList.length === 0) {
-      toast.error('Please fill out all fields (Phone, Location, Bio, and at least one Specialization) to complete your profile.');
+  const handleSaveOverview = async () => {
+    if (!editForm.phone.trim() || !editForm.location.trim() || !editForm.bio.trim()) {
+      toast.error('Please fill out all fields (Phone, Location, Bio).');
       return;
     }
 
@@ -139,7 +151,6 @@ const ProviderProfile = () => {
         phone: editForm.phone,
         location: editForm.location,
         bio: editForm.bio,
-        services: servicesList,
         price_per_service: editForm.price_per_service,
         is_profile_complete: true,
       };
@@ -159,17 +170,41 @@ const ProviderProfile = () => {
 
       if (error) throw error;
 
-      setProfile({
-        ...editForm,
-        services: servicesList,
-        is_profile_complete: true,
-        trust_score: newScore,
-      });
-      setIsEditing(false);
+      setProfile(prev => ({ ...prev, ...editForm, is_profile_complete: true, trust_score: newScore }));
+      setEditingOverview(false);
       toast.success('Profile updated successfully!');
     } catch (err) {
       console.error('Error saving profile:', err);
       toast.error('Failed to save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveSpecializations = async () => {
+    const servicesList = servicesInput.split(',').map(s => s.trim()).filter(s => s);
+
+    if (servicesList.length === 0) {
+      toast.error('Please add at least one specialization.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const newScore = calculateTrustScore({ ...profile, services: servicesList });
+      const { error } = await supabase
+        .from('providers')
+        .update({ services: servicesList, trust_score: newScore })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      setProfile(prev => ({ ...prev, services: servicesList, trust_score: newScore }));
+      setEditingSpecializations(false);
+      toast.success('Specializations updated!');
+    } catch (err) {
+      console.error('Error saving specializations:', err);
+      toast.error('Failed to save specializations.');
     } finally {
       setSaving(false);
     }
@@ -314,15 +349,12 @@ const ProviderProfile = () => {
 
               {/* Avatar */}
               <div className="px-6 md:px-8 -mt-14 md:-mt-16 relative z-10">
-                <div className="relative inline-block">
-                  <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-white dark:bg-slate-800 border-4 border-white shadow-lg flex items-center justify-center text-3xl md:text-4xl font-bold text-primary mx-auto bg-gradient-to-br from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-800"
-                  >
-                    {profile.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
-                  </div>
-                  <button className="absolute -bottom-1 -right-1 p-1.5 bg-primary text-white rounded-lg shadow-md hover:bg-primary/90 transition-colors">
-                    <Camera className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                <ProfilePhotoUpload
+                  userId={user.id}
+                  fullName={profile.full_name}
+                  currentUrl={avatarUrl}
+                  onUpdate={setAvatarUrl}
+                />
               </div>
 
               <div className="px-6 md:px-8 pt-4 pb-6 md:pb-8 text-center">
@@ -395,160 +427,293 @@ const ProviderProfile = () => {
             </motion.div>
           </div>
 
-          {/* Right Column — Details */}
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
-            {/* Contact & Rates */}
-            <motion.div 
-              className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden dark:bg-slate-800"
+          {/* Right Column — Tabs */}
+          <div className="lg:col-span-2">
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Contact & Rates</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Your professional info visible to patients</p>
-                </div>
-                <motion.button 
-                  onClick={() => isEditing ? handleSave() : setIsEditing(true)}
-                  disabled={saving}
-                  className={`flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg transition-all w-full sm:w-auto ${isEditing ? 'bg-green-500 text-white shadow-green-200 hover:bg-green-600' : 'bg-primary text-white shadow-primary/20 hover:bg-primary/90'}`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  <Save className="w-4 h-4" />
-                  {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Edit Profile'}
-                </motion.button>
-              </div>
+              <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+                <Tabs.List className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-2xl mb-6">
+                  {[
+                    { value: 'overview', icon: User, label: 'Overview' },
+                    { value: 'specializations', icon: Award, label: 'Specializations' },
+                    { value: 'documents', icon: FolderOpen, label: 'Documents' },
+                    { value: 'trust', icon: Shield, label: 'Trust' },
+                  ].map(tab => (
+                    <Tabs.Trigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={`flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2.5 rounded-xl text-2xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-slate-500 dark:data-[state=inactive]:text-slate-400`}
+                    >
+                      <tab.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${activeTab === tab.value ? 'text-primary' : ''}`} />
+                      <span>{tab.label}</span>
+                    </Tabs.Trigger>
+                  ))}
+                </Tabs.List>
 
-              <div className="p-6 md:p-8 space-y-5">
-                {/* Bio */}
-                <div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Bio / Title</p>
-                  {isEditing ? (
-                    <input 
-                      type="text" 
-                      value={editForm.bio}
-                      onChange={e => setEditForm({...editForm, bio: e.target.value})}
-                      placeholder="E.g. Registered Nurse • Wound Care Specialist"
-                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                  ) : (
-                    <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.bio || 'No bio provided'}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  {/* Phone */}
-                  <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Phone Number</p>
-                    {isEditing ? (
-                      <div className="relative group">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                        <input 
-                          type="text" 
-                          value={editForm.phone}
-                          onChange={e => setEditForm({...editForm, phone: e.target.value})}
-                          placeholder="+63 912 345 6789"
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
-                        />
+                {/* Overview Tab */}
+                <Tabs.Content value="overview" className="outline-none">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
+                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Contact & Rates</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Your professional info visible to patients</p>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                        <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.phone || 'Not provided'}</p>
+                      {!editingOverview ? (
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => { setEditingOverview(true); setEditForm(profile); }}
+                          className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all w-full sm:w-auto"
+                        >
+                          <Save className="w-4 h-4" />
+                          Edit Profile
+                        </motion.button>
+                      ) : (
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => { setEditingOverview(false); setEditForm(profile); }}
+                            className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                          >
+                            Cancel
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={handleSaveOverview}
+                            disabled={saving}
+                            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-green-500 text-white shadow-lg shadow-green-200 hover:bg-green-600 transition-all disabled:opacity-50"
+                          >
+                            <Save className="w-4 h-4" />
+                            {saving ? 'Saving...' : 'Save Changes'}
+                          </motion.button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-6 md:p-8 space-y-5">
+                      <div>
+                        <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Bio / Title</p>
+                        {editingOverview ? (
+                          <input
+                            type="text" name="bio"
+                            value={editForm.bio}
+                            onChange={e => setEditForm({...editForm, bio: e.target.value})}
+                            placeholder="E.g. Registered Nurse • Wound Care Specialist"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
+                          />
+                        ) : (
+                          <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.bio || 'No bio provided'}</p>
+                        )}
                       </div>
-                    )}
-                  </div>
-
-                  {/* Location */}
-                  <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Location</p>
-                    {isEditing ? (
-                      <div className="relative group">
-                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                        <input 
-                          type="text" 
-                          value={editForm.location}
-                          onChange={e => setEditForm({...editForm, location: e.target.value})}
-                          placeholder="Location"
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        <div>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Phone Number</p>
+                          {editingOverview ? (
+                            <div className="relative group">
+                              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                              <input
+                                type="text" name="phone"
+                                value={editForm.phone}
+                                onChange={e => setEditForm({...editForm, phone: e.target.value})}
+                                placeholder="+63 912 345 6789"
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
+                              <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.phone || 'Not provided'}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Location</p>
+                          {editingOverview ? (
+                            <div className="relative group">
+                              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                              <input
+                                type="text" name="location"
+                                value={editForm.location}
+                                onChange={e => setEditForm({...editForm, location: e.target.value})}
+                                placeholder="Location"
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
+                              <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.location || 'No location set'}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Rate per Service (₱)</p>
+                          {editingOverview ? (
+                            <div className="relative group">
+                              <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                              <input
+                                type="number" name="price_per_service"
+                                value={editForm.price_per_service}
+                                onChange={e => setEditForm({...editForm, price_per_service: Number(e.target.value)})}
+                                placeholder="e.g. 1500"
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><BookOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
+                              <p className="text-slate-700 dark:text-slate-200 font-medium">₱{profile.price_per_service || '0.00'}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Email (Read Only)</p>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
+                            <p className="text-slate-700 dark:text-slate-200 font-medium truncate">{profile.email}</p>
+                          </div>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                        <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.location || 'No location set'}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Rate */}
-                  <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Rate per Service (₱)</p>
-                    {isEditing ? (
-                      <div className="relative group">
-                        <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                        <input 
-                          type="number" 
-                          value={editForm.price_per_service}
-                          onChange={e => setEditForm({...editForm, price_per_service: e.target.value})}
-                          placeholder="e.g. 1500"
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><BookOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                        <p className="text-slate-700 dark:text-slate-200 font-medium">₱{profile.price_per_service || '0.00'}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Email (Read Only)</p>
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                      <p className="text-slate-700 dark:text-slate-200 font-medium truncate">{profile.email}</p>
                     </div>
                   </div>
+                </Tabs.Content>
 
-                  {/* Professional ID Upload (Edit Mode) / Status (View Mode) */}
-                  <div className="sm:col-span-2">
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Professional ID / License</p>
-                    {isEditing ? (
-                      <>
-                        {(profile.professional_id_paths?.length > 0 || profile.professional_id_path) ? (
-                          <div className="space-y-3">
-                            {profile.professional_id_status === 'rejected' && (
-                              <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-medium text-red-700 dark:text-red-300">
-                                <X className="w-4 h-4 shrink-0" />
-                                Your ID was not approved. Please upload a valid professional ID.
-                              </div>
-                            )}
-                            {professionalIdPreviews.length > 0 && (
-                              <div className="grid grid-cols-2 gap-2">
-                                {professionalIdPreviews.map((url, i) => (
-                                  <div key={i} className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 p-1">
-                                    {url.endsWith('.pdf') ? (
-                                      <div className="flex items-center gap-2 p-2">
-                                        <FileText className="w-5 h-5 text-primary shrink-0" />
-                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
-                                        <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0">
-                                          <ExternalLink className="w-3.5 h-3.5 text-primary" />
-                                        </a>
-                                      </div>
-                                    ) : (
-                                      <a href={url} target="_blank" rel="noopener noreferrer">
-                                        <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-lg" />
-                                      </a>
-                                    )}
-                                  </div>
+                {/* Specializations Tab */}
+                <Tabs.Content value="specializations" className="outline-none">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
+                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Specializations</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Services you offer to patients</p>
+                      </div>
+                      {!editingSpecializations ? (
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          onClick={() => setEditingSpecializations(true)}
+                          className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all w-full sm:w-auto"
+                        >
+                          <Save className="w-4 h-4" />
+                          Edit Specializations
+                        </motion.button>
+                      ) : (
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => { setEditingSpecializations(false); setServicesInput((profile.services || []).join(', ')); }}
+                            className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                          >
+                            Cancel
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={handleSaveSpecializations}
+                            disabled={saving}
+                            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-green-500 text-white shadow-lg shadow-green-200 hover:bg-green-600 transition-all disabled:opacity-50"
+                          >
+                            <Save className="w-4 h-4" />
+                            {saving ? 'Saving...' : 'Save'}
+                          </motion.button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-6 md:p-8">
+                      {editingSpecializations ? (
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase mb-2">Comma separated services</p>
+                            <textarea
+                              name="services"
+                              value={servicesInput}
+                              onChange={e => setServicesInput(e.target.value)}
+                              placeholder="Wound Care, Post-Surgery Recovery, Elderly Care"
+                              className="w-full h-28 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 text-sm resize-none transition-all"
+                            />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Suggested Services to Add:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {['Wound Care', 'Elderly Care', 'Post-Surgery Recovery', 'Physical Therapy', 'Vital Signs Monitoring', 'Medication Administration', 'Dementia Care', 'Stroke Rehab']
+                                .filter(s => !(servicesInput || '').toLowerCase().includes(s.toLowerCase()))
+                                .map(s => (
+                                  <motion.button
+                                    key={s}
+                                    type="button"
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => {
+                                      const curr = (servicesInput || '').trim();
+                                      const newServices = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
+                                      setServicesInput(newServices);
+                                    }}
+                                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary rounded-lg text-xs font-bold border border-blue-100 transition-colors dark:bg-blue-900/30 dark:hover:bg-blue-900/20 dark:border-blue-900/50"
+                                  >
+                                    + {s}
+                                  </motion.button>
                                 ))}
-                              </div>
-                            )}
-                            <div className="flex gap-2">
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
+                          {profile.services.length > 0 ? (
+                            profile.services.map((s, i) => (
+                              <motion.span
+                                key={i}
+                                className="px-4 py-2 bg-blue-50 text-primary rounded-xl text-sm font-bold border border-blue-100 dark:bg-blue-900/30 dark:border-blue-900/50"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.3 + i * 0.08 }}
+                              >
+                                {s}
+                              </motion.span>
+                            ))
+                          ) : (
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">No specializations added yet. Click {'\u201C'}Edit Specializations{'\u201D'} to add your services.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Tabs.Content>
+
+                {/* Documents Tab */}
+                <Tabs.Content value="documents" className="outline-none">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
+                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
+                      <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Professional ID / License</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Upload your professional documents for verification</p>
+                    </div>
+                    <div className="p-6 md:p-8">
+                      {(profile.professional_id_paths?.length > 0 || profile.professional_id_path) ? (
+                        <div className="space-y-3">
+                          {profile.professional_id_status === 'rejected' && (
+                            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-medium text-red-700 dark:text-red-300">
+                              <X className="w-4 h-4 shrink-0" />
+                              Your ID was not approved. Please upload a valid professional ID.
+                            </div>
+                          )}
+                          {professionalIdPreviews.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2">
+                              {professionalIdPreviews.map((url, i) => (
+                                <div key={i} className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 p-1">
+                                  {url.endsWith('.pdf') ? (
+                                    <div className="flex items-center gap-2 p-2">
+                                      <FileText className="w-5 h-5 text-primary shrink-0" />
+                                      <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
+                                      <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0">
+                                        <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                                      </a>
+                                    </div>
+                                  ) : (
+                                    <a href={url} target="_blank" rel="noopener noreferrer">
+                                      <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-lg" />
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex gap-2">
                             <motion.button
                               whileTap={{ scale: 0.96 }}
                               onClick={() => fileInputRef.current?.click()}
@@ -566,166 +731,71 @@ const ProviderProfile = () => {
                             >
                               Remove All
                             </motion.button>
-                            </div>
                           </div>
-                        ) : (
-                          <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-6 text-center hover:border-primary transition-colors">
-                            <Upload className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                            <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Upload your Professional ID</p>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Accepted: JPG, PNG, or PDF (max 2MB each)</p>
-                            <motion.button
-                              whileTap={{ scale: 0.96 }}
-                              onClick={() => fileInputRef.current?.click()}
-                              disabled={uploading}
-                              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
-                            >
-                              <Upload className="w-4 h-4" />
-                              {uploading ? 'Uploading...' : 'Choose Files'}
-                            </motion.button>
-                          </div>
-                        )}
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept="image/jpeg,image/png,application/pdf"
-                          onChange={handleProfessionalIdUpload}
-                          hidden
-                          multiple
-                          disabled={uploading}
-                        />
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Shield className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                        {profile.professional_id_status === 'verified' ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-900/50">
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            Verified
-                          </span>
-                        ) : profile.professional_id_status === 'pending' ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-900/50">
-                            <Clock className="w-3.5 h-3.5" />
-                            Pending Review
-                          </span>
-                        ) : profile.professional_id_status === 'rejected' ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-900/50">
-                            <X className="w-3.5 h-3.5" />
-                            Rejected
-                          </span>
-                        ) : (
-                          <p className="text-slate-500 dark:text-slate-400 text-sm">Not uploaded</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Specializations */}
-            <motion.div 
-              className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden dark:bg-slate-800"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-                <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Specializations</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Services you offer to patients</p>
-              </div>
-              <div className="p-6 md:p-8">
-                {isEditing ? (
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase mb-2">Comma separated services</p>
-                      <textarea 
-                        value={servicesInput}
-                        onChange={e => setServicesInput(e.target.value)}
-                        placeholder="Wound Care, Post-Surgery Recovery, Elderly Care"
-                        className="w-full h-28 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 text-sm resize-none transition-all"
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-6 text-center hover:border-primary transition-colors">
+                          <Upload className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                          <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Upload your Professional ID</p>
+                          <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Accepted: JPG, PNG, or PDF (max 2MB each)</p>
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                          >
+                            <Upload className="w-4 h-4" />
+                            {uploading ? 'Uploading...' : 'Choose Files'}
+                          </motion.button>
+                        </div>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file" name="professional_id"
+                        accept="image/jpeg,image/png,application/pdf"
+                        onChange={handleProfessionalIdUpload}
+                        hidden
+                        multiple
+                        disabled={uploading}
                       />
                     </div>
+                  </div>
+                </Tabs.Content>
 
-                    <div>
-                      <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Suggested Services to Add:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {['Wound Care', 'Elderly Care', 'Post-Surgery Recovery', 'Physical Therapy', 'Vital Signs Monitoring', 'Medication Administration', 'Dementia Care', 'Stroke Rehab']
-                          .filter(s => !(servicesInput || '').toLowerCase().includes(s.toLowerCase()))
-                          .map(s => (
-                            <motion.button
-                              key={s}
-                              type="button"
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => {
-                                const curr = (servicesInput || '').trim();
-                                const newServices = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
-                                setServicesInput(newServices);
-                              }}
-                              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary rounded-lg text-xs font-bold border border-blue-100 transition-colors dark:bg-blue-900/30 dark:hover:bg-blue-900/20 dark:border-blue-900/50"
-                            >
-                              + {s}
-                            </motion.button>
-                          ))}
-                      </div>
+                {/* Trust Tab */}
+                <Tabs.Content value="trust" className="outline-none">
+                  <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
+                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
+                      <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Trust Score Breakdown</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">How your trust score is calculated</p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {profile.services.length > 0 ? (
-                      profile.services.map((s, i) => (
-                        <motion.span 
-                          key={i} 
-                          className="px-4 py-2 bg-blue-50 text-primary rounded-xl text-sm font-bold border border-blue-100 dark:bg-blue-900/30 dark:border-blue-900/50"
-                          initial={{ opacity: 0, scale: 0.9 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.3 + i * 0.08 }}
-                        >
-                          {s}
-                        </motion.span>
-                      ))
-                    ) : (
-                      <p className="text-slate-500 dark:text-slate-400 text-sm">No specializations added yet. Click {'\u201C'}Edit Profile{'\u201D'} to add your services.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Trust Score Breakdown */}
-            <motion.div 
-              className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden dark:bg-slate-800"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-                <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Trust Score Breakdown</h3>
-                <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">How your trust score is calculated</p>
-              </div>
-              <div className="p-6 md:p-8">
-                <div className="space-y-2">
-                  {[
-                    { label: 'Profile completed', met: profile.is_profile_complete, points: 20 },
-                    { label: 'Professional ID verified', met: profile.professional_id_status === 'verified', points: 30 },
-                    { label: 'Approved by admin', met: profile.is_approved, points: 30 },
-                    { label: 'Rating 4.0 or higher', met: profile.rating >= 4.0, points: 20 },
-                  ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between py-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.met ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                          {item.met && <CheckCircle2 className="w-3 h-3 text-white" />}
+                    <div className="p-6 md:p-8">
+                      <div className="space-y-2">
+                        {[
+                          { label: 'Profile completed', met: profile.is_profile_complete, points: 20 },
+                          { label: 'Professional ID verified', met: profile.professional_id_status === 'verified', points: 30 },
+                          { label: 'Approved by admin', met: profile.is_approved, points: 30 },
+                          { label: 'Rating 4.0 or higher', met: profile.rating >= 4.0, points: 20 },
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-center justify-between py-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.met ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                                {item.met && <CheckCircle2 className="w-3 h-3 text-white" />}
+                              </div>
+                              <span className="text-sm text-slate-600 dark:text-slate-300">{item.label}</span>
+                            </div>
+                            <span className={`text-xs font-bold ${item.met ? 'text-green-600 dark:text-green-300' : 'text-slate-400 dark:text-slate-500'}`}>+{item.points}</span>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-slate-700">
+                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Total Trust Score</span>
+                          <span className={`text-lg font-bold ${trustLevel.color}`}>{profile.trust_score}/100</span>
                         </div>
-                        <span className="text-sm text-slate-600 dark:text-slate-300">{item.label}</span>
                       </div>
-                      <span className={`text-xs font-bold ${item.met ? 'text-green-600 dark:text-green-300' : 'text-slate-400 dark:text-slate-500'}`}>+{item.points}</span>
                     </div>
-                  ))}
-                  <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-slate-700">
-                    <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Total Trust Score</span>
-                    <span className={`text-lg font-bold ${trustLevel.color}`}>{profile.trust_score}/100</span>
                   </div>
-                </div>
-              </div>
+                </Tabs.Content>
+              </Tabs.Root>
             </motion.div>
           </div>
         </div>

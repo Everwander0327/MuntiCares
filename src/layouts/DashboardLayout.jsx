@@ -58,6 +58,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
   const [showMobileNav, setShowMobileNav] = useState(true);
   const mainRef = useRef(null);
   const lastScrollTop = useRef(0);
+  const channelRef = useRef(null);
 
   const patientLinks = [
     { icon: <LayoutDashboard />, label: 'Dashboard', to: '/patient/dashboard' },
@@ -138,8 +139,10 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     fetchCounts();
     deleteOldMessages();
 
-    const channel = supabase
-      .channel('layout-counts')
+    if (!channelRef.current) {
+      channelRef.current = supabase.channel(`layout-counts-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+    }
+    channelRef.current
       .on('postgres_changes', { event: '*', schema: 'public', table: 'requests', filter: `${authUser.role === 'patient' ? 'patient_id' : 'provider_id'}=eq.${authUser.id}` }, () => fetchCounts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, () => fetchCounts())
       .subscribe();
@@ -157,7 +160,10 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     return () => {
       clearInterval(pollInterval);
       clearInterval(cleanupInterval);
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
       window.removeEventListener('messages-read', onMessagesRead);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('focus', onWindowFocus);
@@ -266,8 +272,12 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
           {/* User Info */}
           <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-900 rounded-2xl mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-              {user.initials}
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0">
+              {authUser?.avatar_url ? (
+                <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                user.initials
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">{user.name}</p>
@@ -310,9 +320,13 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
             <NotificationBell />
             <Link 
               to={`/${currentRole}/profile`} 
-              className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold shadow-sm border border-white dark:border-slate-800 shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+              className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold shadow-sm border border-white dark:border-slate-800 shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer overflow-hidden"
             >
-              {user.initials}
+              {authUser?.avatar_url ? (
+                <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                user.initials
+              )}
             </Link>
           </div>
         </header>
