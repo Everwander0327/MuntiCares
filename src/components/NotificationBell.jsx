@@ -309,7 +309,7 @@ const NotificationBell = () => {
   const fireBrowserNotification = (title, body) => {
     try {
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body, icon: '/vite.svg' });
+        new Notification(title, { body, icon: '/favicon.svg' });
       }
     } catch {}
   };
