@@ -33,7 +33,7 @@ const StatCard = ({ label, value, icon, color }) => {
         </div>
       </div>
       <div>
-        <p className="text-slate-500 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight dark:text-slate-400">{label}</p>
+        <p className="text-slate-500 text-2xs md:text-sm font-medium mt-1 md:mt-3 leading-tight dark:text-slate-400">{label}</p>
         <p className="text-lg md:text-2xl font-bold text-slate-900 dark:text-slate-100" ref={ref}>{count}</p>
       </div>
     </motion.div>
@@ -274,12 +274,12 @@ const ProviderDashboard = () => {
                       <p className="font-bold truncate">{appt.patient}</p>
                       <p className="text-blue-200 text-sm truncate">{appt.service}</p>
                       {appt.paymentStatus === 'pending_cash' && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-200 mt-1">
+                        <span className="inline-flex items-center gap-1 text-2xs font-bold text-amber-200 mt-1">
                           <Banknote className="w-3 h-3" /> Cash on visit
                         </span>
                       )}
                       {appt.paymentStatus === 'paid' && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-200 mt-1">
+                        <span className="inline-flex items-center gap-1 text-2xs font-bold text-green-200 mt-1">
                           <Check className="w-3 h-3" /> Paid
                         </span>
                       )}
@@ -425,7 +425,7 @@ const ProviderDashboard = () => {
                     {review.review_text && (
                       <p className="text-sm text-slate-600 dark:text-slate-400">{review.review_text}</p>
                     )}
-                    <p className="text-[10px] text-slate-400 mt-1">
+                    <p className="text-2xs text-slate-400 mt-1">
                       {new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>

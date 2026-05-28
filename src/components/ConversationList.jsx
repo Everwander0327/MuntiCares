@@ -204,7 +204,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
               </div>
               <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-800 transition-colors ${isUserOnline(conv.id) ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
               {conv.unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[10px] font-bold text-white px-1">
+                <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-2xs font-bold text-white px-1">
                   {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
                 </span>
               )}
@@ -213,7 +213,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <p className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{conv.name}</p>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0 font-medium">
+                <span className="text-2xs text-slate-400 dark:text-slate-500 shrink-0 font-medium">
                   {formatRelativeTime(conv.lastMessage?.created_at)}
                 </span>
               </div>

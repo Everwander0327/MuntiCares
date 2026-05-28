@@ -122,9 +122,9 @@ const AdminRequests = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="font-bold text-slate-900 dark:text-slate-100">{r.service}</p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{r.id}</p>
+                    <p className="text-2xs text-slate-400 dark:text-slate-500 font-mono">{r.id}</p>
                   </div>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-widest ${
                     r.status === 'Accepted' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
                     r.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
                     r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
@@ -144,7 +144,7 @@ const AdminRequests = () => {
                   <p><span className="text-slate-400 dark:text-slate-500">Provider:</span> {r.provider}</p>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-700">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold dark:text-slate-500">{r.date}</span>
+                  <span className="text-2xs text-slate-400 uppercase font-bold dark:text-slate-500">{r.date}</span>
                 </div>
               </motion.div>
             ))}
@@ -155,12 +155,12 @@ const AdminRequests = () => {
             <table className="w-full text-left border-collapse table-striped">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
-                  <th className="px-6 py-4 font-bold">Request ID</th>
-                  <th className="px-6 py-4 font-bold">Patient</th>
-                  <th className="px-6 py-4 font-bold">Provider</th>
-                  <th className="px-6 py-4 font-bold">Service</th>
-                  <th className="px-6 py-4 font-bold">Status</th>
-                  <th className="px-6 py-4 font-bold text-right">Date</th>
+                  <th className="px-6 py-4 font-semibold">Request ID</th>
+                  <th className="px-6 py-4 font-semibold">Patient</th>
+                  <th className="px-6 py-4 font-semibold">Provider</th>
+                  <th className="px-6 py-4 font-semibold">Service</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold text-right">Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,7 +183,7 @@ const AdminRequests = () => {
                       <span className="px-2 py-1 bg-slate-50 rounded-lg text-xs text-slate-500 font-semibold dark:bg-slate-800 dark:text-slate-400">{r.service}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold uppercase tracking-widest ${
                         r.status === 'Accepted' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
                         r.status === 'Completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
                         r.status === 'Pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :

@@ -330,15 +330,15 @@ const ProviderProfile = () => {
                 <p className="text-primary text-sm font-semibold mt-1">{profile.bio || 'No bio provided'}</p>
 
                 <div className="flex items-center justify-center flex-wrap gap-2 mt-3">
-                  <span className="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 font-bold text-[10px] uppercase tracking-widest rounded-full border border-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-900/50">
+                  <span className="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 font-bold text-2xs uppercase tracking-widest rounded-full border border-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-900/50">
                     Healthcare Provider
                   </span>
                   {profile.is_approved ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 font-bold text-[10px] uppercase tracking-widest rounded-full border border-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-900/50">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 font-bold text-2xs uppercase tracking-widest rounded-full border border-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-900/50">
                       <ShieldCheck className="w-3 h-3" /> Approved
                     </span>
                   ) : profile.is_profile_complete ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 font-bold text-[10px] uppercase tracking-widest rounded-full border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900/50">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 font-bold text-2xs uppercase tracking-widest rounded-full border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900/50">
                       <Clock className="w-3 h-3" /> Under Review
                     </span>
                   ) : null}
@@ -424,7 +424,7 @@ const ProviderProfile = () => {
               <div className="p-6 md:p-8 space-y-5">
                 {/* Bio */}
                 <div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Bio / Title</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Bio / Title</p>
                   {isEditing ? (
                     <input 
                       type="text" 
@@ -441,7 +441,7 @@ const ProviderProfile = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   {/* Phone */}
                   <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Phone Number</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Phone Number</p>
                     {isEditing ? (
                       <div className="relative group">
                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
@@ -463,7 +463,7 @@ const ProviderProfile = () => {
 
                   {/* Location */}
                   <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Location</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Location</p>
                     {isEditing ? (
                       <div className="relative group">
                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
@@ -485,7 +485,7 @@ const ProviderProfile = () => {
 
                   {/* Rate */}
                   <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Rate per Service (₱)</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Rate per Service (₱)</p>
                     {isEditing ? (
                       <div className="relative group">
                         <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
@@ -507,7 +507,7 @@ const ProviderProfile = () => {
 
                   {/* Email */}
                   <div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Email (Read Only)</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Email (Read Only)</p>
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
                       <p className="text-slate-700 dark:text-slate-200 font-medium truncate">{profile.email}</p>
@@ -516,7 +516,7 @@ const ProviderProfile = () => {
 
                   {/* Professional ID Upload (Edit Mode) / Status (View Mode) */}
                   <div className="sm:col-span-2">
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider mb-2">Professional ID / License</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Professional ID / License</p>
                     {isEditing ? (
                       <>
                         {(profile.professional_id_paths?.length > 0 || profile.professional_id_path) ? (

@@ -346,7 +346,7 @@ const AuthPage = () => {
                   />
                 ))}
               </div>
-              <p className={`text-[11px] font-medium text-right mt-0.5 ${
+              <p className={`text-nano font-medium text-right mt-0.5 ${
                 strength <= 2 ? 'text-red-400' : strength <= 3 ? 'text-yellow-400' : 'text-green-400'
               }`}>
                 {strengthLabels[strength]}

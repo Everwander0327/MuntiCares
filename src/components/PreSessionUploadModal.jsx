@@ -204,7 +204,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
               <h4 className="text-xs uppercase font-bold text-slate-400 dark:text-slate-500 tracking-wider">Self-Measured Vitals (Optional)</h4>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Blood Pressure</label>
+                  <label className="text-nano font-semibold text-slate-500 dark:text-slate-400">Blood Pressure</label>
                   <input
                     type="text"
                     placeholder="e.g. 120/80"
@@ -214,7 +214,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Temperature (°C)</label>
+                  <label className="text-nano font-semibold text-slate-500 dark:text-slate-400">Temperature (°C)</label>
                   <input
                     type="text"
                     placeholder="e.g. 36.5"
@@ -224,7 +224,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Heart Rate (bpm)</label>
+                  <label className="text-nano font-semibold text-slate-500 dark:text-slate-400">Heart Rate (bpm)</label>
                   <input
                     type="text"
                     placeholder="e.g. 72"
@@ -234,7 +234,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Weight (kg)</label>
+                  <label className="text-nano font-semibold text-slate-500 dark:text-slate-400">Weight (kg)</label>
                   <input
                     type="text"
                     placeholder="e.g. 65"
@@ -281,7 +281,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
               >
                 <Upload className="w-6 h-6 text-slate-400 dark:text-slate-500" />
                 <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Tap to upload photos or documents</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">JPG, PNG, PDF • Max 5 files</p>
+                <p className="text-2xs text-slate-400 dark:text-slate-500">JPG, PNG, PDF • Max 5 files</p>
               </button>
 
               {/* File Preview List */}
@@ -293,7 +293,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                         {getFileIcon(file)}
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">{file.name}</p>
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500">{formatFileSize(file.size)}</p>
+                          <p className="text-2xs text-slate-400 dark:text-slate-500">{formatFileSize(file.size)}</p>
                         </div>
                       </div>
                       <button

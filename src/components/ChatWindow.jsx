@@ -443,7 +443,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                   </div>
                   <div>
                     <h3 className="font-bold text-sm">Teleconsultation</h3>
-                    <p className="text-[11px] text-slate-400 font-mono font-medium">{formatTime(callTimer)}</p>
+                    <p className="text-nano text-slate-400 font-mono font-medium">{formatTime(callTimer)}</p>
                   </div>
                 </div>
                 <button
@@ -641,7 +641,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                   <React.Fragment key={msg.id}>
                     {showDate && (
                       <div className="flex justify-center my-4">
-                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <span className="text-nano font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-100 dark:border-slate-700 shadow-sm">
                           {formatDateLabel(msg.created_at)}
                         </span>
                       </div>
@@ -672,7 +672,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                         </div>
                         {showTime && (
                           <div className="flex items-center gap-1 mt-1 px-1">
-                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-medium">
+                            <span className="text-3xs text-slate-400 dark:text-slate-500 font-medium">
                               {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             {isMe && (
@@ -688,7 +688,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
 
               {/* 24-Hour Notice */}
               <div className="flex justify-center my-6">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold tracking-widest uppercase bg-slate-200/50 dark:bg-slate-700/50 px-3 py-1 rounded-full">
+                <span className="text-2xs text-slate-400 dark:text-slate-500 font-bold tracking-widest uppercase bg-slate-200/50 dark:bg-slate-700/50 px-3 py-1 rounded-full">
                   🔒 Messages disappear after 24 hours
                 </span>
               </div>

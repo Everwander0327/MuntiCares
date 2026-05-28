@@ -8,7 +8,7 @@ const MainLayout = () => {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
-    <div className="min-h-screen selection:bg-blue-100 selection:text-primary">
+    <div className="min-h-screen">
       <ScrollProgress />
       <Navbar />
       <main>

@@ -405,13 +405,13 @@ const PatientConsent = () => {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <span className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{entry.providerName}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${getActionBadge(entry.action)}`}>
+                                <span className={`px-1.5 py-0.5 rounded text-2xs font-bold ${getActionBadge(entry.action)}`}>
                                   {entry.action}
                                 </span>
                               </div>
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{entry.details}</p>
                             </div>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">{formatTimestamp(entry.timestamp)}</span>
+                            <span className="text-2xs text-slate-400 dark:text-slate-500 shrink-0">{formatTimestamp(entry.timestamp)}</span>
                           </div>
                         ))}
                       </div>
@@ -447,7 +447,7 @@ const PatientConsent = () => {
                                     .join(', ') || 'records'}
                                 </p>
                               </div>
-                              <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
+                              <span className="text-2xs text-slate-400 dark:text-slate-500 shrink-0">
                                 {new Date(c.lastAccessRaw).toLocaleDateString('en-US', {
                                   month: 'short', day: 'numeric', year: 'numeric',
                                   hour: '2-digit', minute: '2-digit'

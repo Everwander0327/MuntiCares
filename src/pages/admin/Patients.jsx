@@ -156,7 +156,7 @@ const AdminPatients = () => {
                       <p className="text-xs text-slate-400 dark:text-slate-500">{p.email}</p>
                     </div>
                   </div>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-widest ${
                     p.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full status-dot ${
@@ -195,11 +195,11 @@ const AdminPatients = () => {
             <table className="w-full text-left border-collapse table-striped">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
-                  <th className="px-6 py-4 font-bold">Full Name</th>
-                  <th className="px-6 py-4 font-bold">Email</th>
-                  <th className="px-6 py-4 font-bold">Joined</th>
-                  <th className="px-6 py-4 font-bold">Status</th>
-                  <th className="px-6 py-4 font-bold text-right">Actions</th>
+                  <th className="px-6 py-4 font-semibold">Full Name</th>
+                  <th className="px-6 py-4 font-semibold">Email</th>
+                  <th className="px-6 py-4 font-semibold">Joined</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -222,7 +222,7 @@ const AdminPatients = () => {
                     <td className="px-6 py-4 text-slate-600 text-sm dark:text-slate-300">{p.email}</td>
                     <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{p.joinDate}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold uppercase tracking-widest ${
                         p.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full status-dot ${

@@ -126,7 +126,7 @@ const PaymentModal = ({ isOpen, onClose, request, onPaymentComplete }) => {
                     <span className={`text-xs font-bold ${isSelected ? 'text-primary' : 'text-slate-600 dark:text-slate-300'}`}>
                       {method.label}
                     </span>
-                    <span className="text-[10px] text-slate-400 hidden md:block">{method.desc}</span>
+                    <span className="text-2xs text-slate-400 hidden md:block">{method.desc}</span>
                   </button>
                 );
               })}

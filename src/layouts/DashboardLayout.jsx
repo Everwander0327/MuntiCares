@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
 import ThemeToggle from '../components/ThemeToggle';
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import MobileNavItem from '../components/MobileNavItem';
 
 const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
   <Link 
@@ -36,36 +37,13 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
       transition={{ duration: 0.2 }}
     />
     {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-primary'}` })}
-    <span className="font-semibold flex-1">{label}</span>
+    <span className="font-medium flex-1">{label}</span>
     {badge > 0 && (
-      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-[9px] font-bold px-1.5 ${
+      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-3xs font-bold px-1.5 ${
         active ? 'bg-white text-primary' : 'bg-red-500 text-white'
       }`}>
         {badge > 9 ? '9+' : badge}
       </span>
-    )}
-  </Link>
-);
-
-const MobileNavItem = ({ icon, label, to, active, badge }) => (
-  <Link 
-    to={to}
-    className={`flex flex-col items-center gap-1 py-2 px-3 rounded-xl transition-all relative ${active ? 'text-primary' : 'text-slate-400'}`}
-  >
-    <div className="relative">
-      {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-primary' : 'text-slate-400'}` })}
-      {badge > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center text-[7px] font-bold text-white px-0.5">
-          {badge > 9 ? '9+' : badge}
-        </span>
-      )}
-    </div>
-    <span className={`text-[10px] font-bold ${active ? 'text-primary' : 'text-slate-400'}`}>{label}</span>
-    {active && (
-      <motion.div 
-        className="w-1 h-1 bg-primary rounded-full"
-        layoutId="mobile-indicator"
-      />
     )}
   </Link>
 );
@@ -77,26 +55,29 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser, logout } = useAuth();
+  const [showMobileNav, setShowMobileNav] = useState(true);
+  const mainRef = useRef(null);
+  const lastScrollTop = useRef(0);
 
   const patientLinks = [
     { icon: <LayoutDashboard />, label: 'Dashboard', to: '/patient/dashboard' },
-    { icon: <Search />, label: 'Find Providers', to: '/patient/providers' },
-    { icon: <FileText />, label: 'My Requests', to: '/patient/requests' },
+    { icon: <Search />, label: 'Find Providers', shortLabel: 'Find', primary: true, to: '/patient/providers' },
+    { icon: <FileText />, label: 'My Requests', shortLabel: 'Requests', to: '/patient/requests' },
     { icon: <MessageCircle />, label: 'Messages', to: '/patient/messages' },
-    { icon: <Settings />, label: 'Consent Settings', to: '/patient/consent' },
+    { icon: <Settings />, label: 'Consent Settings', shortLabel: 'Consent', to: '/patient/consent' },
   ];
 
   const providerLinks = [
     { icon: <LayoutDashboard />, label: 'Dashboard', to: '/provider/dashboard' },
-    { icon: <Bell />, label: 'Incoming Requests', to: '/provider/requests' },
-    { icon: <Users />, label: 'My Patients', to: '/provider/patients' },
-    { icon: <CalendarDays />, label: 'My Schedule', to: '/provider/schedule' },
+    { icon: <Bell />, label: 'Incoming Requests', shortLabel: 'Requests', primary: true, to: '/provider/requests' },
+    { icon: <Users />, label: 'My Patients', shortLabel: 'Patients', to: '/provider/patients' },
+    { icon: <CalendarDays />, label: 'My Schedule', shortLabel: 'Schedule', to: '/provider/schedule' },
     { icon: <MessageCircle />, label: 'Messages', to: '/provider/messages' },
   ];
 
   const adminLinks = [
     { icon: <LayoutDashboard />, label: 'Overview', to: '/admin/dashboard' },
-    { icon: <Users />, label: 'Patients', to: '/admin/patients' },
+    { icon: <Users />, label: 'Patients', primary: true, to: '/admin/patients' },
     { icon: <Briefcase />, label: 'Providers', to: '/admin/providers' },
     { icon: <FileText />, label: 'Requests', to: '/admin/requests' },
   ];
@@ -187,6 +168,40 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     fetchCounts();
   }, [location.pathname, fetchCounts]);
 
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      const scrollTop = el.scrollTop;
+      if (scrollTop > lastScrollTop.current && scrollTop > 50) {
+        setShowMobileNav(false);
+      } else {
+        setShowMobileNav(true);
+      }
+      lastScrollTop.current = scrollTop;
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const buildMobileLinks = (links) => {
+    const primaryIndex = links.findIndex(l => l.primary);
+    if (primaryIndex === -1) return links.slice(0, 5);
+    const primary = links[primaryIndex];
+    const others = links.filter((_, i) => i !== primaryIndex);
+    const result = [];
+    let idx = 0;
+    for (let i = 0; i < 5; i++) {
+      if (i === 2) {
+        result.push(primary);
+      } else if (idx < others.length) {
+        result.push(others[idx]);
+        idx++;
+      }
+    }
+    return result;
+  };
+
   return (
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex overflow-hidden">
       {/* Mobile Sidebar Overlay */}
@@ -219,7 +234,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </div>
 
           {/* Nav section label */}
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
+          <p className="text-2xs font-semibold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
 
           {/* Nav links */}
           <nav className="flex-1 space-y-1 overflow-y-auto">
@@ -255,8 +270,8 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
               {user.initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{user.name}</p>
-              <span className="inline-flex items-center px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full uppercase tracking-wider">
+              <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">{user.name}</p>
+              <span className="inline-flex items-center px-2 py-0.5 bg-primary/10 text-primary text-2xs font-medium rounded-full uppercase tracking-wider">
                 {user.badge}
               </span>
             </div>
@@ -271,7 +286,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
             className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-slate-700 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
           >
             <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500 dark:group-hover:text-red-400" />
-            <span className="font-semibold">Logout</span>
+            <span className="font-medium">Logout</span>
           </button>
         </div>
       </aside>
@@ -281,7 +296,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
         <header className="h-20 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between px-4 lg:px-10 shrink-0">
           <div className="flex items-center gap-4 min-w-0">
             <div className="min-w-0">
-              <h2 className="text-sm md:text-lg font-bold text-slate-900 dark:text-slate-100 truncate max-w-[200px] md:max-w-none">
+              <h2 className="text-sm md:text-lg font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[200px] md:max-w-none">
                 Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -302,8 +317,9 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-10 pb-24 lg:pb-10">
+        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 lg:p-10 pb-24 lg:pb-10">
           <motion.div
+            key={location.pathname}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
@@ -314,28 +330,40 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <div id="mobile-bottom-nav" className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
-        <div className="flex items-center justify-around px-1 py-1">
-          {links.slice(0, 5).map((link) => {
-            let badge = 0;
-            if (currentRole === 'patient') {
-              if (link.label === 'My Requests') badge = pendingCount;
-              if (link.label === 'Messages') badge = unreadMsgCount;
-            } else if (currentRole === 'provider') {
-              if (link.label === 'Incoming Requests') badge = pendingCount;
-              if (link.label === 'Messages') badge = unreadMsgCount;
-            }
-            return (
-              <MobileNavItem 
-                key={link.label}
-                icon={link.icon}
-                label={link.label.split(' ').pop()}
-                to={link.to}
-                active={location.pathname === link.to}
-                badge={badge}
-              />
-            );
-          })}
+      <div 
+        id="mobile-bottom-nav" 
+        className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden transition-transform duration-300 ease-in-out ${
+          showMobileNav ? 'translate-y-0' : 'translate-y-full'
+        }`}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="mx-3 mb-3 rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border border-slate-100/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
+          <div className="flex items-center justify-around px-1 py-0.5">
+            {(() => {
+              const mobileLinks = buildMobileLinks(links);
+              return mobileLinks.map((link, i) => {
+                let badge = 0;
+                if (currentRole === 'patient') {
+                  if (link.label === 'My Requests') badge = pendingCount;
+                  if (link.label === 'Messages') badge = unreadMsgCount;
+                } else if (currentRole === 'provider') {
+                  if (link.label === 'Incoming Requests') badge = pendingCount;
+                  if (link.label === 'Messages') badge = unreadMsgCount;
+                }
+                return (
+                  <MobileNavItem 
+                    key={link.label}
+                    icon={link.icon}
+                    label={link.shortLabel || link.label}
+                    to={link.to}
+                    active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
+                    badge={badge}
+                    prominent={i === 2}
+                  />
+                );
+              });
+            })()}
+          </div>
         </div>
       </div>
     </div>

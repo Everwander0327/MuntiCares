@@ -380,7 +380,7 @@ const PatientProviders = () => {
                 <span className="text-sm">{categoryIcons[cat] || '🏥'}</span>
                 <span>{cat}</span>
                 {categoryCounts[cat] > 0 && (
-                  <span className={`text-[10px] font-bold ml-0.5 ${
+                  <span className={`text-2xs font-bold ml-0.5 ${
                     activeCategory === cat ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'
                   }`}>
                     {categoryCounts[cat]}
@@ -409,13 +409,13 @@ const PatientProviders = () => {
           {showHistory && !searchTerm && searchHistory.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-xl z-40 p-3">
               <div className="flex items-center justify-between mb-2 px-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Recent Searches</span>
+                <span className="text-2xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Recent Searches</span>
                 <button
                   onClick={() => {
                     setSearchHistory([]);
                     if (user) localStorage.removeItem(`search_history_${user.id}`);
                   }}
-                  className="text-[10px] font-bold text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors"
+                  className="text-2xs font-bold text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors"
                 >
                   Clear All
                 </button>
@@ -439,7 +439,7 @@ const PatientProviders = () => {
         </div>
           <div className="shrink-0">
             <CustomSelect
-              className="min-w-0 !py-2 !px-2.5 !text-[11px] !rounded-xl"
+              className="min-w-0 !py-2 !px-2.5 !text-nano !rounded-xl"
               value={sortBy}
               onChange={setSortBy}
               options={sortOptions}
@@ -480,8 +480,8 @@ const PatientProviders = () => {
                 {/* Trust Score Bar */}
                 <div className="mb-3">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Trust</span>
-                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{p.trust_score}/100</span>
+                    <span className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Trust</span>
+                    <span className="text-2xs font-bold text-slate-600 dark:text-slate-300">{p.trust_score}/100</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
@@ -492,7 +492,7 @@ const PatientProviders = () => {
                     />
                   </div>
                   {p.professional_id_status === 'verified' && (
-                    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-1">
+                    <span className="inline-flex items-center gap-0.5 text-2xs font-bold text-blue-600 dark:text-blue-400 mt-1">
                       <ShieldCheck className="w-3 h-3" /> Verified
                     </span>
                   )}
@@ -501,17 +501,17 @@ const PatientProviders = () => {
                 {/* Service Tags */}
                 <div className="flex flex-wrap gap-1.5 mb-3">
                   {(p.services || []).slice(0, 3).map((s, i) => (
-                    <span key={i} className="px-2.5 py-1 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-lg text-[11px] font-semibold border border-slate-100 dark:border-slate-700">
+                    <span key={i} className="px-2.5 py-1 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-lg text-nano font-semibold border border-slate-100 dark:border-slate-700">
                       {i === 0 ? (categoryIcons[s] || '') + ' ' : ''}{s}
                     </span>
                   ))}
                   {(p.services || []).length > 3 && (
-                    <span className="px-2.5 py-1 text-slate-400 dark:text-slate-500 rounded-lg text-[11px] font-semibold">
+                    <span className="px-2.5 py-1 text-slate-400 dark:text-slate-500 rounded-lg text-nano font-semibold">
                       +{p.services.length - 3}
                     </span>
                   )}
                   {(!p.services || p.services.length === 0) && (
-                    <span className="px-2.5 py-1 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 rounded-lg text-[11px] font-semibold border border-slate-100 dark:border-slate-700">
+                    <span className="px-2.5 py-1 bg-slate-50 dark:bg-slate-900 text-slate-400 dark:text-slate-500 rounded-lg text-nano font-semibold border border-slate-100 dark:border-slate-700">
                       No services listed
                     </span>
                   )}
@@ -591,21 +591,21 @@ const PatientProviders = () => {
               {/* Step Progress */}
               <div className="flex items-center gap-1.5 mb-3 px-1">
                 <div className={`flex items-center gap-1.5 ${bookingStep === 'form' ? 'text-primary' : 'text-green-600 dark:text-green-300'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-2xs font-bold ${
                     bookingStep === 'confirm' ? 'bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300' : 'bg-primary text-white'
                   }`}>
                     {bookingStep === 'confirm' ? '✓' : '1'}
                   </div>
-                  <span className="text-[10px] font-semibold">Details</span>
+                  <span className="text-2xs font-semibold">Details</span>
                 </div>
                 <div className={`flex-1 h-px rounded-full ${bookingStep === 'confirm' ? 'bg-green-200' : 'bg-slate-200 dark:bg-slate-600'}`} />
                 <div className={`flex items-center gap-1.5 ${bookingStep === 'confirm' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-2xs font-bold ${
                     bookingStep === 'confirm' ? 'bg-primary text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500'
                   }`}>
                     2
                   </div>
-                  <span className="text-[10px] font-semibold">Confirm</span>
+                  <span className="text-2xs font-semibold">Confirm</span>
                 </div>
               </div>
 
@@ -613,7 +613,7 @@ const PatientProviders = () => {
               {bookingStep === 'form' && (
                 <form onSubmit={handleSubmit(handleReviewBooking)} className="space-y-3 sm:space-y-4 md:space-y-6">
                   <div className="space-y-1.5">
-                    <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Service</label>
+                    <label className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Service</label>
                     <select
                       {...register('service')}
                       className={`w-full bg-slate-50 dark:bg-slate-900 border rounded-xl md:rounded-2xl py-2.5 md:py-3 px-3 md:px-4 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all appearance-none ${errors.service ? 'border-red-300' : 'border-slate-200 dark:border-slate-600'}`}
@@ -627,12 +627,12 @@ const PatientProviders = () => {
                       )}
                     </select>
                     {errors.service && (
-                      <p className="text-[11px] text-red-500 dark:text-red-300 mt-0.5 ml-1">{errors.service.message}</p>
+                      <p className="text-nano text-red-500 dark:text-red-300 mt-0.5 ml-1">{errors.service.message}</p>
                     )}
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Date</label>
+                    <label className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Date</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
                       <input
@@ -643,13 +643,13 @@ const PatientProviders = () => {
                       />
                     </div>
                     {errors.date && (
-                      <p className="text-[11px] text-red-500 dark:text-red-300 mt-0.5 ml-1">{errors.date.message}</p>
+                      <p className="text-nano text-red-500 dark:text-red-300 mt-0.5 ml-1">{errors.date.message}</p>
                     )}
                   </div>
 
                   {/* Time Slot Selection */}
                   <div className="space-y-1.5">
-                    <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Available Time Slots</label>
+                    <label className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Available Time Slots</label>
                     {!watchedDate ? (
                       <p className="text-xs sm:text-sm text-slate-400 dark:text-slate-500 ml-1">Select a date to see available slots.</p>
                     ) : loadingSlots ? (
@@ -664,7 +664,7 @@ const PatientProviders = () => {
                             type="button"
                             disabled={!slot.available}
                             onClick={() => { setValue('time', slot.time, { shouldValidate: true }); }}
-                            className={`py-1.5 md:py-2.5 px-2 md:px-3 rounded-lg md:rounded-xl text-[11px] md:text-sm font-bold transition-all border ${
+                            className={`py-1.5 md:py-2.5 px-2 md:px-3 rounded-lg md:rounded-xl text-nano md:text-sm font-bold transition-all border ${
                               watch('time') === slot.time
                                 ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20'
                                 : slot.available
@@ -678,12 +678,12 @@ const PatientProviders = () => {
                       </div>
                     )}
                     {errors.time && (
-                      <p className="text-[11px] text-red-500 dark:text-red-300 mt-0.5 ml-1">{errors.time.message}</p>
+                      <p className="text-nano text-red-500 dark:text-red-300 mt-0.5 ml-1">{errors.time.message}</p>
                     )}
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Message (Optional)</label>
+                    <label className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Message (Optional)</label>
                     <div className="relative">
                       <FileText className="absolute left-3 top-3 w-4 h-4 text-slate-400 dark:text-slate-500" />
                       <textarea
@@ -708,7 +708,7 @@ const PatientProviders = () => {
                       I consent to sharing my medical profile and home address with <span className="font-bold">{selectedProvider.full_name}</span> for the purpose of this home care service.
                     </label>
                     {errors.consent && (
-                      <p className="text-[11px] text-red-500 dark:text-red-300 mt-0.5 ml-1">{errors.consent.message}</p>
+                      <p className="text-nano text-red-500 dark:text-red-300 mt-0.5 ml-1">{errors.consent.message}</p>
                     )}
                   </div>
 
@@ -745,21 +745,21 @@ const PatientProviders = () => {
 
                     <div className="grid grid-cols-2 gap-2 md:gap-4 text-xs md:text-sm">
                       <div>
-                        <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Service</p>
+                        <p className="text-3xs md:text-2xs uppercase font-bold text-slate-400 dark:text-slate-500">Service</p>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 text-xs md:text-sm">{vals.service}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Fee</p>
+                        <p className="text-3xs md:text-2xs uppercase font-bold text-slate-400 dark:text-slate-500">Fee</p>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 text-xs md:text-sm">₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Date</p>
+                        <p className="text-3xs md:text-2xs uppercase font-bold text-slate-400 dark:text-slate-500">Date</p>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 text-xs md:text-sm">
                           {new Date(vals.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500">Time</p>
+                        <p className="text-3xs md:text-2xs uppercase font-bold text-slate-400 dark:text-slate-500">Time</p>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 text-xs md:text-sm">
                           {new Date(`2000-01-01T${vals.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                         </p>
@@ -768,7 +768,7 @@ const PatientProviders = () => {
 
                     {vals.notes && (
                       <div className="pt-2.5 border-t border-slate-200 dark:border-slate-600">
-                        <p className="text-[9px] md:text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 mb-0.5">Message</p>
+                        <p className="text-3xs md:text-2xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-0.5">Message</p>
                         <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 italic">{'\u201C'}{vals.notes}{'\u201D'}</p>
                       </div>
                     )}
@@ -841,14 +841,14 @@ const PatientProviders = () => {
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-sm md:text-lg font-bold text-primary">₱{Number(viewingProvider.price_per_service).toLocaleString()}</p>
-                <p className="text-[10px] text-slate-400 dark:text-slate-500">per service</p>
+                <p className="text-2xs text-slate-400 dark:text-slate-500">per service</p>
               </div>
             </div>
 
             {/* Trust Score Breakdown */}
             <div className="mb-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl md:rounded-2xl p-3 md:p-4">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-[10px] md:text-xs uppercase font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                <h4 className="text-2xs md:text-xs uppercase font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
                   <Shield className="w-3 h-3" /> Trust Score
                 </h4>
                 <span className={`text-xs md:text-sm font-bold ${
@@ -875,7 +875,7 @@ const PatientProviders = () => {
                 ].map((item, i) => {
                   const Icon = item.icon;
                   return (
-                    <div key={i} className="flex items-center justify-between text-[11px] md:text-xs">
+                    <div key={i} className="flex items-center justify-between text-nano md:text-xs">
                       <span className={`flex items-center gap-1.5 ${item.earned ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400 dark:text-slate-500'}`}>
                         <Icon className={`w-3 h-3 ${item.earned ? 'text-green-500' : 'text-slate-300 dark:text-slate-600'}`} />
                         {item.label}
@@ -891,7 +891,7 @@ const PatientProviders = () => {
 
             {/* Bio */}
             <div className="mb-4">
-              <h4 className="text-[10px] md:text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-1.5">About</h4>
+              <h4 className="text-2xs md:text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-1.5">About</h4>
               <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 p-3 md:p-4 rounded-xl md:rounded-2xl">
                 {viewingProvider.bio}
               </p>
@@ -899,10 +899,10 @@ const PatientProviders = () => {
 
             {/* Services */}
             <div className="mb-4">
-              <h4 className="text-[10px] md:text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-1.5">Services</h4>
+              <h4 className="text-2xs md:text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-1.5">Services</h4>
               <div className="flex flex-wrap gap-1.5 md:gap-2">
                 {viewingProvider.services.map((s, i) => (
-                  <span key={i} className="px-2 md:px-3 py-1 md:py-1.5 bg-blue-50 dark:bg-blue-900/30 text-primary border border-blue-100 dark:border-blue-900/50 rounded-lg md:rounded-xl text-[11px] md:text-xs font-bold">
+                  <span key={i} className="px-2 md:px-3 py-1 md:py-1.5 bg-blue-50 dark:bg-blue-900/30 text-primary border border-blue-100 dark:border-blue-900/50 rounded-lg md:rounded-xl text-nano md:text-xs font-bold">
                     {s}
                   </span>
                 ))}
@@ -911,7 +911,7 @@ const PatientProviders = () => {
 
             {/* Reviews */}
             <div className="mb-4">
-              <h4 className="text-[10px] md:text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-2 flex items-center gap-1">
+              <h4 className="text-2xs md:text-xs uppercase font-bold text-slate-400 dark:text-slate-500 mb-2 flex items-center gap-1">
                 <Star className="w-3 h-3 text-yellow-500 fill-current" />
                 Reviews
               </h4>
@@ -921,14 +921,14 @@ const PatientProviders = () => {
                   providerReviews.map((rev, i) => (
                     <div key={i} className="p-2 md:p-3 bg-slate-50 dark:bg-slate-900 border border-slate-100/50 rounded-xl md:rounded-2xl space-y-0.5">
                       <div className="flex justify-between items-center">
-                        <p className="text-[11px] md:text-xs font-bold text-slate-700 dark:text-slate-200">{rev.patient?.full_name || 'Anonymous'}</p>
+                        <p className="text-nano md:text-xs font-bold text-slate-700 dark:text-slate-200">{rev.patient?.full_name || 'Anonymous'}</p>
                         <div className="flex gap-0.5 text-yellow-500">
                           {[...Array(5)].map((_, idx) => (
                             <Star key={idx} className={`w-2.5 h-2.5 md:w-3 md:h-3 ${idx < rev.rating ? 'fill-current' : 'text-slate-200 dark:text-slate-600'}`} />
                           ))}
                         </div>
                       </div>
-                      <p className="text-[11px] md:text-xs text-slate-600 dark:text-slate-300 italic">{'\u201C'}{rev.review_text || 'Excellent consultation!'}{'\u201D'}</p>
+                      <p className="text-nano md:text-xs text-slate-600 dark:text-slate-300 italic">{'\u201C'}{rev.review_text || 'Excellent consultation!'}{'\u201D'}</p>
                     </div>
                   ))
                 ) : (

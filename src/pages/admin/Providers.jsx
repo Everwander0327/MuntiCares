@@ -318,7 +318,7 @@ const AdminProviders = () => {
                         <p className="text-xs text-slate-400 dark:text-slate-500">{p.email}</p>
                       </div>
                     </div>
-                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${style.bg}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-widest ${style.bg}`}>
                       <span className={`w-1.5 h-1.5 rounded-full status-dot ${style.dot}`} />
                       {p.status}
                     </span>
@@ -332,15 +332,15 @@ const AdminProviders = () => {
                   </div>
                   <div className="pt-1">
                     {p.professional_id_status === 'verified' ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
                         <ShieldCheck className="w-3 h-3" /> Verified
                       </span>
                     ) : p.professional_id_status === 'pending' ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                         <Clock className="w-3 h-3" /> ID Pending
                       </span>
                     ) : p.professional_id_status === 'rejected' ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
                         <X className="w-3 h-3" /> Rejected
                       </span>
                     ) : null}
@@ -355,13 +355,13 @@ const AdminProviders = () => {
             <table className="w-full text-left border-collapse table-striped">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
-                  <th className="px-6 py-4 font-bold">Name</th>
-                  <th className="px-6 py-4 font-bold">Specialization</th>
-                  <th className="px-6 py-4 font-bold">Rating</th>
-                  <th className="px-6 py-4 font-bold">Documents</th>
-                  <th className="px-6 py-4 font-bold">Joined</th>
-                  <th className="px-6 py-4 font-bold">Status</th>
-                  <th className="px-6 py-4 font-bold text-right">Action</th>
+                  <th className="px-6 py-4 font-semibold">Name</th>
+                  <th className="px-6 py-4 font-semibold">Specialization</th>
+                  <th className="px-6 py-4 font-semibold">Rating</th>
+                  <th className="px-6 py-4 font-semibold">Documents</th>
+                  <th className="px-6 py-4 font-semibold">Joined</th>
+                  <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,15 +396,15 @@ const AdminProviders = () => {
                       </td>
                       <td className="px-6 py-4">
                         {p.professional_id_status === 'verified' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
                             <ShieldCheck className="w-3 h-3" /> Verified
                           </span>
                         ) : p.professional_id_status === 'pending' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                             <Clock className="w-3 h-3" /> Pending
                           </span>
                         ) : p.professional_id_status === 'rejected' ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
                             <X className="w-3 h-3" /> Rejected
                           </span>
                         ) : (
@@ -413,7 +413,7 @@ const AdminProviders = () => {
                       </td>
                       <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{p.joinDate}</td>
                       <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${style.bg}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold uppercase tracking-widest ${style.bg}`}>
                           <span className={`w-1.5 h-1.5 rounded-full status-dot ${style.dot}`} />
                           {p.status}
                         </span>
@@ -479,7 +479,7 @@ const AdminProviders = () => {
                     {(() => {
                       const style = getStatusStyle(selectedProvider.status);
                       return (
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest mt-1 ${style.bg}`}>
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-widest mt-1 ${style.bg}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
                           {selectedProvider.status}
                         </span>

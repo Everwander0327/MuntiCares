@@ -32,14 +32,14 @@ const StatCard = ({ label, value, icon, color, trend, trendUp }) => {
           {React.cloneElement(icon, { className: 'w-4 h-4 md:w-6 md:h-6' })}
         </div>
         {trend && (
-          <div className={`flex items-center gap-1 text-[10px] md:text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-lg w-fit ${trendUp ? 'text-green-600 dark:text-green-300 bg-green-50 dark:bg-green-900/30' : 'text-red-500 dark:text-red-300 bg-red-50 dark:bg-red-900/30'}`}>
+          <div className={`flex items-center gap-1 text-2xs md:text-xs font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded-lg w-fit ${trendUp ? 'text-green-600 dark:text-green-300 bg-green-50 dark:bg-green-900/30' : 'text-red-500 dark:text-red-300 bg-red-50 dark:bg-red-900/30'}`}>
             {trendUp ? <TrendingUp className="w-2 h-2 md:w-3 md:h-3" /> : <TrendingDown className="w-2 h-2 md:w-3 md:h-3" />}
             <span className="hidden xl:inline">{trend}</span>
           </div>
         )}
       </div>
       <div>
-        <p className="text-slate-500 dark:text-slate-400 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight">{label}</p>
+        <p className="text-slate-500 dark:text-slate-400 text-2xs md:text-sm font-medium mt-1 md:mt-3 leading-tight">{label}</p>
         <p className="text-lg md:text-2xl font-bold text-slate-900 dark:text-slate-100" ref={ref}>{count}</p>
       </div>
     </motion.div>
@@ -328,7 +328,7 @@ const PatientDashboard = () => {
                 <MessageCircle className="w-4 h-4" />
                 Messages
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white px-1">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-3xs font-bold text-white px-1">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -347,7 +347,7 @@ const PatientDashboard = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Message Provider</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{activeVisit.provider}</p>
+                    <p className="text-nano text-slate-500 dark:text-slate-400 truncate">{activeVisit.provider}</p>
                   </div>
                 </Link>
               )}
@@ -362,7 +362,7 @@ const PatientDashboard = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">Rebook a Provider</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Book a new appointment</p>
+                    <p className="text-nano text-slate-500 dark:text-slate-400">Book a new appointment</p>
                   </div>
                 </Link>
               )}
@@ -377,7 +377,7 @@ const PatientDashboard = () => {
                   </div>
                   <div className="min-0">
                     <p className="font-bold text-slate-900 dark:text-slate-100 text-sm">View Visit History</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Check past and upcoming visits</p>
+                    <p className="text-nano text-slate-500 dark:text-slate-400">Check past and upcoming visits</p>
                   </div>
                 </Link>
               )}
@@ -389,7 +389,7 @@ const PatientDashboard = () => {
                   </div>
                   <div className="min-w-0">
                     <p className="font-bold text-slate-700 dark:text-slate-200 text-sm">Ready to get started?</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">Find a provider and book your first visit</p>
+                    <p className="text-nano text-slate-500 dark:text-slate-400">Find a provider and book your first visit</p>
                   </div>
                 </div>
               )}
@@ -421,7 +421,7 @@ const PatientDashboard = () => {
                 <>
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Home Care Visit</p>
+                      <p className="text-2xs sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Home Care Visit</p>
                       <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 mt-0.5">{activeVisit.provider}</h3>
                     </div>
                     <div className="flex items-center gap-2">
@@ -470,7 +470,7 @@ const PatientDashboard = () => {
                   </div>
                   <div className="flex items-center justify-between mb-5">
                     {STEP_LABELS.map((label, i) => (
-                      <span key={label} className={`text-[9px] sm:text-[10px] font-bold transition-colors ${
+                      <span key={label} className={`text-3xs sm:text-2xs font-bold transition-colors ${
                         i <= currentStep ? 'text-slate-700 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600'
                       }`}>{label}</span>
                     ))}

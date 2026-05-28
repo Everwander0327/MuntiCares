@@ -147,7 +147,7 @@ const ProviderPatients = () => {
                       <p className="text-xs text-primary font-semibold">{p.service}</p>
                     </div>
                   </div>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-widest ${
                     p.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full status-dot ${

@@ -233,15 +233,15 @@ const ProviderSchedule = () => {
         >
           <div className="bg-white rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center shadow-sm dark:shadow-slate-900/50 dark:bg-slate-800">
             <p className="text-2xl font-bold text-primary">{todayAppts.length}</p>
-            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Today</p>
+            <p className="text-2xs sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Today</p>
           </div>
           <div className="bg-white rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center shadow-sm dark:shadow-slate-900/50 dark:bg-slate-800">
             <p className="text-2xl font-bold text-amber-500">{activeVisits}</p>
-            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Active</p>
+            <p className="text-2xs sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Active</p>
           </div>
           <div className="bg-white rounded-2xl border border-slate-100 dark:border-slate-700 p-4 text-center shadow-sm dark:shadow-slate-900/50 dark:bg-slate-800">
             <p className="text-2xl font-bold text-green-500">{completedToday}</p>
-            <p className="text-[10px] sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Done</p>
+            <p className="text-2xs sm:text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1">Done</p>
           </div>
         </motion.div>
 
@@ -267,7 +267,7 @@ const ProviderSchedule = () => {
             {/* Day Names */}
             <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-1">
               {DAYS.map(d => (
-                <div key={d} className="text-center text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider py-1.5">{d}</div>
+                <div key={d} className="text-center text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider py-1.5">{d}</div>
               ))}
             </div>
 
@@ -309,7 +309,7 @@ const ProviderSchedule = () => {
                             <div key={idx} className={`w-1 h-1 rounded-full ${selected ? 'bg-white/80' : 'bg-primary'}`} />
                           ))
                         ) : (
-                          <span className={`text-[8px] font-bold leading-none ${selected ? 'text-white/80' : 'text-primary'}`}>{count}</span>
+                          <span className={`text-3xs font-bold leading-none ${selected ? 'text-white/80' : 'text-primary'}`}>{count}</span>
                         )}
                       </div>
                     )}
@@ -319,7 +319,7 @@ const ProviderSchedule = () => {
             </div>
 
             {/* Legend */}
-            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex flex-wrap gap-4 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700 flex flex-wrap gap-4 text-2xs font-bold text-slate-400 dark:text-slate-500">
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> Has Visits</span>
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-200 ring-1.5 ring-primary/30" /> Today</span>
             </div>
@@ -398,7 +398,7 @@ const ProviderSchedule = () => {
                                 <p className="text-xs text-primary font-semibold">{appt.service}</p>
                               </div>
                             </div>
-                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BADGE[appt.status] || 'bg-slate-100 text-slate-500 dark:text-slate-400 dark:bg-slate-700'}`}>
+                            <span className={`text-2xs font-bold px-2.5 py-1 rounded-full shrink-0 ${STATUS_BADGE[appt.status] || 'bg-slate-100 text-slate-500 dark:text-slate-400 dark:bg-slate-700'}`}>
                               {appt.status}
                             </span>
                           </div>
@@ -425,7 +425,7 @@ const ProviderSchedule = () => {
                           <div className="flex items-center gap-1 mb-4">
                             {STATUS_STEPS.map((step, i) => (
                               <React.Fragment key={step}>
-                                <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] font-bold transition-all ${
+                                <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-3xs sm:text-2xs font-bold transition-all ${
                                   i < currentStep ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' 
                                   : i === currentStep ? 'bg-primary text-white shadow-md shadow-primary/30' 
 : 'bg-slate-100 text-slate-400 dark:text-slate-500 dark:bg-slate-700'
@@ -440,7 +440,7 @@ const ProviderSchedule = () => {
                           </div>
                           <div className="flex items-center justify-between mb-4">
                             {STATUS_STEPS.map((step, i) => (
-                              <span key={step} className={`text-[8px] sm:text-[9px] font-bold ${i <= currentStep ? 'text-slate-600 dark:text-slate-300' : 'text-slate-300 dark:text-slate-600'}`}>
+                              <span key={step} className={`text-3xs sm:text-3xs font-bold ${i <= currentStep ? 'text-slate-600 dark:text-slate-300' : 'text-slate-300 dark:text-slate-600'}`}>
                                 {step === 'On The Way' ? 'En Route' : step}
                               </span>
                             ))}

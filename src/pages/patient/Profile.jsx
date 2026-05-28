@@ -574,11 +574,11 @@ const PatientProfile = () => {
                 <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">{profile.email}</p>
                 
                 <div className="flex items-center justify-center gap-2 mt-3">
-                  <span className="inline-flex items-center px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full border border-blue-100 dark:border-blue-900/50">
+                  <span className="inline-flex items-center px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-primary font-bold text-2xs uppercase tracking-widest rounded-full border border-blue-100 dark:border-blue-900/50">
                     Patient
                   </span>
                   {profile.is_profile_complete && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 font-bold text-[10px] uppercase tracking-widest rounded-full border border-green-100 dark:border-green-900/50">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 font-bold text-2xs uppercase tracking-widest rounded-full border border-green-100 dark:border-green-900/50">
                       <CheckCircle2 className="w-3 h-3" /> Complete
                     </span>
                   )}
@@ -655,7 +655,7 @@ const PatientProfile = () => {
             <form onSubmit={handleSave} className="p-6 md:p-8 space-y-5 md:space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
                   <div className="relative group">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <input 
@@ -670,7 +670,7 @@ const PatientProfile = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
                   <div className="relative group">
                     <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <input 
@@ -685,7 +685,7 @@ const PatientProfile = () => {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Home Address (Service Location)</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Home Address (Service Location)</label>
                   <div className="relative group">
                     <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <textarea 
@@ -700,7 +700,7 @@ const PatientProfile = () => {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Medical Notes</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Medical Notes</label>
                   <div className="relative group">
                     <Activity className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
                     <textarea 
@@ -714,7 +714,7 @@ const PatientProfile = () => {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Allergies</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Allergies</label>
                   <textarea
                     value={profile.allergies}
                     onChange={e => setProfile({...profile, allergies: e.target.value})}
@@ -741,7 +741,7 @@ const PatientProfile = () => {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Chronic Conditions</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Chronic Conditions</label>
                   <textarea
                     value={profile.chronic_conditions}
                     onChange={e => setProfile({...profile, chronic_conditions: e.target.value})}
@@ -768,7 +768,7 @@ const PatientProfile = () => {
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200 ml-1">Past Surgeries</label>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Past Surgeries</label>
                   <textarea
                     value={profile.past_surgeries}
                     onChange={e => setProfile({...profile, past_surgeries: e.target.value})}
@@ -945,7 +945,7 @@ const PatientProfile = () => {
                           </div>
                         </div>
                         {note.services_rendered && (
-                          <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-primary font-bold text-[10px] uppercase tracking-widest rounded-full self-start sm:self-auto">
+                          <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-primary font-bold text-2xs uppercase tracking-widest rounded-full self-start sm:self-auto">
                             {note.services_rendered}
                           </span>
                         )}
@@ -955,25 +955,25 @@ const PatientProfile = () => {
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         {note.vitals_bp && (
                           <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Blood Pressure</p>
+                            <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase">Blood Pressure</p>
                             <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_bp}</p>
                           </div>
                         )}
                         {note.vitals_temp && (
                           <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Temperature</p>
+                            <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase">Temperature</p>
                             <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_temp}°C</p>
                           </div>
                         )}
                         {note.vitals_hr && (
                           <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">Heart Rate</p>
+                            <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase">Heart Rate</p>
                             <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_hr} bpm</p>
                           </div>
                         )}
                         {note.vitals_spo2 && (
                           <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">SpO2</p>
+                            <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase">SpO2</p>
                             <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_spo2}%</p>
                           </div>
                         )}
@@ -981,7 +981,7 @@ const PatientProfile = () => {
 
                       {note.notes && (
                         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50">
-                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Clinical Notes</p>
+                          <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">Clinical Notes</p>
                           <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{note.notes}</p>
                         </div>
                       )}

@@ -274,7 +274,7 @@ const NotificationBell = () => {
           toast(
             <div>
               <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">{notif.title}</p>
-              <p className="text-slate-500 dark:text-slate-400 text-[11px] font-normal mt-0.5">{notif.message}</p>
+              <p className="text-slate-500 dark:text-slate-400 text-nano font-normal mt-0.5">{notif.message}</p>
             </div>,
             {
               icon,
@@ -416,7 +416,7 @@ const NotificationBell = () => {
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (
           <motion.span 
-            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-[9px] font-bold text-white px-1"
+            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-3xs font-bold text-white px-1"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             key={unreadCount}
@@ -470,7 +470,7 @@ const NotificationBell = () => {
                           <span className="w-1.5 h-1.5 bg-primary rounded-full shrink-0" />
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{notif.message}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
+                        <p className="text-2xs text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {timeAgo(notif.time)}
                         </p>
@@ -499,7 +499,7 @@ const NotificationBell = () => {
             {/* Footer */}
             {unreadNotifications.length > 0 && (
               <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 text-center">
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
+                <p className="text-2xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
                   Showing latest {unreadNotifications.length} notifications
                 </p>
               </div>

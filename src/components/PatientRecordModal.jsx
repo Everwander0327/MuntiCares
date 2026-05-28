@@ -421,38 +421,38 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                               <form onSubmit={handleSaveNote} className="space-y-4">
                                 <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl p-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
                                   <div className="col-span-2 sm:col-span-3">
-                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Vital Signs</p>
+                                    <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">Vital Signs</p>
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">BP (mmHg)</label>
+                                    <label className="text-2xs font-bold text-slate-500 dark:text-slate-400">BP (mmHg)</label>
                                     <input type="text" placeholder="120/80" value={newNote.bp} onChange={e => setNewNote({...newNote, bp: e.target.value})} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none" />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Temp (°C)</label>
+                                    <label className="text-2xs font-bold text-slate-500 dark:text-slate-400">Temp (°C)</label>
                                     <input type="text" placeholder="36.5" value={newNote.temp} onChange={e => setNewNote({...newNote, temp: e.target.value})} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none" />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Heart Rate</label>
+                                    <label className="text-2xs font-bold text-slate-500 dark:text-slate-400">Heart Rate</label>
                                     <input type="number" placeholder="80" value={newNote.hr} onChange={e => setNewNote({...newNote, hr: e.target.value})} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none" />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">Resp Rate</label>
+                                    <label className="text-2xs font-bold text-slate-500 dark:text-slate-400">Resp Rate</label>
                                     <input type="number" placeholder="16" value={newNote.rr} onChange={e => setNewNote({...newNote, rr: e.target.value})} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none" />
                                   </div>
                                   <div>
-                                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">SpO2 (%)</label>
+                                    <label className="text-2xs font-bold text-slate-500 dark:text-slate-400">SpO2 (%)</label>
                                     <input type="number" placeholder="98" value={newNote.spo2} onChange={e => setNewNote({...newNote, spo2: e.target.value})} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none" />
                                   </div>
                                   <div className="col-span-2 sm:col-span-1">
-                                    <label className="text-[10px] font-bold text-orange-600 dark:text-orange-400">Pain Scale (1-10)</label>
+                                    <label className="text-2xs font-bold text-orange-600 dark:text-orange-400">Pain Scale (1-10)</label>
                                     <input type="number" min="0" max="10" placeholder="0" value={newNote.pain} onChange={e => setNewNote({...newNote, pain: e.target.value})} className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1.5 text-xs outline-none" />
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Services Rendered</label>
+                                  <label className="text-2xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Services Rendered</label>
                                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                                     {availableServices.map(service => (
-                                      <button key={service} type="button" onClick={() => toggleService(service)} className={`px-2 py-1 text-[10px] font-bold rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${newNote.services.includes(service) ? 'bg-primary text-white border-primary' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{service}</button>
+                                      <button key={service} type="button" onClick={() => toggleService(service)} className={`px-2 py-1 text-2xs font-bold rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${newNote.services.includes(service) ? 'bg-primary text-white border-primary' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>{service}</button>
                                     ))}
                                   </div>
                                 </div>
@@ -494,7 +494,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                       <div className="flex justify-between items-start mb-2">
                                         <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm">Dr. {note.provider?.full_name || 'Provider'}</h4>
                                         <div className="flex items-center gap-2">
-                                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-full">{new Date(note.created_at).toLocaleDateString()}</span>
+                                          <span className="text-2xs font-bold text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-900 px-2 py-1 rounded-full">{new Date(note.created_at).toLocaleDateString()}</span>
                                           {note.provider_id === user.id && (
                                             <button onClick={() => handleDeleteNote(note.id, note.attachment_url)} className="p-1 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50" title="Delete Note">
                                               <Trash2 className="w-3 h-3" />
@@ -502,7 +502,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                           )}
                                         </div>
                                       </div>
-                                      <div className="flex flex-wrap gap-2 mb-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 p-2 rounded-lg">
+                                      <div className="flex flex-wrap gap-2 mb-2 text-2xs font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 p-2 rounded-lg">
                                         {note.vitals_bp && <span>🩸 BP: {note.vitals_bp}</span>}
                                         {note.vitals_temp && <span>🌡️ T: {note.vitals_temp}°C</span>}
                                         {note.vitals_hr && <span>❤️ HR: {note.vitals_hr}</span>}
@@ -512,7 +512,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                       </div>
                                       {note.services_rendered && (
                                         <div className="mb-2">
-                                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Services:</span>
+                                          <span className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Services:</span>
                                           <span className="text-xs font-semibold text-primary bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-lg">{note.services_rendered}</span>
                                         </div>
                                       )}

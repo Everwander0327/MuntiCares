@@ -30,7 +30,7 @@ const StatCard = ({ label, value, icon, color }) => {
         </div>
       </div>
       <div>
-        <p className="text-slate-500 text-[10px] md:text-sm font-medium mt-1 md:mt-3 leading-tight dark:text-slate-400">{label}</p>
+        <p className="text-slate-500 text-2xs md:text-sm font-medium mt-1 md:mt-3 leading-tight dark:text-slate-400">{label}</p>
         <p className="text-lg md:text-2xl font-bold text-slate-900 dark:text-slate-100" ref={ref}>{count}</p>
       </div>
     </motion.div>
@@ -286,7 +286,7 @@ const AdminDashboard = () => {
                     <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{act.action}</td>
                     <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{act.date}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold uppercase tracking-wider ${
                         act.status === 'Completed' ? 'bg-green-100 text-green-700' :
                         act.status === 'Accepted' ? 'bg-blue-100 text-blue-700' :
                         act.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
