@@ -309,7 +309,7 @@ const NotificationBell = () => {
   const fireBrowserNotification = (title, body) => {
     try {
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body, icon: '/favicon.svg' });
+        new Notification(title, { body, icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQsIDQpIj4KICAgIDxwYXRoIGQ9Ik0xOSAxNGMxLjQ5LTEuNDYgMy0zLjIxIDMtNS41QTUuNSA1LjUgMCAwIDAgMTYuNSAzYy0xLjc2IDAtMyAuNS00LjUgMi0xLjUtMS41LTIuNzQtMi00LjUtMkE1LjUgNS41IDAgMCAwIDIgOC41YzAgMi4zIDEuNSA0LjA1IDMgNS41bDcgN1oiIGZpbGw9IiNmZmYiLz4KICA8L2c+Cjwvc3ZnPgo=' });
       }
     } catch {}
   };
