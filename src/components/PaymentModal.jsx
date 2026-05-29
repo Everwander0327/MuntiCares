@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Wallet, CreditCard, Banknote, Check, Loader2, X } from 'lucide-react';
+import { Wallet, Banknote, Check, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
@@ -13,71 +13,72 @@ import {
 import { Button } from './ui/button';
 
 const methods = [
-  { id: 'gcash', label: 'GCash', icon: Wallet, color: 'bg-emerald-500', desc: 'Pay via GCash app' },
-  { id: 'card', label: 'Card', icon: CreditCard, color: 'bg-blue-500', desc: 'Credit or debit card' },
-  { id: 'cash', label: 'Cash', icon: Banknote, color: 'bg-amber-500', desc: 'Pay during visit' },
+  {
+    id: 'simulated',
+    label: 'Simulated',
+    icon: Wallet,
+    color: 'bg-blue-500',
+    desc: 'Pay online (simulated)',
+    fee: 0.1,
+  },
+  {
+    id: 'cash',
+    label: 'Cash',
+    icon: Banknote,
+    color: 'bg-amber-500',
+    desc: 'Pay during visit',
+    fee: 0,
+  },
 ];
 
 const PaymentModal = ({ isOpen, onClose, request, onPaymentComplete }) => {
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [processing, setProcessing] = useState(false);
 
+  const amount = Number(request?.amount || 0);
+  const platformFee = Math.round(amount * 0.1 * 100) / 100;
+  const providerPayout = amount - platformFee;
+
   const handlePay = async () => {
     if (!selectedMethod || !request) return;
     setProcessing(true);
 
     try {
-      if (selectedMethod === 'gcash' || selectedMethod === 'card') {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      const isSimulated = selectedMethod === 'simulated';
+      const fee = isSimulated ? platformFee : 0;
+      const payout = isSimulated ? providerPayout : amount;
 
-        const { error: txError } = await supabase
-          .from('transactions')
-          .insert([{
-            request_id: request.id,
-            patient_id: request.patientId,
-            provider_id: request.providerId,
-            amount: request.amount,
-            payment_method: selectedMethod,
-            status: 'paid',
-            paid_at: new Date().toISOString(),
-          }]);
+      const { error: txError } = await supabase
+        .from('transactions')
+        .insert([{
+          request_id: request.id,
+          patient_id: request.patientId,
+          provider_id: request.providerId,
+          amount: amount,
+          payment_method: isSimulated ? 'simulated' : 'cash',
+          status: 'paid',
+          platform_fee: fee,
+          provider_payout: payout,
+          paid_at: new Date().toISOString(),
+        }]);
 
-        if (txError) throw txError;
+      if (txError) throw txError;
 
-        const { error: reqError } = await supabase
-          .from('requests')
-          .update({ payment_status: 'paid' })
-          .eq('id', request.id);
+      const { error: reqError } = await supabase
+        .from('requests')
+        .update({ payment_status: 'paid' })
+        .eq('id', request.id);
 
-        if (reqError) throw reqError;
+      if (reqError) throw reqError;
 
-        toast.success('Payment successful!');
+      if (isSimulated) {
+        toast.success('Payment successful! Amount held in escrow.');
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
-        onPaymentComplete('paid');
-      } else if (selectedMethod === 'cash') {
-        const { error: txError } = await supabase
-          .from('transactions')
-          .insert([{
-            request_id: request.id,
-            patient_id: request.patientId,
-            provider_id: request.providerId,
-            amount: request.amount,
-            payment_method: 'cash',
-            status: 'pending_cash',
-          }]);
-
-        if (txError) throw txError;
-
-        const { error: reqError } = await supabase
-          .from('requests')
-          .update({ payment_status: 'pending_cash' })
-          .eq('id', request.id);
-
-        if (reqError) throw reqError;
-
+      } else {
         toast.success('Cash payment noted. Pay the provider during your visit.');
-        onPaymentComplete('pending_cash');
       }
+
+      onPaymentComplete('paid');
     } catch (err) {
       console.error('Payment error:', err);
       toast.error('Payment failed. Please try again.');
@@ -100,13 +101,13 @@ const PaymentModal = ({ isOpen, onClose, request, onPaymentComplete }) => {
           <div className="text-center py-4 bg-slate-50 dark:bg-slate-900 rounded-2xl">
             <p className="text-xs text-slate-400 uppercase font-bold">Total</p>
             <p className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-              ₱{Number(request?.amount || 0).toLocaleString()}
+              ₱{amount.toLocaleString()}
             </p>
           </div>
 
           <div className="space-y-3">
             <p className="text-xs font-bold uppercase text-slate-400">Select Payment Method</p>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {methods.map(method => {
                 const Icon = method.icon;
                 const isSelected = selectedMethod === method.id;
@@ -126,26 +127,36 @@ const PaymentModal = ({ isOpen, onClose, request, onPaymentComplete }) => {
                     <span className={`text-xs font-bold ${isSelected ? 'text-primary' : 'text-slate-600 dark:text-slate-300'}`}>
                       {method.label}
                     </span>
-                    <span className="text-2xs text-slate-400 hidden md:block">{method.desc}</span>
+                    <span className="text-2xs text-slate-400">{method.desc}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
+          {selectedMethod === 'simulated' && (
+            <div className="space-y-2 bg-blue-50 dark:bg-blue-900/30 rounded-xl p-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">Service Fee</span>
+                <span className="font-semibold text-slate-900 dark:text-slate-100">₱{amount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500 dark:text-slate-400">Platform Fee (10%)</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">₱{platformFee.toLocaleString()}</span>
+              </div>
+              <div className="border-t border-blue-200 dark:border-blue-800 pt-2 flex justify-between text-sm">
+                <span className="font-bold text-slate-700 dark:text-slate-300">Provider Receives</span>
+                <span className="font-bold text-green-600 dark:text-green-400">₱{providerPayout.toLocaleString()}</span>
+              </div>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 text-center">
+                Simulated payment — your account won't be charged. Amount held until service is completed.
+              </p>
+            </div>
+          )}
+
           {selectedMethod === 'cash' && (
             <p className="text-xs text-amber-600 dark:text-amber-400 text-center bg-amber-50 dark:bg-amber-900/30 p-3 rounded-xl">
-              Pay in cash directly to the provider during your visit.
-            </p>
-          )}
-          {selectedMethod === 'gcash' && (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center bg-emerald-50 dark:bg-emerald-900/30 p-3 rounded-xl">
-              Simulated payment — your account won't be charged.
-            </p>
-          )}
-          {selectedMethod === 'card' && (
-            <p className="text-xs text-blue-600 dark:text-blue-400 text-center bg-blue-50 dark:bg-blue-900/30 p-3 rounded-xl">
-              Simulated payment — your card won't be charged.
+              Pay in cash directly to the provider during your visit. No platform fees.
             </p>
           )}
 

@@ -177,14 +177,14 @@ const AdminProfile = () => {
                 <Tabs.List className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-2xl mb-6">
                   <Tabs.Trigger
                     value="overview"
-                    className={`flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2.5 rounded-xl text-2xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-slate-500 dark:data-[state=inactive]:text-slate-400`}
+                    className={`flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-3 md:py-2.5 rounded-xl text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-slate-500 dark:data-[state=inactive]:text-slate-400`}
                   >
                     <User className={`w-3.5 h-3.5 md:w-4 md:h-4 ${activeTab === 'overview' ? 'text-primary' : ''}`} />
                     <span>Overview</span>
                   </Tabs.Trigger>
                   <Tabs.Trigger
                     value="system"
-                    className={`flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2.5 rounded-xl text-2xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-slate-500 dark:data-[state=inactive]:text-slate-400`}
+                    className={`flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-3 md:py-2.5 rounded-xl text-xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-slate-500 dark:data-[state=inactive]:text-slate-400`}
                   >
                     <BarChart3 className={`w-3.5 h-3.5 md:w-4 md:h-4 ${activeTab === 'system' ? 'text-primary' : ''}`} />
                     <span>System</span>

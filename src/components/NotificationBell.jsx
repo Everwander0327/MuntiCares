@@ -411,7 +411,7 @@ const NotificationBell = () => {
             Notification.requestPermission();
           }
         }}
-        className="p-2 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors relative"
+        className="p-2.5 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors relative"
       >
         <Bell className="w-6 h-6" />
         {unreadCount > 0 && (

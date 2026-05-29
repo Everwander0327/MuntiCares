@@ -15,11 +15,15 @@ import {
   Briefcase,
   Bell,
   CalendarDays,
-  MessageCircle
+  MessageCircle,
+  Wallet,
+  Megaphone,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import MobileNavItem from '../components/MobileNavItem';
+import toast from 'react-hot-toast';
 
 const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
   <Link 
@@ -55,9 +59,12 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user: authUser, logout } = useAuth();
-  const [showMobileNav, setShowMobileNav] = useState(true);
+  const [showAnnounceModal, setShowAnnounceModal] = useState(false);
+  const [announceTitle, setAnnounceTitle] = useState('');
+  const [announceMsg, setAnnounceMsg] = useState('');
+  const [announceTarget, setAnnounceTarget] = useState('all');
+  const [announceSending, setAnnounceSending] = useState(false);
   const mainRef = useRef(null);
-  const lastScrollTop = useRef(0);
   const channelRef = useRef(null);
 
   const patientLinks = [
@@ -73,14 +80,17 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     { icon: <Bell />, label: 'Incoming Requests', shortLabel: 'Requests', primary: true, to: '/provider/requests' },
     { icon: <Users />, label: 'My Patients', shortLabel: 'Patients', to: '/provider/patients' },
     { icon: <CalendarDays />, label: 'My Schedule', shortLabel: 'Schedule', to: '/provider/schedule' },
+    { icon: <Wallet />, label: 'My Payouts', shortLabel: 'Payouts', to: '/provider/payouts' },
     { icon: <MessageCircle />, label: 'Messages', to: '/provider/messages' },
   ];
 
   const adminLinks = [
-    { icon: <LayoutDashboard />, label: 'Overview', to: '/admin/dashboard' },
-    { icon: <Users />, label: 'Patients', primary: true, to: '/admin/patients' },
-    { icon: <Briefcase />, label: 'Providers', to: '/admin/providers' },
-    { icon: <FileText />, label: 'Requests', to: '/admin/requests' },
+    { icon: <LayoutDashboard />, label: 'Overview', shortLabel: 'Home', primary: true, to: '/admin/dashboard' },
+    { icon: <Users />, label: 'Patients', shortLabel: 'Patients', to: '/admin/patients' },
+    { icon: <Briefcase />, label: 'Providers', shortLabel: 'Providers', to: '/admin/providers' },
+    { icon: <FileText />, label: 'Requests', shortLabel: 'Requests', to: '/admin/requests' },
+    { icon: <Wallet />, label: 'Transactions', shortLabel: 'Payments', to: '/admin/transactions' },
+    { icon: <Megaphone />, label: 'Announcements', shortLabel: 'Alerts', to: '/admin/announcements' },
   ];
 
   // Use the actual logged in user data, fallback to dummy info if not available
@@ -174,30 +184,15 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     fetchCounts();
   }, [location.pathname, fetchCounts]);
 
-  useEffect(() => {
-    const el = mainRef.current;
-    if (!el) return;
-    const handleScroll = () => {
-      const scrollTop = el.scrollTop;
-      if (scrollTop > lastScrollTop.current && scrollTop > 50) {
-        setShowMobileNav(false);
-      } else {
-        setShowMobileNav(true);
-      }
-      lastScrollTop.current = scrollTop;
-    };
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const buildMobileLinks = (links) => {
     const primaryIndex = links.findIndex(l => l.primary);
-    if (primaryIndex === -1) return links.slice(0, 5);
+    if (primaryIndex === -1) return links;
     const primary = links[primaryIndex];
     const others = links.filter((_, i) => i !== primaryIndex);
     const result = [];
     let idx = 0;
-    for (let i = 0; i < 5; i++) {
+    const maxSlots = Math.min(6, others.length + 1);
+    for (let i = 0; i < maxSlots; i++) {
       if (i === 2) {
         result.push(primary);
       } else if (idx < others.length) {
@@ -208,7 +203,35 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     return result;
   };
 
+  const handleSendAnnouncement = async () => {
+    if (!announceTitle.trim() || !announceMsg.trim()) {
+      toast.error('Please fill in title and message.');
+      return;
+    }
+    setAnnounceSending(true);
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      const { error } = await supabase.from('announcements').insert([{
+        title: announceTitle.trim(),
+        message: announceMsg.trim(),
+        target_audience: announceTarget,
+        created_by: user?.user?.id,
+      }]);
+      if (error) throw error;
+      toast.success('Announcement sent!');
+      setAnnounceTitle('');
+      setAnnounceMsg('');
+      setAnnounceTarget('all');
+      setShowAnnounceModal(false);
+    } catch (err) {
+      toast.error('Failed to send announcement.');
+    } finally {
+      setAnnounceSending(false);
+    }
+  };
+
   return (
+    <>
       <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       <AnimatePresence>
@@ -320,7 +343,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
             <NotificationBell />
             <Link 
               to={`/${currentRole}/profile`} 
-              className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold shadow-sm border border-white dark:border-slate-800 shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer overflow-hidden"
+              className="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold shadow-sm border border-white dark:border-slate-800 shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer overflow-hidden"
             >
               {authUser?.avatar_url ? (
                 <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -342,19 +365,18 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </motion.div>
         </main>
       </div>
+    </div>
 
       {/* Mobile Bottom Navigation */}
       <div 
         id="mobile-bottom-nav" 
-        className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden transition-transform duration-300 ease-in-out ${
-          showMobileNav ? 'translate-y-0' : 'translate-y-full'
-        }`}
+        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="mx-3 mb-3 rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border border-slate-100/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
           <div className="flex items-center justify-around px-1 py-0.5">
             {(() => {
-              const mobileLinks = buildMobileLinks(links);
+              const mobileLinks = buildMobileLinks(currentRole === 'admin' ? links.filter(l => l.label !== 'Announcements') : links);
               return mobileLinks.map((link, i) => {
                 let badge = 0;
                 if (currentRole === 'patient') {
@@ -380,7 +402,100 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Mobile Announcement FAB */}
+      {currentRole === 'admin' && (
+        <>
+          <button
+            onClick={() => setShowAnnounceModal(true)}
+            className="lg:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+          >
+            <Megaphone className="w-6 h-6 text-white" />
+          </button>
+
+          {/* Announcement Modal — always in DOM, CSS-transitioned */}
+          <div
+            className={`fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-200 ${
+              showAnnounceModal ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            onClick={() => { setShowAnnounceModal(false); }}
+          >
+            <div
+              className={`bg-white dark:bg-slate-800 rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto transition-transform duration-200 ${
+                showAnnounceModal ? 'translate-y-0' : 'translate-y-full'
+              }`}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 rounded-t-[2rem] z-10">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Megaphone className="w-5 h-5 text-primary" />
+                  Quick Announcement
+                </h2>
+                <button onClick={() => setShowAnnounceModal(false)} className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider dark:text-slate-500">Title</label>
+                  <input
+                    type="text"
+                    value={announceTitle}
+                    onChange={e => setAnnounceTitle(e.target.value)}
+                    placeholder="e.g., New Service Available"
+                    className="w-full mt-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider dark:text-slate-500">Target Audience</label>
+                  <div className="flex gap-2 mt-1.5">
+                    {[
+                      { value: 'all', label: 'All Users' },
+                      { value: 'patients', label: 'Patients' },
+                      { value: 'providers', label: 'Providers' },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setAnnounceTarget(opt.value)}
+                        className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          announceTarget === opt.value
+                            ? 'bg-primary text-white shadow-sm'
+                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-300'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider dark:text-slate-500">Message</label>
+                  <textarea
+                    value={announceMsg}
+                    onChange={e => setAnnounceMsg(e.target.value)}
+                    placeholder="Write your announcement..."
+                    rows={4}
+                    className="w-full mt-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 resize-none"
+                  />
+                </div>
+
+                <button
+                  onClick={handleSendAnnouncement}
+                  disabled={announceSending || !announceTitle.trim() || !announceMsg.trim()}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20"
+                >
+                  <Send className="w-4 h-4" />
+                  {announceSending ? 'Sending...' : 'Send Announcement'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 };
 

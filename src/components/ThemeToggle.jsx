@@ -7,7 +7,7 @@ const ThemeToggle = ({ className = '' }) => {
   return (
     <button
       onClick={toggle}
-      className={`p-2 rounded-xl transition-all hover:bg-slate-100 dark:hover:bg-slate-700 ${className}`}
+      className={`p-2.5 rounded-xl transition-all hover:bg-slate-100 dark:hover:bg-slate-700 ${className}`}
       aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {dark ? (

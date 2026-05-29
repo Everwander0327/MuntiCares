@@ -32,6 +32,7 @@ const ProviderPatients = lazy(() => import('./pages/provider/Patients'));
 const ProviderSchedule = lazy(() => import('./pages/provider/Schedule'));
 const ProviderProfile = lazy(() => import('./pages/provider/Profile'));
 const ProviderMessages = lazy(() => import('./pages/provider/Messages'));
+const ProviderPayouts = lazy(() => import('./pages/provider/Payouts'));
 const PatientProfileView = lazy(() => import('./pages/provider/PatientProfileView'));
 
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
@@ -39,6 +40,8 @@ const AdminPatients = lazy(() => import('./pages/admin/Patients'));
 const AdminProviders = lazy(() => import('./pages/admin/Providers'));
 const AdminRequests = lazy(() => import('./pages/admin/Requests'));
 const AdminProfile = lazy(() => import('./pages/admin/Profile'));
+const AdminTransactions = lazy(() => import('./pages/admin/Transactions'));
+const AdminAnnouncements = lazy(() => import('./pages/admin/Announcements'));
 
 function AppContent() {
   const location = useLocation();
@@ -85,6 +88,7 @@ function AppContent() {
           <Route path="patients/:id/profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientProfileView /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="schedule" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderSchedule /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderMessages /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="payouts" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderPayouts /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
         </Route>
 
@@ -95,6 +99,8 @@ function AppContent() {
           <Route path="providers" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminProviders /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
           <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="transactions" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminTransactions /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route path="announcements" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminAnnouncements /></AnimatedPage></Suspense></ErrorBoundary>} />
         </Route>
       </Routes>
     </AnimatePresence>
