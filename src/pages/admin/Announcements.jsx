@@ -3,10 +3,12 @@ import DashboardLayout from '../../layouts/DashboardLayout';
 import { Megaphone, Send, Trash2, Users, Briefcase, Database } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import { SkeletonPage } from '../../components/Skeleton';
 import toast from 'react-hot-toast';
 
 const AdminAnnouncements = () => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
@@ -47,14 +49,13 @@ const AdminAnnouncements = () => {
     }
     setSending(true);
     try {
-      const { data: user } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from('announcements')
         .insert([{
           title: title.trim(),
           message: message.trim(),
           target_audience: target,
-          created_by: user?.user?.id,
+          created_by: user?.id,
         }])
         .select();
 

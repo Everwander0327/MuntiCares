@@ -1,16 +1,14 @@
- 
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import heroImage from '../../assets/hero.png';
-import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff } from 'lucide-react';
+import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff, ShieldCheck, RotateCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import confetti from 'canvas-confetti';
-import { supabase } from '../../lib/supabase';
+import { useSignIn, useSignUp } from '@clerk/clerk-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { sha256Hex } from '../../lib/hash';
 import { toast } from 'react-hot-toast';
 import { FormInput, FormCheckbox } from '../../components/ui/form-input';
 
@@ -28,6 +26,10 @@ const registerSchema = z.object({
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
+});
+
+const verifySchema = z.object({
+  code: z.string().length(6, 'Enter the 6-digit code'),
 });
 
 const getPasswordStrength = (password) => {
@@ -64,7 +66,9 @@ const TabButton = ({ active, label, onClick }) => (
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user } = useAuth();
+  const { signIn, setActive: setActiveSignIn } = useSignIn();
+  const { signUp, setActive: setActiveSignUp } = useSignUp();
   const [mode, setMode] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -72,10 +76,15 @@ const AuthPage = () => {
   const [shake, setShake] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [verifyingCode, setVerifyingCode] = useState(false);
   const emailRef = useRef(null);
+  const codeRef = useRef(null);
 
   const loginForm = useForm({ resolver: zodResolver(loginSchema) });
   const registerForm = useForm({ resolver: zodResolver(registerSchema) });
+  const verifyForm = useForm({ resolver: zodResolver(verifySchema) });
   const watchPassword = registerForm.watch('password', '');
 
   useEffect(() => {
@@ -88,41 +97,33 @@ const AuthPage = () => {
   }, [user, navigate]);
 
   useEffect(() => {
-    const timer = setTimeout(() => emailRef.current?.focus(), 400);
+    const timer = setTimeout(() => {
+      if (pendingVerification) {
+        codeRef.current?.focus();
+      } else {
+        emailRef.current?.focus();
+      }
+    }, 400);
     return () => clearTimeout(timer);
-  }, [mode]);
+  }, [mode, pendingVerification]);
 
   const handleLogin = async (data) => {
     setError('');
     setLoading(true);
     try {
-      const enteredHash = await sha256Hex(data.password);
-      const { data: result, error: queryError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', data.email)
-        .single();
+      const result = await signIn.create({
+        identifier: data.email,
+        password: data.password,
+      });
 
-      if (queryError) throw new Error('Invalid email or password');
-
-      if (result && (result.password === enteredHash || result.password === data.password)) {
-        if (result.is_banned) throw new Error('Your account has been banned. Please contact support.');
-        if (result.password === data.password) {
-          try {
-            const newHash = await sha256Hex(data.password);
-            await supabase.from('users').update({ password: newHash }).eq('id', result.id);
-          } catch (e) { console.error('Password migration failed:', e); }
-        }
-        login(result);
+      if (result.status === 'complete') {
+        await setActiveSignIn({ session: result.createdSessionId });
         toast.success('Logged in successfully');
-        const rolePath = result.role === 'admin' ? '/admin/dashboard' : `/${result.role}/dashboard`;
-        navigate(rolePath);
-      } else {
-        throw new Error('Invalid email or password');
       }
     } catch (err) {
-      setError(err.message);
-      toast.error(err.message);
+      const message = err.errors?.[0]?.longMessage || 'Invalid email or password';
+      setError(message);
+      toast.error(message);
       setShake(true);
       setTimeout(() => setShake(false), 500);
     } finally {
@@ -134,31 +135,26 @@ const AuthPage = () => {
     setError('');
     setLoading(true);
     try {
-      const hashed = await sha256Hex(data.password);
-      const { data: newUser, error: insertError } = await supabase
-        .from('users')
-        .insert([{ full_name: data.fullName, email: data.email, password: hashed, role }])
-        .select();
+      await signUp.create({
+        emailAddress: data.email,
+        password: data.password,
+        firstName: data.fullName.split(' ').slice(0, -1).join(' ') || data.fullName,
+        lastName: data.fullName.split(' ').pop() || '',
+      });
 
-      if (insertError) throw insertError;
+      await signUp.update({
+        publicMetadata: { role },
+      });
 
-      if (role === 'provider' && newUser?.[0]) {
-        const { error: providerError } = await supabase
-          .from('providers')
-          .insert([{ user_id: newUser[0].id }]);
-        if (providerError) console.error('Error creating provider profile:', providerError);
-      }
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
 
-      if (newUser?.[0]) {
-        login(newUser[0]);
-        toast.success('Account created');
-        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-      }
-
-      navigate(role === 'patient' ? '/patient/dashboard' : '/provider/dashboard');
+      setVerificationEmail(data.email);
+      setPendingVerification(true);
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      setError('');
     } catch (err) {
-      console.error('Registration error:', err);
-      setError(err.message || 'An error occurred during registration');
+      const message = err.errors?.[0]?.longMessage || 'Registration failed';
+      setError(message);
       setShake(true);
       setTimeout(() => setShake(false), 500);
     } finally {
@@ -166,9 +162,122 @@ const AuthPage = () => {
     }
   };
 
+  const handleVerifyEmail = async (data) => {
+    setError('');
+    setVerifyingCode(true);
+    try {
+      const result = await signUp.attemptEmailAddressVerification({
+        code: data.code,
+      });
+
+      if (result.status === 'complete') {
+        await setActiveSignUp({ session: result.createdSessionId });
+        toast.success('Email verified! Welcome to MuntiCares!');
+      } else {
+        throw new Error('Verification failed. Please try again.');
+      }
+    } catch (err) {
+      const message = err.errors?.[0]?.longMessage || 'Invalid code. Please try again.';
+      setError(message);
+      toast.error(message);
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    setError('');
+    try {
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      toast.success('New code sent to your email!');
+    } catch (err) {
+      const message = err.errors?.[0]?.longMessage || 'Failed to resend code';
+      toast.error(message);
+    }
+  };
+
+  const handleBackToRegister = () => {
+    setPendingVerification(false);
+    setVerificationEmail('');
+    setMode('register');
+    setError('');
+  };
+
   const strength = getPasswordStrength(watchPassword);
 
   const formContent = (isLogin) => {
+    if (pendingVerification) {
+      return (
+        <motion.div
+          key="verify"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={{ duration: 0.25 }}
+        >
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck className="w-8 h-8 text-primary" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Verify Your Email</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              We sent a 6-digit code to<br />
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{verificationEmail}</span>
+            </p>
+          </div>
+
+          <form className="space-y-4" onSubmit={verifyForm.handleSubmit(handleVerifyEmail)}>
+            <FormInput
+              label="Verification Code"
+              placeholder="000000"
+              icon={ShieldCheck}
+              className="!py-2.5 text-center text-lg tracking-[0.5em] font-mono"
+              error={verifyForm.formState.errors.code?.message}
+              maxLength={6}
+              ref={codeRef}
+              {...verifyForm.register('code')}
+            />
+
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 p-3 rounded-xl text-xs font-medium text-center">
+                {error}
+              </div>
+            )}
+
+            <motion.button
+              type="submit"
+              disabled={verifyingCode}
+              className={`btn-primary w-full py-3 text-sm shadow-lg shadow-primary/30 ${verifyingCode ? 'opacity-70 cursor-not-allowed' : ''}`}
+              whileHover={!verifyingCode ? { scale: 1.02 } : {}}
+              whileTap={!verifyingCode ? { scale: 0.97 } : {}}
+            >
+              {verifyingCode ? 'Verifying...' : 'Verify Email'}
+            </motion.button>
+
+            <div className="flex items-center justify-between pt-2">
+              <button
+                type="button"
+                onClick={handleResendCode}
+                className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                Resend code
+              </button>
+              <button
+                type="button"
+                onClick={handleBackToRegister}
+                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium"
+              >
+                Use different email
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      );
+    }
+
     if (isLogin) {
       return (
           <motion.div
@@ -468,11 +577,13 @@ const AuthPage = () => {
               boxShadow: '0 8px 32px rgba(30, 111, 191, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5)',
             }}
           >
-            {/* Tabs */}
-            <div className="flex justify-center border-b border-slate-200 dark:border-slate-700 mb-3">
-              <TabButton active={mode === 'login'} label="Login" onClick={() => { setMode('login'); setError(''); }} />
-              <TabButton active={mode === 'register'} label="Register" onClick={() => { setMode('register'); setError(''); }} />
-            </div>
+            {/* Tabs - hide when in verification mode */}
+            {!pendingVerification && (
+              <div className="flex justify-center border-b border-slate-200 dark:border-slate-700 mb-3">
+                <TabButton active={mode === 'login'} label="Login" onClick={() => { setMode('login'); setError(''); }} />
+                <TabButton active={mode === 'register'} label="Register" onClick={() => { setMode('register'); setError(''); }} />
+              </div>
+            )}
 
             <AnimatePresence mode="wait">
               {formContent(mode === 'login')}

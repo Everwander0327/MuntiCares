@@ -1,110 +1,59 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useUser, useAuth as useClerkAuth, useClerk, useSignIn } from '@clerk/clerk-react';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => {
-    const storedUser = localStorage.getItem('munticares_user');
-    return storedUser ? JSON.parse(storedUser) : null;
-  });
-  // authInitialized indicates we've finished validating/refreshing the cached user
+  const { user: clerkUser, isLoaded: userLoaded } = useUser();
+  const { isSignedIn } = useClerkAuth();
+  const clerk = useClerk();
+  const { signIn, setActive } = useSignIn();
+  const [user, setUser] = useState(null);
   const [authInitialized, setAuthInitialized] = useState(false);
 
-  const login = (userData) => {
-    const normalized = {
-      id: userData.id,
-      email: userData.email,
-      role: userData.role,
-      full_name: userData.full_name || userData.fullName || userData.name || '',
-      is_banned: userData.is_banned || false,
-      // keep any other fields present
-      ...userData,
-    };
-    localStorage.setItem('munticares_user', JSON.stringify(normalized));
-    setUser(normalized);
-    // Mark auth as initialized when we actively log in to avoid race with initial validation
-    setAuthInitialized(true);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('munticares_user');
-    setUser(null);
-  };
-
-  // Validate cached user against server profile on mount
+  // Sync Clerk user -> app user object
   useEffect(() => {
-    let mounted = true;
+    if (!userLoaded) return;
 
-    const init = async () => {
-      try {
-        const cached = localStorage.getItem('munticares_user');
-        if (!cached) {
-          if (mounted) setAuthInitialized(true);
-          return;
-        }
+    if (!isSignedIn || !clerkUser) {
+      setUser(null);
+      setAuthInitialized(true);
+      return;
+    }
 
-        const parsed = JSON.parse(cached);
-        // Try to refresh from server using id if available, otherwise email
-        const identifier = parsed.id ? { id: parsed.id } : { email: parsed.email };
-        if (!identifier.id && !identifier.email) {
-          if (mounted) setAuthInitialized(true);
-          return;
-        }
+    setUser({
+      id: clerkUser.publicMetadata?.legacy_id || clerkUser.id,
+      clerkId: clerkUser.id,
+      email: clerkUser.primaryEmailAddress?.emailAddress || '',
+      role: clerkUser.publicMetadata?.role || 'patient',
+      full_name: clerkUser.fullName || '',
+      is_banned: clerkUser.publicMetadata?.is_banned || false,
+      avatar_url: clerkUser.imageUrl || '',
+    });
+    setAuthInitialized(true);
+  }, [clerkUser, userLoaded, isSignedIn]);
 
-        let res;
-        if (identifier.id) {
-          res = await supabase.from('users').select('*').eq('id', identifier.id).maybeSingle();
-        } else {
-          res = await supabase.from('users').select('*').eq('email', identifier.email).maybeSingle();
-        }
+  const login = useCallback(async ({ email, password }) => {
+    try {
+      const result = await signIn.create({ identifier: email, password });
 
-        const { data } = res || {};
-        if (mounted) {
-          if (data) {
-            // update cache with canonical server data
-            const normalized = {
-              id: data.id,
-              email: data.email,
-              role: data.role,
-              full_name: data.full_name || data.name || '',
-              is_banned: data.is_banned || false,
-              ...data,
-            };
-            localStorage.setItem('munticares_user', JSON.stringify(normalized));
-            setUser(normalized);
-          } else {
-            // server has no record; clear local cache
-            localStorage.removeItem('munticares_user');
-            setUser(null);
-          }
-          setAuthInitialized(true);
-        }
-      } catch (err) {
-        // if anything goes wrong, mark initialized so UI can proceed
-        if (mounted) setAuthInitialized(true);
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        return { success: true };
       }
-    };
 
-    init();
+      return { success: false, error: 'Verification required' };
+    } catch (err) {
+      const message = err.errors?.[0]?.longMessage || err.message || 'Login failed';
+      throw new Error(message);
+    }
+  }, [signIn, setActive]);
 
-    // cross-tab sync: respond to other tabs logging out/in
-    const onStorage = (e) => {
-      if (e.key === 'munticares_user') {
-        const v = e.newValue;
-        setUser(v ? JSON.parse(v) : null);
-      }
-    };
-
-    window.addEventListener('storage', onStorage);
-
-    return () => {
-      mounted = false;
-      window.removeEventListener('storage', onStorage);
-    };
-  }, []);
+  const logout = useCallback(() => {
+    clerk.signOut();
+  }, [clerk]);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, authInitialized }}>

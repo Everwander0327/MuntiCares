@@ -210,12 +210,11 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     }
     setAnnounceSending(true);
     try {
-      const { data: user } = await supabase.auth.getUser();
       const { error } = await supabase.from('announcements').insert([{
         title: announceTitle.trim(),
         message: announceMsg.trim(),
         target_audience: announceTarget,
-        created_by: user?.user?.id,
+        created_by: authUser?.id,
       }]);
       if (error) throw error;
       toast.success('Announcement sent!');
