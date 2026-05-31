@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Mail, Phone, MapPin, Calendar, HeartPulse, Activity, FileText, Clock, MessageCircle, ArrowLeft, Lock, Shield, AlertCircle, Stethoscope, FolderOpen, User } from 'lucide-react';
+import { Mail, Phone, MapPin, Calendar, HeartPulse, Activity, FileText, Clock, MessageCircle, ArrowLeft, Lock, Shield, AlertCircle, Stethoscope, FolderOpen, User, FileCode, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import EmptyState from '../../components/EmptyState';
 import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
+import FhirExportModal from '../../components/FhirExportModal';
+import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '../../lib/fhir';
 
 const PatientProfileView = () => {
   const { id } = useParams();
@@ -20,10 +23,14 @@ const PatientProfileView = () => {
   const [documents, setDocuments] = useState([]);
   const [visitNotes, setVisitNotes] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  const [fhirOpen, setFhirOpen] = useState(false);
+  const [fhirBundle, setFhirBundle] = useState(null);
+  const [fhirLoading, setFhirLoading] = useState(false);
 
   useEffect(() => {
+    if (!authUser || !id) return;
+
     const fetchData = async () => {
-      if (!authUser || !id) return;
       try {
         const { data: userData, error: userError } = await supabase
           .from('users')
@@ -92,6 +99,33 @@ const PatientProfileView = () => {
       }
     };
     fetchData();
+
+    const subscription = supabase
+      .channel(`consent-${id}-${authUser.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'consent_access',
+        filter: `patient_id=eq.${id} AND provider_id=eq.${authUser.id}`,
+      }, (payload) => {
+        if (payload.new) setConsent(payload.new);
+      })
+      .subscribe();
+
+    const pollInterval = setInterval(async () => {
+      const { data } = await supabase
+        .from('consent_access')
+        .select('*')
+        .eq('patient_id', id)
+        .eq('provider_id', authUser.id)
+        .maybeSingle();
+      if (data) setConsent(data);
+    }, 5000);
+
+    return () => {
+      supabase.removeChannel(subscription);
+      clearInterval(pollInterval);
+    };
   }, [id, authUser, navigate]);
 
   if (loading) {
@@ -100,7 +134,71 @@ const PatientProfileView = () => {
 
   if (!patient) return null;
 
+  const handleFhirExport = async () => {
+    setFhirLoading(true);
+    try {
+      const resources = [];
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      const { data: patData } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('user_id', id)
+        .maybeSingle();
+
+      const patientRes = buildPatientResource(userData, patData);
+      resources.push(patientRes);
+
+      const canAccess = consent?.is_enabled;
+      const perms = consent?.permissions || {};
+
+      if (canAccess) {
+        if (perms.medical_history) {
+          const { data: mh } = await supabase
+            .from('medical_histories')
+            .select('*')
+            .eq('patient_id', id)
+            .maybeSingle();
+
+          if (mh) {
+            const conditions = buildConditionResources(mh, id);
+            resources.push(...conditions);
+            const allergies = buildAllergyResources(mh, id);
+            resources.push(...allergies);
+          }
+        }
+
+        const { data: notesData } = await supabase
+          .from('visit_notes')
+          .select('*')
+          .eq('patient_id', id)
+          .eq('provider_id', authUser.id)
+          .order('created_at', { ascending: false });
+
+        if (notesData?.length) {
+          const vitals = buildVitalSignObservations(notesData, id);
+          resources.push(...vitals);
+        }
+      }
+
+      const bundle = buildBundle(resources);
+      setFhirBundle(bundle);
+      setFhirOpen(true);
+    } catch (err) {
+      console.error('FHIR export error:', err);
+      toast.error('Failed to export FHIR data.');
+    } finally {
+      setFhirLoading(false);
+    }
+  };
+
   return (
+    <>
     <DashboardLayout role="provider">
       <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
         <motion.button
@@ -141,9 +239,9 @@ const PatientProfileView = () => {
                 <p className="text-slate-500 text-sm font-medium mt-1 dark:text-slate-400">{patient.email}</p>
 
                 {!consent?.is_enabled && (
-                  <div className="mt-3 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 rounded-xl text-xs font-medium text-amber-700 dark:text-amber-300">
-                    <Lock className="w-3.5 h-3.5" />
-                    Waiting for patient consent
+                  <div className="mt-3 flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/25 border-2 border-amber-200 dark:border-amber-700/50 rounded-2xl text-xs font-bold text-amber-700 dark:text-amber-300 shadow-sm">
+                    <Lock className="w-4 h-4" />
+                    <span>Consent Required to Export FHIR</span>
                   </div>
                 )}
 
@@ -186,15 +284,43 @@ const PatientProfileView = () => {
                   </div>
                 </div>
 
+                {/* Actions Section */}
                 <div className="mt-6 pt-6 border-t border-slate-100 dark:border-slate-700">
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => navigate(`/provider/messages?user=${id}`)}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-primary bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all text-sm"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Send Message
-                  </motion.button>
+                  <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-3">Actions</p>
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-2 space-y-2">
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => navigate(`/provider/messages?user=${id}`)}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-primary bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm shadow-sm"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Send Message
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={consent?.is_enabled ? { scale: 0.96 } : {}}
+                      onClick={consent?.is_enabled ? handleFhirExport : undefined}
+                      disabled={fhirLoading || !consent?.is_enabled}
+                      className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold transition-all text-sm shadow-sm ${
+                        consent?.is_enabled
+                          ? 'text-emerald-600 dark:text-emerald-300 bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 cursor-pointer'
+                          : 'text-slate-300 dark:text-slate-600 bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed'
+                      }`}
+                    >
+                      {fhirLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : consent?.is_enabled ? (
+                        <FileCode className="w-4 h-4" />
+                      ) : (
+                        <Lock className="w-3.5 h-3.5" />
+                      )}
+                      {fhirLoading
+                        ? 'Generating...'
+                        : consent?.is_enabled
+                          ? 'Export as FHIR'
+                          : 'FHIR — Consent Required'}
+                    </motion.button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -416,7 +542,15 @@ const PatientProfileView = () => {
           </div>
         </div>
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+
+      <FhirExportModal
+        open={fhirOpen}
+        onClose={() => setFhirOpen(false)}
+        bundle={fhirBundle}
+        patientName={patient?.full_name}
+      />
+    </>
   );
 };
 

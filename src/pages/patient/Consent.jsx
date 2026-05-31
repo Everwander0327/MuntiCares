@@ -57,7 +57,7 @@ const ProviderCard = ({ providerName, service, lastAccess, isEnabled, permission
           >
             <motion.div
               className="w-6 h-6 bg-white dark:bg-slate-800 rounded-full shadow-sm dark:shadow-slate-900/50"
-              animate={{ x: isEnabled ? 18 : 0 }}
+              animate={{ x: isEnabled ? 22 : 0 }}
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             />
           </motion.button>

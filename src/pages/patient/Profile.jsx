@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download, User, Stethoscope, FolderOpen, Clock } from 'lucide-react';
+import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download, User, Stethoscope, FolderOpen, Clock, FileCode } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,6 +12,8 @@ import { jsPDF } from 'jspdf';
 import { getSignedUrl } from '../../lib/supabaseHelpers';
 import EmptyState from '../../components/EmptyState';
 import ProfilePhotoUpload from '../../components/ProfilePhotoUpload';
+import FhirExportModal from '../../components/FhirExportModal';
+import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '../../lib/fhir';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -20,6 +22,9 @@ const PatientProfile = () => {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [visitNotes, setVisitNotes] = useState([]);
+  const [fhirOpen, setFhirOpen] = useState(false);
+  const [fhirBundle, setFhirBundle] = useState(null);
+  const [fhirLoading, setFhirLoading] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
@@ -244,6 +249,60 @@ const PatientProfile = () => {
   const fields = [profile.phone, profile.address, profile.emergency_contact];
   const filled = fields.filter(f => f && f.trim() !== '').length;
   const completionPercent = Math.round((filled / fields.length) * 100);
+
+  // FHIR Export
+  const handleFhirExport = async () => {
+    setFhirLoading(true);
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      const { data: patData } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const { data: histRows } = await supabase
+        .from('medical_histories')
+        .select('*')
+        .eq('patient_id', user.id);
+      const histData = histRows?.[0] || null;
+
+      const { data: notesData } = await supabase
+        .from('visit_notes')
+        .select('*')
+        .eq('patient_id', user.id)
+        .order('created_at', { ascending: false });
+
+      const resources = [];
+
+      const patientRes = buildPatientResource(userData, patData);
+      resources.push(patientRes);
+
+      const vitals = buildVitalSignObservations(notesData || [], user.id);
+      resources.push(...vitals);
+
+      if (histData) {
+        const conditions = buildConditionResources(histData, user.id);
+        resources.push(...conditions);
+        const allergies = buildAllergyResources(histData, user.id);
+        resources.push(...allergies);
+      }
+
+      const bundle = buildBundle(resources);
+      setFhirBundle(bundle);
+      setFhirOpen(true);
+    } catch (err) {
+      console.error('FHIR export error:', err);
+      toast.error('Failed to export FHIR data.');
+    } finally {
+      setFhirLoading(false);
+    }
+  };
 
   // PDF Generation
   const generatePDF = async () => {
@@ -531,6 +590,7 @@ const PatientProfile = () => {
   }
 
   return (
+    <>
     <DashboardLayout role="patient">
       <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
         {/* Completion Alert */}
@@ -630,17 +690,33 @@ const PatientProfile = () => {
                   </div>
                 </div>
 
-                {/* Download & Logout */}
-                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 space-y-3">
-                <motion.button
-                  whileTap={{ scale: 0.96 }}
-                  onClick={generatePDF}
-                  disabled={generatingPdf}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-primary bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all text-sm disabled:opacity-50"
-                >
-                  {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                  {generatingPdf ? 'Generating...' : 'Download Medical Summary'}
-                </motion.button>
+                {/* Data Export Section */}
+                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
+                  <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-3">Data Export</p>
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-2 space-y-2">
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      onClick={generatePDF}
+                      disabled={generatingPdf}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-primary bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm disabled:opacity-50 shadow-sm"
+                    >
+                      {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                      {generatingPdf ? 'Generating...' : 'Medical Summary (PDF)'}
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      onClick={handleFhirExport}
+                      disabled={fhirLoading}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-emerald-600 dark:text-emerald-300 bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all text-sm disabled:opacity-50 shadow-sm"
+                    >
+                      {fhirLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />}
+                      {fhirLoading ? 'Generating...' : 'FHIR (Interoperability)'}
+                    </motion.button>
+                  </div>
+                </div>
+
+                {/* Logout */}
+                <div className="pt-4">
                 <motion.button
                   whileTap={{ scale: 0.96 }}
                   onClick={handleLogout}
@@ -975,7 +1051,15 @@ const PatientProfile = () => {
           </motion.div>
         </div>
       </div>
-    </DashboardLayout>
+      </DashboardLayout>
+
+      <FhirExportModal
+        open={fhirOpen}
+        onClose={() => setFhirOpen(false)}
+        bundle={fhirBundle}
+        patientName={profile.full_name}
+      />
+    </>
   );
 };
 
