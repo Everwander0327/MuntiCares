@@ -32,6 +32,15 @@ const FeatureCard = ({ feature }) => {
       className="card group relative overflow-hidden hover:-translate-y-1 transition-transform duration-200"
       whileTap={{ scale: 0.98 }}
     >
+      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none hidden lg:block"
+           style={{
+             background: 'linear-gradient(135deg, #1E6FBF, #60A5FA, #1E6FBF)',
+             padding: '2px',
+             mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+             maskComposite: 'exclude',
+             WebkitMaskComposite: 'xor',
+           }}
+      />
       <div
         ref={ref}
         style={style}
@@ -39,16 +48,7 @@ const FeatureCard = ({ feature }) => {
         onMouseLeave={handleMouseLeave}
         className="relative"
       >
-        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none hidden lg:block"
-             style={{
-               background: 'linear-gradient(135deg, #1E6FBF, #60A5FA, #1E6FBF)',
-               padding: '2px',
-               mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-               maskComposite: 'exclude',
-               WebkitMaskComposite: 'xor',
-             }}
-        />
-          <div className="bg-blue-50 dark:bg-blue-900/30 w-12 h-12 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-100 dark:shadow-slate-900/50 group-hover:bg-primary group-hover:shadow-primary/30 transition-all duration-300">
+        <div className="bg-blue-50 dark:bg-blue-900/30 w-12 h-12 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-100 dark:shadow-slate-900/50 group-hover:bg-primary group-hover:shadow-primary/30 transition-all duration-300">
           <div className="card-icon-animate">
             {cloneElement(feature.icon, { className: "w-5 h-5 text-primary group-hover:text-white transition-colors" })}
           </div>

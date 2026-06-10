@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Check, X, MapPin, Calendar, Clock, Wallet, Banknote, CheckCircle, Loader2 } from 'lucide-react';
+import { Check, X, MapPin, Calendar, Clock, Wallet, Banknote, CheckCircle, Loader2, Receipt as ReceiptIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import ReceiptModal from '../../components/ReceiptModal';
 import { SkeletonPage } from '../../components/Skeleton';
 import toast from 'react-hot-toast';
 import EmptyState from '../../components/EmptyState';
@@ -28,6 +29,7 @@ const ProviderRequests = () => {
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState({});
   const [completing, setCompleting] = useState({});
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -252,8 +254,7 @@ const ProviderRequests = () => {
 
       await Promise.all(updates);
 
-      const methodLabel = txData?.payment_method === 'simulated' ? 'Payment released to you.' : '';
-      toast.success(`Service marked complete! ${methodLabel}`);
+      toast.success('Service marked complete! Payment released to you.');
 
       setTimeout(() => {
         setActive(prev => prev.filter(r => r.id !== req.id));
@@ -500,18 +501,38 @@ const ProviderRequests = () => {
                         </div>
                       </div>
 
-                      <motion.button
-                        onClick={() => handleMarkComplete(req)}
-                        className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all shadow-lg w-full bg-primary text-white hover:bg-primary/90 shadow-primary/20"
-                        whileTap={{ scale: 0.95 }}
-                        disabled={!!completing[req.id]}
-                      >
-                        {completing[req.id] ? (
-                          <><Loader2 className="w-4 h-4 animate-spin" /> Completing...</>
-                        ) : (
-                          <><CheckCircle className="w-4 h-4" /> Mark Complete</>
+                      <div className="grid grid-cols-2 gap-2">
+                        {req.paymentStatus === 'paid' && (
+                          <motion.button
+                            onClick={async () => {
+                              const { data } = await supabase
+                                .from('transactions')
+                                .select('*')
+                                .eq('request_id', req.id)
+                                .single();
+                              if (data) {
+                                setSelectedReceipt({ ...data, providerName: req.patient });
+                              }
+                            }}
+                            className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
+                            whileTap={{ scale: 0.95 }}
+                          >
+                            <ReceiptIcon className="w-4 h-4" /> View Receipt
+                          </motion.button>
                         )}
-                      </motion.button>
+                        <motion.button
+                          onClick={() => handleMarkComplete(req)}
+                          className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all shadow-lg bg-primary text-white hover:bg-primary/90 shadow-primary/20"
+                          whileTap={{ scale: 0.95 }}
+                          disabled={!!completing[req.id]}
+                        >
+                          {completing[req.id] ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> Completing...</>
+                          ) : (
+                            <><CheckCircle className="w-4 h-4" /> Mark Complete</>
+                          )}
+                        </motion.button>
+                      </div>
                     </motion.div>
                   ))}
                 </AnimatePresence>
@@ -528,6 +549,12 @@ const ProviderRequests = () => {
           </>
         )}
       </div>
+
+      <ReceiptModal
+        isOpen={!!selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+        transaction={selectedReceipt}
+      />
     </DashboardLayout>
   );
 };

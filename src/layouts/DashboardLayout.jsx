@@ -375,39 +375,55 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
         <div className="mx-3 mb-3 rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border border-slate-100/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
           <div className="flex items-center justify-around px-1 py-0.5">
             {(() => {
-              const mobileLinks = buildMobileLinks(currentRole === 'admin' ? links.filter(l => l.label !== 'Announcements') : links);
-              return mobileLinks.map((link, i) => {
-                let badge = 0;
-                if (currentRole === 'patient') {
-                  if (link.label === 'My Requests') badge = pendingCount;
-                  if (link.label === 'Messages') badge = unreadMsgCount;
-                } else if (currentRole === 'provider') {
-                  if (link.label === 'Incoming Requests') badge = pendingCount;
-                  if (link.label === 'Messages') badge = unreadMsgCount;
-                }
-                return (
-                  <MobileNavItem 
-                    key={link.label}
-                    icon={link.icon}
-                    label={link.shortLabel || link.label}
-                    to={link.to}
-                    active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
-                    badge={badge}
-                    prominent={i === 2}
-                  />
-                );
-              });
-            })()}
+              const filteredLinks = currentRole === 'admin' ? links.filter(l => l.label !== 'Announcements') : currentRole === 'provider' ? links.filter(l => l.label !== 'Messages') : links;
+              const mobileLinks = buildMobileLinks(filteredLinks);
+                return mobileLinks.map((link, i) => {
+                  let badge = 0;
+                  if (currentRole === 'patient') {
+                    if (link.label === 'My Requests') badge = pendingCount;
+                    if (link.label === 'Messages') badge = unreadMsgCount;
+                  } else if (currentRole === 'provider') {
+                    if (link.label === 'Incoming Requests') badge = pendingCount;
+                    if (link.label === 'Messages') badge = unreadMsgCount;
+                  }
+                  return (
+                    <MobileNavItem 
+                      key={link.label}
+                      icon={link.icon}
+                      label={link.shortLabel || link.label}
+                      to={link.to}
+                      active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
+                      badge={badge}
+                      prominent={i === 2}
+                    />
+                  );
+                });
+              })()}
+            </div>
           </div>
-        </div>
       </div>
+
+      {/* Mobile Message FAB for Provider */}
+      {currentRole === 'provider' && (
+        <Link
+          to="/provider/messages"
+          className="lg:hidden fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-primary shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+        >
+          <MessageCircle className="w-6 h-6 text-white" />
+          {unreadMsgCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] rounded-full bg-red-500 text-white text-3xs font-bold flex items-center justify-center px-1 shadow-lg border-2 border-white dark:border-slate-800">
+              {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
+            </span>
+          )}
+        </Link>
+      )}
 
       {/* Mobile Announcement FAB */}
       {currentRole === 'admin' && (
         <>
           <button
             onClick={() => setShowAnnounceModal(true)}
-            className="lg:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+className="lg:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
           >
             <Megaphone className="w-6 h-6 text-white" />
           </button>

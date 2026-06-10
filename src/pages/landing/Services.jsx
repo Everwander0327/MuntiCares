@@ -1,4 +1,5 @@
  
+import { cloneElement } from 'react';
 import { Heart, Stethoscope, Activity, Users, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from './animations';
@@ -48,8 +49,8 @@ const ServiceCard = ({ service }) => {
         onMouseLeave={handleMouseLeave}
       >
           <div className="bg-blue-50 dark:bg-blue-900/30 w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-100 dark:shadow-slate-900/50 group-hover:bg-primary group-hover:shadow-primary/30 transition-all duration-300">
-          <div className="card-icon-animate text-primary group-hover:text-white transition-colors duration-300">
-            {service.icon}
+          <div className="card-icon-animate">
+            {cloneElement(service.icon, { className: "w-8 h-8 text-primary group-hover:text-white transition-colors" })}
           </div>
         </div>
         <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">{service.title}</h3>

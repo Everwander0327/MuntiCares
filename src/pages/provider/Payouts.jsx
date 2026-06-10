@@ -18,12 +18,16 @@ const StatusBadge = ({ status }) => {
   const styles = {
     paid: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
     completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    collected: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+    pending_cash: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
   };
   const icons = {
     paid: <Clock className="w-3 h-3" />,
     completed: <CheckCircle2 className="w-3 h-3" />,
+    collected: <CheckCircle2 className="w-3 h-3" />,
+    pending_cash: <Clock className="w-3 h-3" />,
   };
-  const labels = { paid: 'Held', completed: 'Released' };
+  const labels = { paid: 'Held', completed: 'Released', collected: 'Collected', pending_cash: 'Pending Cash' };
   const s = styles[status] || 'bg-slate-100 text-slate-600';
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold uppercase ${s}`}>
@@ -191,7 +195,7 @@ const ProviderPayouts = () => {
             value={`₱${totalFees.toLocaleString()}`}
             icon={<PiggyBank className="w-6 h-6 text-blue-600 dark:text-blue-400" />}
             color={{ bg: 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20', border: 'border-blue-100 dark:border-blue-900/50', iconBg: 'bg-blue-100 dark:bg-blue-900/30', label: 'text-blue-600 dark:text-blue-400', value: 'text-blue-700 dark:text-blue-300', sub: 'text-blue-500' }}
-            sub="10% fee on simulated payments"
+            sub="10% platform fee"
           />
           <StatCard
             label="Transaction Volume"
@@ -247,7 +251,7 @@ const ProviderPayouts = () => {
                       </td>
                       <td className="px-6 py-4 font-bold text-slate-900 dark:text-slate-100">₱{t.amount.toLocaleString()}</td>
                       <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
-                        {t.payment_method === 'simulated' ? `₱${t.platform_fee.toLocaleString()}` : <span className="text-slate-400">—</span>}
+                        ₱{t.platform_fee.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 font-semibold text-green-600 dark:text-green-400">₱{t.provider_payout.toLocaleString()}</td>
                       <td className="px-6 py-4"><StatusBadge status={t.status} /></td>

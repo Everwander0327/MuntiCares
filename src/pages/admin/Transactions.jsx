@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Download, ArrowUpDown, Wallet, PiggyBank, TrendingUp, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, Download, ArrowUpDown, Wallet, PiggyBank, TrendingUp, Clock, CheckCircle2, XCircle, Receipt as ReceiptIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import DateRangePicker from '../../components/DateRangePicker';
 import Pagination from '../../components/Pagination';
+import ReceiptModal from '../../components/ReceiptModal';
 import useSort from '../../hooks/useSort';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
@@ -18,31 +19,47 @@ const StatusBadge = ({ status }) => {
   const styles = {
     paid: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
     completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+    collected: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
+    pending_cash: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
     refunded: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
     unpaid: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300',
   };
   const icons = {
     paid: <CheckCircle2 className="w-3 h-3" />,
     completed: <CheckCircle2 className="w-3 h-3" />,
+    collected: <CheckCircle2 className="w-3 h-3" />,
+    pending_cash: <Clock className="w-3 h-3" />,
     refunded: <XCircle className="w-3 h-3" />,
     unpaid: <Clock className="w-3 h-3" />,
   };
+  const labels = { paid: 'Held', completed: 'Released', collected: 'Collected', pending_cash: 'Pending Cash' };
   const style = styles[status] || 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300';
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold uppercase ${style}`}>
-      {icons[status]} {status === 'paid' ? 'Held' : status === 'completed' ? 'Released' : status}
+      {icons[status]} {labels[status] || status}
     </span>
   );
 };
 
 const PaymentBadge = ({ method }) => {
-  if (method === 'simulated') {
-    return <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-2xs font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">Simulated</span>;
-  }
-  if (method === 'cash') {
-    return <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-2xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">Cash</span>;
-  }
-  return <span className="text-xs text-slate-400">—</span>;
+  const styles = {
+    gcash: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+    maya: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+    bank_transfer: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+    cash: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  };
+  const labels = {
+    gcash: 'GCash',
+    maya: 'Maya',
+    bank_transfer: 'Bank Transfer',
+    cash: 'Cash',
+  };
+  const style = styles[method] || 'bg-slate-100 text-slate-600 dark:bg-slate-800';
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-2xs font-bold ${style}`}>
+      {labels[method] || method}
+    </span>
+  );
 };
 
 const AdminTransactions = () => {
@@ -54,6 +71,7 @@ const AdminTransactions = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
   const { sorted, sortKey, handleSort, getSortIndicator } = useSort(transactions);
 
   useEffect(() => {
@@ -71,25 +89,41 @@ const AdminTransactions = () => {
 
         if (error) throw error;
 
-        const formatted = (data || []).map(t => ({
-          id: t.id,
-          requestId: t.request_id,
-          patient: t.patient?.full_name || 'Unknown',
-          patientEmail: t.patient?.email || '',
-          provider: t.provider?.full_name || 'Unknown',
-          providerEmail: t.provider?.email || '',
-          service: t.request?.service || '—',
-          requestStatus: t.request?.status || '—',
-          amount: Number(t.amount) || 0,
-          platform_fee: Number(t.platform_fee) || 0,
-          provider_payout: Number(t.provider_payout) || 0,
-          payment_method: t.payment_method || '',
-          status: t.status || 'unpaid',
-          paid_at: t.paid_at,
-          date: new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          timestamp: new Date(t.created_at).getTime(),
-          created_at: t.created_at,
-        }));
+        const formatted = (data || []).map(t => {
+          const amount = Number(t.amount) || 0;
+          const isFeeMethod = true;
+          const isPaidTx = ['paid', 'completed', 'collected'].includes(t.status);
+          const storedFee = Number(t.platform_fee) || 0;
+          const storedPayout = Number(t.provider_payout) || 0;
+
+          let platformFee = storedFee;
+          let providerPayout = storedPayout;
+
+          if (isPaidTx && amount > 0 && (storedFee === 0 || storedPayout === 0)) {
+            platformFee = isFeeMethod ? Math.round(amount * 0.1 * 100) / 100 : 0;
+            providerPayout = !isFeeMethod ? amount : amount - platformFee;
+          }
+
+          return {
+            id: t.id,
+            requestId: t.request_id,
+            patient: t.patient?.full_name || 'Unknown',
+            patientEmail: t.patient?.email || '',
+            provider: t.provider?.full_name || 'Unknown',
+            providerEmail: t.provider?.email || '',
+            service: t.request?.service || '—',
+            requestStatus: t.request?.status || '—',
+            amount,
+            platform_fee: platformFee,
+            provider_payout: providerPayout,
+            payment_method: t.payment_method || '',
+            status: t.status || 'unpaid',
+            paid_at: t.paid_at,
+            date: new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            timestamp: new Date(t.created_at).getTime(),
+            created_at: t.created_at,
+          };
+        });
 
         setTransactions(formatted);
       } catch (err) {
@@ -103,7 +137,7 @@ const AdminTransactions = () => {
 
   const volume = transactions.reduce((sum, t) => sum + t.amount, 0);
   const platformRevenue = transactions.reduce((sum, t) => sum + t.platform_fee, 0);
-  const providerEarnings = transactions.reduce((sum, t) => sum + t.provider_payout + (t.payment_method === 'cash' ? t.amount : 0), 0);
+  const providerEarnings = transactions.reduce((sum, t) => sum + t.provider_payout, 0);
   const pendingRelease = transactions.filter(t => t.status === 'paid').reduce((sum, t) => sum + t.provider_payout, 0);
 
   const filtered = sorted.filter(t => {
@@ -223,6 +257,8 @@ const AdminTransactions = () => {
                 { value: 'all', label: 'All Status' },
                 { value: 'paid', label: 'Held' },
                 { value: 'completed', label: 'Released' },
+                { value: 'collected', label: 'Collected' },
+                { value: 'pending_cash', label: 'Pending Cash' },
                 { value: 'refunded', label: 'Refunded' },
               ]}
             />
@@ -250,7 +286,7 @@ const AdminTransactions = () => {
             value={`₱${platformRevenue.toLocaleString()}`}
             icon={<PiggyBank className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />}
             color={{ bg: 'bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20', border: 'border-emerald-100 dark:border-emerald-900/50', iconBg: 'bg-emerald-100 dark:bg-emerald-900/30', label: 'text-emerald-600 dark:text-emerald-400', value: 'text-emerald-700 dark:text-emerald-300', sub: 'text-emerald-500' }}
-            sub="10% fee from simulated payments"
+            sub="10% platform fee"
           />
           <StatCard
             label="Provider Earnings"
@@ -305,13 +341,21 @@ const AdminTransactions = () => {
                       <PaymentBadge method={t.payment_method} />
                     </div>
                   </div>
-                  {t.payment_method === 'simulated' && (
-                    <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-lg px-3 py-1.5">
-                      <span>Fee: ₱{t.platform_fee}</span>
-                      <span>Provider: ₱{t.provider_payout}</span>
-                    </div>
-                  )}
-                  <div className="text-xs text-slate-400 dark:text-slate-500">{t.date}</div>
+                  <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900 rounded-lg px-3 py-1.5">
+                    <span>Fee: ₱{t.platform_fee.toLocaleString()}</span>
+                    <span>Provider: ₱{t.provider_payout.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-slate-400 dark:text-slate-500">{t.date}</div>
+                    {['completed', 'collected'].includes(t.status) && (
+                      <button
+                        onClick={() => setSelectedReceipt({ ...t, providerName: t.provider })}
+                        className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-primary"
+                      >
+                        <ReceiptIcon className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
               ))
             )}
@@ -322,14 +366,11 @@ const AdminTransactions = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
-                  <SortableHeader label="Transaction ID" sortKey="id" />
                   <SortableHeader label="Patient" sortKey="patient" />
-                  <SortableHeader label="Provider" sortKey="provider" />
-                  <SortableHeader label="Service" sortKey="service" />
+                  <th className="px-6 py-4 font-semibold">Service</th>
                   <SortableHeader label="Amount" sortKey="amount" />
-                  <th className="px-6 py-4 font-semibold">Payment Method</th>
-                  <SortableHeader label="Platform Fee" sortKey="platform_fee" />
-                  <SortableHeader label="Provider Payout" sortKey="provider_payout" />
+                  <th className="px-6 py-4 font-semibold">Payment</th>
+                  <SortableHeader label="Fee / Payout" sortKey="provider_payout" />
                   <SortableHeader label="Status" sortKey="status" />
                   <SortableHeader label="Date" sortKey="date" />
                 </tr>
@@ -337,7 +378,7 @@ const AdminTransactions = () => {
               <tbody>
                 {paginated.length === 0 ? (
                   <tr>
-                    <td colSpan="10"><EmptyState icon="inbox" title="No transactions found" message="No transactions match your current search or filter." variant="compact" /></td>
+                    <td colSpan="7"><EmptyState icon="inbox" title="No transactions found" message="No transactions match your current search or filter." variant="compact" /></td>
                   </tr>
                 ) : (
                   paginated.map((t, idx) => (
@@ -348,22 +389,34 @@ const AdminTransactions = () => {
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.3 + idx * 0.03 }}
                     >
-                      <td className="px-6 py-4 text-sm font-mono text-slate-400 dark:text-slate-500">{t.id.slice(0, 8)}</td>
-                      <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-200">{t.patient}</td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{t.provider}</td>
+                      <td className="px-6 py-4">
+                        <div className="font-bold text-slate-700 dark:text-slate-200 truncate max-w-[180px]" title={t.patient}>{t.patient}</div>
+                        <div className="text-xs text-slate-400 dark:text-slate-500 truncate max-w-[180px]" title={t.provider}>{t.provider}</div>
+                      </td>
                       <td className="px-6 py-4">
                         <span className="px-2 py-1 bg-slate-50 rounded-lg text-xs text-slate-500 font-semibold dark:bg-slate-800 dark:text-slate-400">{t.service}</span>
                       </td>
-                      <td className="px-6 py-4 font-bold text-slate-900 dark:text-slate-100">₱{t.amount.toLocaleString()}</td>
+                      <td className="px-6 py-4 font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap">₱{t.amount.toLocaleString()}</td>
                       <td className="px-6 py-4"><PaymentBadge method={t.payment_method} /></td>
-                      <td className="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">
-                        {t.payment_method === 'simulated' ? `₱${t.platform_fee.toLocaleString()}` : <span className="text-slate-400">—</span>}
+                      <td className="px-6 py-4 text-sm whitespace-nowrap">
+                        <span className="text-slate-400">Fee:</span> ₱{t.platform_fee.toLocaleString()}
+                        <span className="mx-1 text-slate-300">/</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">₱{t.provider_payout.toLocaleString()}</span>
                       </td>
-                      <td className="px-6 py-4 text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        {t.payment_method === 'simulated' ? `₱${t.provider_payout.toLocaleString()}` : <span className="text-slate-400">Cash (direct)</span>}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={t.status} />
+                          {['completed', 'collected'].includes(t.status) && (
+                            <button
+                              onClick={() => setSelectedReceipt({ ...t, providerName: t.provider })}
+                              className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-primary"
+                            >
+                              <ReceiptIcon className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-6 py-4"><StatusBadge status={t.status} /></td>
-                      <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{t.date}</td>
+                      <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400 whitespace-nowrap">{t.date}</td>
                     </motion.tr>
                   ))
                 )}
@@ -376,6 +429,12 @@ const AdminTransactions = () => {
           </div>
         </motion.div>
       </div>
+
+      <ReceiptModal
+        isOpen={!!selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+        transaction={selectedReceipt}
+      />
     </DashboardLayout>
   );
 };

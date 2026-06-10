@@ -1,18 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Mail, Phone, MapPin, Award, BookOpen, Clock, LogOut, Calendar, CheckCircle2, ShieldCheck, Save, Upload, ExternalLink, Shield, FileText, X, User, FolderOpen } from 'lucide-react';
+import { Mail, Phone, MapPin, Award, BookOpen, Clock, LogOut, Calendar, CheckCircle2, ShieldCheck, Save, Shield, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 
-const PROFESSIONAL_ID_BUCKET = 'provider-docs';
-
-const getProfessionalIdUrl = (filePath) => {
-  if (!filePath) return null;
-  const { data } = supabase.storage.from(PROFESSIONAL_ID_BUCKET).getPublicUrl(filePath);
-  return data?.publicUrl || null;
-};
 import { SkeletonPage } from '../../components/Skeleton';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -37,10 +30,6 @@ const getTrustLevel = (score) => {
 const ProviderProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [professionalIdPreviews, setProfessionalIdPreviews] = useState([]);
-  const fileInputRef = useRef(null);
-
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -123,13 +112,6 @@ const ProviderProfile = () => {
         setEditForm(fullProfile);
         setServicesInput((provData.services || []).join(', '));
 
-        const paths = (provData.professional_id_paths && provData.professional_id_paths.length > 0)
-          ? provData.professional_id_paths
-          : (provData.professional_id_path ? [provData.professional_id_path] : []);
-        setProfessionalIdPreviews(paths.map(p => getProfessionalIdUrl(p)).filter(Boolean));
-        if (paths.length > 0 && (!provData.professional_id_paths || provData.professional_id_paths.length === 0)) {
-          supabase.from('providers').update({ professional_id_paths: paths }).eq('user_id', user.id);
-        }
       } catch (err) {
         console.error('Error fetching profile:', err);
       } finally {
@@ -207,93 +189,6 @@ const ProviderProfile = () => {
       toast.error('Failed to save specializations.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleProfessionalIdUpload = async (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    const allowed = ['image/jpeg', 'image/png', 'application/pdf'];
-    for (const f of files) {
-      if (!allowed.includes(f.type)) {
-        toast.error(`"${f.name}" has an unsupported file type. Please use JPG, PNG, or PDF.`);
-        e.target.value = '';
-        return;
-      }
-      if (f.size > 2 * 1024 * 1024) {
-        toast.error(`"${f.name}" exceeds the 2MB limit.`);
-        e.target.value = '';
-        return;
-      }
-    }
-
-    setUploading(true);
-    try {
-      const newPaths = [...(profile.professional_id_paths || [])];
-
-      for (const file of files) {
-        const ext = file.name.split('.').pop();
-        const uniqueName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-        const filePath = `${user.id}/${uniqueName}.${ext}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('provider-docs')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-        newPaths.push(filePath);
-      }
-
-      const newScore = calculateTrustScore({
-        ...profile,
-        professional_id_paths: newPaths,
-        professional_id_path: newPaths[0] || null,
-      });
-
-      const { error: updateError } = await supabase
-        .from('providers')
-        .update({ professional_id_paths: newPaths, professional_id_path: newPaths[0] || null, professional_id_status: 'pending', trust_score: newScore })
-        .eq('user_id', user.id);
-
-      if (updateError) throw updateError;
-
-      setProfessionalIdPreviews(newPaths.map(p => getProfessionalIdUrl(p)).filter(Boolean));
-      setProfile(prev => ({ ...prev, professional_id_paths: newPaths, professional_id_path: newPaths[0] || null, professional_id_status: 'pending', trust_score: newScore }));
-      toast.success('Professional ID uploaded successfully! It will be reviewed by an admin.');
-    } catch (err) {
-      console.error('Error uploading professional ID:', err);
-      toast.error('Failed to upload. Please try again.');
-    } finally {
-      setUploading(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleRemoveProfessionalId = async () => {
-    const allPaths = profile.professional_id_paths || [];
-    if (allPaths.length === 0 && !profile.professional_id_path) return;
-
-    try {
-      await supabase.storage
-        .from('provider-docs')
-        .remove(allPaths);
-
-      const newScore = calculateTrustScore({ ...profile, professional_id_paths: [], professional_id_path: null });
-
-      const { error } = await supabase
-        .from('providers')
-        .update({ professional_id_paths: [], professional_id_path: null, professional_id_status: 'none', trust_score: newScore })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setProfessionalIdPreviews([]);
-      setProfile(prev => ({ ...prev, professional_id_paths: [], professional_id_path: null, professional_id_status: 'none', trust_score: newScore }));
-      toast.success('Professional ID removed.');
-    } catch (err) {
-      console.error('Error removing professional ID:', err);
-      toast.error('Failed to remove. Please try again.');
     }
   };
 
@@ -439,7 +334,6 @@ const ProviderProfile = () => {
                   {[
                     { value: 'overview', icon: User, label: 'Overview' },
                     { value: 'specializations', icon: Award, label: 'Specializations' },
-                    { value: 'documents', icon: FolderOpen, label: 'Documents' },
                     { value: 'trust', icon: Shield, label: 'Trust' },
                   ].map(tab => (
                     <Tabs.Trigger
@@ -672,92 +566,6 @@ const ProviderProfile = () => {
                           )}
                         </div>
                       )}
-                    </div>
-                  </div>
-                </Tabs.Content>
-
-                {/* Documents Tab */}
-                <Tabs.Content value="documents" className="outline-none">
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
-                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-                      <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Professional ID / License</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Upload your professional documents for verification</p>
-                    </div>
-                    <div className="p-6 md:p-8">
-                      {(profile.professional_id_paths?.length > 0 || profile.professional_id_path) ? (
-                        <div className="space-y-3">
-                          {profile.professional_id_status === 'rejected' && (
-                            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-medium text-red-700 dark:text-red-300">
-                              <X className="w-4 h-4 shrink-0" />
-                              Your ID was not approved. Please upload a valid professional ID.
-                            </div>
-                          )}
-                          {professionalIdPreviews.length > 0 && (
-                            <div className="grid grid-cols-2 gap-2">
-                              {professionalIdPreviews.map((url, i) => (
-                                <div key={i} className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 p-1">
-                                  {url.endsWith('.pdf') ? (
-                                    <div className="flex items-center gap-2 p-2">
-                                      <FileText className="w-5 h-5 text-primary shrink-0" />
-                                      <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
-                                      <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0">
-                                        <ExternalLink className="w-3.5 h-3.5 text-primary" />
-                                      </a>
-                                    </div>
-                                  ) : (
-                                    <a href={url} target="_blank" rel="noopener noreferrer">
-                                      <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-lg" />
-                                    </a>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <div className="flex gap-2">
-                            <motion.button
-                              whileTap={{ scale: 0.96 }}
-                              onClick={() => fileInputRef.current?.click()}
-                              disabled={uploading}
-                              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
-                            >
-                              <Upload className="w-4 h-4" />
-                              {uploading ? 'Uploading...' : 'Add More'}
-                            </motion.button>
-                            <motion.button
-                              whileTap={{ scale: 0.96 }}
-                              onClick={handleRemoveProfessionalId}
-                              disabled={uploading}
-                              className="px-4 py-2 rounded-xl border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300 text-sm font-bold hover:bg-red-50 dark:hover:bg-red-900/30 transition-all"
-                            >
-                              Remove All
-                            </motion.button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl p-6 text-center hover:border-primary transition-colors">
-                          <Upload className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                          <p className="text-sm font-bold text-slate-600 dark:text-slate-300 mb-1">Upload your Professional ID</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 mb-4">Accepted: JPG, PNG, or PDF (max 2MB each)</p>
-                          <motion.button
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={uploading}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
-                          >
-                            <Upload className="w-4 h-4" />
-                            {uploading ? 'Uploading...' : 'Choose Files'}
-                          </motion.button>
-                        </div>
-                      )}
-                      <input
-                        ref={fileInputRef}
-                        type="file" name="professional_id"
-                        accept="image/jpeg,image/png,application/pdf"
-                        onChange={handleProfessionalIdUpload}
-                        hidden
-                        multiple
-                        disabled={uploading}
-                      />
                     </div>
                   </div>
                 </Tabs.Content>

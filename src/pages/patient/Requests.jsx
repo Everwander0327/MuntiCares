@@ -11,6 +11,7 @@ import ReviewModal from '../../components/ReviewModal';
 import CancelRescheduleModal from '../../components/CancelRescheduleModal';
 import PreSessionUploadModal from '../../components/PreSessionUploadModal';
 import PaymentModal from '../../components/PaymentModal';
+import ReceiptModal from '../../components/ReceiptModal';
 import EmptyState from '../../components/EmptyState';
 
 const staggerContainer = {
@@ -117,10 +118,18 @@ const RequestCard = ({ id, providerId, patientId, provider, service, date, time,
 
         {/* Payment Status Badge */}
         {paymentStatus === 'paid' && (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Paid
-          </span>
+          <>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Paid
+            </span>
+            <button
+              onClick={() => onPay({ ...{ id, providerId, patientId, providerName: provider, amount: parseInt(price.replace(/[^0-9]/g, '')) || 0 }, viewReceipt: true })}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold transition-all"
+            >
+              View Receipt
+            </button>
+          </>
         )}
         {paymentStatus === 'pending_cash' && (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200">
@@ -159,6 +168,7 @@ const PatientRequests = () => {
   const [selectedManageReq, setSelectedManageReq] = useState(null);
   const [selectedPreSessionReq, setSelectedPreSessionReq] = useState(null);
   const [paymentModalRequest, setPaymentModalRequest] = useState(null);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [ratedRequests, setRatedRequests] = useState({});
   const [presessionSubmitted, setPresessionSubmitted] = useState({});
   const { user } = useAuth();
@@ -245,6 +255,21 @@ const PatientRequests = () => {
     }
   }, [fetchedRequests, requestsLoading]);
 
+  const handlePayOrReceipt = async (req) => {
+    if (req.viewReceipt) {
+      const { data } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('request_id', req.id)
+        .single();
+      if (data) {
+        setSelectedReceipt({ ...data, providerName: req.providerName });
+      }
+    } else {
+      setPaymentModalRequest(req);
+    }
+  };
+
   const filteredRequests = requests.filter(r => filter === 'All' || r.status === filter);
 
   return (
@@ -304,7 +329,7 @@ const PatientRequests = () => {
                   onRateProvider={setSelectedReviewReq}
                   onManageRequest={setSelectedManageReq}
                   onPreSession={setSelectedPreSessionReq}
-                  onPay={setPaymentModalRequest}
+                  onPay={handlePayOrReceipt}
                 />
               ))
             ) : (
@@ -357,10 +382,17 @@ const PatientRequests = () => {
 
       {/* Payment Modal */}
       <PaymentModal
-        isOpen={!!paymentModalRequest}
+        isOpen={!!paymentModalRequest && !paymentModalRequest?.viewReceipt}
         onClose={() => setPaymentModalRequest(null)}
         request={paymentModalRequest}
         onPaymentComplete={() => setPaymentModalRequest(null)}
+      />
+
+      {/* Receipt Modal */}
+      <ReceiptModal
+        isOpen={!!selectedReceipt}
+        onClose={() => setSelectedReceipt(null)}
+        transaction={selectedReceipt}
       />
     </DashboardLayout>
   );
