@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import heroImage from '../../assets/hero.png';
-import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff, ShieldCheck, RotateCw } from 'lucide-react';
+import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import confetti from 'canvas-confetti';
-import { useSignIn, useSignUp } from '@clerk/clerk-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { FormInput, FormCheckbox } from '../../components/ui/form-input';
@@ -26,10 +25,6 @@ const registerSchema = z.object({
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
-});
-
-const verifySchema = z.object({
-  code: z.string().length(6, 'Enter the 6-digit code'),
 });
 
 const getPasswordStrength = (password) => {
@@ -66,9 +61,7 @@ const TabButton = ({ active, label, onClick }) => (
 
 const AuthPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { signIn, setActive: setActiveSignIn } = useSignIn();
-  const { signUp, setActive: setActiveSignUp } = useSignUp();
+  const { user, login, register, setPassword } = useAuth();
   const [mode, setMode] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -76,15 +69,12 @@ const AuthPage = () => {
   const [shake, setShake] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [pendingVerification, setPendingVerification] = useState(false);
-  const [verificationEmail, setVerificationEmail] = useState('');
-  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [pendingSetPassword, setPendingSetPassword] = useState(null);
   const emailRef = useRef(null);
-  const codeRef = useRef(null);
 
   const loginForm = useForm({ resolver: zodResolver(loginSchema) });
   const registerForm = useForm({ resolver: zodResolver(registerSchema) });
-  const verifyForm = useForm({ resolver: zodResolver(verifySchema) });
+  const setPasswordForm = useForm({ resolver: zodResolver(loginSchema) });
   const watchPassword = registerForm.watch('password', '');
 
   useEffect(() => {
@@ -97,35 +87,43 @@ const AuthPage = () => {
   }, [user, navigate]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (pendingVerification) {
-        codeRef.current?.focus();
-      } else {
-        emailRef.current?.focus();
-      }
-    }, 400);
+    const timer = setTimeout(() => emailRef.current?.focus(), 400);
     return () => clearTimeout(timer);
-  }, [mode, pendingVerification]);
+  }, [mode]);
 
   const handleLogin = async (data) => {
     setError('');
     setLoading(true);
     try {
-      const result = await signIn.create({
-        identifier: data.email,
-        password: data.password,
-      });
-
-      if (result.status === 'complete') {
-        await setActiveSignIn({ session: result.createdSessionId });
-        toast.success('Logged in successfully');
-      }
+      await login({ email: data.email, password: data.password });
+      toast.success('Logged in successfully');
     } catch (err) {
-      const message = err.errors?.[0]?.longMessage || 'Invalid email or password';
+      if (err.message === 'SET_PASSWORD') {
+        setPendingSetPassword(data.email);
+        setError('');
+        setLoading(false);
+        return;
+      }
+      const message = err.message || 'Invalid email or password';
       setError(message);
       toast.error(message);
       setShake(true);
       setTimeout(() => setShake(false), 500);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSetPassword = async (data) => {
+    setError('');
+    setLoading(true);
+    try {
+      await setPassword({ email: pendingSetPassword, password: data.password });
+      toast.success('Password set! You can now sign in.');
+      setPendingSetPassword(null);
+    } catch (err) {
+      setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -135,26 +133,15 @@ const AuthPage = () => {
     setError('');
     setLoading(true);
     try {
-      await signUp.create({
-        emailAddress: data.email,
-        password: data.password,
-        firstName: data.fullName.split(' ').slice(0, -1).join(' ') || data.fullName,
-        lastName: data.fullName.split(' ').pop() || '',
-      });
-
-      await signUp.update({
-        publicMetadata: { role },
-      });
-
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-
-      setVerificationEmail(data.email);
-      setPendingVerification(true);
+      await register({ email: data.email, password: data.password, fullName: data.fullName, role });
       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      toast.success('Account created! You can now sign in.');
+      setMode('login');
       setError('');
     } catch (err) {
-      const message = err.errors?.[0]?.longMessage || 'Registration failed';
+      const message = err.message || 'Registration failed';
       setError(message);
+      toast.error(message);
       setShake(true);
       setTimeout(() => setShake(false), 500);
     } finally {
@@ -162,117 +149,64 @@ const AuthPage = () => {
     }
   };
 
-  const handleVerifyEmail = async (data) => {
-    setError('');
-    setVerifyingCode(true);
-    try {
-      const result = await signUp.attemptEmailAddressVerification({
-        code: data.code,
-      });
-
-      if (result.status === 'complete') {
-        await setActiveSignUp({ session: result.createdSessionId });
-        toast.success('Email verified! Welcome to MuntiCares!');
-      } else {
-        throw new Error('Verification failed. Please try again.');
-      }
-    } catch (err) {
-      const message = err.errors?.[0]?.longMessage || 'Invalid code. Please try again.';
-      setError(message);
-      toast.error(message);
-      setShake(true);
-      setTimeout(() => setShake(false), 500);
-    } finally {
-      setVerifyingCode(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    setError('');
-    try {
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      toast.success('New code sent to your email!');
-    } catch (err) {
-      const message = err.errors?.[0]?.longMessage || 'Failed to resend code';
-      toast.error(message);
-    }
-  };
-
-  const handleBackToRegister = () => {
-    setPendingVerification(false);
-    setVerificationEmail('');
-    setMode('register');
-    setError('');
-  };
-
   const strength = getPasswordStrength(watchPassword);
 
   const formContent = (isLogin) => {
-    if (pendingVerification) {
+    if (pendingSetPassword) {
       return (
         <motion.div
-          key="verify"
+          key="set-password"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.25 }}
         >
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <ShieldCheck className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Verify Your Email</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Set Your Password</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              We sent a 6-digit code to<br />
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{verificationEmail}</span>
+              First-time login for<br />
+              <span className="font-semibold text-slate-700 dark:text-slate-300">{pendingSetPassword}</span>
             </p>
           </div>
-
-          <form className="space-y-4" onSubmit={verifyForm.handleSubmit(handleVerifyEmail)}>
+          <form className="space-y-2" onSubmit={setPasswordForm.handleSubmit(handleSetPassword)}>
             <FormInput
-              label="Verification Code"
-              placeholder="000000"
-              icon={ShieldCheck}
-              className="!py-2.5 text-center text-lg tracking-[0.5em] font-mono"
-              error={verifyForm.formState.errors.code?.message}
-              maxLength={6}
-              ref={codeRef}
-              {...verifyForm.register('code')}
+              label="New Password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              icon={Lock}
+              className="!py-2.5"
+              error={setPasswordForm.formState.errors.password?.message}
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              }
+              {...setPasswordForm.register('password')}
             />
-
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 p-3 rounded-xl text-xs font-medium text-center">
-                {error}
-              </div>
+              <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 p-3 rounded-xl text-xs font-medium text-center">{error}</div>
             )}
-
             <motion.button
               type="submit"
-              disabled={verifyingCode}
-              className={`btn-primary w-full py-3 text-sm shadow-lg shadow-primary/30 ${verifyingCode ? 'opacity-70 cursor-not-allowed' : ''}`}
-              whileHover={!verifyingCode ? { scale: 1.02 } : {}}
-              whileTap={!verifyingCode ? { scale: 0.97 } : {}}
+              disabled={loading}
+              className={`btn-primary w-full py-3 text-sm shadow-lg shadow-primary/30 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              whileHover={!loading ? { scale: 1.02 } : {}}
+              whileTap={!loading ? { scale: 0.97 } : {}}
             >
-              {verifyingCode ? 'Verifying...' : 'Verify Email'}
+              {loading ? 'Setting password...' : 'Set Password'}
             </motion.button>
-
-            <div className="flex items-center justify-between pt-2">
-              <button
-                type="button"
-                onClick={handleResendCode}
-                className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline"
-              >
-                <RotateCw className="w-3.5 h-3.5" />
-                Resend code
-              </button>
-              <button
-                type="button"
-                onClick={handleBackToRegister}
-                className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium"
-              >
-                Use different email
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => { setPendingSetPassword(null); setError(''); }}
+              className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium"
+            >
+              Use a different account
+            </button>
           </form>
         </motion.div>
       );
@@ -577,8 +511,7 @@ const AuthPage = () => {
               boxShadow: '0 8px 32px rgba(30, 111, 191, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5)',
             }}
           >
-            {/* Tabs - hide when in verification mode */}
-            {!pendingVerification && (
+            {!pendingSetPassword && (
               <div className="flex justify-center border-b border-slate-200 dark:border-slate-700 mb-3">
                 <TabButton active={mode === 'login'} label="Login" onClick={() => { setMode('login'); setError(''); }} />
                 <TabButton active={mode === 'register'} label="Register" onClick={() => { setMode('register'); setError(''); }} />

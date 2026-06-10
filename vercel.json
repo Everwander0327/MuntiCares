@@ -1,10 +1,5 @@
 {
   "version": 2,
-  "functions": {
-    "api/clerk-webhook.js": {
-      "maxDuration": 10
-    }
-  },
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
