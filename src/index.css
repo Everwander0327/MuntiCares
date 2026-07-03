@@ -4,7 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -16,22 +15,12 @@
   }
 }
 
-/* Theme transition */
-html {
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-html.dark {
-  color-scheme: dark;
-}
-
-/* Smooth scroll behavior */
 html {
   scroll-behavior: smooth;
 }
 
 body {
-  @apply font-sans bg-secondary text-slate-800 dark:bg-slate-900 dark:text-white;
+  @apply font-sans bg-secondary text-slate-800;
   line-height: 1.75;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -41,12 +30,10 @@ body {
   @apply bg-primary/15 text-primary;
 }
 
-/* Hide mobile bottom nav when a modal is open */
 body.modal-open #mobile-bottom-nav {
   display: none !important;
 }
 
-/* Tighter letter-spacing for headings */
 h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
@@ -89,7 +76,7 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .card {
-    @apply bg-white/70 p-6 md:p-8 rounded-2xl shadow shadow-blue-900/5 border border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 dark:bg-slate-800/70 dark:border-slate-700/50;
+    @apply bg-white/70 p-6 md:p-8 rounded-2xl shadow shadow-blue-900/5 border border-white/20 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1;
   }
 
   @media (min-width: 768px) {
@@ -100,13 +87,11 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Button ripple */
 @keyframes ripple {
   from { transform: scale(0); opacity: 1; }
   to { transform: scale(2.5); opacity: 0; }
 }
 
-/* Animated underline for links */
 .link-underline {
   background-image: linear-gradient(currentColor, currentColor);
   background-size: 0% 2px;
@@ -119,7 +104,6 @@ h1, h2, h3, h4, h5, h6 {
   background-size: 100% 2px;
 }
 
-/* Card icon hover animation */
 @keyframes icon-bounce {
   0%, 100% { transform: scale(1) rotate(0deg); }
   25% { transform: scale(1.15) rotate(-4deg); }
@@ -132,27 +116,20 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Focus glow for form inputs */
 input:focus, textarea:focus, select:focus {
   border-color: #1E6FBF !important;
   box-shadow: 0 0 0 3px rgba(30, 111, 191, 0.15) !important;
 }
 
-/* Focus-visible for all interactive elements */
 button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(30, 111, 191, 0.4);
   border-radius: inherit;
 }
 
-/* Skeleton loading animation */
 @keyframes skeleton-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 .skeleton {
@@ -162,27 +139,14 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   border-radius: 0.75rem;
 }
 
-.dark .skeleton {
-  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
-}
-
 @keyframes skeleton-shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-/* Floating animation for hero image */
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0px) rotate(2deg);
-  }
-  50% {
-    transform: translateY(-12px) rotate(2deg);
-  }
+  0%, 100% { transform: translateY(0px) rotate(2deg); }
+  50% { transform: translateY(-12px) rotate(2deg); }
 }
 
 .animate-float {
@@ -195,7 +159,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   }
 }
 
-/* Animated gradient background */
 @keyframes gradient-shift {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -207,7 +170,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   animation: gradient-shift 8s ease infinite;
 }
 
-/* Gradient text animation */
 @keyframes gradient-text-shift {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -221,7 +183,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   background-clip: text;
 }
 
-/* Floating particles */
 @keyframes particle-float {
   0% { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
   10% { opacity: 1; }
@@ -239,13 +200,11 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   pointer-events: none;
 }
 
-/* Blur-up image loading */
 @keyframes blur-load {
   from { filter: blur(20px); }
   to { filter: blur(0); }
 }
 
-/* Shake animation for form errors */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
@@ -256,7 +215,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   animation: shake 0.5s ease-in-out;
 }
 
-/* Auth floating blobs */
 @keyframes blob-float-1 {
   0%, 100% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(30px, -30px) scale(1.1); }
@@ -279,7 +237,6 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
 .blob-2 { animation: blob-float-2 10s ease-in-out infinite; }
 .blob-3 { animation: blob-float-3 12s ease-in-out infinite; }
 
-/* Status dot animation */
 @keyframes dot-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
@@ -289,31 +246,20 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   animation: dot-pulse 2s ease-in-out infinite;
 }
 
-/* Table styling */
 .table-striped tbody tr:nth-child(even) {
   background-color: #F8FBFF;
-}
-
-.dark .table-striped tbody tr:nth-child(even) {
-  background-color: #1e293b;
 }
 
 .table-striped tbody tr:hover {
   background-color: #EFF6FF !important;
 }
 
-.dark .table-striped tbody tr:hover {
-  background-color: #1e3a5f !important;
-}
-
-/* Mobile bottom nav */
 @media (max-width: 1023px) {
   .dashboard-main {
     padding-bottom: 5rem;
   }
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -328,16 +274,8 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible {
   border-radius: 3px;
 }
 
-.dark ::-webkit-scrollbar-thumb {
-  background: #475569;
-}
-
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
 }
 
 .scrollbar-hide {

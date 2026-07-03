@@ -3,7 +3,7 @@ import { Heart } from 'lucide-react';
 
 const Footer = () => {
   return (
-    <footer className="bg-slate-900 dark:bg-black text-white pt-20 pb-10">
+    <footer className="bg-slate-900 text-white pt-20 pb-10">
       <div className="container mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-12 mb-16">
           <div className="col-span-1 md:col-span-2 space-y-6">
@@ -21,7 +21,6 @@ const Footer = () => {
             <h4 className="text-lg font-bold mb-6">Quick Links</h4>
             <ul className="space-y-4 text-slate-400">
               <li><Link to="/" className="link-underline hover:text-primary transition-colors">Home</Link></li>
-              <li><a href="#" className="link-underline hover:text-primary transition-colors">About Us</a></li>
               <li><Link to="/patient/providers" className="link-underline hover:text-primary transition-colors">Find Providers</Link></li>
               <li><a href="#" className="link-underline hover:text-primary transition-colors">Contact</a></li>
             </ul>
@@ -38,9 +37,6 @@ const Footer = () => {
         <hr className="border-slate-800 mb-10" />
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-slate-500 text-sm">
           <p>© 2025 MuntiCares Muntinlupa. All rights reserved.</p>
-          <div className="flex gap-6">
-            <span>Made with ❤️ for Muntinlupa</span>
-          </div>
         </div>
       </div>
     </footer>

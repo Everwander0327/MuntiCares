@@ -1,516 +1,140 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import NotificationBell from '../components/NotificationBell';
-import ThemeToggle from '../components/ThemeToggle';
-import { supabase } from '../lib/supabase';
-import { 
-  LayoutDashboard, 
-  Search, 
-  FileText, 
-  Settings, 
-  LogOut, 
-  X,
-  Heart,
-  Users,
-  Briefcase,
-  Bell,
-  CalendarDays,
-  MessageCircle,
-  Wallet,
-  Megaphone,
-  Send
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
-import MobileNavItem from '../components/MobileNavItem';
-import toast from 'react-hot-toast';
+import { LayoutDashboard, Search, FileText, MessageCircle, Settings, CalendarDays, Briefcase, Users, Heart, LogOut } from 'lucide-react';
 
-const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
-  <Link 
-    to={to} 
-    onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-primary'}`}
-  >
-    <motion.div
-      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-primary rounded-r-full"
-      initial={false}
-      animate={{ 
-        height: active ? '60%' : '0%',
-        opacity: active ? 1 : 0,
-      }}
-      transition={{ duration: 0.2 }}
-    />
-    {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-primary'}` })}
-    <span className="font-medium flex-1">{label}</span>
-    {badge > 0 && (
-      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-3xs font-bold px-1.5 ${
-        active ? 'bg-white text-primary' : 'bg-red-500 text-white'
-      }`}>
-        {badge > 9 ? '9+' : badge}
-      </span>
-    )}
-  </Link>
-);
+const initials = {
+  patient: 'JD',
+  provider: 'MR',
+  admin: 'AD',
+};
+
+const names = {
+  patient: 'Juan Dela Cruz',
+  provider: 'Maria Reyes',
+  admin: 'Admin User',
+};
+
+const roleLinks = {
+  patient: [
+    { icon: LayoutDashboard, label: 'Dashboard', to: '/patient/dashboard' },
+    { icon: Search, label: 'Find Providers', to: '/patient/providers' },
+    { icon: FileText, label: 'My Requests', to: '/patient/requests' },
+    { icon: MessageCircle, label: 'Messages', to: '/patient/messages' },
+    { icon: Settings, label: 'Profile', to: '/patient/profile' },
+  ],
+  provider: [
+    { icon: LayoutDashboard, label: 'Dashboard', to: '/provider/dashboard' },
+    { icon: FileText, label: 'Requests', to: '/provider/requests' },
+    { icon: Users, label: 'Patients', to: '/provider/patients' },
+    { icon: CalendarDays, label: 'Schedule', to: '/provider/schedule' },
+    { icon: Settings, label: 'Profile', to: '/provider/profile' },
+    { icon: MessageCircle, label: 'Messages', to: '/provider/messages' },
+  ],
+  admin: [
+    { icon: LayoutDashboard, label: 'Dashboard', to: '/admin/dashboard' },
+    { icon: Users, label: 'Patients', to: '/admin/patients' },
+    { icon: Briefcase, label: 'Providers', to: '/admin/providers' },
+    { icon: FileText, label: 'Requests', to: '/admin/requests' },
+    { icon: Settings, label: 'Profile', to: '/admin/profile' },
+  ],
+};
 
 const DashboardLayout = ({ children, role = 'patient' }) => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser, logout } = useAuth();
-  const [showAnnounceModal, setShowAnnounceModal] = useState(false);
-  const [announceTitle, setAnnounceTitle] = useState('');
-  const [announceMsg, setAnnounceMsg] = useState('');
-  const [announceTarget, setAnnounceTarget] = useState('all');
-  const [announceSending, setAnnounceSending] = useState(false);
-  const mainRef = useRef(null);
-  const channelRef = useRef(null);
+  const links = roleLinks[role] || roleLinks.patient;
 
-  const patientLinks = [
-    { icon: <LayoutDashboard />, label: 'Dashboard', to: '/patient/dashboard' },
-    { icon: <Search />, label: 'Find Providers', shortLabel: 'Find', primary: true, to: '/patient/providers' },
-    { icon: <FileText />, label: 'My Requests', shortLabel: 'Requests', to: '/patient/requests' },
-    { icon: <MessageCircle />, label: 'Messages', to: '/patient/messages' },
-    { icon: <Settings />, label: 'Consent Settings', shortLabel: 'Consent', to: '/patient/consent' },
-  ];
-
-  const providerLinks = [
-    { icon: <LayoutDashboard />, label: 'Dashboard', to: '/provider/dashboard' },
-    { icon: <Bell />, label: 'Incoming Requests', shortLabel: 'Requests', primary: true, to: '/provider/requests' },
-    { icon: <Users />, label: 'My Patients', shortLabel: 'Patients', to: '/provider/patients' },
-    { icon: <CalendarDays />, label: 'My Schedule', shortLabel: 'Schedule', to: '/provider/schedule' },
-    { icon: <Wallet />, label: 'My Payouts', shortLabel: 'Payouts', to: '/provider/payouts' },
-    { icon: <MessageCircle />, label: 'Messages', to: '/provider/messages' },
-  ];
-
-  const adminLinks = [
-    { icon: <LayoutDashboard />, label: 'Overview', shortLabel: 'Home', primary: true, to: '/admin/dashboard' },
-    { icon: <Users />, label: 'Patients', shortLabel: 'Patients', to: '/admin/patients' },
-    { icon: <Briefcase />, label: 'Providers', shortLabel: 'Providers', to: '/admin/providers' },
-    { icon: <FileText />, label: 'Requests', shortLabel: 'Requests', to: '/admin/requests' },
-    { icon: <Wallet />, label: 'Transactions', shortLabel: 'Payments', to: '/admin/transactions' },
-    { icon: <Megaphone />, label: 'Announcements', shortLabel: 'Alerts', to: '/admin/announcements' },
-  ];
-
-  // Use the actual logged in user data, fallback to dummy info if not available
-  const currentRole = authUser?.role || role;
-  const links = currentRole === 'patient' ? patientLinks : currentRole === 'provider' ? providerLinks : adminLinks;
-
-  const getInitials = (name) => {
-    if (!name) return 'U';
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-  };
-
-  const userInfo = {
-    patient: { name: 'Juan Dela Cruz', initials: 'JD', badge: 'Patient' },
-    provider: { name: 'Maria Santos', initials: 'MS', badge: 'Provider' },
-    admin: { name: 'Admin User', initials: 'AD', badge: 'Admin' },
-  };
-
-  const user = {
-    name: authUser?.full_name || userInfo[currentRole]?.name,
-    initials: getInitials(authUser?.full_name) || userInfo[currentRole]?.initials,
-    badge: authUser?.role ? authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1) : userInfo[currentRole]?.badge,
-  };
-
-  const deleteOldMessages = useCallback(async () => {
-    if (!authUser) return;
-    const { error } = await supabase
-      .from('messages')
-      .delete()
-      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-    if (error) console.warn('Message cleanup error:', error);
-  }, [authUser]);
-
-  const fetchCounts = useCallback(async () => {
-    if (!authUser) return;
-    const pendingRes = await supabase
-      .from('requests')
-      .select('id', { count: 'exact', head: true })
-      .eq(authUser.role === 'patient' ? 'patient_id' : 'provider_id', authUser.id)
-      .eq('status', 'Pending');
-    if (!pendingRes.error) setPendingCount(pendingRes.count || 0);
-
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: msgData, error: msgError } = await supabase
-      .from('messages')
-      .select('id')
-      .eq('receiver_id', authUser.id)
-      .gte('created_at', yesterday);
-    if (!msgError) {
-      const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${authUser.id}`) || '[]'));
-      const unreadCount = (msgData || []).filter(m => !readIds.has(m.id)).length;
-      setUnreadMsgCount(unreadCount);
-    }
-  }, [authUser]);
-
-  useEffect(() => {
-    fetchCounts();
-    deleteOldMessages();
-
-    if (!channelRef.current) {
-      channelRef.current = supabase.channel(`layout-counts-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
-    }
-    channelRef.current
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests', filter: `${authUser.role === 'patient' ? 'patient_id' : 'provider_id'}=eq.${authUser.id}` }, () => fetchCounts())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, () => fetchCounts())
-      .subscribe();
-
-    const onMessagesRead = () => fetchCounts();
-    const onVisibilityChange = () => { if (document.visibilityState === 'visible') fetchCounts(); };
-    const onWindowFocus = () => fetchCounts();
-    window.addEventListener('messages-read', onMessagesRead);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    window.addEventListener('focus', onWindowFocus);
-
-    const pollInterval = setInterval(fetchCounts, 2000);
-    const cleanupInterval = setInterval(deleteOldMessages, 60000);
-
-    return () => {
-      clearInterval(pollInterval);
-      clearInterval(cleanupInterval);
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
-      }
-      window.removeEventListener('messages-read', onMessagesRead);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-      window.removeEventListener('focus', onWindowFocus);
-    };
-  }, [authUser, fetchCounts, deleteOldMessages]);
-
-  useEffect(() => {
-    fetchCounts();
-  }, [location.pathname, fetchCounts]);
-
-  const buildMobileLinks = (links) => {
-    const primaryIndex = links.findIndex(l => l.primary);
-    if (primaryIndex === -1) return links;
-    const primary = links[primaryIndex];
-    const others = links.filter((_, i) => i !== primaryIndex);
-    const result = [];
-    let idx = 0;
-    const maxSlots = Math.min(6, others.length + 1);
-    for (let i = 0; i < maxSlots; i++) {
-      if (i === 2) {
-        result.push(primary);
-      } else if (idx < others.length) {
-        result.push(others[idx]);
-        idx++;
-      }
-    }
-    return result;
-  };
-
-  const handleSendAnnouncement = async () => {
-    if (!announceTitle.trim() || !announceMsg.trim()) {
-      toast.error('Please fill in title and message.');
-      return;
-    }
-    setAnnounceSending(true);
-    try {
-      const { error } = await supabase.from('announcements').insert([{
-        title: announceTitle.trim(),
-        message: announceMsg.trim(),
-        target_audience: announceTarget,
-        created_by: authUser?.id,
-      }]);
-      if (error) throw error;
-      toast.success('Announcement sent!');
-      setAnnounceTitle('');
-      setAnnounceMsg('');
-      setAnnounceTarget('all');
-      setShowAnnounceModal(false);
-    } catch (err) {
-      toast.error('Failed to send announcement.');
-    } finally {
-      setAnnounceSending(false);
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('mc_user');
+    navigate('/login');
   };
 
   return (
-    <>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div 
-            className="fixed inset-0 bg-slate-900/50 dark:bg-black/50 z-40 lg:hidden backdrop-blur-sm"
-            onClick={() => setIsSidebarOpen(false)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:translate-x-0`}>
-        <div className="h-full flex flex-col p-6">
-          {/* Logo */}
-          <div className="flex items-center justify-between mb-8">
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="bg-primary p-2 rounded-lg group-hover:rotate-12 transition-transform">
-                <Heart className="text-white w-5 h-5" fill="currentColor" />
-              </div>
-              <span className="text-xl font-bold text-primary tracking-tight">MuntiCares</span>
-            </Link>
-            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors">
-              <X className="w-6 h-6" />
-            </button>
+    <div className="min-h-screen bg-slate-50 flex">
+      <aside className="w-64 bg-white border-r border-slate-100 min-h-screen p-6 hidden lg:flex flex-col">
+        <Link to="/" className="flex items-center gap-2 mb-8">
+          <div className="bg-primary p-2 rounded-lg">
+            <Heart className="text-white w-5 h-5" fill="currentColor" />
           </div>
+          <span className="text-xl font-bold text-primary">MuntiCares</span>
+        </Link>
 
-          {/* Nav section label */}
-          <p className="text-2xs font-semibold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
+        <nav className="flex-1 space-y-1">
+          {links.map((link) => {
+            const Icon = link.icon;
+            const active = location.pathname === link.to;
+            return (
+              <Link
+                key={link.label}
+                to={link.to}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                  active
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-slate-500 hover:bg-blue-50 hover:text-primary'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="font-medium">{link.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-          {/* Nav links */}
-          <nav className="flex-1 space-y-1 overflow-y-auto">
-            {links.map((link) => {
-              let badge = 0;
-              if (currentRole === 'patient') {
-                if (link.label === 'My Requests') badge = pendingCount;
-                if (link.label === 'Messages') badge = unreadMsgCount;
-              } else if (currentRole === 'provider') {
-                if (link.label === 'Incoming Requests') badge = pendingCount;
-                if (link.label === 'Messages') badge = unreadMsgCount;
-              }
-              return (
-                <SidebarItem 
-                  key={link.label} 
-                  icon={link.icon}
-                  label={link.label}
-                  to={link.to}
-                  active={location.pathname === link.to}
-                  onClick={() => setIsSidebarOpen(false)}
-                  badge={badge}
-                />
-              );
-            })}
-          </nav>
-
-          {/* Divider */}
-          <div className="border-t border-slate-100 dark:border-slate-700 my-4" />
-
-          {/* User Info */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-900 rounded-2xl mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0">
-              {authUser?.avatar_url ? (
-                <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                user.initials
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">{user.name}</p>
-              <span className="inline-flex items-center px-2 py-0.5 bg-primary/10 text-primary text-2xs font-medium rounded-full uppercase tracking-wider">
-                {user.badge}
-              </span>
-            </div>
-          </div>
-
-          {/* Logout */}
-          <button 
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-slate-700 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
+        <div className="pt-4 border-t border-slate-100">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all w-full"
           >
-            <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500 dark:group-hover:text-red-400" />
+            <LogOut className="w-5 h-5" />
             <span className="font-medium">Logout</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        <header className="h-20 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between px-4 lg:px-10 shrink-0">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="min-w-0">
-              <h2 className="text-sm md:text-lg font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[200px] md:max-w-none">
-                Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-              </p>
-            </div>
+      <div className="flex-1 flex flex-col">
+        <header className="h-20 bg-white border-b border-slate-100 flex items-center justify-between px-4 lg:px-10">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Dashboard</h2>
+            <p className="text-sm text-slate-500">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+            </p>
           </div>
-
           <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <NotificationBell />
-            <Link 
-              to={`/${currentRole}/profile`} 
-              className="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold shadow-sm border border-white dark:border-slate-800 shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer overflow-hidden"
-            >
-              {authUser?.avatar_url ? (
-                <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                user.initials
-              )}
-            </Link>
+            <div className="text-right">
+              <p className="text-sm font-semibold text-slate-900">{names[role]}</p>
+              <p className="text-xs text-slate-500 capitalize">{role}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">
+              {initials[role]}
+            </div>
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 lg:p-10 pb-24 lg:pb-10">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-          >
-            {children}
-          </motion.div>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-10">
+          {children}
         </main>
       </div>
-    </div>
 
-      {/* Mobile Bottom Navigation */}
-      <div 
-        id="mobile-bottom-nav" 
-        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-      >
-        <div className="mx-3 mb-3 rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border border-slate-100/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
-          <div className="flex items-center justify-around px-1 py-0.5">
-            {(() => {
-              const filteredLinks = currentRole === 'admin' ? links.filter(l => l.label !== 'Announcements') : currentRole === 'provider' ? links.filter(l => l.label !== 'Messages') : links;
-              const mobileLinks = buildMobileLinks(filteredLinks);
-                return mobileLinks.map((link, i) => {
-                  let badge = 0;
-                  if (currentRole === 'patient') {
-                    if (link.label === 'My Requests') badge = pendingCount;
-                    if (link.label === 'Messages') badge = unreadMsgCount;
-                  } else if (currentRole === 'provider') {
-                    if (link.label === 'Incoming Requests') badge = pendingCount;
-                    if (link.label === 'Messages') badge = unreadMsgCount;
-                  }
-                  return (
-                    <MobileNavItem 
-                      key={link.label}
-                      icon={link.icon}
-                      label={link.shortLabel || link.label}
-                      to={link.to}
-                      active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
-                      badge={badge}
-                      prominent={i === 2}
-                    />
-                  );
-                });
-              })()}
-            </div>
-          </div>
+      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-white border-t border-slate-100">
+        <div className="flex items-center justify-around px-2 py-1">
+          {links.slice(0, 5).map((link) => {
+            const Icon = link.icon;
+            const active = location.pathname === link.to;
+            return (
+              <Link
+                key={link.label}
+                to={link.to}
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all ${
+                  active ? 'text-primary' : 'text-slate-400'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-2xs font-medium">{link.label}</span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-
-      {/* Mobile Message FAB for Provider */}
-      {currentRole === 'provider' && (
-        <Link
-          to="/provider/messages"
-          className="lg:hidden fixed bottom-24 right-4 z-50 w-14 h-14 rounded-full bg-primary shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
-        >
-          <MessageCircle className="w-6 h-6 text-white" />
-          {unreadMsgCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] rounded-full bg-red-500 text-white text-3xs font-bold flex items-center justify-center px-1 shadow-lg border-2 border-white dark:border-slate-800">
-              {unreadMsgCount > 9 ? '9+' : unreadMsgCount}
-            </span>
-          )}
-        </Link>
-      )}
-
-      {/* Mobile Announcement FAB */}
-      {currentRole === 'admin' && (
-        <>
-          <button
-            onClick={() => setShowAnnounceModal(true)}
-className="lg:hidden fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary shadow-xl shadow-primary/30 hover:shadow-primary/50 hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
-          >
-            <Megaphone className="w-6 h-6 text-white" />
-          </button>
-
-          {/* Announcement Modal — always in DOM, CSS-transitioned */}
-          <div
-            className={`fixed inset-0 bg-black/40 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-200 ${
-              showAnnounceModal ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-            }`}
-            onClick={() => { setShowAnnounceModal(false); }}
-          >
-            <div
-              className={`bg-white dark:bg-slate-800 rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl w-full sm:max-w-lg max-h-[85vh] overflow-y-auto transition-transform duration-200 ${
-                showAnnounceModal ? 'translate-y-0' : 'translate-y-full'
-              }`}
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 rounded-t-[2rem] z-10">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                  <Megaphone className="w-5 h-5 text-primary" />
-                  Quick Announcement
-                </h2>
-                <button onClick={() => setShowAnnounceModal(false)} className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider dark:text-slate-500">Title</label>
-                  <input
-                    type="text"
-                    value={announceTitle}
-                    onChange={e => setAnnounceTitle(e.target.value)}
-                    placeholder="e.g., New Service Available"
-                    className="w-full mt-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider dark:text-slate-500">Target Audience</label>
-                  <div className="flex gap-2 mt-1.5">
-                    {[
-                      { value: 'all', label: 'All Users' },
-                      { value: 'patients', label: 'Patients' },
-                      { value: 'providers', label: 'Providers' },
-                    ].map(opt => (
-                      <button
-                        key={opt.value}
-                        onClick={() => setAnnounceTarget(opt.value)}
-                        className={`flex-1 px-3 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                          announceTarget === opt.value
-                            ? 'bg-primary text-white shadow-sm'
-                            : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-300'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-slate-400 font-bold uppercase tracking-wider dark:text-slate-500">Message</label>
-                  <textarea
-                    value={announceMsg}
-                    onChange={e => setAnnounceMsg(e.target.value)}
-                    placeholder="Write your announcement..."
-                    rows={4}
-                    className="w-full mt-1.5 px-4 py-2.5 rounded-xl border border-slate-200 text-sm dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 resize-none"
-                  />
-                </div>
-
-                <button
-                  onClick={handleSendAnnouncement}
-                  disabled={announceSending || !announceTitle.trim() || !announceMsg.trim()}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-primary text-white font-bold hover:bg-primary/90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20"
-                >
-                  <Send className="w-4 h-4" />
-                  {announceSending ? 'Sending...' : 'Send Announcement'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </>
+    </div>
   );
 };
 
