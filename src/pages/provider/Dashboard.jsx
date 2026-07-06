@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Clock, Users, CheckCircle } from 'lucide-react';
+import ComingSoonModal from '../../components/ComingSoonModal';
 
 const stats = [
   { label: 'Pending Requests', value: '2', icon: Clock, color: 'bg-yellow-50 text-yellow-600' },
@@ -13,6 +15,8 @@ const upcomingSchedule = [
 ];
 
 const ProviderDashboard = () => {
+  const [showComingSoon, setShowComingSoon] = useState(false);
+
   return (
     <DashboardLayout role="provider">
       <div className="space-y-6">
@@ -70,8 +74,8 @@ const ProviderDashboard = () => {
                   <td className="px-6 py-4 text-slate-600">{r.service}</td>
                   <td className="px-6 py-4 text-slate-600">{r.date}</td>
                   <td className="px-6 py-4 flex gap-2">
-                    <button className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-xs font-bold hover:bg-green-600 hover:text-white">Accept</button>
-                    <button className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white">Decline</button>
+                    <button onClick={() => setShowComingSoon(true)} className="px-3 py-1 bg-green-50 text-green-600 rounded-lg text-xs font-bold hover:bg-green-600 hover:text-white">Accept</button>
+                    <button onClick={() => setShowComingSoon(true)} className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white">Decline</button>
                   </td>
                 </tr>
               ))}
@@ -79,6 +83,8 @@ const ProviderDashboard = () => {
           </table>
         </div>
       </div>
+
+      <ComingSoonModal isOpen={showComingSoon} onClose={() => setShowComingSoon(false)} message="Request management is coming soon." />
     </DashboardLayout>
   );
 };

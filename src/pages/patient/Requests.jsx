@@ -1,13 +1,22 @@
+import { useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
+import CancelRescheduleModal from '../../components/CancelRescheduleModal';
+import PaymentModal from '../../components/PaymentModal';
+import ReviewModal from '../../components/ReviewModal';
 
 const requests = [
-  { provider: 'Maria Santos', service: 'Senior Care', date: 'Jan 15, 2026', status: 'Accepted' },
-  { provider: 'Juan Reyes', service: 'Physical Therapy', date: 'Jan 12, 2026', status: 'Completed' },
-  { provider: 'Ana Cruz', service: 'Home Nursing', date: 'Jan 10, 2026', status: 'Pending' },
-  { provider: 'Pedro Gonzales', service: 'Child Care', date: 'Jan 8, 2026', status: 'Cancelled' },
+  { id: 1, provider: 'Maria Santos', service: 'Senior Care', date: 'Jan 15, 2026', status: 'Accepted' },
+  { id: 2, provider: 'Juan Reyes', service: 'Physical Therapy', date: 'Jan 12, 2026', status: 'Completed' },
+  { id: 3, provider: 'Ana Cruz', service: 'Home Nursing', date: 'Jan 10, 2026', status: 'Pending' },
+  { id: 4, provider: 'Pedro Gonzales', service: 'Child Care', date: 'Jan 8, 2026', status: 'Cancelled' },
 ];
 
 const PatientRequests = () => {
+  const [modal, setModal] = useState({ type: null, request: null });
+
+  const openModal = (type, request) => setModal({ type, request });
+  const closeModal = () => setModal({ type: null, request: null });
+
   return (
     <DashboardLayout role="patient">
       <div className="space-y-6">
@@ -20,6 +29,7 @@ const PatientRequests = () => {
                 <th className="px-6 py-4 font-semibold">Service</th>
                 <th className="px-6 py-4 font-semibold">Date</th>
                 <th className="px-6 py-4 font-semibold">Status</th>
+                <th className="px-6 py-4 font-semibold">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -36,12 +46,30 @@ const PatientRequests = () => {
                       'bg-red-100 text-red-700'
                     }`}>{r.status}</span>
                   </td>
+                  <td className="px-6 py-4">
+                    {r.status === 'Accepted' && (
+                      <div className="flex gap-2">
+                        <button onClick={() => openModal('payment', r)} className="text-xs bg-primary text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-600">Pay</button>
+                        <button onClick={() => openModal('cancel', r)} className="text-xs border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-50">Cancel</button>
+                      </div>
+                    )}
+                    {r.status === 'Completed' && (
+                      <button onClick={() => openModal('review', r)} className="text-xs bg-yellow-500 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-yellow-600">Review</button>
+                    )}
+                    {r.status === 'Pending' && (
+                      <button onClick={() => openModal('cancel', r)} className="text-xs border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-50">Cancel</button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      <CancelRescheduleModal isOpen={modal.type === 'cancel'} onClose={closeModal} request={modal.request} />
+      <PaymentModal isOpen={modal.type === 'payment'} onClose={closeModal} request={modal.request} />
+      <ReviewModal isOpen={modal.type === 'review'} onClose={closeModal} request={modal.request} />
     </DashboardLayout>
   );
 };

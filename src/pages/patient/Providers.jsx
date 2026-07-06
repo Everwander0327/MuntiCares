@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
+import CancelRescheduleModal from '../../components/CancelRescheduleModal';
+import ComingSoonModal from '../../components/ComingSoonModal';
 
 const providers = [
   { name: 'Maria Santos', service: 'Senior Care', rating: 4.8, location: 'Muntinlupa City' },
@@ -9,6 +12,9 @@ const providers = [
 ];
 
 const PatientProviders = () => {
+  const [bookingProvider, setBookingProvider] = useState(null);
+  const [showComingSoon, setShowComingSoon] = useState(false);
+
   return (
     <DashboardLayout role="patient">
       <div className="space-y-6">
@@ -16,7 +22,9 @@ const PatientProviders = () => {
         <input
           type="text"
           placeholder="Search providers..."
-          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary"
+          onFocus={() => setShowComingSoon(true)}
+          readOnly
+          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary cursor-pointer"
         />
         <div className="grid gap-4">
           {providers.map((p, i) => (
@@ -29,13 +37,20 @@ const PatientProviders = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-yellow-500 font-bold">★ {p.rating}</p>
-                  <button className="mt-2 btn-primary text-xs px-4 py-1.5">Book</button>
+                  <button onClick={() => setBookingProvider(p)} className="mt-2 btn-primary text-xs px-4 py-1.5">Book</button>
                 </div>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      <CancelRescheduleModal
+        isOpen={!!bookingProvider}
+        onClose={() => setBookingProvider(null)}
+        request={bookingProvider}
+      />
+      <ComingSoonModal isOpen={showComingSoon} onClose={() => setShowComingSoon(false)} message="Search is coming soon." />
     </DashboardLayout>
   );
 };

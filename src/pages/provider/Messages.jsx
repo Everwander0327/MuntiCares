@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
+import ComingSoonModal from '../../components/ComingSoonModal';
 
 const messages = [
   { from: 'Maria Santos', lastMessage: 'Thank you for your visit today!', time: '3 hours ago', unread: true },
@@ -7,13 +9,15 @@ const messages = [
 ];
 
 const ProviderMessages = () => {
+  const [showComingSoon, setShowComingSoon] = useState(false);
+
   return (
     <DashboardLayout role="provider">
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-slate-900">Messages</h1>
         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
           {messages.map((m, i) => (
-            <div key={i} className={`p-4 border-b border-slate-50 flex items-center gap-4 ${m.unread ? 'bg-blue-50' : ''}`}>
+            <div key={i} onClick={() => setShowComingSoon(true)} className={`p-4 border-b border-slate-50 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors ${m.unread ? 'bg-blue-50' : ''}`}>
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
                 {m.from.split(' ').map(n => n[0]).join('')}
               </div>
@@ -29,6 +33,8 @@ const ProviderMessages = () => {
           ))}
         </div>
       </div>
+
+      <ComingSoonModal isOpen={showComingSoon} onClose={() => setShowComingSoon(false)} message="Messaging is coming soon." />
     </DashboardLayout>
   );
 };

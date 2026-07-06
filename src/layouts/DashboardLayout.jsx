@@ -45,7 +45,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('mc_user');
-    navigate('/login');
+    navigate('/');
   };
 
   return (

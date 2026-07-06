@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
+import PreSessionUploadModal from '../../components/PreSessionUploadModal';
 
 const ProviderRequests = () => {
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const requests = [
-    { patient: 'Maria Santos', service: 'Home Nursing', date: 'Jan 20, 2026', status: 'Pending' },
-    { patient: 'Jose Garcia', service: 'Child Care', date: 'Jan 22, 2026', status: 'Pending' },
-    { patient: 'Ana Cruz', service: 'Senior Care', date: 'Jan 18, 2026', status: 'Accepted' },
-    { patient: 'Pedro Gonzales', service: 'Physical Therapy', date: 'Jan 15, 2026', status: 'Completed' },
+    { id: 1, patient: 'Maria Santos', service: 'Home Nursing', date: 'Jan 20, 2026', status: 'Pending' },
+    { id: 2, patient: 'Jose Garcia', service: 'Child Care', date: 'Jan 22, 2026', status: 'Pending' },
+    { id: 3, patient: 'Ana Cruz', service: 'Senior Care', date: 'Jan 18, 2026', status: 'Accepted' },
+    { id: 4, patient: 'Pedro Gonzales', service: 'Physical Therapy', date: 'Jan 15, 2026', status: 'Completed' },
   ];
 
   return (
@@ -20,6 +23,7 @@ const ProviderRequests = () => {
                 <th className="px-6 py-4 font-semibold">Service</th>
                 <th className="px-6 py-4 font-semibold">Date</th>
                 <th className="px-6 py-4 font-semibold">Status</th>
+                <th className="px-6 py-4 font-semibold">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -35,12 +39,19 @@ const ProviderRequests = () => {
                       'bg-yellow-100 text-yellow-700'
                     }`}>{r.status}</span>
                   </td>
+                  <td className="px-6 py-4">
+                    {r.status === 'Accepted' && (
+                      <button onClick={() => setSelectedRequest(r)} className="text-xs bg-primary text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-600">Prepare</button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      <PreSessionUploadModal isOpen={!!selectedRequest} onClose={() => setSelectedRequest(null)} request={selectedRequest} />
     </DashboardLayout>
   );
 };

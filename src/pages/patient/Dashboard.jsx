@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import CancelRescheduleModal from '../../components/CancelRescheduleModal';
+import PaymentModal from '../../components/PaymentModal';
 
 const stats = [
   { label: 'Active Requests', value: '3', icon: Clock, color: 'bg-blue-50 text-primary' },
@@ -8,12 +11,14 @@ const stats = [
 ];
 
 const recentRequests = [
-  { provider: 'Maria Santos', service: 'Senior Care', date: 'Jan 15, 2026', status: 'Accepted' },
-  { provider: 'Juan Reyes', service: 'Physical Therapy', date: 'Jan 12, 2026', status: 'Completed' },
-  { provider: 'Ana Cruz', service: 'Home Nursing', date: 'Jan 10, 2026', status: 'Pending' },
+  { id: 1, provider: 'Maria Santos', service: 'Senior Care', date: 'Jan 15, 2026', status: 'Accepted' },
+  { id: 2, provider: 'Juan Reyes', service: 'Physical Therapy', date: 'Jan 12, 2026', status: 'Completed' },
+  { id: 3, provider: 'Ana Cruz', service: 'Home Nursing', date: 'Jan 10, 2026', status: 'Pending' },
 ];
 
 const PatientDashboard = () => {
+  const [modal, setModal] = useState({ type: null, request: null });
+
   return (
     <DashboardLayout role="patient">
       <div className="space-y-6">
@@ -41,6 +46,7 @@ const PatientDashboard = () => {
                   <th className="px-6 py-4 font-semibold">Service</th>
                   <th className="px-6 py-4 font-semibold">Date</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
+                  <th className="px-6 py-4 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -56,6 +62,14 @@ const PatientDashboard = () => {
                         'bg-yellow-100 text-yellow-700'
                       }`}>{r.status}</span>
                     </td>
+                    <td className="px-6 py-4">
+                      {r.status === 'Accepted' && (
+                        <button onClick={() => setModal({ type: 'payment', request: r })} className="text-xs bg-primary text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-blue-600">Pay</button>
+                      )}
+                      {r.status === 'Pending' && (
+                        <button onClick={() => setModal({ type: 'cancel', request: r })} className="text-xs border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-50">Cancel</button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -63,6 +77,9 @@ const PatientDashboard = () => {
           </div>
         </div>
       </div>
+
+      <CancelRescheduleModal isOpen={modal.type === 'cancel'} onClose={() => setModal({ type: null, request: null })} request={modal.request} />
+      <PaymentModal isOpen={modal.type === 'payment'} onClose={() => setModal({ type: null, request: null })} request={modal.request} />
     </DashboardLayout>
   );
 };

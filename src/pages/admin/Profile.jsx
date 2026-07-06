@@ -1,6 +1,15 @@
+import { useNavigate } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 
 const AdminProfile = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('mc_user');
+    navigate('/');
+  };
+
   return (
     <DashboardLayout role="admin">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -30,6 +39,10 @@ const AdminProfile = () => {
             </div>
           </div>
         </div>
+
+        <button onClick={handleLogout} className="w-full py-3 rounded-2xl border-2 border-red-200 text-red-600 font-bold hover:bg-red-50 hover:border-red-400 transition-all flex items-center justify-center gap-2">
+          <LogOut className="w-5 h-5" /> Logout
+        </button>
       </div>
     </DashboardLayout>
   );
