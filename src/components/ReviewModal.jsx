@@ -1,71 +1,172 @@
 import { useState } from 'react';
-import { X, Star, Check, Info } from 'lucide-react';
+import { Star, Check } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { supabase } from '../lib/supabase';
+import { toast } from 'react-hot-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from './ui/dialog';
+import { Button } from './ui/button';
 
 const CATEGORIES = [
-  { key: 'overall', label: 'Overall Experience' },
+  { key: 'overall', label: 'Overall Experience', required: true },
   { key: 'service', label: 'Service Quality' },
   { key: 'communication', label: 'Communication' },
   { key: 'punctuality', label: 'Punctuality' },
 ];
 
-const ReviewModal = ({ isOpen, onClose, request }) => {
-  const [ratings, setRatings] = useState({ overall: 0, service: 0, communication: 0, punctuality: 0 });
+const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
+  const [ratings, setRatings] = useState({
+    overall: 0,
+    service: 0,
+    communication: 0,
+    punctuality: 0,
+  });
+  const [hovered, setHovered] = useState({ overall: 0, service: 0, communication: 0, punctuality: 0 });
   const [comment, setComment] = useState('');
-  const [comingSoon, setComingSoon] = useState(false);
-
-  if (!isOpen) return null;
+  const [submitting, setSubmitting] = useState(false);
 
   const setRating = (key, val) => setRatings(prev => ({ ...prev, [key]: val }));
+  const setHover = (key, val) => setHovered(prev => ({ ...prev, [key]: val }));
 
-  const handleSubmit = () => {
-    setComingSoon(true);
-    setTimeout(() => { setComingSoon(false); onClose(); }, 1500);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (ratings.overall === 0) {
+      toast.error('Please select an overall star rating.');
+      return;
+    }
+
+    setSubmitting(true);
+
+    const submittedCb = onReviewSubmitted;
+    onClose();
+    toast.success('Thank you! Your review has been submitted.');
+    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+    if (submittedCb) submittedCb(request.id);
+    const rated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
+    rated[request.id] = true;
+    localStorage.setItem('rated_requests', JSON.stringify(rated));
+
+    try {
+      const { error: reviewError } = await supabase
+        .from('provider_reviews')
+        .insert([{
+          patient_id: request.patientId || null,
+          provider_id: request.providerId,
+          request_id: request.id,
+          rating: ratings.overall,
+          review_text: `[Service: ${ratings.service || 0}/5 | Comm: ${ratings.communication || 0}/5 | Punctual: ${ratings.punctuality || 0}/5] ${comment}`
+        }]);
+
+      if (reviewError) {
+        console.warn('provider_reviews insert failed, falling back to direct provider rating update...', reviewError);
+        const { data: providerData } = await supabase
+          .from('providers')
+          .select('rating')
+          .eq('user_id', request.providerId)
+          .single();
+
+        const currentRating = providerData?.rating || 0;
+        const updatedRating = currentRating === 0 ? ratings.overall : ((currentRating * 4) + ratings.overall) / 5;
+
+        const { error: updateError } = await supabase
+          .from('providers')
+          .update({ rating: updatedRating })
+          .eq('user_id', request.providerId);
+
+        if (updateError) throw updateError;
+      } else {
+        const { data: allReviews } = await supabase
+          .from('provider_reviews')
+          .select('rating')
+          .eq('provider_id', request.providerId);
+
+        if (allReviews && allReviews.length > 0) {
+          const avg = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
+          await supabase
+            .from('providers')
+            .update({ rating: avg })
+            .eq('user_id', request.providerId);
+        }
+      }
+    } catch (err) {
+      console.error('Error submitting review:', err);
+      toast.error('Your review is saved locally but failed to sync to the server.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-          <h2 className="text-lg font-bold text-slate-900">Rate Your Experience</h2>
-          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5 text-slate-400" /></button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-md p-8">
+        <DialogHeader>
+          <div className="text-center">
+            <span className="text-3xl">🎉</span>
+            <DialogTitle className="mt-2">Rate Your Visit</DialogTitle>
+            <DialogDescription className="mt-1">
+              How was your care session with <span className="font-bold text-primary">{request?.providerName}</span>?
+            </DialogDescription>
+          </div>
+        </DialogHeader>
 
-        <div className="p-6 space-y-5">
-          {comingSoon && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-blue-50 border border-blue-100 text-sm text-blue-700 font-semibold">
-              <Info className="w-4 h-4" /> Reviews are coming soon.
-            </div>
-          )}
-
-          <p className="text-sm text-slate-600">
-            How was your experience with <span className="font-bold">{request?.provider || 'Provider'}</span>?
-          </p>
-
-          {CATEGORIES.map(cat => (
-            <div key={cat.key}>
-              <p className="text-sm font-semibold text-slate-700 mb-2">{ratings[cat.key] > 0 ? cat.label : `${cat.label} (tap to rate)`}</p>
-              <div className="flex gap-1">
-                {[1,2,3,4,5].map(star => (
-                  <button key={star} onClick={() => setRating(cat.key, star)} className="p-0.5">
-                    <Star className={`w-7 h-7 ${star <= ratings[cat.key] ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'}`} />
-                  </button>
-                ))}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-4">
+            {CATEGORIES.map(cat => (
+              <div key={cat.key} className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{cat.label}</span>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map(star => {
+                    const active = star <= (hovered[cat.key] || ratings[cat.key]);
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(cat.key, star)}
+                        onMouseEnter={() => setHover(cat.key, star)}
+                        onMouseLeave={() => setHover(cat.key, 0)}
+                        className="p-0.5 hover:scale-110 active:scale-95 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
+                        aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                      >
+                        <Star className={`w-5 h-5 transition-colors ${
+                          active ? 'fill-amber-400 text-amber-400' : 'text-slate-200 dark:text-slate-600 fill-none'
+                        }`} />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-
-          <div>
-            <label className="text-sm font-semibold text-slate-700 mb-1.5 block">Write a comment (optional)</label>
-            <textarea value={comment} onChange={e => setComment(e.target.value)} rows={3} placeholder="Share your experience..." className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-primary resize-none" />
+            ))}
           </div>
 
-          <button onClick={handleSubmit} className="w-full py-3 rounded-xl bg-primary text-white font-semibold hover:bg-blue-600 flex items-center justify-center gap-2">
-            <Check className="w-4 h-4" /> Submit Review
-          </button>
-        </div>
-      </div>
-    </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Share your feedback (Optional)</label>
+            <textarea
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              placeholder="Write about the provider's professionalism, care, or anything else..."
+              rows={4}
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl p-4 outline-none focus:ring-2 focus:ring-primary/10 transition-all text-sm resize-none text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Submitting...' : (
+                <><Check className="w-4 h-4" /> Submit Review</>
+              )}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

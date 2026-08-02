@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import ScrollProgress from '../components/ScrollProgress';
 
 const MainLayout = () => {
   const location = useLocation();
@@ -8,6 +9,7 @@ const MainLayout = () => {
 
   return (
     <div className="min-h-screen">
+      <ScrollProgress />
       <Navbar />
       <main>
         <Outlet />

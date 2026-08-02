@@ -1,41 +1,136 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import ComingSoonModal from '../../components/ComingSoonModal';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { MessageCircle, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import ChatWindow from '../../components/ChatWindow';
+import ConversationList from '../../components/ConversationList';
+import IncomingCallOverlay from '../../components/IncomingCallOverlay';
+import { CallProvider } from '../../contexts/CallContext';
+import { useLocation } from 'react-router-dom';
+import useMediaQuery from '../../hooks/useMediaQuery';
 
-const messages = [
-  { from: 'Maria Santos', lastMessage: 'Thank you for your visit today!', time: '3 hours ago', unread: true },
-  { from: 'Pedro Gonzales', lastMessage: 'Can we reschedule to Friday?', time: '1 day ago', unread: false },
-  { from: 'Juana Torres', lastMessage: 'See you tomorrow at 10am.', time: '2 days ago', unread: false },
-];
+const slideVariants = {
+  initial: { x: '30%', opacity: 0 },
+  animate: { x: 0, opacity: 1, transition: { type: 'spring', damping: 25, stiffness: 250 } },
+  exit: { x: '30%', opacity: 0, transition: { duration: 0.15 } },
+};
 
 const ProviderMessages = () => {
-  const [showComingSoon, setShowComingSoon] = useState(false);
+  const { user } = useAuth();
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const location = useLocation();
+  const [view, setView] = useState('list');
+  const [selectedPartner, setSelectedPartner] = useState(null);
+  const [currentUserData, setCurrentUserData] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [autoStartVideo, setAutoStartVideo] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('users')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        setCurrentUserData({
+          id: user.id,
+          name: data?.full_name || 'Provider',
+          email: data?.email,
+        });
+      });
+  }, [user]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const targetId = params.get('provider') || params.get('partner');
+    if (targetId && currentUserData) {
+      const partnerName = params.get('name') || undefined;
+      setSelectedPartner({ id: targetId, name: partnerName });
+      setView('chat');
+      if (params.get('startVideo') === '1') {
+        setAutoStartVideo(true);
+      }
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [location.search, currentUserData, location.pathname]);
+
+  const handleSelect = (partner) => {
+    setSelectedPartner(partner);
+    setView('chat');
+    setAutoStartVideo(false);
+  };
+
+  const handleBack = () => {
+    setView('list');
+    setSelectedPartner(null);
+    setAutoStartVideo(false);
+  };
 
   return (
-    <DashboardLayout role="provider">
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-slate-900">Messages</h1>
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-          {messages.map((m, i) => (
-            <div key={i} onClick={() => setShowComingSoon(true)} className={`p-4 border-b border-slate-50 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors ${m.unread ? 'bg-blue-50' : ''}`}>
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                {m.from.split(' ').map(n => n[0]).join('')}
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center justify-between">
-                  <p className="font-bold text-slate-900">{m.from}</p>
-                  <span className="text-xs text-slate-400">{m.time}</span>
-                </div>
-                <p className="text-sm text-slate-500">{m.lastMessage}</p>
-              </div>
-              {m.unread && <div className="w-2 h-2 rounded-full bg-primary" />}
+    <CallProvider>
+      <IncomingCallOverlay />
+      <DashboardLayout role="provider">
+        {view === 'list' ? (
+          <div className="max-w-6xl h-[calc(100vh-120px)] md:h-[calc(100vh-80px)] flex flex-col mx-auto">
+            <div className="mb-4">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Messages</h1>
+              <p className="text-slate-500 dark:text-slate-400">Chat with your patients.</p>
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="flex-1 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden relative dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key="list"
+                  variants={slideVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="h-full flex flex-col"
+                >
+                  <div className="p-4 border-b border-slate-100 bg-slate-50/50 space-y-3 dark:border-slate-700 dark:bg-slate-900/50">
+                    <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2 dark:text-slate-200">
+                      <MessageCircle className="w-4 h-4 text-primary" />
+                      Conversations
+                    </h3>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+                      <input
+                        type="text"
+                        placeholder="Search conversations..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary/10 dark:bg-slate-800 dark:border-slate-600"
+                      />
+                    </div>
+                  </div>
+                  <ConversationList user={user} onSelect={handleSelect} searchTerm={searchTerm} />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        ) : isDesktop && currentUserData && selectedPartner?.id ? (
+          <ChatWindow
+            currentUser={currentUserData}
+            otherUser={selectedPartner}
+            onBack={handleBack}
+            autoStartVideo={autoStartVideo}
+          />
+        ) : null}
+      </DashboardLayout>
 
-      <ComingSoonModal isOpen={showComingSoon} onClose={() => setShowComingSoon(false)} message="Messaging is coming soon." />
-    </DashboardLayout>
+      {view === 'chat' && !isDesktop && currentUserData && selectedPartner?.id && (
+        <div className="fixed inset-0 z-50">
+          <ChatWindow
+            currentUser={currentUserData}
+            otherUser={selectedPartner}
+            onBack={handleBack}
+            autoStartVideo={autoStartVideo}
+          />
+        </div>
+      )}
+    </CallProvider>
   );
 };
 
