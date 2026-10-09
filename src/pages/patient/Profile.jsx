@@ -592,7 +592,17 @@ const PatientProfile = () => {
   return (
     <>
     <DashboardLayout role="patient">
-      <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
+      <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 overflow-x-hidden w-full max-w-full">
+        <section className="relative overflow-hidden rounded-[2rem] bg-ink text-white border border-black/5 dark:border-white/10 shadow-soft">
+          <div className="absolute inset-0 mesh-ambient opacity-60" />
+          <div className="absolute -right-20 -top-20 w-[320px] h-[320px] rounded-full bg-primary/30 blur-[90px]" />
+          <div className="absolute inset-0 grain" />
+          <div className="relative p-7 md:p-10">
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Health passport</p>
+            <h1 className="font-display font-bold tracking-tight text-3xl md:text-5xl leading-[1.02] mt-3 max-w-5xl w-full" style={{ textWrap: 'balance' }}>Your profile, ready for care</h1>
+            <p className="text-slate-300 mt-2 text-sm md:text-[15px] max-w-xl">Keep contact, medical history and documents current so providers arrive prepared.</p>
+          </div>
+        </section>
         {/* Completion Alert */}
         {!profile.is_profile_complete && (
           <motion.div 

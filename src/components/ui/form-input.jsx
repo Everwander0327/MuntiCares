@@ -10,11 +10,11 @@ const FormInput = React.forwardRef(({ label, error, icon: Icon, rightElement, cl
         <input
           ref={ref}
           className={cn(
-            "w-full bg-white/70 dark:bg-slate-800/70 border rounded-2xl py-4",
+            "w-full bg-white/80 dark:bg-slate-800/80 ring-1 rounded-[1.25rem] py-4",
             Icon ? "pl-12" : "px-4",
             rightElement ? "pr-12" : "pr-4",
-            "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all",
-            error ? "border-red-300 dark:border-red-500" : "border-slate-200 dark:border-slate-600",
+            "focus:outline-none focus:ring-0 transition-all duration-700 ease-fluid",
+            error ? "ring-red-300 dark:ring-red-500" : "ring-black/5 dark:ring-white/10",
             className
           )}
           {...props}
@@ -38,9 +38,9 @@ const FormTextarea = React.forwardRef(({ label, error, className, ...props }, re
     <textarea
       ref={ref}
       className={cn(
-        "w-full bg-white/70 dark:bg-slate-800/70 border rounded-2xl p-4",
-        "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all resize-none",
-        error ? "border-red-300 dark:border-red-500" : "border-slate-200 dark:border-slate-600",
+        "w-full bg-white/80 dark:bg-slate-800/80 ring-1 rounded-[1.25rem] p-4",
+        "focus:outline-none focus:ring-0 transition-all duration-700 ease-fluid resize-none",
+        error ? "ring-red-300 dark:ring-red-500" : "ring-black/5 dark:ring-white/10",
         className
       )}
       {...props}
@@ -58,14 +58,14 @@ const FormCheckbox = React.forwardRef(({ label, error, className, labelClassName
         type="checkbox"
         ref={ref}
         className={cn(
-          "w-5 h-5 rounded-md border-2 transition-all cursor-pointer",
-          "focus:outline-none focus:ring-2 focus:ring-primary/50",
+          "w-5 h-5 rounded-md border-2 transition-all duration-700 ease-fluid cursor-pointer",
+          "focus:outline-none focus:ring-0",
           "accent-primary",
           className
         )}
         {...props}
       />
-      <span className={cn("text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-colors", labelClassName)}>
+      <span className={cn("text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-all duration-700 ease-fluid", labelClassName)}>
         {label}
       </span>
     </label>

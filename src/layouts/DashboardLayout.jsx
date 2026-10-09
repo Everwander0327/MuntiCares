@@ -18,29 +18,30 @@ import {
   MessageCircle,
   Megaphone
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import MobileNavItem from '../components/MobileNavItem';
 
 const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
-  <Link 
-    to={to} 
+  <Link
+    to={to}
     onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${active ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-primary'}`}
+    className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative overflow-hidden ${
+      active 
+        ? 'neu-btn-primary text-white font-bold shadow-md' 
+        : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+    }`}
   >
-    <motion.div
-      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-primary rounded-r-full"
-      initial={false}
-      animate={{ 
-        height: active ? '60%' : '0%',
-        opacity: active ? 1 : 0,
-      }}
-      transition={{ duration: 0.2 }}
-    />
-    {React.cloneElement(icon, { className: `w-5 h-5 ${active ? 'text-white' : 'text-slate-400 group-hover:text-primary'}` })}
-    <span className="font-medium flex-1">{label}</span>
+    <span className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0 ${
+      active 
+        ? '!bg-white/20 !text-white shadow-inner border border-white/30 backdrop-blur-sm' 
+        : 'neu-flat-sm text-slate-600 dark:text-slate-300 group-hover:text-primary group-hover:scale-105'
+    }`}>
+      {React.cloneElement(icon, { className: `w-4 h-4 ${active ? '!text-white' : ''}` })}
+    </span>
+    <span className={`font-semibold text-sm flex-1 truncate ${active ? 'text-white font-bold' : ''}`}>{label}</span>
     {badge > 0 && (
-      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-3xs font-bold px-1.5 ${
+      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-3xs font-extrabold px-1.5 shadow-sm ${
         active ? 'bg-white text-primary' : 'bg-red-500 text-white'
       }`}>
         {badge > 9 ? '9+' : badge}
@@ -51,6 +52,7 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
 
 const DashboardLayout = ({ children, role = 'patient' }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
@@ -58,6 +60,10 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
   const { user: authUser, logout } = useAuth();
   const mainRef = useRef(null);
   const channelRef = useRef(null);
+
+  const toggleDesktopCollapse = () => {
+    setIsDesktopCollapsed(prev => !prev);
+  };
 
   const patientLinks = [
     { icon: <LayoutDashboard />, label: 'Dashboard', to: '/patient/dashboard' },
@@ -195,118 +201,180 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
-      <AnimatePresence>
-        {isSidebarOpen && (
-          <motion.div 
-            className="fixed inset-0 bg-slate-900/50 dark:bg-black/50 z-40 lg:hidden backdrop-blur-sm"
-            onClick={() => setIsSidebarOpen(false)}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          />
-        )}
-      </AnimatePresence>
+      <LayoutGroup id="munti-sidebar-flight">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex overflow-hidden mesh-ambient dark:mesh-ambient-dark">
+        {/* Mobile Sidebar Overlay */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div 
+              className="fixed inset-0 bg-slate-900/50 dark:bg-black/50 z-40 lg:hidden backdrop-blur-sm"
+              onClick={() => setIsSidebarOpen(false)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+          )}
+        </AnimatePresence>
 
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-800 border-r border-slate-100 dark:border-slate-700 transition-transform duration-300 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:static lg:translate-x-0`}>
-        <div className="h-full flex flex-col p-6">
-          {/* Logo */}
-          <div className="flex items-center justify-between mb-8">
-            <Link to="/" className="flex items-center gap-2 group">
-              <div className="bg-primary p-2 rounded-lg group-hover:rotate-12 transition-transform">
-                <Heart className="text-white w-5 h-5" fill="currentColor" />
+        {/* Sidebar - floating neumorphic island with desktop rollup collapse */}
+        <motion.aside
+          initial={false}
+          animate={{
+            width: isDesktopCollapsed ? 0 : 312,
+            opacity: isDesktopCollapsed ? 0 : 1,
+            paddingLeft: isDesktopCollapsed ? 0 : undefined,
+            paddingRight: isDesktopCollapsed ? 0 : undefined,
+          }}
+          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          className={`fixed inset-y-0 left-0 z-50 transition-transform duration-500 ease-fluid transform ${
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:static lg:translate-x-0 lg:p-4 overflow-hidden shrink-0 select-none`}
+        >
+          <div className="h-full w-[280px] flex flex-col p-6 neu-flat lg:rounded-[2.25rem]">
+            {/* Logo with spinning heart collapse trigger on desktop */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2.5">
+                {!isDesktopCollapsed ? (
+                  <motion.button
+                    layoutId="munti-heart-badge"
+                    type="button"
+                    onClick={toggleDesktopCollapse}
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    transition={{
+                      layout: { duration: 0.55, ease: [0.34, 1.56, 0.64, 1] },
+                    }}
+                    className="neu-flat-sm w-10 h-10 rounded-2xl flex items-center justify-center text-primary cursor-pointer active:scale-95 transition-transform shrink-0 shadow-sm"
+                    title="Collapse sidebar"
+                  >
+                    <motion.div
+                      animate={{ rotate: 0 }}
+                      transition={{ duration: 0.5 }}
+                    >
+                      <Heart className="w-5 h-5 text-primary fill-primary" />
+                    </motion.div>
+                  </motion.button>
+                ) : (
+                  <div className="w-10 h-10" />
+                )}
+                <Link to="/" className="flex items-center">
+                  <span className="text-xl font-display font-extrabold text-primary tracking-tight">MuntiCares</span>
+                </Link>
               </div>
-              <span className="text-xl font-bold text-primary tracking-tight">MuntiCares</span>
-            </Link>
-            <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 p-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-colors">
-              <X className="w-6 h-6" />
+              <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 p-2 neu-btn rounded-xl transition-all">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Nav section label */}
+            <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
+
+            {/* Nav links */}
+            <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
+              {links.map((link) => {
+                let badge = 0;
+                if (currentRole === 'patient') {
+                  if (link.label === 'My Requests') badge = pendingCount;
+                  if (link.label === 'Messages') badge = unreadMsgCount;
+                } else if (currentRole === 'provider') {
+                  if (link.label === 'Incoming Requests') badge = pendingCount;
+                  if (link.label === 'Messages') badge = unreadMsgCount;
+                }
+                return (
+                  <SidebarItem 
+                    key={link.label} 
+                    icon={link.icon}
+                    label={link.label}
+                    to={link.to}
+                    active={location.pathname === link.to}
+                    onClick={() => setIsSidebarOpen(false)}
+                    badge={badge}
+                  />
+                );
+              })}
+            </nav>
+
+            {/* Divider */}
+            <div className="border-t border-slate-200/50 dark:border-white/5 my-4" />
+
+            {/* User Info - Raised Neumorphic Card */}
+            <div className="flex items-center gap-3 px-4 py-3 neu-flat-sm rounded-2xl mb-3">
+              <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0">
+                {authUser?.avatar_url ? (
+                  <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  user.initials
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{user.name}</p>
+                <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-primary text-3xs font-black rounded-full uppercase tracking-wider mt-0.5">
+                  {user.badge}
+                </span>
+              </div>
+            </div>
+
+            {/* Logout */}
+            <button 
+              onClick={() => {
+                logout();
+                navigate('/login');
+              }}
+              className="neu-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
+            >
+              <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-red-500">
+                <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-500 dark:group-hover:text-red-400" />
+              </div>
+              <span className="font-bold text-xs">Logout</span>
             </button>
           </div>
+        </motion.aside>
 
-          {/* Nav section label */}
-          <p className="text-2xs font-semibold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
-
-          {/* Nav links */}
-          <nav className="flex-1 space-y-1 overflow-y-auto">
-            {links.map((link) => {
-              let badge = 0;
-              if (currentRole === 'patient') {
-                if (link.label === 'My Requests') badge = pendingCount;
-                if (link.label === 'Messages') badge = unreadMsgCount;
-              } else if (currentRole === 'provider') {
-                if (link.label === 'Incoming Requests') badge = pendingCount;
-                if (link.label === 'Messages') badge = unreadMsgCount;
-              }
-              return (
-                <SidebarItem 
-                  key={link.label} 
-                  icon={link.icon}
-                  label={link.label}
-                  to={link.to}
-                  active={location.pathname === link.to}
-                  onClick={() => setIsSidebarOpen(false)}
-                  badge={badge}
-                />
-              );
-            })}
-          </nav>
-
-          {/* Divider */}
-          <div className="border-t border-slate-100 dark:border-slate-700 my-4" />
-
-          {/* User Info */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-900 rounded-2xl mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0">
-              {authUser?.avatar_url ? (
-                <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                user.initials
+        {/* Main Content */}
+        <div className={`flex-1 flex flex-col min-w-0 h-screen lg:p-4 ${isDesktopCollapsed ? 'lg:pl-4' : 'lg:pl-4'} transition-all duration-500`}>
+          {/* Upper Panel Header - Raised Neumorphic Banner */}
+          <header className="h-[76px] neu-flat lg:rounded-[2rem] flex items-center justify-between px-5 lg:px-7 shrink-0 lg:mb-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              {/* When collapsed on desktop: The heart badge physically flies here from the sidebar while spinning! */}
+              {isDesktopCollapsed && (
+                <motion.button
+                  layoutId="munti-heart-badge"
+                  type="button"
+                  onClick={toggleDesktopCollapse}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={{
+                    layout: { duration: 0.55, ease: [0.34, 1.56, 0.64, 1] },
+                  }}
+                  className="hidden lg:flex neu-btn w-11 h-11 rounded-2xl items-center justify-center text-primary cursor-pointer shrink-0 shadow-md group"
+                  title="Expand sidebar"
+                >
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.55, ease: 'easeInOut' }}
+                  >
+                    <Heart className="w-5 h-5 text-primary fill-primary group-hover:scale-110 transition-transform" />
+                  </motion.div>
+                </motion.button>
               )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-900 dark:text-slate-100 text-sm truncate">{user.name}</p>
-              <span className="inline-flex items-center px-2 py-0.5 bg-primary/10 text-primary text-2xs font-medium rounded-full uppercase tracking-wider">
-                {user.badge}
-              </span>
-            </div>
-          </div>
 
-          {/* Logout */}
-          <button 
-            onClick={() => {
-              logout();
-              navigate('/login');
-            }}
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-slate-700 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
-          >
-            <LogOut className="w-5 h-5 text-slate-400 group-hover:text-red-500 dark:group-hover:text-red-400" />
-            <span className="font-medium">Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen">
-        <header className="h-20 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between px-4 lg:px-10 shrink-0">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="min-w-0">
-              <h2 className="text-sm md:text-lg font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[200px] md:max-w-none">
+              <div className="min-w-0">
+              <h2 className="text-sm md:text-lg font-display font-extrabold text-slate-900 dark:text-slate-100 truncate max-w-[200px] md:max-w-none">
                 Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <ThemeToggle />
             <NotificationBell />
             <Link 
               to={`/${currentRole}/profile`} 
-              className="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold shadow-sm border border-white dark:border-slate-800 shrink-0 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors cursor-pointer overflow-hidden"
+              className="neu-btn w-11 h-11 rounded-2xl flex items-center justify-center text-primary font-black shadow-sm shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden"
+              title="Profile"
             >
               {authUser?.avatar_url ? (
                 <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -317,12 +385,13 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto p-4 lg:p-10 pb-24 lg:pb-10">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-7 pb-28 lg:pb-10 neu-flat lg:rounded-[2.25rem]">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="w-full max-w-full p-1"
           >
             {children}
           </motion.div>
@@ -336,8 +405,8 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
         className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
-        <div className="mx-3 mb-3 rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-lg border border-slate-100/50 dark:border-slate-700/50 shadow-lg shadow-slate-200/50 dark:shadow-slate-900/50">
-          <div className="flex items-center justify-around px-1 py-0.5">
+        <div className="mx-3 mb-3 rounded-2xl neu-flat">
+          <div className="flex items-center justify-around px-1 py-1">
             {(() => {
               const mobileLinks = buildMobileLinks(links);
                 return mobileLinks.map((link, i) => {
@@ -362,9 +431,10 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
                   );
                 });
               })()}
-            </div>
           </div>
+        </div>
       </div>
+      </LayoutGroup>
     </>
   );
 };

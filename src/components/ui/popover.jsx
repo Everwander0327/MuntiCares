@@ -12,8 +12,8 @@ const PopoverContent = React.forwardRef(({ className, align = "center", sideOffs
       align={align}
       sideOffset={sideOffset}
       className={cn(
-        "z-50 w-72 rounded-2xl border border-slate-100 dark:border-slate-700",
-        "bg-white dark:bg-slate-800 p-4 shadow-xl",
+        "z-50 w-72 rounded-[2rem] ring-1 ring-black/5 dark:ring-white/10",
+        "bg-white dark:bg-slate-800 p-4 shadow-soft",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

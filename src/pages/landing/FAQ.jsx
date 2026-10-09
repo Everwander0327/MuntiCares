@@ -1,12 +1,13 @@
- 
 import { useState } from 'react';
-import { ChevronDown, HelpCircle } from 'lucide-react';
+import { CaretDown, Question } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const FLUID = [0.32, 0.72, 0, 1];
 
 const faqs = [
   {
     q: 'How are providers verified?',
-    a: 'Every provider on MuntiCares undergoes a rigorous background check, credential verification, and in-person interview before being approved. We also review licenses, certifications, and conduct定期 reference checks to ensure the highest standards of care.',
+    a: 'Every provider on MuntiCares undergoes a rigorous background check, credential verification, and in-person interview before being approved. We also review licenses, certifications, and conduct regular reference checks to ensure the highest standards of care.',
   },
   {
     q: 'What areas of Muntinlupa do you serve?',
@@ -17,7 +18,7 @@ const faqs = [
     a: 'Service fees are agreed upon between you and your provider before the visit begins. MuntiCares keeps the process transparent, so you always know the cost of your care upfront.',
   },
   {
-    q: 'Can I switch providers if I\'m not satisfied?',
+    q: "Can I switch providers if I'm not satisfied?",
     a: 'Absolutely. You can request a different provider at any time. We encourage you to find the right match for your needs, and our support team is happy to help facilitate a smooth transition.',
   },
   {
@@ -30,38 +31,36 @@ const faqs = [
   },
 ];
 
-const FAQItem = ({ faq, isOpen, onClick }) => {
-  return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden transition-all duration-300">
-      <button
-        onClick={onClick}
-        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left bg-white dark:bg-slate-800 hover:bg-blue-50/50 dark:hover:bg-slate-700/50 transition-colors"
-        aria-expanded={isOpen}
-      >
-        <span className="font-semibold text-slate-900 dark:text-slate-100">{faq.q}</span>
-        <ChevronDown
-          className={`w-5 h-5 text-primary shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
-        />
-      </button>
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            key="content"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="overflow-hidden"
-          >
-            <div className="px-6 pb-5 text-slate-600 dark:text-slate-300 leading-relaxed bg-white dark:bg-slate-800">
-              {faq.a}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
+const FAQItem = ({ faq, isOpen, onClick }) => (
+  <div className={`rounded-[2rem] overflow-hidden transition-all duration-700 ease-fluid ring-1 ${isOpen ? 'ring-primary/30 shadow-card bg-white dark:bg-slate-800' : 'ring-black/5 dark:ring-white/10 bg-white/60 dark:bg-slate-800/60'}`}>
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left transition-all duration-700 ease-fluid hover:bg-primary/5 min-h-[68px]"
+      aria-expanded={isOpen}
+    >
+      <span className="font-semibold text-slate-900 dark:text-slate-100 text-base md:text-lg">{faq.q}</span>
+      <span className={`w-11 h-11 rounded-full bg-black/[0.04] dark:bg-white/[0.06] ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-center shrink-0 transition-transform duration-700 ease-fluid ${isOpen ? 'rotate-180 bg-primary text-white' : 'text-primary'}`}>
+        <CaretDown size={16} weight="light" />
+      </span>
+    </button>
+    <AnimatePresence initial={false}>
+      {isOpen && (
+        <motion.div
+          key="content"
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.5, ease: FLUID }}
+          className="overflow-hidden"
+        >
+          <div className="px-6 pb-6 text-slate-600 dark:text-slate-300 leading-relaxed text-sm">
+            {faq.a}
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+);
 
 const FAQ = () => {
   const [openIndex, setOpenIndex] = useState(null);
@@ -71,20 +70,20 @@ const FAQ = () => {
   };
 
   return (
-    <section id="faq" className="py-14 bg-secondary/50 dark:bg-slate-800/50" aria-labelledby="faq-heading">
-      <div className="container mx-auto px-6 max-w-3xl">
+    <section id="faq" className="py-20 md:py-32 bg-secondary/50 dark:bg-slate-900/50 relative overflow-hidden border-t border-black/5 dark:border-white/5" aria-labelledby="faq-heading">
+      <div className="container mx-auto px-4 md:px-6 max-w-3xl">
         <motion.div
-          className="text-center space-y-3 mb-10"
-          initial={{ opacity: 0, y: 20 }}
+          className="text-center space-y-4 mb-12"
+          initial={{ opacity: 0, y: 64 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.8, ease: FLUID }}
         >
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 text-primary mb-3">
-            <HelpCircle className="w-5 h-5" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary ring-1 ring-primary/20 mb-2">
+            <Question size={22} weight="light" />
           </div>
-          <h2 id="faq-heading" className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100">Frequently Asked Questions</h2>
-          <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto text-sm">
+          <h2 id="faq-heading" className="font-display text-3xl md:text-5xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">Frequently asked questions</h2>
+          <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto text-sm md:text-base">
             Everything you need to know about MuntiCares and how we help you get the care you deserve.
           </p>
         </motion.div>
@@ -106,8 +105,8 @@ const FAQ = () => {
             <motion.div
               key={idx}
               variants={{
-                initial: { opacity: 0, y: 20 },
-                animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+                initial: { opacity: 0, y: 64 },
+                animate: { opacity: 1, y: 0, transition: { duration: 0.7, ease: FLUID } },
               }}
             >
               <FAQItem

@@ -1,89 +1,97 @@
- 
-import { cloneElement } from 'react';
-import { Calendar, ShieldCheck, Lock } from 'lucide-react';
+import { CalendarBlank, ShieldCheck, LockKey } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from './animations';
-import useTilt from '../../hooks/useTilt';
+import { IMAGES } from '../../lib/images';
+
+const FLUID = [0.32, 0.72, 0, 1];
 
 const features = [
   {
-    icon: <Calendar className="w-8 h-8 text-primary" />,
-    title: "Easy Booking",
-    description: "Book a professional provider in minutes with our streamlined scheduling system."
+    icon: <CalendarBlank size={22} weight="light" className="text-primary" />,
+    title: 'Easy Booking',
+    description: 'Book a professional provider in minutes with our streamlined scheduling system.',
+    span: 'md:col-span-7',
+    image: IMAGES.landing.featureBooking,
   },
   {
-    icon: <ShieldCheck className="w-8 h-8 text-primary" />,
-    title: "Verified Providers",
-    description: "All providers undergo rigorous background checks and credential verification."
+    icon: <ShieldCheck size={22} weight="light" className="text-primary" />,
+    title: 'Verified Providers',
+    description: 'All providers undergo rigorous background checks and credential verification.',
+    span: 'md:col-span-5',
+    image: IMAGES.landing.featureVerified,
   },
   {
-    icon: <Lock className="w-8 h-8 text-primary" />,
-    title: "Secure Health Data",
-    description: "You have full control over your information. We prioritize your privacy and security."
-  }
+    icon: <LockKey size={22} weight="light" className="text-primary" />,
+    title: 'Secure Health Data',
+    description: 'You have full control over your information. We prioritize your privacy and security with granular consent and encrypted records.',
+    span: 'md:col-span-12',
+    image: IMAGES.landing.featureSecure,
+  },
 ];
 
-const FeatureCard = ({ feature }) => {
-  const { ref, style, handleMouseMove, handleMouseLeave } = useTilt(6);
-
-  return (
-    <motion.div
-      variants={staggerItem}
-      className="card group relative overflow-hidden hover:-translate-y-1 transition-transform duration-200"
-      whileTap={{ scale: 0.98 }}
-    >
-      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none hidden lg:block"
-           style={{
-             background: 'linear-gradient(135deg, #1E6FBF, #60A5FA, #1E6FBF)',
-             padding: '2px',
-             mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-             maskComposite: 'exclude',
-             WebkitMaskComposite: 'xor',
-           }}
-      />
-      <div
-        ref={ref}
-        style={style}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        className="relative"
-      >
-        <div className="bg-blue-50 dark:bg-blue-900/30 w-12 h-12 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-100 dark:shadow-slate-900/50 group-hover:bg-primary group-hover:shadow-primary/30 transition-all duration-300">
+const FeatureCard = ({ feature }) => (
+  <motion.div
+    variants={staggerItem}
+    className="group h-full transition-transform duration-700 ease-fluid hover:-translate-y-1 active:scale-[0.98]"
+    whileTap={{ scale: 0.98 }}
+  >
+    <div className="bezel h-full">
+      <div className="bezel-inner h-full shadow-card overflow-hidden">
+        {feature.image && (
+          <div className="relative h-52 md:h-60 overflow-hidden">
+            <img
+              src={feature.image}
+              alt={feature.title}
+              loading="lazy"
+              className="h-full w-full object-cover object-center opacity-100 contrast-105 saturate-110 transition-transform duration-700 ease-out group-hover:scale-105"
+            />
+            <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-white via-white/20 to-transparent dark:from-slate-800 dark:via-slate-800/20 dark:to-transparent" />
+          </div>
+        )}
+        <div className="p-6 md:p-8">
+        <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4 ring-1 ring-primary/20 group-hover:bg-primary transition-all duration-700 ease-fluid [&_svg]:group-hover:text-white">
           <div className="card-icon-animate">
-            {cloneElement(feature.icon, { className: "w-5 h-5 text-primary group-hover:text-white transition-colors" })}
+            {feature.icon}
           </div>
         </div>
-        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">{feature.title}</h3>
-        <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{feature.description}</p>
+        <h3 className="font-display text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">{feature.title}</h3>
+        <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm">{feature.description}</p>
+        </div>
       </div>
-    </motion.div>
-  );
-};
+    </div>
+  </motion.div>
+);
 
-const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-
-const Features = () => {
-  return (
-    <section id="features" className="py-14 bg-white dark:bg-slate-800" aria-labelledby="features-heading">
-      <div className="container mx-auto px-6">
-        <motion.div
-          className="text-center space-y-3 mb-10"
-          {...(isMobile ? {} : { initial: { opacity: 0, y: 20 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true }, transition: { duration: 0.5 } })}
-        >
-          <h2 id="features-heading" className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100">Why MuntiCares?</h2>
-          <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto text-sm">We&apos;re committed to providing the safest and most efficient home care connection in the city.</p>
-        </motion.div>
-        <motion.div
-          className="grid md:grid-cols-3 gap-6"
-          {...(isMobile ? {} : { variants: staggerContainer, initial: 'initial', whileInView: 'animate', viewport: { once: true, amount: 0.2 } })}
-        >
-          {features.map((feature, idx) => (
-            <FeatureCard key={idx} feature={feature} />
-          ))}
-        </motion.div>
-      </div>
-    </section>
-  );
-};
+const Features = () => (
+  <section id="features" className="py-20 md:py-32 bg-white dark:bg-slate-900 relative overflow-hidden" aria-labelledby="features-heading">
+    <div className="pointer-events-none absolute -top-32 left-1/2 h-64 w-[42rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
+    <div className="container mx-auto px-4 md:px-6">
+      <motion.div
+        className="text-center space-y-4 mb-12 md:mb-16"
+        initial={{ opacity: 0, y: 64 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.8, ease: FLUID }}
+      >
+        <span className="eyebrow">Why MuntiCares</span>
+        <h2 id="features-heading" className="font-display text-3xl md:text-5xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight max-w-4xl mx-auto">Care you can trust</h2>
+        <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto text-sm md:text-base">We&apos;re committed to providing the safest and most efficient home care connection in the city.</p>
+      </motion.div>
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-12 grid-flow-dense gap-6"
+        variants={staggerContainer}
+        initial="initial"
+        whileInView="animate"
+        viewport={{ once: true, amount: 0.2 }}
+      >
+        {features.map((feature, idx) => (
+          <div key={idx} className={`col-span-1 ${feature.span}`}>
+            <FeatureCard feature={feature} />
+          </div>
+        ))}
+      </motion.div>
+    </div>
+  </section>
+);
 
 export default Features;

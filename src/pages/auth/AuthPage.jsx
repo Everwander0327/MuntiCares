@@ -1,8 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import heroImage from '../../assets/hero.png';
-import { Heart, Mail, Lock, User, UserCheck, Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { IMAGES } from '../../lib/images';
+const heroImage = IMAGES.brand.heroAuth;
+import { Heart, Envelope, LockKey, User, ShieldCheck, Eye, EyeSlash, Stethoscope, ArrowUpRight } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,6 +14,16 @@ import confetti from 'canvas-confetti';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { FormInput, FormCheckbox } from '../../components/ui/form-input';
+
+gsap.registerPlugin(ScrollTrigger, useGSAP);
+
+const FLUID = [0.32, 0.72, 0, 1];
+
+// Phosphor Light wrappers — FormInput renders icons via className sizing
+const EnvelopeLight = (props) => <Envelope weight="light" {...props} />;
+const LockLight = (props) => <LockKey weight="light" {...props} />;
+const UserLight = (props) => <User weight="light" {...props} />;
+const ShieldLight = (props) => <ShieldCheck weight="light" {...props} />;
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -44,7 +58,7 @@ const strengthColors = ['', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-
 const TabButton = ({ active, label, onClick }) => (
   <button
     onClick={onClick}
-    className={`relative px-4 md:px-8 py-1.5 md:py-3 text-sm md:text-lg font-semibold transition-colors ${
+    className={`relative px-4 md:px-8 py-1.5 md:py-3 text-sm md:text-lg font-semibold transition-all duration-700 ease-fluid ${
       active ? 'text-primary' : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'
     }`}
   >
@@ -59,8 +73,24 @@ const TabButton = ({ active, label, onClick }) => (
   </button>
 );
 
+const PasswordToggle = ({ show, onToggle }) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all duration-700 ease-fluid"
+    tabIndex={-1}
+    aria-label={show ? 'Hide password' : 'Show password'}
+  >
+    {show ? <EyeSlash size={20} weight="light" /> : <Eye size={20} weight="light" />}
+  </button>
+);
+
 const AuthPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTarget = searchParams.get('redirect') || location.state?.from?.pathname;
+
   const { user, login, register, setPassword } = useAuth();
   const [mode, setMode] = useState('login');
   const [showPassword, setShowPassword] = useState(false);
@@ -70,7 +100,8 @@ const AuthPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingSetPassword, setPendingSetPassword] = useState(null);
-  const emailRef = useRef(null);
+  const pageRef = useRef(null);
+  const bgRef = useRef(null);
 
   const loginForm = useForm({ resolver: zodResolver(loginSchema) });
   const registerForm = useForm({ resolver: zodResolver(registerSchema) });
@@ -79,17 +110,41 @@ const AuthPage = () => {
 
   useEffect(() => {
     if (user) {
+      if (redirectTarget && (user.role === 'patient' || !redirectTarget.startsWith('/patient') || user.role === 'admin')) {
+        navigate(redirectTarget, { replace: true });
+        return;
+      }
       if (user.role === 'patient') navigate('/patient/dashboard');
       else if (user.role === 'provider') navigate('/provider/dashboard');
       else if (user.role === 'admin') navigate('/admin/dashboard');
       else navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, navigate, redirectTarget]);
 
   useEffect(() => {
-    const timer = setTimeout(() => emailRef.current?.focus(), 400);
+    const timer = setTimeout(() => loginForm.setFocus('email'), 400);
     return () => clearTimeout(timer);
   }, [mode]);
+
+  useGSAP(
+    () => {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const ctx = gsap.context(() => {
+        gsap.fromTo(
+          bgRef.current,
+          { scale: isMobile ? 1.0 : 1.05, opacity: 0.7 },
+          {
+            scale: 1.0,
+            opacity: 1,
+            duration: isMobile ? 0.8 : 1.4,
+            ease: 'power2.out',
+          }
+        );
+      }, pageRef);
+      return () => ctx.revert();
+    },
+    { scope: pageRef }
+  );
 
   const handleLogin = async (data) => {
     setError('');
@@ -159,10 +214,10 @@ const AuthPage = () => {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.5, ease: FLUID }}
         >
           <div className="text-center mb-6">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Set Your Password</h3>
+            <h3 className="font-display text-lg font-semibold text-slate-900 dark:text-slate-100">Set Your Password</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               First-time login for<br />
               <span className="font-semibold text-slate-700 dark:text-slate-300">{pendingSetPassword}</span>
@@ -173,28 +228,19 @@ const AuthPage = () => {
               label="New Password"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              icon={Lock}
+              icon={LockLight}
               className="!py-2.5"
               error={setPasswordForm.formState.errors.password?.message}
-              rightElement={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-slate-400 hover:text-slate-600 transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              }
+              rightElement={<PasswordToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
               {...setPasswordForm.register('password')}
             />
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 p-3 rounded-xl text-xs font-medium text-center">{error}</div>
+              <div className="bg-red-500/10 text-red-500 dark:text-red-300 p-3 rounded-[1.25rem] text-xs font-medium text-center ring-1 ring-red-500/20">{error}</div>
             )}
             <motion.button
               type="submit"
               disabled={loading}
-              className={`btn-primary w-full py-3 text-sm shadow-lg shadow-primary/30 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className={`btn-primary w-full py-3 text-sm ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
               whileHover={!loading ? { scale: 1.02 } : {}}
               whileTap={!loading ? { scale: 0.97 } : {}}
             >
@@ -203,7 +249,7 @@ const AuthPage = () => {
             <button
               type="button"
               onClick={() => { setPendingSetPassword(null); setError(''); }}
-              className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium"
+              className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium transition-all duration-700 ease-fluid"
             >
               Use a different account
             </button>
@@ -219,17 +265,16 @@ const AuthPage = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.5, ease: FLUID }}
           >
             <form className="space-y-2" onSubmit={loginForm.handleSubmit(handleLogin)}>
                   <FormInput
                     label="Email Address"
                     type="email"
                     placeholder="juan.delacruz@example.com"
-                    icon={Mail}
+                    icon={EnvelopeLight}
                     className="!py-2.5"
                     error={loginForm.formState.errors.email?.message}
-                    ref={emailRef}
                     {...loginForm.register('email')}
                   />
 
@@ -237,19 +282,10 @@ const AuthPage = () => {
                     label="Password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    icon={Lock}
+                    icon={LockLight}
                     className="!py-2.5"
                     error={loginForm.formState.errors.password?.message}
-              rightElement={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              }
+              rightElement={<PasswordToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
               {...loginForm.register('password')}
             />
 
@@ -258,14 +294,14 @@ const AuthPage = () => {
               <button
                 type="button"
                 onClick={() => toast.info('Password reset coming soon')}
-                className="text-xs text-red-800 font-semibold hover:text-red-900 transition-colors"
+                className="text-xs text-red-800 font-semibold hover:text-red-900 transition-all duration-700 ease-fluid"
               >
                 Forgot Password?
               </button>
             </div>
 
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 p-3 rounded-xl text-xs font-medium text-center">
+              <div className="bg-red-500/10 text-red-500 dark:text-red-300 p-3 rounded-[1.25rem] text-xs font-medium text-center ring-1 ring-red-500/20">
                   {error}
                 </div>
             )}
@@ -273,7 +309,7 @@ const AuthPage = () => {
             <motion.button
               type="submit"
               disabled={loading}
-            className={`btn-primary w-full py-3 text-sm shadow-lg shadow-primary/30 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            className={`btn-primary w-full py-3 text-sm ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
               whileHover={!loading ? { scale: 1.02 } : {}}
               whileTap={!loading ? { scale: 0.97 } : {}}
             >
@@ -290,25 +326,29 @@ const AuthPage = () => {
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -20 }}
-        transition={{ duration: 0.25 }}
+        transition={{ duration: 0.5, ease: FLUID }}
       >
         <form className="space-y-2" onSubmit={registerForm.handleSubmit(handleRegister)}>
           {/* Role Pills */}
           <div>
             <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 ml-1 block mb-1.5">I am a...</label>
             <div className="flex gap-2">
-              {['patient', 'provider'].map((r) => (
+              {[
+                { value: 'patient', label: 'Patient', icon: <User size={16} weight="light" /> },
+                { value: 'provider', label: 'Provider', icon: <Stethoscope size={16} weight="light" /> },
+              ].map((r) => (
                 <button
-                  key={r}
+                  key={r.value}
                   type="button"
-                  onClick={() => setRole(r)}
-                  className={`flex-1 py-1.5 rounded-xl text-xs font-semibold transition-all border-2 ${
-                    role === r
-                      ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
-                      : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 hover:border-slate-400 dark:hover:border-slate-500'
+                  onClick={() => setRole(r.value)}
+                  className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all duration-700 ease-fluid ring-1 flex items-center justify-center gap-2 active:scale-[0.98] ${
+                    role === r.value
+                      ? 'ring-primary bg-primary text-white shadow-card'
+                      : 'ring-black/10 dark:ring-white/10 text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-800/60 hover:ring-black/20 dark:hover:ring-white/20'
                   }`}
                 >
-                  {r === 'patient' ? '🧑‍⚕️ Patient' : '👨‍⚕️ Provider'}
+                  {r.icon}
+                  {r.label}
                 </button>
               ))}
             </div>
@@ -320,7 +360,7 @@ const AuthPage = () => {
               <FormInput
                 label="Full Name"
                 placeholder="Juan Dela Cruz"
-                icon={User}
+                icon={UserLight}
                 className="!py-2"
                 error={registerForm.formState.errors.fullName?.message}
                 {...registerForm.register('fullName')}
@@ -329,7 +369,7 @@ const AuthPage = () => {
                 label="Email Address"
                 type="email"
                 placeholder="juan@example.com"
-                icon={Mail}
+                icon={EnvelopeLight}
                 className="!py-2"
                 error={registerForm.formState.errors.email?.message}
                 {...registerForm.register('email')}
@@ -340,38 +380,20 @@ const AuthPage = () => {
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                icon={Lock}
+                icon={LockLight}
                 className="!py-2"
                 error={registerForm.formState.errors.password?.message}
-                rightElement={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                }
+                rightElement={<PasswordToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
                 {...registerForm.register('password')}
               />
               <FormInput
                 label="Confirm Password"
                 type={showConfirmPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                icon={UserCheck}
+                icon={ShieldLight}
                 className="!py-2"
                 error={registerForm.formState.errors.confirmPassword?.message}
-                rightElement={
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                    tabIndex={-1}
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                }
+                rightElement={<PasswordToggle show={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />}
                 {...registerForm.register('confirmPassword')}
               />
             </div>
@@ -383,13 +405,13 @@ const AuthPage = () => {
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div
                     key={i}
-                    className={`h-1 flex-1 rounded-full transition-colors ${
+                    className={`h-1 flex-1 rounded-full transition-all duration-700 ease-fluid ${
                       i <= strength ? strengthColors[strength] : 'bg-slate-200 dark:bg-slate-700'
                     }`}
                   />
                 ))}
               </div>
-              <p className={`text-nano font-medium text-right mt-0.5 ${
+              <p className={`text-xs font-medium text-right mt-1 ${
                 strength <= 2 ? 'text-red-400' : strength <= 3 ? 'text-yellow-400' : 'text-green-400'
               }`}>
                 {strengthLabels[strength]}
@@ -398,14 +420,14 @@ const AuthPage = () => {
           )}
 
           <FormCheckbox
-            label="I accept the Terms &amp; Conditions"
+            label="I accept the Terms & Conditions"
             labelClassName="text-slate-900 dark:text-slate-100"
             error={registerForm.formState.errors.terms?.message}
             {...registerForm.register('terms')}
           />
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-300 p-3 rounded-xl text-sm font-medium text-center">
+            <div className="bg-red-500/10 text-red-500 dark:text-red-300 p-3 rounded-[1.25rem] text-sm font-medium text-center ring-1 ring-red-500/20">
               {error}
             </div>
           )}
@@ -413,7 +435,7 @@ const AuthPage = () => {
           <motion.button
             type="submit"
             disabled={loading}
-            className={`btn-primary w-full py-3 text-sm shadow-lg shadow-primary/30 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            className={`btn-primary w-full py-3 text-sm ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
             whileHover={!loading ? { scale: 1.02 } : {}}
             whileTap={!loading ? { scale: 0.97 } : {}}
           >
@@ -425,107 +447,75 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="flex h-screen">
-      {/* Brand Side - hidden on mobile */}
-      <div className="hidden lg:block lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-primary via-blue-600 to-indigo-900">
-        <img
-          src={heroImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-40"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-primary/20 to-transparent" />
-
-        <div className="relative z-10 flex flex-col items-center justify-center text-white px-16 py-20 w-full h-full">
-          <Link to="/" className="inline-flex items-center gap-3 mb-10">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-xl">
-              <Heart className="w-8 h-8 text-white" fill="currentColor" />
-            </div>
-            <span className="text-3xl font-bold tracking-tight">MuntiCares</span>
-          </Link>
-
-          <h2 className="text-4xl font-bold leading-tight mb-4 text-center">Your Health,<br />Our Priority</h2>
-          <p className="text-white/70 text-lg mb-12 text-center max-w-sm">Muntinlupa&apos;s trusted home care platform connecting families with professional caregivers.</p>
-
-          <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 text-center">
-              <p className="text-3xl font-bold">10K+</p>
-              <p className="text-sm text-white/70 mt-1">Patients</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-5 text-center">
-              <p className="text-3xl font-bold">500+</p>
-              <p className="text-sm text-white/70 mt-1">Providers</p>
-            </div>
-          </div>
-
-          <div className="mt-12 bg-white/10 backdrop-blur-sm rounded-2xl p-6 max-w-sm">
-            <p className="text-lg italic leading-relaxed text-white/90">&quot;MuntiCares gave my mother the care she deserves. The caregivers are professional and very compassionate.&quot;</p>
-            <div className="mt-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-lg font-bold">M</div>
-              <div>
-                <p className="font-semibold text-sm">Maria Santos</p>
-                <p className="text-xs text-white/60">Patient&apos;s Daughter</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Form Side */}
-      <div className="w-full lg:w-1/2 relative flex items-center justify-center pt-20 lg:pt-0 p-4 sm:p-6 lg:p-8 bg-slate-50 dark:bg-slate-900 overflow-hidden">
-        {/* Mobile hero background */}
-        <div className="lg:hidden absolute inset-0">
+    <main ref={pageRef} className="relative overflow-x-hidden w-full max-w-full bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white">
+      {/* Theme-aware cinema backdrop */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
+        <div ref={bgRef} className="h-full w-full">
           <img
             src={heroImage}
             alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
+            className="h-full w-full object-cover opacity-45 saturate-110 dark:opacity-60"
+            loading="eager"
           />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/80 via-blue-700/70 to-indigo-900/80" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.08),transparent_50%)]" />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-secondary/60 via-white/55 to-secondary/85 dark:from-slate-950/80 dark:via-slate-950/75 dark:to-slate-950" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(30,111,191,0.08)_78%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(2,6,23,0.6)_78%)]" />
+      </div>
+
+      <div className="relative z-10 mx-auto w-full max-w-md px-4 md:px-6 pt-28 lg:pt-32 pb-16 lg:pb-24">
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <div className="bg-primary p-2 rounded-full shadow-card">
+            <Heart size={18} weight="fill" className="text-white" />
+          </div>
+          <span className="font-display text-lg font-semibold tracking-tight text-slate-900 dark:text-white">MuntiCares</span>
+        </div>
+
+        <div className="text-center mb-8">
+          <h1 className="font-display font-semibold text-slate-900 dark:text-white w-full" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', lineHeight: 1.08, letterSpacing: '-0.02em' }}>
+            Welcome back
+          </h1>
+          <p className="mt-2 text-sm md:text-base text-slate-600 dark:text-white/70">
+            Sign in or create your account to continue.
+          </p>
         </div>
 
         <motion.div
-          className={`relative w-full max-w-md lg:max-w-lg ${shake ? 'animate-shake' : ''}`}
-          initial={{ opacity: 0, y: 20 }}
+          className={`relative w-full transform-gpu ${shake ? 'animate-shake' : ''}`}
+          initial={{ opacity: 0, y: 32 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+          transition={{ duration: 0.6, ease: FLUID }}
         >
-          {/* Mobile brand mini */}
-          <div className="lg:hidden text-center mb-4">
-            <Link to="/" className="inline-flex items-center gap-2 mb-2">
-              <div className="bg-primary p-1.5 rounded-lg shadow-lg shadow-primary/20">
-                <Heart className="text-white w-5 h-5" fill="currentColor" />
-              </div>
-              <span className="text-xl font-bold text-white tracking-tight">MuntiCares</span>
-            </Link>
-            <p className="text-white/60 text-xs">Your Health, Our Priority</p>
-          </div>
+          <div className="bezel">
+            <div className="bezel-inner p-5 md:p-8 shadow-soft">
+              {redirectTarget && !pendingSetPassword && (
+                <div className="mb-4 p-3 rounded-2xl bg-primary/10 dark:bg-primary/20 text-xs font-medium text-primary dark:text-blue-300 ring-1 ring-primary/20 flex items-center gap-2">
+                  <ShieldCheck size={18} weight="fill" className="shrink-0 text-primary dark:text-blue-300" />
+                  <span>Sign in or register to browse verified providers and book home care visits.</span>
+                </div>
+              )}
 
-          {/* Glass Card */}
-          <div
-            className="bg-white/30 md:bg-white/50 dark:bg-slate-900/30 dark:md:bg-slate-900/50 rounded-xl md:rounded-[2.5rem] p-3 md:p-10 border border-white/40 dark:border-slate-700"
-            style={{
-              backdropFilter: 'blur(30px)',
-              WebkitBackdropFilter: 'blur(30px)',
-              boxShadow: '0 8px 32px rgba(30, 111, 191, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.5)',
-            }}
-          >
-            {!pendingSetPassword && (
-              <div className="flex justify-center border-b border-slate-200 dark:border-slate-700 mb-3">
-                <TabButton active={mode === 'login'} label="Login" onClick={() => { setMode('login'); setError(''); }} />
-                <TabButton active={mode === 'register'} label="Register" onClick={() => { setMode('register'); setError(''); }} />
-              </div>
-            )}
+              {!pendingSetPassword && (
+                <div className="flex justify-center ring-1 ring-black/5 dark:ring-white/10 rounded-full mb-4 p-1">
+                  <TabButton active={mode === 'login'} label="Login" onClick={() => { setMode('login'); setError(''); }} />
+                  <TabButton active={mode === 'register'} label="Register" onClick={() => { setMode('register'); setError(''); }} />
+                </div>
+              )}
 
-            <AnimatePresence mode="wait">
-              {formContent(mode === 'login')}
-            </AnimatePresence>
+              <AnimatePresence mode="wait">
+                {formContent(mode === 'login')}
+              </AnimatePresence>
 
+              {!pendingSetPassword && mode === 'login' && (
+                <Link to="/register" className="group mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-primary hover:text-primary-700 transition-all duration-700 ease-fluid">
+                  New here? Create an account
+                  <ArrowUpRight size={16} weight="light" className="transition-transform duration-700 ease-fluid group-hover:translate-x-1 group-hover:-translate-y-[1px]" />
+                </Link>
+              )}
+            </div>
           </div>
         </motion.div>
       </div>
-    </div>
+    </main>
   );
 };
 

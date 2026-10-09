@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, FileText, MessageCircle, Star, CheckCircle2, XCircle, Navigation, Clock, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -81,21 +82,58 @@ const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [panelPos, setPanelPos] = useState({ top: 0, right: 16 });
   const panelRef = useRef(null);
+  const buttonRef = useRef(null);
   const prevNotifsRef = useRef([]);
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Close when clicking outside
+  // Anchor the dropdown to the bell button in viewport coords.
+  // Rendered via portal so glass blur / overflow-hidden ancestors cannot clip it.
+  const updatePanelPos = useCallback(() => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const width = Math.min(384, window.innerWidth - 32);
+    const right = Math.max(16, window.innerWidth - rect.right - (384 - width) / 2 - 160);
+    setPanelPos({
+      top: rect.bottom + 12,
+      right,
+      width,
+    });
+  }, []);
+
   useEffect(() => {
+    if (!isOpen) return;
+    updatePanelPos();
+    window.addEventListener('resize', updatePanelPos);
+    window.addEventListener('scroll', updatePanelPos, true);
+    return () => {
+      window.removeEventListener('resize', updatePanelPos);
+      window.removeEventListener('scroll', updatePanelPos, true);
+    };
+  }, [isOpen, updatePanelPos]);
+
+  // Close when clicking outside or pressing Escape
+  useEffect(() => {
+    if (!isOpen) return;
     const handleClickOutside = (e) => {
-      if (panelRef.current && !panelRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
+      const inButton = buttonRef.current && buttonRef.current.contains(e.target);
+      const inPanel = panelRef.current && panelRef.current.contains(e.target);
+      if (!inButton && !inPanel) setIsOpen(false);
+    };
+    const handleKey = (e) => {
+      if (e.key === 'Escape') setIsOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [isOpen]);
 
   // Generate notifications from request status changes
   const generateNotifications = (requests, role) => {
@@ -402,21 +440,24 @@ const NotificationBell = () => {
   const unreadNotifications = notifications.filter(n => !readIds.includes(n.id));
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       {/* Bell Button */}
-      <button 
+      <button
+        ref={buttonRef}
         onClick={() => {
           setIsOpen(!isOpen);
           if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
           }
         }}
-        className="p-2.5 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors relative"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        className="neu-btn w-11 h-11 text-slate-600 dark:text-slate-300 hover:text-primary transition-all relative rounded-2xl flex items-center justify-center"
       >
-        <Bell className="w-6 h-6" />
+        <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <motion.span 
-            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-3xs font-bold text-white px-1"
+          <motion.span
+            className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-3xs font-extrabold text-white px-1 shadow-sm"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             key={unreadCount}
@@ -426,15 +467,18 @@ const NotificationBell = () => {
         )}
       </button>
 
-      {/* Dropdown Panel */}
-      <AnimatePresence>
+      {/* Dropdown Panel - portaled so header blur / overflow-hidden cannot clip it */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
         {isOpen && (
           <motion.div
-            className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-20 sm:top-full mt-2 w-auto sm:w-96 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-2xl z-50 overflow-hidden"
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            ref={panelRef}
+            className="fixed neu-flat rounded-3xl overflow-hidden"
+            style={{ top: panelPos.top, right: panelPos.right, width: panelPos.width || 384, zIndex: 200 }}
+            initial={{ opacity: 0, y: -10, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: -10, scale: 0.97 }}
+            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
@@ -449,14 +493,19 @@ const NotificationBell = () => {
               )}
             </div>
 
-            {/* Notification List */}
-            <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700/50">
-              {unreadNotifications.length > 0 ? (
-                unreadNotifications.map((notif) => {
+            {/* Notification List - show all, unread first */}
+            <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-50 dark:divide-white/5">
+              {notifications.length > 0 ? (
+                [...notifications].sort((a, b) => {
+                  const aUnread = unreadNotifications.some((n) => n.id === a.id) ? 0 : 1;
+                  const bUnread = unreadNotifications.some((n) => n.id === b.id) ? 0 : 1;
+                  return aUnread - bUnread;
+                }).map((notif) => {
+                  const isUnread = unreadNotifications.some((n) => n.id === notif.id);
                   return (
                     <div
                       key={notif.id}
-                      className="w-full text-left px-5 py-3.5 flex items-start gap-3 transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700/80 bg-blue-50/20 dark:bg-blue-900/10 relative group cursor-pointer"
+                      className={`w-full text-left px-5 py-3.5 flex items-start gap-3 transition-colors relative group cursor-pointer ${isUnread ? 'hover:bg-slate-50 dark:hover:bg-white/5 bg-blue-50/40 dark:bg-blue-500/10' : 'hover:bg-slate-50 dark:hover:bg-white/5 opacity-75'}`}
                       onClick={() => handleNotifClick(notif)}
                     >
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${getNotifBg(notif.type)}`}>
@@ -464,10 +513,10 @@ const NotificationBell = () => {
                       </div>
                       <div className="flex-1 min-w-0 pr-6">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm truncate font-bold text-slate-900 dark:text-slate-100">
+                          <p className={`text-sm truncate ${isUnread ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-600 dark:text-slate-300'}`}>
                             {notif.title}
                           </p>
-                          <span className="w-1.5 h-1.5 bg-primary rounded-full shrink-0" />
+                          {isUnread && <span className="w-1.5 h-1.5 bg-primary rounded-full shrink-0" />}
                         </div>
                         <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{notif.message}</p>
                         <p className="text-2xs text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
@@ -479,7 +528,7 @@ const NotificationBell = () => {
                       {/* X / Dismiss Button on Hover */}
                       <button
                         onClick={(e) => dismissNotification(e, notif.id)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100/80 dark:hover:bg-slate-700/80 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
                         title="Dismiss"
                       >
                         <X className="w-3.5 h-3.5" />
@@ -489,9 +538,9 @@ const NotificationBell = () => {
                 })
               ) : (
                 <div className="p-8 text-center">
-                  <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2 animate-bounce" />
-                  <p className="text-sm text-slate-500 dark:text-slate-400 font-bold">You{'\u2019'}re all caught up!</p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">No unread notifications at the moment.</p>
+                  <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500 font-bold">You{'\u2019'}re all caught up!</p>
+                  <p className="text-xs text-slate-400 mt-1">No notifications at the moment.</p>
                 </div>
               )}
             </div>
@@ -506,7 +555,9 @@ const NotificationBell = () => {
             )}
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 };

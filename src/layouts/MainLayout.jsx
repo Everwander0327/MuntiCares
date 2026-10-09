@@ -8,10 +8,10 @@ const MainLayout = () => {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-full">
       <ScrollProgress />
       <Navbar />
-      <main>
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         <Outlet />
       </main>
       {!isAuthPage && <Footer />}

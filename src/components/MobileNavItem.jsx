@@ -7,10 +7,10 @@ const MobileNavItem = ({ icon, label, to, active, badge, prominent }) => {
     return (
       <Link to={to} className="flex-1 flex justify-center">
         <motion.div
-          whileTap={{ scale: 0.95 }}
-          className="flex flex-col items-center gap-0 -mt-4 transition-all relative select-none"
+          whileTap={{ scale: 0.94 }}
+          className="flex flex-col items-center gap-0.5 -mt-6 transition-all relative select-none"
         >
-          <div className="relative w-14 h-14 rounded-full bg-primary shadow-xl shadow-primary/30 dark:shadow-primary/40 ring-[3px] ring-white dark:ring-slate-800 flex items-center justify-center">
+          <div className="relative w-14 h-14 rounded-full neu-btn-primary flex items-center justify-center shadow-xl ring-[3px] ring-white dark:ring-slate-800">
             {React.cloneElement(icon, {
               className: 'w-7 h-7 text-white'
             })}
@@ -21,14 +21,14 @@ const MobileNavItem = ({ icon, label, to, active, badge, prominent }) => {
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                  className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center text-3xs font-bold text-white px-0.5"
+                  className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center text-3xs font-black text-white px-0.5 shadow-md"
                 >
                   {badge > 9 ? '9+' : badge}
                 </motion.span>
               )}
             </AnimatePresence>
           </div>
-          <span className="text-2xs font-medium text-primary mt-0.5">{label}</span>
+          <span className="text-2xs font-extrabold uppercase tracking-wide text-primary mt-0.5">{label}</span>
         </motion.div>
       </Link>
     );
@@ -37,16 +37,16 @@ const MobileNavItem = ({ icon, label, to, active, badge, prominent }) => {
   return (
     <Link to={to} className="flex-1">
       <motion.div
-        whileTap={{ scale: 0.9 }}
-        className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-all relative select-none ${
-          active
-            ? 'text-primary bg-primary/10'
-            : 'text-black/40 hover:text-black/70 dark:text-slate-400 dark:hover:text-slate-300'
-        }`}
+        whileTap={{ scale: 0.92 }}
+        className="flex flex-col items-center gap-1 py-1 px-1 transition-all relative select-none"
       >
-        <div className="relative">
+        <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+          active
+            ? 'neu-btn-primary text-white scale-105'
+            : 'neu-flat-sm text-slate-500 dark:text-slate-400 hover:text-primary'
+        }`}>
           {React.cloneElement(icon, {
-            className: `w-5 h-5 transition-colors ${active ? 'text-primary' : ''}`
+            className: `w-4 h-4 transition-colors ${active ? 'text-white' : ''}`
           })}
           <AnimatePresence>
             {badge > 0 && (
@@ -55,23 +55,16 @@ const MobileNavItem = ({ icon, label, to, active, badge, prominent }) => {
                 animate={{ scale: 1 }}
                 exit={{ scale: 0 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                 className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center text-3xs font-bold text-white px-0.5"
+                className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-red-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center text-3xs font-extrabold text-white px-0.5 shadow-sm"
               >
                 {badge > 9 ? '9+' : badge}
               </motion.span>
             )}
           </AnimatePresence>
         </div>
-        <span className={`text-2xs font-medium transition-colors ${active ? 'text-primary' : ''}`}>
+        <span className={`text-3xs font-bold transition-colors truncate max-w-[56px] text-center ${active ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
           {label}
         </span>
-        {active && (
-          <motion.div
-            className="h-[3px] w-6 bg-primary rounded-full"
-            layoutId="mobile-indicator"
-            transition={{ type: 'spring', stiffness: 500, damping: 35 }}
-          />
-        )}
       </motion.div>
     </Link>
   );

@@ -12,6 +12,9 @@ const CTASection = lazy(() => import('./landing/CTASection'));
 
 const LandingPage = () => {
   return (
+    <main
+      className="overflow-x-hidden w-full max-w-full"
+    >
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -21,10 +24,11 @@ const LandingPage = () => {
       <Features />
       <Services />
       <HowItWorks />
-      <Suspense fallback={<div className="py-24" />}><Coverage /></Suspense>
-      <Suspense fallback={<div className="py-24" />}><FAQ /></Suspense>
-      <Suspense fallback={<div className="py-24" />}><CTASection /></Suspense>
+      <Suspense fallback={<div className="py-20 md:py-32" aria-hidden="true" />}><Coverage /></Suspense>
+      <Suspense fallback={<div className="py-20 md:py-32" aria-hidden="true" />}><FAQ /></Suspense>
+      <Suspense fallback={<div className="py-20 md:py-32" aria-hidden="true" />}><CTASection /></Suspense>
     </motion.div>
+    </main>
   );
 };
 

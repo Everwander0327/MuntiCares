@@ -102,11 +102,11 @@ const ProviderProfileView = () => {
 
   return (
     <DashboardLayout role="patient">
-      <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
+      <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 overflow-x-hidden w-full max-w-full">
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={() => navigate('/patient/providers')}
-          className="inline-flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 hover:text-primary transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400 hover:text-primary transition-colors bg-white/70 dark:bg-slate-900/70 border border-black/5 dark:border-white/10 rounded-full px-4 py-2 backdrop-blur"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Providers
@@ -116,11 +116,13 @@ const ProviderProfileView = () => {
           {/* Sidebar Card */}
           <div className="lg:col-span-1">
             <motion.div
-              className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
+              className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[2rem] border border-black/5 dark:border-white/10 shadow-softer overflow-hidden grain relative"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="h-28 md:h-32 bg-gradient-to-br from-primary via-blue-500 to-blue-400 relative">
+              <div className="h-28 md:h-32 bg-ink relative overflow-hidden">
+                <div className="absolute inset-0 mesh-ambient opacity-70" />
+                <div className="absolute -right-10 -top-10 w-48 h-48 rounded-full bg-primary/40 blur-[60px]" />
                 <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
               </div>
 

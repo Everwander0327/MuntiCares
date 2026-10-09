@@ -25,7 +25,7 @@ const staggerItem = {
 const ProviderCard = ({ providerName, service, lastAccess, isEnabled, permissions, onToggle, onPermChange, loading, expanded, onToggleExpand }) => {
   return (
     <motion.div
-      className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
+      className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[1.5rem] border border-black/5 dark:border-white/10 shadow-softer hover:shadow-soft hover:-translate-y-0.5 transition-all duration-700 ease-fluid overflow-hidden"
       variants={staggerItem}
     >
       <div className="flex items-center justify-between p-6">
@@ -282,21 +282,27 @@ const PatientConsent = () => {
 
   return (
     <DashboardLayout role="patient">
-      <div className="max-w-4xl space-y-8">
-        <motion.div
-          className="flex items-center gap-4"
+      <div className="max-w-4xl space-y-6 overflow-x-hidden w-full max-w-full">
+        <motion.section
+          className="relative overflow-hidden rounded-[2rem] bg-ink text-white border border-black/5 dark:border-white/10 shadow-soft"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.5 }}
         >
-          <div className="p-3 bg-blue-100 dark:bg-blue-900/40 text-primary rounded-2xl">
-            <ShieldCheck className="w-8 h-8" />
+          <div className="absolute inset-0 mesh-ambient opacity-60" />
+          <div className="absolute -right-20 -top-20 w-[320px] h-[320px] rounded-full bg-emerald-500/20 blur-[90px]" />
+          <div className="absolute inset-0 grain" />
+          <div className="relative flex items-start gap-4 p-7 md:p-10">
+            <div className="p-3 bg-white/10 ring-1 ring-white/15 text-white rounded-2xl shrink-0">
+              <ShieldCheck className="w-7 h-7" />
+            </div>
+            <div className="max-w-5xl w-full">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Trust center</p>
+              <h1 className="font-display font-bold tracking-tight text-3xl md:text-5xl leading-[1.02] mt-2" style={{ textWrap: 'balance' }}>Manage Your Health Data Access</h1>
+              <p className="text-slate-300 mt-2 text-sm md:text-[15px]">Securely control which providers can view your medical information.</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Your Health Data Access</h1>
-            <p className="text-slate-500 dark:text-slate-400">Securely control which providers can view your medical information.</p>
-          </div>
-        </motion.div>
+        </motion.section>
 
         <motion.div
           className="bg-primary/5 border border-primary/10 rounded-3xl p-6 flex gap-4 items-start"

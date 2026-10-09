@@ -4,9 +4,16 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const [dark, setDark] = useState(() => {
-    const stored = localStorage.getItem('mc_theme');
-    if (stored) return stored === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    try {
+      const stored = typeof localStorage !== 'undefined' ? localStorage?.getItem('mc_theme') : null;
+      if (stored) return stored === 'dark';
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+    } catch {
+      // fallback
+    }
+    return false;
   });
 
   useEffect(() => {
@@ -16,7 +23,13 @@ export const ThemeProvider = ({ children }) => {
     } else {
       root.classList.remove('dark');
     }
-    localStorage.setItem('mc_theme', dark ? 'dark' : 'light');
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('mc_theme', dark ? 'dark' : 'light');
+      }
+    } catch {
+      // ignore
+    }
   }, [dark]);
 
   const toggle = useCallback(() => setDark(prev => !prev), []);

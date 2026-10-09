@@ -1,8 +1,9 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = ({ allowedRole }) => {
   const { user, authInitialized } = useAuth();
+  const location = useLocation();
 
   // Wait for auth to initialize to prevent flicker / incorrect redirects
   if (!authInitialized) {
@@ -17,8 +18,9 @@ const ProtectedRoute = ({ allowedRole }) => {
   }
 
   if (!user) {
-    // Not logged in, redirect to login page
-    return <Navigate to="/login" replace />;
+    // Not logged in, redirect to login page preserving destination
+    const target = location.pathname + location.search;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(target)}`} state={{ from: location }} replace />;
   }
 
   // Support allowedRole as string or array

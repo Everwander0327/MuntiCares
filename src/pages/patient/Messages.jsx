@@ -74,12 +74,17 @@ const PatientMessages = () => {
       <IncomingCallOverlay />
       <DashboardLayout role="patient">
         {view === 'list' ? (
-          <div className="max-w-6xl h-[calc(100vh-120px)] md:h-[calc(100vh-80px)] flex flex-col mx-auto">
-            <div className="mb-4">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Messages</h1>
-              <p className="text-slate-500 dark:text-slate-400">Chat with your healthcare providers.</p>
-            </div>
-            <div className="flex-1 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden relative">
+          <div className="max-w-6xl h-[calc(100vh-120px)] md:h-[calc(100vh-80px)] flex flex-col mx-auto overflow-x-hidden w-full max-w-full">
+            <section className="relative overflow-hidden rounded-[2rem] bg-ink text-white border border-black/5 dark:border-white/10 shadow-soft mb-4">
+              <div className="absolute inset-0 mesh-ambient opacity-60" />
+              <div className="absolute inset-0 grain" />
+              <div className="relative p-6 md:p-8">
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Direct line</p>
+                <h1 className="font-display font-bold tracking-tight text-2xl md:text-4xl mt-2">Messages</h1>
+                <p className="text-slate-300 text-sm mt-1">Chat with your healthcare providers.</p>
+              </div>
+            </section>
+            <div className="flex-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[1.75rem] border border-black/5 dark:border-white/10 shadow-softer overflow-hidden relative">
               <AnimatePresence mode="wait">
                 <motion.div
                   key="list"

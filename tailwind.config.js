@@ -9,11 +9,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: "#1E6FBF",
+        primary: {
+          DEFAULT: "#1E6FBF",
+          50: "#EFF6FF",
+          100: "#DBEAFE",
+          200: "#BFDBFE",
+          300: "#93C5FD",
+          400: "#60A5FA",
+          500: "#2E86DE",
+          600: "#1E6FBF",
+          700: "#1A5A9E",
+          800: "#1E4A80",
+          900: "#1E3A5F",
+        },
         secondary: "#F0F7FF",
+        ink: "#0B1526",
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['"Outfit"', '"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Cabinet Grotesk"', '"Clash Display"', '"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       fontSize: {
         '2xs': ['0.625rem', { lineHeight: '0.875rem' }],
@@ -33,6 +47,14 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+      },
+      boxShadow: {
+        soft: "0 24px 80px -24px rgba(30, 111, 191, 0.18)",
+        softer: "0 12px 40px -12px rgba(11, 21, 38, 0.12)",
+        card: "0 8px 32px rgba(30, 111, 191, 0.08)",
+      },
+      transitionTimingFunction: {
+        fluid: "cubic-bezier(0.32, 0.72, 0, 1)",
       },
     },
   },

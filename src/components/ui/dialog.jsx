@@ -1,6 +1,6 @@
 import React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
+import { X } from "@phosphor-icons/react"
 import { cn } from "../../lib/utils"
 
 const Dialog = DialogPrimitive.Root
@@ -27,25 +27,25 @@ const DialogContent = React.forwardRef(({ className, children, hideClose = false
       ref={ref}
       className={cn(
         "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
-        "bg-white dark:bg-slate-800 rounded-[2.5rem] p-8",
-        "border border-slate-100 dark:border-slate-700 shadow-2xl",
-        "max-w-md w-full",
+        "bezel max-w-md w-full",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
         "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-        "duration-200",
+        "duration-700 ease-fluid",
         className
       )}
       {...props}
     >
+      <div className="bezel-inner p-8 shadow-soft">
       {children}
       {!hideClose && (
-        <DialogPrimitive.Close className="absolute right-6 top-6 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
-          <X className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+        <DialogPrimitive.Close className="absolute right-6 top-6 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-700 ease-fluid outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0">
+          <X size={20} weight="light" className="text-slate-400 dark:text-slate-500" />
         </DialogPrimitive.Close>
       )}
+      </div>
     </DialogPrimitive.Content>
   </DialogPortal>
 ))

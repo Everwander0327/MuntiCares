@@ -21,10 +21,10 @@ const staggerItem = {
 };
 
 const RequestCard = ({ id, providerId, patientId, provider, service, date, time, status, price, location, onRateProvider, isRated, onManageRequest, onPreSession, presessionSubmitted }) => (
-  <motion.div 
-    className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 hover:shadow-md transition-all"
+  <motion.div
+    className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-5 md:p-6 rounded-[1.5rem] border border-black/5 dark:border-white/10 shadow-softer hover:shadow-soft hover:-translate-y-1 hover:border-primary/25 transition-all duration-700 ease-fluid overflow-hidden relative"
     variants={staggerItem}
-    whileHover={{ y: -4, transition: { duration: 0.2 } }}
+    whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.32, 0.72, 0, 1] } }}
   >
     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
       <div className="flex items-center gap-4">
@@ -220,31 +220,49 @@ const PatientRequests = () => {
 
   const filteredRequests = requests.filter(r => filter === 'All' || r.status === filter);
 
+  const filters = ['All', 'Accepted', 'Pending', 'Completed', 'Cancelled', 'Rejected'];
+
   return (
     <DashboardLayout role="patient">
-      <div className="space-y-8">
-        <motion.div 
-          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-          initial={{ opacity: 0, y: 20 }}
+      <div className="space-y-6 overflow-x-hidden w-full max-w-full">
+        <section className="relative overflow-hidden rounded-[2rem] bg-ink text-white border border-black/5 dark:border-white/10 shadow-soft">
+          <div className="absolute inset-0 mesh-ambient opacity-60" />
+          <div className="absolute -right-20 -top-20 w-[320px] h-[320px] rounded-full bg-primary/30 blur-[90px]" />
+          <div className="absolute inset-0 grain" />
+          <motion.div
+            className="relative p-7 md:p-10 max-w-5xl w-full"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Continuity of care</p>
+            <h1 className="font-display font-bold tracking-tight text-3xl md:text-5xl leading-[1.02] mt-3 max-w-5xl w-full" style={{ textWrap: 'balance' }}>My Requests</h1>
+            <p className="text-slate-300 mt-2 text-sm md:text-[15px]">Track and manage every service request in one calm timeline.</p>
+          </motion.div>
+        </section>
+
+        <motion.div
+          className="flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">My Requests</h1>
-            <p className="text-slate-500 dark:text-slate-400">Track and manage your service requests</p>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
+            {filters.map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-500 shrink-0 ${filter === f ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'bg-white/80 dark:bg-slate-900/80 border border-black/5 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-primary/30 hover:text-primary'}`}
+              >
+                {f === 'All' ? 'All Status' : f}
+              </button>
+            ))}
           </div>
-          <div className="flex gap-2 w-full md:w-auto">
-            <CustomSelect 
+          <div className="shrink-0 hidden lg:block">
+            <CustomSelect
               value={filter}
               onChange={setFilter}
-              options={[
-                { value: 'All', label: 'All Status' },
-                { value: 'Accepted', label: 'Accepted' },
-                { value: 'Pending', label: 'Pending' },
-                { value: 'Completed', label: 'Completed' },
-                { value: 'Cancelled', label: 'Cancelled' },
-                { value: 'Rejected', label: 'Rejected' },
-              ]}
+              options={filters.map((f) => ({ value: f, label: f === 'All' ? 'All Status' : f }))}
             />
           </div>
         </motion.div>
@@ -252,8 +270,8 @@ const PatientRequests = () => {
         {loading ? (
           <div className="text-center py-20 text-slate-400 dark:text-slate-500">Loading requests...</div>
         ) : (
-          <motion.div 
-            className="space-y-4"
+          <motion.div
+            className="timeline-rail space-y-3 bg-white/40 dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-[1.75rem] p-3 md:p-5 backdrop-blur-sm"
             variants={staggerContainer}
             initial="initial"
             animate="animate"

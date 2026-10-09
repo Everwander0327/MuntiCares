@@ -8,15 +8,25 @@ const CookieConsent = () => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem(STORAGE_KEY);
-    if (!consent) {
-      const timer = setTimeout(() => setVisible(true), 1000);
-      return () => clearTimeout(timer);
+    try {
+      const consent = typeof localStorage !== 'undefined' ? localStorage?.getItem(STORAGE_KEY) : null;
+      if (!consent) {
+        const timer = setTimeout(() => setVisible(true), 1000);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // ignore
     }
   }, []);
 
   const accept = () => {
-    localStorage.setItem(STORAGE_KEY, 'accepted');
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, 'accepted');
+      }
+    } catch {
+      // ignore
+    }
     setVisible(false);
   };
 

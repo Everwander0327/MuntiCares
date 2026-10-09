@@ -1,6 +1,6 @@
 import React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { ChevronDown, Check } from "lucide-react"
+import { CaretDown, Check } from "@phosphor-icons/react"
 import { cn } from "../../lib/utils"
 
 const Select = SelectPrimitive.Root
@@ -12,13 +12,13 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
     ref={ref}
     className={cn(
       "flex w-full min-w-[160px] items-center justify-between whitespace-nowrap",
-      "bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700",
-      "px-4 py-2.5 rounded-xl",
+      "bg-white dark:bg-slate-800 ring-1 ring-black/5 dark:ring-white/10",
+      "px-4 py-2.5 rounded-full",
       "text-sm font-semibold text-slate-700 dark:text-slate-200",
       "hover:bg-slate-50 dark:hover:bg-slate-700",
-      "shadow-sm dark:shadow-slate-900/50",
-      "transition-all",
-      "focus:outline-none focus:ring-2 focus:ring-primary/50",
+      "shadow-card",
+      "transition-all duration-700 ease-fluid",
+      "focus:outline-none focus:ring-0",
       "data-[placeholder]:text-slate-400 dark:data-[placeholder]:text-slate-500",
       className
     )}
@@ -26,7 +26,7 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-300 group-data-[state=open]:rotate-180" />
+      <CaretDown size={16} weight="light" className="text-slate-400 dark:text-slate-500 transition-transform duration-700 ease-fluid group-data-[state=open]:rotate-180" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))
@@ -38,8 +38,8 @@ const SelectContent = React.forwardRef(({ className, children, position = "poppe
       ref={ref}
       className={cn(
         "relative z-50 max-h-96 min-w-[8rem] overflow-hidden",
-        "bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700",
-        "rounded-2xl shadow-xl",
+        "bg-white dark:bg-slate-800 ring-1 ring-black/5 dark:ring-white/10",
+        "rounded-[2rem] shadow-soft p-1.5",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -80,7 +80,7 @@ const SelectItem = React.forwardRef(({ className, children, ...props }, ref) => 
   >
     <span className="absolute left-3 flex h-3.5 w-3.5 items-center justify-center">
       <SelectPrimitive.ItemIndicator>
-        <Check className="w-4 h-4 text-primary" />
+        <Check size={16} weight="light" className="text-primary" />
       </SelectPrimitive.ItemIndicator>
     </span>
     <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
