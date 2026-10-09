@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Clock, MapPin, MessageSquare, Star, XCircle, FileUp } from 'lucide-react';
-import { motion } from 'framer-motion';
-import CustomSelect from '../../components/CustomSelect';
+import { 
+  Clock, MapPin, MessageSquare, Star, XCircle, FileUp, 
+  Search, SlidersHorizontal, Check, Calendar, Activity, 
+  ChevronRight, ChevronLeft, ArrowUpDown, Filter, Sparkles, X, ChevronDown,
+  AlertCircle, CheckCircle2, ShieldAlert
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import usePatientRequests from '../../hooks/usePatientRequests';
 import { supabase } from '../../lib/supabase';
@@ -11,123 +15,196 @@ import ReviewModal from '../../components/ReviewModal';
 import CancelRescheduleModal from '../../components/CancelRescheduleModal';
 import PreSessionUploadModal from '../../components/PreSessionUploadModal';
 import EmptyState from '../../components/EmptyState';
+import { SkeletonPage } from '../../components/Skeleton';
 
 const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.1 } },
-};
-const staggerItem = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  animate: { transition: { staggerChildren: 0.06 } },
 };
 
-const RequestCard = ({ id, providerId, patientId, provider, service, date, time, status, price, location, onRateProvider, isRated, onManageRequest, onPreSession, presessionSubmitted }) => (
-  <motion.div
-    className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-5 md:p-6 rounded-[1.5rem] border border-black/5 dark:border-white/10 shadow-softer hover:shadow-soft hover:-translate-y-1 hover:border-primary/25 transition-all duration-700 ease-fluid overflow-hidden relative"
-    variants={staggerItem}
-    whileHover={{ y: -4, transition: { duration: 0.25, ease: [0.32, 0.72, 0, 1] } }}
-  >
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-primary font-bold text-lg">
-          {provider.split(' ').map(n => n[0]).join('')}
+const staggerItem = {
+  initial: { opacity: 0, y: 15 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+};
+
+const getStatusStyle = (status) => {
+  switch (status) {
+    case 'Accepted':
+    case 'On The Way':
+    case 'Arrived':
+      return {
+        badge: 'neu-flat-sm text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 font-black',
+        icon: Sparkles,
+        dot: 'bg-emerald-500',
+        ping: true,
+      };
+    case 'Completed':
+      return {
+        badge: 'neu-flat-sm text-blue-600 dark:text-blue-400 border border-blue-500/30 bg-blue-500/10 dark:bg-blue-500/15 font-black',
+        icon: CheckCircle2,
+        dot: 'bg-blue-500',
+        ping: false,
+      };
+    case 'Pending':
+      return {
+        badge: 'neu-flat-sm text-amber-600 dark:text-amber-400 border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 font-black',
+        icon: Clock,
+        dot: 'bg-amber-500',
+        ping: false,
+      };
+    case 'Cancelled':
+      return {
+        badge: 'neu-flat-sm text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700 bg-slate-200/50 dark:bg-slate-800/60 font-bold',
+        icon: XCircle,
+        dot: 'bg-slate-400',
+        ping: false,
+      };
+    case 'Rejected':
+    default:
+      return {
+        badge: 'neu-flat-sm text-rose-600 dark:text-rose-400 border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 font-black',
+        icon: AlertCircle,
+        dot: 'bg-rose-500',
+        ping: false,
+      };
+  }
+};
+
+const RequestCard = ({ 
+  id, providerId, patientId, provider, service, date, time, 
+  status, price, location, onRateProvider, isRated, 
+  onManageRequest, onPreSession, presessionSubmitted 
+}) => {
+  const statusTheme = getStatusStyle(status);
+
+  return (
+    <motion.div
+      variants={staggerItem}
+      className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col justify-between select-text"
+    >
+      {/* Upper Content Area */}
+      <div className="p-4 sm:p-6 space-y-3 sm:space-y-3.5">
+        {/* Top Header: Provider Avatar & Info + Status Badge & Mobile Price */}
+        <div className="flex items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+            <div className="relative shrink-0">
+              <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black text-sm sm:text-base overflow-hidden aspect-square">
+                {provider.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-display font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate">
+                {provider}
+              </h3>
+              <p className="text-xs font-semibold text-primary truncate mt-0.5">
+                {service}
+              </p>
+            </div>
+          </div>
+
+          {/* Status Badge & Mobile Price */}
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 sm:gap-3 shrink-0">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-3xs shadow-xs ${statusTheme.badge}`}>
+              {statusTheme.ping ? (
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+              ) : (
+                <statusTheme.icon className="w-3 h-3 shrink-0" />
+              )}
+              <span>{status}</span>
+            </span>
+            <span className="font-display text-sm font-black text-slate-900 dark:text-white tabular-nums sm:hidden">
+              ₱{Number(price || 0).toLocaleString()}
+            </span>
+          </div>
         </div>
-        <div>
-          <h3 className="font-bold text-slate-900 dark:text-slate-100">{provider}</h3>
-          <p className="text-slate-500 dark:text-slate-400 text-sm">{service}</p>
+
+        {/* Middle Meta Details (Clean Flat Style) */}
+        <div className="py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 text-xs bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-slate-600 dark:text-slate-300 font-medium text-2xs sm:text-xs">
+            <span className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span>{date}</span>
+            </span>
+            <span className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="truncate max-w-[130px] sm:max-w-none">{location || 'Muntinlupa City'}</span>
+            </span>
+          </div>
+
+          <div className="hidden sm:block font-display text-sm font-black text-slate-900 dark:text-white tabular-nums">
+            ₱{Number(price || 0).toLocaleString()}
+          </div>
         </div>
       </div>
-      
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
-          <Clock className="w-4 h-4" />
-          <span>{date}</span>
-        </div>
-        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
-          <MapPin className="w-4 h-4" />
-          <span>{location || 'Muntinlupa'}</span>
-        </div>
-        <div className="font-bold text-slate-900 dark:text-slate-100">
-          ₱{price}
-        </div>
-        
-        {/* Chat Shortcut - active visits only */}
+
+      {/* Action Buttons Flush at Bottom */}
+      <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-0 flex flex-wrap items-center justify-end gap-2">
+        {/* Chat Shortcut - Primary for active on-the-way visits */}
         {['Accepted', 'On The Way', 'Arrived'].includes(status) && (
           <Link 
             to={`/patient/messages?provider=${providerId}`}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all"
+            className="neu-btn-primary flex-1 sm:flex-initial justify-center px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer shadow-sm"
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            Chat
+            <span>Chat Provider</span>
           </Link>
         )}
 
-        {/* Pre-Session Upload - only for Accepted visits */}
+        {/* Pre-Session Info */}
         {['Accepted', 'Pending'].includes(status) && (
           <button
+            type="button"
             onClick={() => !presessionSubmitted && onPreSession({ id, providerId, patientId, providerName: provider })}
             disabled={presessionSubmitted}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+            className={`flex-1 sm:flex-initial justify-center px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               presessionSubmitted
-                ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 border-green-200 dark:border-green-900/50 cursor-default'
-                : 'bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-200 border-indigo-200 dark:border-indigo-900/50 hover:scale-105 active:scale-95'
+                ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400 cursor-default opacity-90'
+                : 'neu-btn text-indigo-600 dark:text-indigo-400'
             }`}
           >
-            <FileUp className={`w-3.5 h-3.5 ${presessionSubmitted ? 'text-green-500' : 'text-indigo-500 dark:text-indigo-300'}`} />
-            {presessionSubmitted ? 'Info Sent' : 'Pre-Session Info'}
+            <FileUp className={`w-3.5 h-3.5 ${presessionSubmitted ? 'text-emerald-500' : 'text-indigo-500'}`} />
+            <span>{presessionSubmitted ? 'Info Submitted' : 'Pre-Session Info'}</span>
           </button>
         )}
 
-        {/* Cancel/Reschedule - only for Pending or Accepted */}
+        {/* Manage Request (Cancel/Reschedule) */}
         {['Pending', 'Accepted'].includes(status) && (
           <button
+            type="button"
             onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date, time })}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-bold transition-all hover:scale-105 active:scale-95"
+            className="neu-btn flex-1 sm:flex-initial justify-center px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 cursor-pointer"
           >
             <XCircle className="w-3.5 h-3.5" />
-            Manage
+            <span>Manage</span>
           </button>
         )}
 
-        {/* Rate & Review - completed only */}
+        {/* Rate & Review */}
         {status === 'Completed' && (
           <button 
+            type="button"
             onClick={() => !isRated && onRateProvider({ id, providerId, patientId, providerName: provider })}
             disabled={isRated}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+            className={`w-full sm:w-auto justify-center px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               isRated 
-                ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 border-green-200 dark:border-green-900/50 cursor-default' 
-                : 'bg-yellow-50 dark:bg-yellow-900/30 hover:bg-yellow-100 dark:hover:bg-yellow-900/40 text-yellow-700 dark:text-yellow-200 border-yellow-200 dark:border-yellow-900/50 shadow-sm dark:shadow-slate-900/50 shadow-yellow-100 hover:scale-105 active:scale-95'
+                ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400 cursor-default opacity-90' 
+                : 'neu-btn-primary shadow-sm'
             }`}
           >
-            <Star className={`w-3.5 h-3.5 ${isRated ? 'fill-current text-green-500' : 'fill-current text-yellow-500 animate-pulse'}`} />
-            {isRated ? 'Reviewed' : 'Rate & Review'}
+            <Star className={`w-3.5 h-3.5 ${isRated ? 'fill-current text-emerald-500' : 'fill-current text-amber-300'}`} />
+            <span>{isRated ? 'Reviewed' : 'Rate & Review'}</span>
           </button>
         )}
-
-        {/* Status Badge */}
-        <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold ${
-          ['Accepted', 'On The Way', 'Arrived'].includes(status) ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200' :
-          status === 'Completed' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200' :
-          status === 'Pending' ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-200' :
-          status === 'Cancelled' ? 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400' :
-          'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200'
-        }`}>
-          <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-            ['Accepted', 'On The Way', 'Arrived'].includes(status) ? 'bg-green-500' :
-            status === 'Completed' ? 'bg-green-500' :
-            status === 'Pending' ? 'bg-yellow-500' :
-            status === 'Cancelled' ? 'bg-slate-400' :
-            'bg-red-500'
-          }`} />
-          {status}
-        </span>
       </div>
-    </div>
-  </motion.div>
-);
+    </motion.div>
+  );
+};
 
 const PatientRequests = () => {
   const [filter, setFilter] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReviewReq, setSelectedReviewReq] = useState(null);
@@ -135,8 +212,22 @@ const PatientRequests = () => {
   const [selectedPreSessionReq, setSelectedPreSessionReq] = useState(null);
   const [ratedRequests, setRatedRequests] = useState({});
   const [presessionSubmitted, setPresessionSubmitted] = useState({});
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
+  const filterMenuRef = React.useRef(null);
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (filterMenuRef.current && !filterMenuRef.current.contains(e.target)) {
+        setShowFilterMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const localRated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
@@ -159,53 +250,6 @@ const PatientRequests = () => {
     }
   }, [user]);
 
-  const fetchRequests = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*, provider:provider_id(full_name)')
-        .eq('patient_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch provider locations from providers table
-      const providerIds = (data || []).map(r => r.provider_id);
-      let providerLocations = {};
-
-      if (providerIds.length > 0) {
-        const { data: provData } = await supabase
-          .from('providers')
-          .select('user_id, location')
-          .in('user_id', providerIds);
-        
-        (provData || []).forEach(p => {
-          providerLocations[p.user_id] = p.location;
-        });
-      }
-
-      const formatted = (data || []).map(req => ({
-        id: req.id,
-        providerId: req.provider_id,
-        provider: req.provider?.full_name || 'Unknown',
-        service: req.service,
-        date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        status: req.status,
-        price: req.price || '0',
-        location: providerLocations[req.provider_id] || 'Muntinlupa',
-        originalNotes: req.notes || '',
-      }));
-
-      setRequests(formatted);
-    } catch (err) {
-      console.error('Error fetching requests:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Use the shared hook for fetching and realtime
   const { requests: fetchedRequests, loading: requestsLoading } = usePatientRequests(user?.id || null);
 
@@ -218,99 +262,321 @@ const PatientRequests = () => {
     }
   }, [fetchedRequests, requestsLoading]);
 
-  const filteredRequests = requests.filter(r => filter === 'All' || r.status === filter);
-
   const filters = ['All', 'Accepted', 'Pending', 'Completed', 'Cancelled', 'Rejected'];
+
+  const filteredRequests = useMemo(() => {
+    return requests.filter(r => {
+      const matchesFilter = filter === 'All' || r.status === filter;
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch = !term || 
+        r.provider?.toLowerCase().includes(term) ||
+        r.service?.toLowerCase().includes(term) ||
+        r.location?.toLowerCase().includes(term);
+      return matchesFilter && matchesSearch;
+    });
+  }, [requests, filter, searchTerm]);
+
+  // Reset to first page when filtering or searching
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredRequests.slice(start, start + itemsPerPage);
+  }, [filteredRequests, currentPage, itemsPerPage]);
+
+  // Compute a compact set of visible page numbers (e.g. 1 ... 4 5 6 ... 12)
+  const visiblePages = useMemo(() => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    const pages = [];
+    if (currentPage <= 3) {
+      pages.push(1, 2, 3, '...', totalPages);
+    } else if (currentPage >= totalPages - 2) {
+      pages.push(1, '...', totalPages - 2, totalPages - 1, totalPages);
+    } else {
+      pages.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages);
+    }
+    return pages;
+  }, [totalPages, currentPage]);
+
+  // Quick Counter Stats
+  const stats = useMemo(() => {
+    const pending = requests.filter(r => r.status === 'Pending').length;
+    const active = requests.filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
+    const completed = requests.filter(r => r.status === 'Completed').length;
+    return { pending, active, completed, total: requests.length };
+  }, [requests]);
+
+  if (loading) {
+    return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;
+  }
 
   return (
     <DashboardLayout role="patient">
-      <div className="space-y-6 overflow-x-hidden w-full max-w-full">
-        <section className="relative overflow-hidden rounded-[2rem] bg-ink text-white border border-black/5 dark:border-white/10 shadow-soft">
-          <div className="absolute inset-0 mesh-ambient opacity-60" />
-          <div className="absolute -right-20 -top-20 w-[320px] h-[320px] rounded-full bg-primary/30 blur-[90px]" />
-          <div className="absolute inset-0 grain" />
-          <motion.div
-            className="relative p-7 md:p-10 max-w-5xl w-full"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Continuity of care</p>
-            <h1 className="font-display font-bold tracking-tight text-3xl md:text-5xl leading-[1.02] mt-3 max-w-5xl w-full" style={{ textWrap: 'balance' }}>My Requests</h1>
-            <p className="text-slate-300 mt-2 text-sm md:text-[15px]">Track and manage every service request in one calm timeline.</p>
-          </motion.div>
+      <div className="flex-1 flex flex-col justify-between space-y-4 sm:space-y-6 relative w-full max-w-full">
+        
+        {/* Unified Neumorphic Header Card with Integrated Search & Filter Dropdown */}
+        <section className="neu-flat p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-4 sm:space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div>
+              <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
+                My Service Requests
+              </h1>
+              <p className="text-2xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 max-w-xl">
+                Track, reschedule, and manage all your healthcare appointments in one place.
+              </p>
+            </div>
+
+            {/* Quick Summary Clickable Filter Pills */}
+            <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
+              <button
+                type="button"
+                onClick={() => setFilter(filter === 'Pending' ? 'All' : 'Pending')}
+                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filter === 'Pending'
+                    ? 'neu-pressed text-amber-600 dark:text-amber-400 border border-amber-500/40 bg-amber-500/15'
+                    : 'neu-btn text-amber-600 dark:text-amber-400 hover:text-amber-700'
+                }`}
+                title="Filter Pending requests"
+              >
+                <Clock className="w-3 h-3 text-amber-500 shrink-0" />
+                <span>{stats.pending} Pending</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilter(filter === 'Accepted' ? 'All' : 'Accepted')}
+                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filter === 'Accepted'
+                    ? 'neu-pressed text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 bg-emerald-500/15'
+                    : 'neu-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-700'
+                }`}
+                title="Filter Active / Accepted requests"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span>{stats.active} Active</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilter(filter === 'Completed' ? 'All' : 'Completed')}
+                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  filter === 'Completed'
+                    ? 'neu-pressed text-blue-600 dark:text-blue-400 border border-blue-500/40 bg-blue-500/15'
+                    : 'neu-btn text-blue-600 dark:text-blue-400 hover:text-blue-700'
+                }`}
+                title="Filter Completed requests"
+              >
+                <CheckCircle2 className="w-3 h-3 text-blue-500 shrink-0" />
+                <span>{stats.completed} Completed</span>
+              </button>
+
+              {filter !== 'All' && (
+                <button
+                  type="button"
+                  onClick={() => setFilter('All')}
+                  className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-full text-3xs font-extrabold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                  title="Clear filter and show all"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Show All</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Integrated Search Bar + Side Dropdown Button */}
+          <div className="flex items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
+            {/* Sunken Search Box */}
+            <div className="relative flex-1 min-w-0">
+              <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[44px] sm:h-[52px] border border-slate-200/50 dark:border-white/5">
+                <Search className="w-4 h-4 text-primary ml-1.5 sm:ml-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search provider, service..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Dropdown Filter Button beside searchbox */}
+            <div className="relative shrink-0" ref={filterMenuRef}>
+              <button
+                type="button"
+                onClick={() => setShowFilterMenu(prev => !prev)}
+                className={`neu-btn h-[44px] sm:h-[52px] px-3 sm:px-4 rounded-xl sm:rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer relative outline-none select-none ${
+                  showFilterMenu ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+                }`}
+                title={`Filter by: ${filter === 'All' ? 'All Requests' : filter}`}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                <span className="text-xs font-bold hidden sm:inline">
+                  {filter === 'All' ? 'All Requests' : filter}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                {filter !== 'All' && (
+                  <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
+                )}
+              </button>
+
+              {/* Floating Filter Popup Menu */}
+              <AnimatePresence>
+                {showFilterMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    className="absolute right-0 top-full mt-2 w-52 sm:w-56 neu-flat rounded-2xl p-2 z-50 shadow-2xl border border-white/60 dark:border-white/10"
+                  >
+                    <div className="px-3 py-2 border-b border-slate-200/60 dark:border-white/5 mb-1 flex items-center justify-between">
+                      <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Filter Status</span>
+                      <span className="text-3xs text-primary font-bold">{filter}</span>
+                    </div>
+                    <div className="space-y-1">
+                      {filters.map((f) => {
+                        const active = filter === f;
+                        return (
+                          <button
+                            key={f}
+                            type="button"
+                            onClick={() => {
+                              setFilter(f);
+                              setShowFilterMenu(false);
+                            }}
+                            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                              active
+                                ? 'neu-flat-sm text-primary font-bold shadow-sm'
+                                : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+                            }`}
+                          >
+                            <span>{f === 'All' ? 'All Requests' : f}</span>
+                            {active && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
         </section>
 
+        {/* Request Cards Feed */}
         <motion.div
-          className="flex flex-col lg:flex-row lg:items-center justify-between gap-4"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          className="space-y-3 sm:space-y-4"
+          variants={staggerContainer}
+          initial="initial"
+          animate="animate"
         >
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
-            {filters.map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-4 py-2.5 rounded-full text-xs font-bold whitespace-nowrap transition-all duration-500 shrink-0 ${filter === f ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'bg-white/80 dark:bg-slate-900/80 border border-black/5 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-primary/30 hover:text-primary'}`}
-              >
-                {f === 'All' ? 'All Status' : f}
-              </button>
-            ))}
-          </div>
-          <div className="shrink-0 hidden lg:block">
-            <CustomSelect
-              value={filter}
-              onChange={setFilter}
-              options={filters.map((f) => ({ value: f, label: f === 'All' ? 'All Status' : f }))}
-            />
-          </div>
+          {paginatedRequests.length > 0 ? (
+            paginatedRequests.map((req) => (
+              <RequestCard 
+                key={req.id} 
+                id={req.id}
+                providerId={req.providerId}
+                patientId={user?.id}
+                provider={req.provider}
+                service={req.service}
+                date={req.date}
+                time={req.time}
+                status={req.status}
+                price={req.price}
+                location={req.location}
+                isRated={!!ratedRequests[req.id]}
+                presessionSubmitted={!!presessionSubmitted[req.id]}
+                onRateProvider={setSelectedReviewReq}
+                onManageRequest={setSelectedManageReq}
+                onPreSession={setSelectedPreSessionReq}
+              />
+            ))
+          ) : (
+            <div className="neu-flat p-8 sm:p-12 rounded-2xl sm:rounded-[2.25rem] text-center">
+              <EmptyState
+                icon="inbox"
+                title={requests.length === 0 ? 'No requests yet' : 'No matching requests'}
+                message={requests.length === 0 ? 'Book a consultation with a certified healthcare provider to get started!' : 'Try selecting another status filter or clear your search query.'}
+                action={requests.length === 0 ? { label: 'Find Providers', onClick: () => navigate('/patient/providers') } : undefined}
+              />
+            </div>
+          )}
         </motion.div>
 
-        {loading ? (
-          <div className="text-center py-20 text-slate-400 dark:text-slate-500">Loading requests...</div>
-        ) : (
-          <motion.div
-            className="timeline-rail space-y-3 bg-white/40 dark:bg-white/[0.02] border border-black/5 dark:border-white/5 rounded-[1.75rem] p-3 md:p-5 backdrop-blur-sm"
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-          >
-            {filteredRequests.length > 0 ? (
-              filteredRequests.map((req) => (
-                <RequestCard 
-                  key={req.id} 
-                  id={req.id}
-                  providerId={req.providerId}
-                  patientId={user.id}
-                  provider={req.provider}
-                  service={req.service}
-                  date={req.date}
-                  status={req.status}
-                  price={req.price}
-                  location={req.location}
-                  isRated={!!ratedRequests[req.id]}
-                  presessionSubmitted={!!presessionSubmitted[req.id]}
-                  onRateProvider={setSelectedReviewReq}
-                  onManageRequest={setSelectedManageReq}
-                  onPreSession={setSelectedPreSessionReq}
-                />
-              ))
-            ) : (
-              <motion.div 
-                className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+        {/* Neumorphic Pagination Controls */}
+        {filteredRequests.length > itemsPerPage && (
+          <div className="neu-flat p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto pt-4">
+            <span className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 font-medium text-center sm:text-left">
+              Showing <strong className="text-slate-800 dark:text-slate-200">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredRequests.length)}</strong> requests
+            </span>
+
+            <div className="flex items-center gap-1 sm:gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
-                <EmptyState
-                  icon="inbox"
-                  title={requests.length === 0 ? 'No requests yet' : 'No matching requests'}
-                  message={requests.length === 0 ? 'Find a provider to get started!' : 'No requests found for this filter.'}
-                  action={requests.length === 0 ? { label: 'Browse Providers', onClick: () => navigate('/patient/providers') } : undefined}
-                />
-              </motion.div>
-            )}
-          </motion.div>
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Prev</span>
+              </button>
+
+              <div className="flex items-center gap-1 px-0.5 sm:px-1">
+                {visiblePages.map((pageNum, idx) => {
+                  if (pageNum === '...') {
+                    return (
+                      <span key={`ellipsis-${idx}`} className="w-5 sm:w-6 text-center text-xs text-slate-400 select-none">
+                        …
+                      </span>
+                    );
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                        currentPage === pageNum
+                          ? 'neu-btn-primary shadow-sm text-white'
+                          : 'neu-btn text-slate-600 dark:text-slate-400 hover:text-primary'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              >
+                <span className="hidden xs:inline">Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -329,14 +595,15 @@ const PatientRequests = () => {
         isOpen={!!selectedManageReq}
         onClose={() => setSelectedManageReq(null)}
         request={selectedManageReq}
-        onActionComplete={() => fetchRequests()}
+        onActionComplete={() => {
+          // Trigger hook re-sync if needed
+        }}
       />
 
       {/* Pre-Session Upload Modal */}
       <PreSessionUploadModal
         isOpen={!!selectedPreSessionReq}
         onClose={() => {
-          // Refresh presession state after close
           const presession = JSON.parse(localStorage.getItem('presession_submitted') || '{}');
           setPresessionSubmitted(presession);
           setSelectedPreSessionReq(null);

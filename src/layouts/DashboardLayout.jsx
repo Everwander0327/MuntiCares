@@ -385,13 +385,13 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </div>
         </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-7 pb-28 lg:pb-10 neu-flat lg:rounded-[2.25rem]">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-7 pb-28 lg:pb-10 neu-flat lg:rounded-[2.25rem] flex flex-col">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="w-full max-w-full p-1"
+            className="w-full max-w-full p-1 flex-1 flex flex-col"
           >
             {children}
           </motion.div>

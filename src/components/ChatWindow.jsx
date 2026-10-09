@@ -575,39 +575,47 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       )}
 
       {/* Chat Header */}
-      <div className="px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 flex items-center gap-3 shrink-0 z-10">
+      <div className="px-4 py-3 sm:py-3.5 neu-flat border-b border-white/60 dark:border-white/5 flex items-center gap-3 shrink-0 z-10">
         {onBack && (
           <button
             onClick={onBack}
-            className="w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center transition-colors -ml-1"
+            className="neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer -ml-1 text-slate-600 dark:text-slate-300 hover:text-primary"
+            title="Back to conversations"
           >
-            <ArrowLeft className="w-5 h-5 text-slate-600 dark:text-slate-300" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
         )}
-        <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-primary flex items-center justify-center font-bold overflow-hidden shrink-0 border border-slate-200 dark:border-slate-600">
+        <div className="relative shrink-0">
+          <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden p-0.5 flex items-center justify-center">
             {otherUser.photoUrl ? (
-              <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
+              <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
             ) : (
-              <UserCircle className="w-6 h-6" />
+              <UserCircle className="w-6 h-6 text-primary" />
             )}
           </div>
-          <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white transition-colors duration-300 ${isUserOnline(otherUser.id) ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
+          <div 
+            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#172236] transition-colors duration-300 ${
+              isUserOnline(otherUser.id) ? 'bg-emerald-500' : 'bg-slate-400'
+            }`} 
+            title={isUserOnline(otherUser.id) ? 'Online' : 'Offline'}
+          />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-slate-900 dark:text-slate-100 leading-tight truncate">{otherUser.name}</h3>
-          <p className={`text-xs font-medium transition-colors duration-300 ${isUserOnline(otherUser.id) ? 'text-green-500' : 'text-slate-400 dark:text-slate-500'}`}>
+          <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 leading-tight truncate">
+            {otherUser.name}
+          </h3>
+          <p className={`text-3xs sm:text-xs font-bold transition-colors duration-300 ${
+            isUserOnline(otherUser.id) ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'
+          }`}>
             {isUserOnline(otherUser.id) ? 'Active now' : 'Offline'}
           </p>
         </div>
         <motion.button
           onClick={startVideoCall}
-          className="w-11 h-11 rounded-full bg-blue-50 dark:bg-blue-900/30 text-primary flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-all shrink-0 border border-blue-100 dark:border-blue-900/30"
+          className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-primary flex items-center justify-center hover:text-primary-700 transition-all shrink-0 cursor-pointer"
           title="Start Teleconsultation"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
-          animate={{ scale: [1, 1.04, 1] }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
         >
           <Video className="w-5 h-5 fill-current" />
         </motion.button>
@@ -617,15 +625,16 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-slate-50/50 dark:bg-slate-900/50"
+        className="flex-1 overflow-y-auto bg-slate-50/40 dark:bg-slate-900/40"
       >
         <div className="px-4 md:px-6 py-4">
           {messages.length === 0 ? (
             <div className="text-center text-slate-400 dark:text-slate-500 mt-16">
-              <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700">
-                <span className="text-2xl">👋</span>
+              <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">
+                <span>👋</span>
               </div>
-              <p className="text-sm font-medium">Say hello to start the conversation!</p>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Say hello to start the conversation!</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Feel free to discuss details regarding your appointment.</p>
             </div>
           ) : (
             <>
@@ -641,7 +650,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                   <React.Fragment key={msg.id}>
                     {showDate && (
                       <div className="flex justify-center my-4">
-                        <span className="text-nano font-bold text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-100 dark:border-slate-700 shadow-sm">
+                        <span className="neu-flat-sm text-3xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-400 px-3.5 py-1 rounded-full">
                           {formatDateLabel(msg.created_at)}
                         </span>
                       </div>
@@ -649,30 +658,30 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-0.5'}`}
+                      className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-1'}`}
                     >
                       {!isMe && (
-                        <div className={`w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden shrink-0 mr-2 self-end ${showAvatar ? '' : 'invisible'}`}>
+                        <div className={`neu-flat-sm w-8 h-8 rounded-xl overflow-hidden shrink-0 mr-2.5 self-end p-0.5 ${showAvatar ? '' : 'invisible'}`}>
                           {otherUser.photoUrl ? (
-                            <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
+                            <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-primary font-bold text-xs">
+                            <div className="w-full h-full flex items-center justify-center text-primary font-black text-xs">
                               {otherUser.name?.[0] || '?'}
                             </div>
                           )}
                         </div>
                       )}
-                      <div className={`max-w-[75%] md:max-w-[60%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                      <div className={`max-w-[80%] md:max-w-[65%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                         <div className={`px-4 py-2.5 relative ${
                           isMe
-                            ? 'bg-gradient-to-tr from-primary to-blue-500 text-white rounded-2xl rounded-br-sm'
-                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-2xl rounded-bl-sm shadow-sm dark:shadow-slate-900/50'
+                            ? 'neu-btn-primary rounded-2xl rounded-br-sm shadow-md'
+                            : 'neu-flat rounded-2xl rounded-bl-sm text-slate-800 dark:text-slate-100 font-medium'
                         }`}>
-                          <p className="text-[15px] whitespace-pre-wrap leading-snug">{msg.content}</p>
+                          <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.content}</p>
                         </div>
                         {showTime && (
-                          <div className="flex items-center gap-1 mt-1 px-1">
-                            <span className="text-3xs text-slate-400 dark:text-slate-500 font-medium">
+                          <div className="flex items-center gap-1.5 mt-1 px-1">
+                            <span className="text-3xs text-slate-400 dark:text-slate-500 font-semibold tabular-nums">
                               {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             {isMe && (
@@ -688,8 +697,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
 
               {/* 24-Hour Notice */}
               <div className="flex justify-center my-6">
-                <span className="text-2xs text-slate-400 dark:text-slate-500 font-bold tracking-widest uppercase bg-slate-200/50 dark:bg-slate-700/50 px-3 py-1 rounded-full">
-                  🔒 Messages disappear after 24 hours
+                <span className="neu-flat-sm text-3xs text-slate-400 dark:text-slate-500 font-extrabold tracking-widest uppercase px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
+                  <span>🔒</span> Messages disappear after 24 hours
                 </span>
               </div>
             </>
@@ -704,19 +713,19 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                 exit={{ opacity: 0, scale: 0.8, y: 10 }}
                 className="flex justify-start mt-2"
               >
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden mr-2 shadow-sm shrink-0">
+                <div className="neu-flat-sm w-8 h-8 rounded-xl overflow-hidden mr-2.5 shrink-0 p-0.5">
                   {otherUser.photoUrl ? (
-                    <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover" />
+                    <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-primary font-bold text-xs">
+                    <div className="w-full h-full flex items-center justify-center text-primary font-black text-xs">
                       {otherUser.name?.[0] || '?'}
                     </div>
                   )}
                 </div>
-                <div className="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1">
-                  <motion.div className="w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
-                  <motion.div className="w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
-                  <motion.div className="w-1.5 h-1.5 bg-slate-400 dark:bg-slate-500 rounded-full" animate={{ y: [0, -5, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
+                <div className="neu-flat rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+                  <motion.div className="w-1.5 h-1.5 bg-primary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-primary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-primary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
                 </div>
               </motion.div>
             )}
@@ -731,7 +740,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             onClick={scrollToBottom}
-            className="fixed bottom-20 right-6 w-10 h-10 bg-white dark:bg-slate-800 rounded-full shadow-lg dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700 flex items-center justify-center hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors z-30"
+            className="fixed bottom-20 right-6 neu-btn w-10 h-10 rounded-full flex items-center justify-center z-30 cursor-pointer"
           >
             <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -741,22 +750,22 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       </div>
 
       {/* Input Area */}
-      <div className="p-3 md:p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700 shrink-0">
-        <form onSubmit={handleSend} className="flex gap-2 max-w-4xl mx-auto">
-          <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-full px-4 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary focus-within:bg-white dark:focus-within:bg-slate-800 transition-all">
+      <div className="p-3 sm:p-4 neu-flat border-t border-white/60 dark:border-white/5 shrink-0">
+        <form onSubmit={handleSend} className="flex gap-2.5 max-w-4xl mx-auto items-center">
+          <div className="neu-inset flex-1 flex items-center rounded-2xl px-3.5 sm:px-4 h-[46px] sm:h-[50px] transition-all">
             <input
               type="text"
               value={newMessage}
               onChange={handleTyping}
               placeholder="Type a message..."
-              className="flex-1 bg-transparent py-3 focus:outline-none text-sm font-medium text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
-              style={{ fontSize: '16px' }}
+              className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
             />
           </div>
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="w-11 h-11 bg-primary text-white rounded-full flex items-center justify-center hover:bg-primary/90 transition-all disabled:opacity-50 disabled:scale-95 shrink-0 shadow-lg shadow-primary/20"
+            className="neu-btn-primary w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-2xl flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none shrink-0 cursor-pointer shadow-md"
+            title="Send Message"
           >
             <Send className="w-4 h-4 ml-0.5" />
           </button>

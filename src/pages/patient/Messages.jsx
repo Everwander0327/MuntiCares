@@ -74,17 +74,51 @@ const PatientMessages = () => {
       <IncomingCallOverlay />
       <DashboardLayout role="patient">
         {view === 'list' ? (
-          <div className="max-w-6xl h-[calc(100vh-120px)] md:h-[calc(100vh-80px)] flex flex-col mx-auto overflow-x-hidden w-full max-w-full">
-            <section className="relative overflow-hidden rounded-[2rem] bg-ink text-white border border-black/5 dark:border-white/10 shadow-soft mb-4">
-              <div className="absolute inset-0 mesh-ambient opacity-60" />
-              <div className="absolute inset-0 grain" />
-              <div className="relative p-6 md:p-8">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Direct line</p>
-                <h1 className="font-display font-bold tracking-tight text-2xl md:text-4xl mt-2">Messages</h1>
-                <p className="text-slate-300 text-sm mt-1">Chat with your healthcare providers.</p>
+          <div className="max-w-6xl h-[calc(100vh-130px)] md:h-[calc(100vh-85px)] flex flex-col mx-auto overflow-hidden w-full max-w-full space-y-4">
+            {/* Neumorphic Header Card */}
+            <section className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-[2rem] space-y-4 shrink-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center text-primary">
+                      <MessageCircle className="w-4 h-4" />
+                    </span>
+                    <span className="text-3xs uppercase font-extrabold tracking-wider text-primary">Direct Communication</span>
+                  </div>
+                  <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white mt-1">
+                    Messages
+                  </h1>
+                  <p className="text-2xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
+                    Chat in real-time or start teleconsultations with your healthcare providers.
+                  </p>
+                </div>
+              </div>
+
+              {/* Neumorphic Inset Search Bar */}
+              <div className="neu-inset p-1.5 sm:p-2 rounded-2xl flex items-center gap-2.5 h-[46px] sm:h-[50px]">
+                <Search className="w-4 h-4 text-primary ml-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search provider, conversations..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="neu-btn w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors shrink-0 mr-1"
+                    title="Clear search"
+                  >
+                    <span className="text-xs font-bold leading-none">✕</span>
+                  </button>
+                )}
               </div>
             </section>
-            <div className="flex-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[1.75rem] border border-black/5 dark:border-white/10 shadow-softer overflow-hidden relative">
+
+            {/* Conversation List Card */}
+            <div className="flex-1 neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col relative min-h-0">
               <AnimatePresence mode="wait">
                 <motion.div
                   key="list"
@@ -92,41 +126,27 @@ const PatientMessages = () => {
                   initial="initial"
                   animate="animate"
                   exit="exit"
-                  className="h-full flex flex-col"
+                  className="h-full flex flex-col min-h-0"
                 >
-                  <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 space-y-3">
-                    <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
-                      <MessageCircle className="w-4 h-4 text-primary" />
-                      Conversations
-                    </h3>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-                      <input
-                        type="text"
-                        placeholder="Search conversations..."
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl py-2 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-primary/10"
-                      />
-                    </div>
-                  </div>
                   <ConversationList user={user} onSelect={handleSelect} searchTerm={searchTerm} />
                 </motion.div>
               </AnimatePresence>
             </div>
           </div>
         ) : isDesktop && currentUserData && selectedPartner?.id ? (
-          <ChatWindow
-            currentUser={currentUserData}
-            otherUser={selectedPartner}
-            onBack={handleBack}
-            autoStartVideo={autoStartVideo}
-          />
+          <div className="max-w-6xl h-[calc(100vh-130px)] md:h-[calc(100vh-85px)] neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col mx-auto w-full">
+            <ChatWindow
+              currentUser={currentUserData}
+              otherUser={selectedPartner}
+              onBack={handleBack}
+              autoStartVideo={autoStartVideo}
+            />
+          </div>
         ) : null}
       </DashboardLayout>
 
       {view === 'chat' && !isDesktop && currentUserData && selectedPartner?.id && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-50 bg-[#ebf1f8] dark:bg-[#172236]">
           <ChatWindow
             currentUser={currentUserData}
             otherUser={selectedPartner}

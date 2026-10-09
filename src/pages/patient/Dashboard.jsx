@@ -486,7 +486,7 @@ const PatientDashboard = () => {
                   </h4>
                 </div>
                 <div className="grid grid-cols-3 gap-2.5">
-                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm transition-transform hover:-translate-y-0.5">
+                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm select-text">
                     <div className="neu-flat-sm w-8 h-8 rounded-xl flex items-center justify-center mb-1 text-blue-500 shrink-0">
                       <Clock className="w-4 h-4" />
                     </div>
@@ -498,7 +498,7 @@ const PatientDashboard = () => {
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm transition-transform hover:-translate-y-0.5">
+                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm select-text">
                     <div className="neu-flat-sm w-8 h-8 rounded-xl flex items-center justify-center mb-1 text-emerald-500 shrink-0">
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
@@ -510,7 +510,7 @@ const PatientDashboard = () => {
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm transition-transform hover:-translate-y-0.5">
+                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm select-text">
                     <div className="neu-flat-sm w-8 h-8 rounded-xl flex items-center justify-center mb-1 text-amber-500 shrink-0">
                       <AlertCircle className="w-4 h-4" />
                     </div>
@@ -788,7 +788,7 @@ const PatientDashboard = () => {
               {requests.slice(0, 5).map((req, idx) => (
                 <div
                   key={idx}
-                  className="neu-flat-sm p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-transform hover:scale-[1.01]"
+                  className="neu-flat-sm p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-text"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-primary text-xs font-black shrink-0">

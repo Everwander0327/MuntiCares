@@ -154,8 +154,10 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="flex-1 flex items-center justify-center p-12">
+        <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
       </div>
     );
   }
@@ -163,20 +165,22 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   if (filtered.length === 0) {
     if (searchTerm && conversations.length > 0) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-20">
-          <Search className="w-10 h-10 text-slate-300 dark:text-slate-500 mb-3" />
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No results found</h3>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">No conversations match {'\u201C'}{searchTerm}{'\u201D'}</p>
+        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-16 px-4">
+          <div className="neu-flat-sm w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-slate-400">
+            <Search className="w-8 h-8" />
+          </div>
+          <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">No results found</h3>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 text-center">No conversations match {'\u201C'}{searchTerm}{'\u201D'}</p>
         </div>
       );
     }
     return (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-20">
-          <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 shadow-sm dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-700">
-            <MessageSquareWarning className="w-8 h-8 text-slate-300 dark:text-slate-500" />
-          </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">No conversations yet</h3>
-          <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">
+      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-16 px-4">
+        <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-primary">
+          <MessageSquareWarning className="w-8 h-8" />
+        </div>
+        <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">No conversations yet</h3>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs text-center">
           {user?.role === 'patient'
             ? 'Chat with providers once a request is accepted.'
             : 'Chat with patients once you accept their request.'}
@@ -186,25 +190,35 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700/50">
+    <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 select-none">
       {filtered.map((conv, i) => {
         const preview = getLastMessagePreview(conv.lastMessage, user.id);
+        const hasUnread = conv.unreadCount > 0;
         return (
           <motion.button
             key={conv.id}
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
             onClick={() => onSelect(conv)}
-            className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
+            className={`w-full flex items-center gap-3.5 p-3 sm:p-3.5 rounded-2xl transition-all text-left cursor-pointer ${
+              hasUnread 
+                ? 'neu-convex border border-primary/25' 
+                : 'neu-flat-sm hover:neu-flat'
+            }`}
           >
             <div className="relative shrink-0">
-              <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 overflow-hidden">
-                <img src={conv.photoUrl} alt="" className="w-full h-full object-cover" />
+              <div className="neu-flat-sm w-12 h-12 rounded-2xl overflow-hidden p-0.5 flex items-center justify-center">
+                <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
               </div>
-              <div className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-800 transition-colors ${isUserOnline(conv.id) ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`} />
-              {conv.unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-2xs font-bold text-white px-1">
+              <div 
+                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#172236] transition-colors ${
+                  isUserOnline(conv.id) ? 'bg-emerald-500' : 'bg-slate-400'
+                }`} 
+                title={isUserOnline(conv.id) ? 'Online' : 'Offline'}
+              />
+              {hasUnread && (
+                <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-primary rounded-full border-2 border-white dark:border-[#172236] flex items-center justify-center text-3xs font-black text-white px-1 shadow-md">
                   {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
                 </span>
               )}
@@ -212,22 +226,30 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <p className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">{conv.name}</p>
-                <span className="text-2xs text-slate-400 dark:text-slate-500 shrink-0 font-medium">
+                <p className={`font-extrabold text-sm truncate ${
+                  hasUnread ? 'text-primary' : 'text-slate-800 dark:text-slate-100'
+                }`}>
+                  {conv.name}
+                </p>
+                <span className="text-3xs text-slate-400 dark:text-slate-500 shrink-0 font-bold tabular-nums">
                   {formatRelativeTime(conv.lastMessage?.created_at)}
                 </span>
               </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="flex items-center gap-2 mt-1">
                 {preview.text ? (
-                  <p className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-slate-700 dark:text-slate-200 font-semibold' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {preview.isYou && <span className="text-slate-400 dark:text-slate-500">You: </span>}
+                  <p className={`text-xs truncate ${
+                    hasUnread 
+                      ? 'text-slate-800 dark:text-slate-100 font-bold' 
+                      : 'text-slate-500 dark:text-slate-400 font-medium'
+                  }`}>
+                    {preview.isYou && <span className="text-slate-400 font-normal">You: </span>}
                     {preview.text}
                   </p>
                 ) : (
-                  <p className="text-xs text-slate-400 dark:text-slate-500 italic">No messages yet</p>
+                  <p className="text-xs text-slate-400 italic">No messages yet</p>
                 )}
-                {conv.unreadCount > 0 && (
-                  <span className="w-2 h-2 bg-primary rounded-full shrink-0" />
+                {hasUnread && (
+                  <span className="w-2 h-2 bg-primary rounded-full shrink-0 shadow-sm" />
                 )}
               </div>
             </div>

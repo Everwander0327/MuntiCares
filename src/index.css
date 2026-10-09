@@ -48,13 +48,28 @@ body {
   -webkit-tap-highlight-color: transparent !important;
 }
 
+/* Focus ring & tap highlight resets for interactive controls */
 *:focus,
 *:focus-visible,
-*:focus-within,
-*:active {
+*:focus-within {
   outline: none !important;
-  box-shadow: none !important;
-  -webkit-tap-highlight-color: transparent !important;
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-width: 0px !important;
+}
+
+button:focus,
+button:focus-visible,
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+a:focus,
+a:focus-visible {
+  outline: none !important;
   --tw-ring-color: transparent !important;
   --tw-ring-shadow: 0 0 #0000 !important;
   --tw-ring-offset-shadow: 0 0 #0000 !important;
@@ -75,7 +90,6 @@ a,
 button:focus,
 button:focus-visible,
 button:focus-within,
-button:active,
 input:focus,
 input:focus-visible,
 input:focus-within,
@@ -88,11 +102,9 @@ textarea:focus-within,
 a:focus,
 a:focus-visible,
 a:focus-within,
-a:active,
 [tabindex]:focus,
 [tabindex]:focus-visible {
   outline: none !important;
-  box-shadow: none !important;
   border-color: inherit;
   --tw-ring-color: transparent !important;
   --tw-ring-shadow: 0 0 #0000 !important;
@@ -595,26 +607,42 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible, input:focus-vis
 /* Outer raised / extruded surfaces */
 .neu-flat {
   background: #ebf1f8;
-  box-shadow: 6px 6px 16px rgba(163, 177, 198, 0.45), -6px -6px 16px rgba(255, 255, 255, 0.85);
+  box-shadow: 6px 6px 16px rgba(163, 177, 198, 0.45), -6px -6px 16px rgba(255, 255, 255, 0.85) !important;
   border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.neu-flat:active:not(button):not(a):not([role="button"]):not(.neu-btn):not(.neu-btn-primary) {
+  box-shadow: 6px 6px 16px rgba(163, 177, 198, 0.45), -6px -6px 16px rgba(255, 255, 255, 0.85) !important;
 }
 
 .dark .neu-flat {
   background: #172236;
-  box-shadow: 6px 6px 16px rgba(10, 15, 26, 0.65), -6px -6px 16px rgba(35, 52, 80, 0.4);
+  box-shadow: 6px 6px 16px rgba(10, 15, 26, 0.65), -6px -6px 16px rgba(35, 52, 80, 0.4) !important;
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark .neu-flat:active:not(button):not(a):not([role="button"]):not(.neu-btn):not(.neu-btn-primary) {
+  box-shadow: 6px 6px 16px rgba(10, 15, 26, 0.65), -6px -6px 16px rgba(35, 52, 80, 0.4) !important;
 }
 
 .neu-flat-sm {
   background: #ebf1f8;
-  box-shadow: 3px 3px 8px rgba(163, 177, 198, 0.4), -3px -3px 8px rgba(255, 255, 255, 0.8);
+  box-shadow: 3px 3px 8px rgba(163, 177, 198, 0.4), -3px -3px 8px rgba(255, 255, 255, 0.8) !important;
   border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.neu-flat-sm:active:not(button):not(a):not([role="button"]):not(.neu-btn):not(.neu-btn-primary) {
+  box-shadow: 3px 3px 8px rgba(163, 177, 198, 0.4), -3px -3px 8px rgba(255, 255, 255, 0.8) !important;
 }
 
 .dark .neu-flat-sm {
   background: #172236;
-  box-shadow: 3px 3px 8px rgba(10, 15, 26, 0.6), -3px -3px 8px rgba(35, 52, 80, 0.35);
+  box-shadow: 3px 3px 8px rgba(10, 15, 26, 0.6), -3px -3px 8px rgba(35, 52, 80, 0.35) !important;
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark .neu-flat-sm:active:not(button):not(a):not([role="button"]):not(.neu-btn):not(.neu-btn-primary) {
+  box-shadow: 3px 3px 8px rgba(10, 15, 26, 0.6), -3px -3px 8px rgba(35, 52, 80, 0.35) !important;
 }
 
 .neu-convex {
@@ -667,7 +695,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible, input:focus-vis
 
 .neu-btn:active,
 .neu-btn.active {
-  box-shadow: inset 3px 3px 6px #cad4e2, inset -3px -3px 6px #ffffff;
+  box-shadow: inset 3px 3px 6px #b5c2d4, inset -3px -3px 6px #ffffff !important;
   transform: translateY(1px);
 }
 
@@ -683,7 +711,8 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible, input:focus-vis
 
 .dark .neu-btn:active,
 .dark .neu-btn.active {
-  box-shadow: inset 3px 3px 6px #0d1420, inset -3px -3px 6px #1f2c44;
+  box-shadow: inset 3px 3px 6px #080d16, inset -3px -3px 6px #1a253a !important;
+  transform: translateY(1px);
 }
 
 /* Primary Neumorphic Accent Button */
@@ -702,7 +731,7 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible, input:focus-vis
 }
 
 .neu-btn-primary:active {
-  box-shadow: inset 3px 3px 7px #124578, inset -3px -3px 7px #288cfa;
+  box-shadow: inset 4px 4px 8px #0f3760, inset -3px -3px 7px #2b91ff !important;
   transform: translateY(1px);
 }
 
@@ -717,7 +746,8 @@ button:focus-visible, a:focus-visible, [tabindex]:focus-visible, input:focus-vis
 }
 
 .dark .neu-btn-primary:active {
-  box-shadow: inset 3px 3px 7px #124578, inset -3px -3px 7px #288cfa;
+  box-shadow: inset 4px 4px 8px #0c2c4d, inset -3px -3px 7px #2b91ff !important;
+  transform: translateY(1px);
 }
 
 /* Neumorphic Indicator Dot */

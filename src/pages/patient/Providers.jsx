@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, Star, MapPin, X, Calendar, FileText, CheckCircle2, Shield, ShieldCheck, SlidersHorizontal, Check, Sun, Sunset, Clock, CalendarDays, Sparkles, ChevronDown } from 'lucide-react';
+import { Search, Star, MapPin, X, Calendar, FileText, CheckCircle2, Shield, ShieldCheck, SlidersHorizontal, Check, Sun, Sunset, Clock, CalendarDays, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import CustomSelect from '../../components/CustomSelect';
@@ -43,6 +43,7 @@ const PatientProviders = () => {
   const [viewingProvider, setViewingProvider] = useState(null);
   const [providerReviews, setProviderReviews] = useState([]);
   const [sheetTab, setSheetTab] = useState('overview');
+  const [showAllServices, setShowAllServices] = useState(false);
   const [openServiceMenu, setOpenServiceMenu] = useState(false);
   const [openTimeMenu, setOpenTimeMenu] = useState(false);
   const { register, handleSubmit, formState: { errors }, watch, setValue, getValues, reset } = useForm({
@@ -354,7 +355,7 @@ const PatientProviders = () => {
             {/* Search Input Container - DOMINATES THE WIDTH */}
             <div className="relative flex-1 min-w-0" ref={searchRef}>
               <label htmlFor="provider-search" className="sr-only">Search providers or services</label>
-              <div className="neu-flat-sm p-1.5 sm:p-2.5 rounded-2xl flex items-center gap-2 sm:gap-3 h-[48px] sm:h-[52px]">
+              <div className="neu-inset p-1.5 sm:p-2.5 rounded-2xl flex items-center gap-2 sm:gap-3 h-[48px] sm:h-[52px]">
                 <Search className="w-4 h-4 text-primary ml-2 shrink-0" />
                 <input
                   id="provider-search"
@@ -450,20 +451,20 @@ const PatientProviders = () => {
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, delay: Math.min(idx, 9) * 0.04 }}
-                className="neu-flat p-5 sm:p-6 rounded-[2.25rem] flex flex-col justify-between transition-transform hover:-translate-y-1"
+                className="neu-flat p-5 sm:p-6 rounded-[2.25rem] flex flex-col justify-between select-text"
               >
                 <div>
                   {/* Avatar + Name + Rating */}
                   <div className="flex items-center gap-3.5 mb-4">
                     <div className="relative shrink-0">
-                      <div className="neu-flat-sm w-13 h-13 rounded-2xl flex items-center justify-center text-base font-bold text-primary overflow-hidden p-0.5">
+                      <div className="neu-flat-sm w-16 h-16 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-lg font-bold text-primary overflow-hidden p-0.5 aspect-square">
                         {p.avatar_url ? (
                           <img src={p.avatar_url} alt={`${p.full_name} photo`} className="w-full h-full object-cover rounded-[14px]" loading="lazy" />
                         ) : (
                           p.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()
                         )}
                       </div>
-                      <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-800 ${isUserOnline(p.id) ? 'bg-emerald-500 shadow-sm' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                      <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 ${isUserOnline(p.id) ? 'bg-emerald-500 shadow-sm' : 'bg-slate-300 dark:bg-slate-600'}`} />
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -945,20 +946,20 @@ const PatientProviders = () => {
           <SheetTitle className="sr-only">{viewingProvider?.full_name || 'Provider Profile'}</SheetTitle>
           <SheetDescription className="sr-only">View provider details, trust score, and reviews</SheetDescription>
           {viewingProvider && (
-          <div className="flex flex-col h-full min-h-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-0 md:grid md:grid-cols-[340px_minmax(0,1fr)]">
+          <div className="flex flex-col h-full min-h-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-0 md:grid md:grid-cols-[360px_minmax(0,1fr)]">
             {/* Left Column / Mobile Header */}
-            <div className="flex flex-col shrink-0 md:shrink-0 md:min-h-0 md:overflow-y-auto md:border-r border-slate-200/60 dark:border-white/5">
+            <div className="flex flex-col shrink-0 md:shrink-0 md:min-h-0 md:overflow-y-auto md:border-r border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30">
               {/* Cover Header */}
-              <div className="h-20 sm:h-24 bg-gradient-to-r from-primary to-primary-700 relative overflow-hidden shrink-0">
+              <div className="h-20 sm:h-24 md:h-28 bg-gradient-to-r from-primary via-primary-600 to-primary-700 relative overflow-hidden shrink-0">
                 <div className="absolute inset-0 bg-white/10 dark:bg-black/20" />
                 <div className="mx-auto mt-2.5 h-1.5 w-12 rounded-full bg-white/40 sm:hidden relative z-10" aria-hidden="true" />
               </div>
 
               {/* Identity & Badges */}
-              <div className="px-5 md:px-6 -mt-9 relative z-10 shrink-0">
+              <div className="px-5 md:px-6 -mt-9 md:-mt-11 relative z-10 shrink-0">
                 <div className="flex gap-3.5">
                   <div className="relative shrink-0">
-                    <div className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-2xl neu-flat flex items-center justify-center text-xl font-black text-primary overflow-hidden p-0.5">
+                    <div className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-2xl neu-flat flex items-center justify-center text-xl font-black text-primary overflow-hidden p-0.5 ring-4 ring-white dark:ring-slate-900 shadow-md aspect-square">
                       {viewingProvider.avatar_url ? (
                         <img src={viewingProvider.avatar_url} alt={`${viewingProvider.full_name} photo`} className="w-full h-full object-cover rounded-[14px]" />
                       ) : (
@@ -967,8 +968,8 @@ const PatientProviders = () => {
                     </div>
                     <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 ${isUserOnline(viewingProvider.id) ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                   </div>
-                  <div className="min-w-0 flex-1 pt-9">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="min-w-0 flex-1 pt-9 md:pt-10">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <h2 className="font-display text-lg md:text-xl font-extrabold text-slate-900 dark:text-white leading-tight">
                         {viewingProvider.full_name}
                       </h2>
@@ -1005,14 +1006,44 @@ const PatientProviders = () => {
                 </div>
               </div>
 
-              {/* Desktop-only Sidebar Trust Score */}
-              <div className="hidden md:block px-6 mt-4">
-                <div className="mb-3.5 px-0.5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Trust Score</span>
+              {/* Desktop-only Combined Practitioner Info & Metrics */}
+              <div className="hidden md:block px-6 mt-4 space-y-3.5">
+                {/* About Practitioner Bio */}
+                <div className="neu-flat-sm p-3.5 rounded-2xl">
+                  <p className="text-3xs uppercase font-extrabold tracking-wider text-slate-400 mb-1">About Practitioner</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                    {viewingProvider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa.'}
+                  </p>
+                </div>
+
+                {/* 3 Metric chips: Rating, Services, Status */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="neu-flat-sm p-2.5 rounded-xl text-center">
+                    <p className="text-3xs uppercase font-bold text-slate-400">Rating</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">{(viewingProvider.rating || 0).toFixed(1)} ★</p>
+                  </div>
+                  <div className="neu-flat-sm p-2.5 rounded-xl text-center">
+                    <p className="text-3xs uppercase font-bold text-slate-400">Services</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">{(viewingProvider.services || []).length}</p>
+                  </div>
+                  <div className="neu-flat-sm p-2.5 rounded-xl text-center">
+                    <p className="text-3xs uppercase font-bold text-slate-400">Status</p>
+                    <p className={`text-xs font-black mt-1 capitalize ${isUserOnline(viewingProvider.id) ? 'text-emerald-500' : 'text-slate-400'}`}>
+                      {isUserOnline(viewingProvider.id) ? 'Active' : 'Offline'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Trust Score */}
+                <div className="neu-flat-sm p-3 rounded-2xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <Shield className="w-3.5 h-3.5 text-primary" />
+                      <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Trust Score</span>
+                    </div>
                     <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{viewingProvider.trust_score}/100</span>
                   </div>
-                  <div className="w-full h-1.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-700 ease-out ${
                         viewingProvider.trust_score >= 70 ? 'bg-emerald-500' : viewingProvider.trust_score >= 40 ? 'bg-amber-500' : 'bg-slate-400'
@@ -1024,17 +1055,17 @@ const PatientProviders = () => {
               </div>
 
               {/* Desktop Sticky Booking Action */}
-              <div className="hidden md:block px-6 mt-auto pt-4 pb-6 sticky bottom-0 border-t border-slate-200/60 dark:border-white/5">
+              <div className="hidden md:block px-6 mt-auto pt-4 pb-6 sticky bottom-0 border-t border-slate-200/60 dark:border-white/5 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm">
                 <button
                   onClick={() => {
                     setViewingProvider(null);
                     openBookingModal(viewingProvider);
                   }}
                   disabled={requested.includes(viewingProvider.id)}
-                  className={`w-full py-3.5 rounded-2xl text-xs font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer ${
+                  className={`w-full py-3.5 rounded-2xl text-xs font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                     requested.includes(viewingProvider.id)
                       ? 'neu-btn text-emerald-600 dark:text-emerald-400 cursor-not-allowed'
-                      : 'neu-btn-primary shadow-md'
+                      : 'neu-btn-primary'
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
@@ -1052,10 +1083,10 @@ const PatientProviders = () => {
               </div>
             </div>
 
-            {/* Right Column / Content Tabs */}
+            {/* Right Column / Content */}
             <div className="flex flex-col flex-1 min-h-0 md:h-full">
-              {/* Segmented Neumorphic Tabs */}
-              <div className="px-5 md:px-6 mt-4 shrink-0">
+              {/* Mobile Only Segmented Tabs */}
+              <div className="px-5 md:hidden mt-4 shrink-0">
                 <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-2xl" role="tablist">
                   {[
                     { v: 'overview', label: 'Overview' },
@@ -1080,12 +1111,12 @@ const PatientProviders = () => {
                 </div>
               </div>
 
-              {/* Tab Contents */}
-              <div key={sheetTab} className="flex-1 min-h-0 overflow-y-auto px-5 md:px-6 mt-4 pb-2 space-y-4">
+              {/* Mobile Tab Contents */}
+              <div key={sheetTab} className="md:hidden flex-1 min-h-0 overflow-y-auto px-5 mt-4 pb-2 space-y-4">
                 {sheetTab === 'overview' && (
                   <div className="space-y-4">
                     {/* Mobile Trust Score */}
-                    <div className="md:hidden">
+                    <div>
                       <div className="flex items-center justify-between mb-1.5">
                         <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Trust Score</span>
                         <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{viewingProvider.trust_score}/100</span>
@@ -1195,6 +1226,117 @@ const PatientProviders = () => {
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Desktop Single-Page Seamless Layout */}
+              <div className="hidden md:flex flex-col flex-1 min-h-0 overflow-y-auto px-7 py-6 space-y-6">
+                {/* Section 1: Practice Details & Fee Cards */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Practice & Consultation</h3>
+                    <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">Muntinlupa Health Network</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="neu-flat-sm p-4 rounded-2xl">
+                      <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Consultation Fee</p>
+                      <p className="text-lg font-black text-primary mt-1">₱{Number(viewingProvider.price_per_service).toLocaleString()}</p>
+                      <p className="text-3xs text-slate-400 mt-1">Standard per-session visit rate</p>
+                    </div>
+                    <div className="neu-flat-sm p-4 rounded-2xl">
+                      <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Practice Schedule</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1.5">Mon – Sat • 9:00 AM – 5:00 PM</p>
+                      <p className="text-3xs text-slate-400 mt-1">Walk-ins & scheduled appointments</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section 2: Services Offered (Collapsible) */}
+                <div className="space-y-3 pt-2 border-t border-slate-200/60 dark:border-white/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                        Offered Services ({(viewingProvider.services || []).length})
+                      </h3>
+                      <p className="text-3xs text-slate-400">Click any service to book directly</p>
+                    </div>
+                    {(viewingProvider.services || []).length > 4 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllServices(!showAllServices)}
+                        className="neu-btn px-3 py-1.5 rounded-xl text-3xs font-extrabold text-primary flex items-center gap-1 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                      >
+                        {showAllServices ? (
+                          <>Show Less <ChevronUp className="w-3 h-3" /></>
+                        ) : (
+                          <>Show All ({(viewingProvider.services || []).length}) <ChevronDown className="w-3 h-3" /></>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {((viewingProvider.services || []).slice(0, showAllServices ? undefined : 4)).map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setViewingProvider(null);
+                          openBookingModal(viewingProvider, s);
+                        }}
+                        className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">{s}</p>
+                          <p className="text-3xs text-slate-400">Available for booking</p>
+                        </div>
+                        <span className="text-xs font-black text-primary shrink-0">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
+                      </button>
+                    ))}
+                    {(!viewingProvider.services || viewingProvider.services.length === 0) && (
+                      <p className="text-xs text-slate-400 italic py-2 col-span-2">General medical consultation only.</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section 3: Patient Ratings & Reviews */}
+                <div className="space-y-3 pt-2 border-t border-slate-200/60 dark:border-white/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Patient Reviews</h3>
+                      <p className="text-3xs text-slate-400">Feedback from verified appointments</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center text-amber-500">
+                        <Star className="w-4 h-4 fill-current" />
+                      </div>
+                      <span className="font-display text-base font-extrabold text-slate-900 dark:text-white">
+                        {(viewingProvider.rating || 0).toFixed(1)}
+                      </span>
+                      <span className="text-3xs text-slate-400">({providerReviews.length})</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {providerReviews.length > 0 ? (
+                      providerReviews.slice(0, 4).map((rev, i) => (
+                        <div key={i} className="neu-inset p-3.5 rounded-2xl border border-slate-200/50 dark:border-white/5">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{rev.patient?.full_name || 'Verified Patient'}</span>
+                            <div className="flex text-amber-500">
+                              {[...Array(rev.rating || 5)].map((_, idx) => (
+                                <Star key={idx} className="w-3 h-3 fill-current" />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-slate-300">“{rev.review_text || 'Very accommodating and professional healthcare care!'}”</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="neu-inset p-5 rounded-2xl text-center border border-slate-200/50 dark:border-white/5">
+                        <p className="text-xs text-slate-400">No written reviews yet for this healthcare provider.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Mobile Sticky Booking Action Button */}
