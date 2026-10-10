@@ -67,27 +67,25 @@ const HowItWorks = () => (
               key={idx}
               variants={staggerItem}
               whileTap={{ scale: 0.98 }}
-              className={`col-span-1 ${step.span} ${step.offset} transition-transform duration-700 ease-fluid hover:-translate-y-1`}
+              className={`col-span-1 ${step.span} ${step.offset} transition-transform duration-300 hover:-translate-y-1`}
             >
-              <div className="bezel h-full">
-                <div className="bezel-inner p-6 md:p-8 h-full shadow-card relative flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-5">
-                      <div className="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-lg shadow-card ring-4 ring-white dark:ring-slate-800">
-                        {step.number}
-                      </div>
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-primary/10 text-primary dark:bg-primary/20 dark:text-blue-300">
-                        {step.tag}
-                      </span>
+              <div className="neu-flat rounded-2xl md:rounded-[2.25rem] p-6 md:p-8 h-full relative flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="neu-btn-primary w-12 h-12 rounded-2xl flex items-center justify-center font-display font-black text-lg shadow-md text-white">
+                      {step.number}
                     </div>
-                    <h3 className="font-display text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">{step.title}</h3>
-                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">{step.description}</p>
+                    <span className="neu-flat-sm text-[10px] uppercase font-black tracking-wider px-3 py-1 rounded-full text-primary dark:text-blue-300">
+                      {step.tag}
+                    </span>
                   </div>
+                  <h3 className="font-display text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">{step.title}</h3>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">{step.description}</p>
+                </div>
 
-                  <div className="pt-4 border-t border-slate-100 dark:border-white/5 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                    <CheckCircle size={15} weight="fill" className="text-emerald-500 shrink-0" />
-                    <span>{step.detail}</span>
-                  </div>
+                <div className="pt-4 border-t border-slate-200/50 dark:border-white/5 flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  <CheckCircle size={16} weight="fill" className="text-emerald-500 shrink-0" />
+                  <span>{step.detail}</span>
                 </div>
               </div>
             </motion.div>

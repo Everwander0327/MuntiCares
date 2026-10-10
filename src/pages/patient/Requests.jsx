@@ -18,12 +18,12 @@ import EmptyState from '../../components/EmptyState';
 import { SkeletonPage } from '../../components/Skeleton';
 
 const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.06 } },
+  animate: { transition: { staggerChildren: 0.04 } },
 };
 
 const staggerItem = {
-  initial: { opacity: 0, y: 15 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } },
 };
 
 const getStatusStyle = (status) => {
@@ -79,7 +79,7 @@ const RequestCard = ({
   return (
     <motion.div
       variants={staggerItem}
-      className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col justify-between select-text"
+      className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col justify-between select-text transform-gpu will-change-transform"
     >
       {/* Upper Content Area */}
       <div className="p-4 sm:p-6 space-y-3 sm:space-y-3.5">
@@ -280,6 +280,17 @@ const PatientRequests = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [filter, searchTerm]);
+
+  // Smoothly scroll back to top of main container when changing pagination pages
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    const mainEl = document.querySelector('main');
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
   const paginatedRequests = useMemo(() => {
@@ -532,7 +543,7 @@ const PatientRequests = () => {
             <div className="flex items-center gap-1 sm:gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
               <button
                 type="button"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
                 className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
@@ -553,7 +564,7 @@ const PatientRequests = () => {
                     <button
                       key={pageNum}
                       type="button"
-                      onClick={() => setCurrentPage(pageNum)}
+                      onClick={() => handlePageChange(pageNum)}
                       className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
                         currentPage === pageNum
                           ? 'neu-btn-primary shadow-sm text-white'
@@ -568,7 +579,7 @@ const PatientRequests = () => {
 
               <button
                 type="button"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
                 className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >

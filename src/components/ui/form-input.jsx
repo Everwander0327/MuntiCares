@@ -3,29 +3,33 @@ import { cn } from '../../lib/utils';
 
 const FormInput = React.forwardRef(({ label, error, icon: Icon, rightElement, className, ...props }, ref) => {
   return (
-    <div className="space-y-2">
-      {label && <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">{label}</label>}
-      <div className="relative">
-        {Icon && <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />}
+    <div className="space-y-1 sm:space-y-1.5">
+      {label && <label className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">{label}</label>}
+      <div className="relative flex items-center">
+        {Icon && (
+          <div className="absolute left-3.5 sm:left-4 z-10 pointer-events-none flex items-center justify-center text-slate-400 dark:text-slate-500">
+            <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500" />
+          </div>
+        )}
         <input
           ref={ref}
           className={cn(
-            "w-full bg-white/80 dark:bg-slate-800/80 ring-1 rounded-[1.25rem] py-4",
-            Icon ? "pl-12" : "px-4",
-            rightElement ? "pr-12" : "pr-4",
-            "focus:outline-none focus:ring-0 transition-all duration-700 ease-fluid",
-            error ? "ring-red-300 dark:ring-red-500" : "ring-black/5 dark:ring-white/10",
+            "w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3",
+            Icon ? "!pl-10 sm:!pl-12" : "px-3.5 sm:px-4",
+            rightElement ? "!pr-10 sm:!pr-12" : "pr-3.5 sm:pr-4",
+            "focus:outline-none text-xs sm:text-sm font-semibold transition-all duration-300",
+            error ? "ring-1 ring-red-400 dark:ring-red-500" : "",
             className
           )}
           {...props}
         />
         {rightElement && (
-          <div className="absolute inset-y-0 right-4 flex items-center">
+          <div className="absolute inset-y-0 right-3.5 sm:right-4 z-10 flex items-center">
             {rightElement}
           </div>
         )}
       </div>
-      {error && <p className="text-xs text-red-500 dark:text-red-400 mt-1 ml-1">{error}</p>}
+      {error && <p className="text-[11px] sm:text-xs text-red-500 dark:text-red-400 mt-0.5 ml-1">{error}</p>}
     </div>
   );
 });
@@ -38,9 +42,9 @@ const FormTextarea = React.forwardRef(({ label, error, className, ...props }, re
     <textarea
       ref={ref}
       className={cn(
-        "w-full bg-white/80 dark:bg-slate-800/80 ring-1 rounded-[1.25rem] p-4",
-        "focus:outline-none focus:ring-0 transition-all duration-700 ease-fluid resize-none",
-        error ? "ring-red-300 dark:ring-red-500" : "ring-black/5 dark:ring-white/10",
+        "w-full neu-inset text-slate-800 dark:text-slate-100 rounded-2xl p-4",
+        "focus:outline-none text-xs sm:text-sm font-semibold transition-all duration-300 resize-none",
+        error ? "ring-1 ring-red-400 dark:ring-red-500" : "",
         className
       )}
       {...props}

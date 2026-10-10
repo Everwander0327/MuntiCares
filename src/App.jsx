@@ -7,6 +7,7 @@ import { useTheme } from './contexts/ThemeContext';
 
 // Layouts
 import MainLayout from './layouts/MainLayout';
+import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import AnimatedPage from './components/AnimatedPage';
@@ -66,37 +67,43 @@ function AppContent() {
           <Route path="register" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
         </Route>
 
-        {/* Dashboard Routes with Sidebar (lazy loaded) */}
+        {/* Dashboard Routes with Persistent Shell (Top Bar & Bottom Nav stay mounted) */}
         <Route path="/patient" element={<ProtectedRoute allowedRole="patient" />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientDashboard /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="providers" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientProviders /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="providers/:id/profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderProfileView /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientMessages /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="consent" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientConsent /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route element={<DashboardLayout role="patient" />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientDashboard /></Suspense></ErrorBoundary>} />
+            <Route path="providers" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientProviders /></Suspense></ErrorBoundary>} />
+            <Route path="providers/:id/profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderProfileView /></Suspense></ErrorBoundary>} />
+            <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientRequests /></Suspense></ErrorBoundary>} />
+            <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientMessages /></Suspense></ErrorBoundary>} />
+            <Route path="consent" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientConsent /></Suspense></ErrorBoundary>} />
+            <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientProfile /></Suspense></ErrorBoundary>} />
+          </Route>
         </Route>
 
         <Route path="/provider" element={<ProtectedRoute allowedRole="provider" />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderDashboard /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="patients" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderPatients /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="patients/:id/profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><PatientProfileView /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="schedule" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderSchedule /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderMessages /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><ProviderProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route element={<DashboardLayout role="provider" />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderDashboard /></Suspense></ErrorBoundary>} />
+            <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderRequests /></Suspense></ErrorBoundary>} />
+            <Route path="patients" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderPatients /></Suspense></ErrorBoundary>} />
+            <Route path="patients/:id/profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientProfileView /></Suspense></ErrorBoundary>} />
+            <Route path="schedule" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderSchedule /></Suspense></ErrorBoundary>} />
+            <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderMessages /></Suspense></ErrorBoundary>} />
+            <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderProfile /></Suspense></ErrorBoundary>} />
+          </Route>
         </Route>
 
         <Route path="/admin" element={<ProtectedRoute allowedRole="admin" />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminDashboard /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="patients" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminPatients /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="providers" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminProviders /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminRequests /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminProfile /></AnimatedPage></Suspense></ErrorBoundary>} />
-          <Route path="announcements" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AnimatedPage><AdminAnnouncements /></AnimatedPage></Suspense></ErrorBoundary>} />
+          <Route element={<DashboardLayout role="admin" />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminDashboard /></Suspense></ErrorBoundary>} />
+            <Route path="patients" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminPatients /></Suspense></ErrorBoundary>} />
+            <Route path="providers" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminProviders /></Suspense></ErrorBoundary>} />
+            <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminRequests /></Suspense></ErrorBoundary>} />
+            <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminProfile /></Suspense></ErrorBoundary>} />
+            <Route path="announcements" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminAnnouncements /></Suspense></ErrorBoundary>} />
+          </Route>
         </Route>
       </Routes>
     </AnimatePresence>

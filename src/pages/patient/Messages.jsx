@@ -57,6 +57,17 @@ const PatientMessages = () => {
     }
   }, [location.search, currentUserData, location.pathname]);
 
+  useEffect(() => {
+    if (view === 'chat') {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [view]);
+
   const handleSelect = (partner) => {
     setSelectedPartner(partner);
     setView('chat');
@@ -74,9 +85,9 @@ const PatientMessages = () => {
       <IncomingCallOverlay />
       <DashboardLayout role="patient">
         {view === 'list' ? (
-          <div className="max-w-6xl h-[calc(100vh-130px)] md:h-[calc(100vh-85px)] flex flex-col mx-auto overflow-hidden w-full max-w-full space-y-4">
+          <div className="flex-1 flex flex-col space-y-4 sm:space-y-6 relative w-full max-w-full">
             {/* Neumorphic Header Card */}
-            <section className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-[2rem] space-y-4 shrink-0">
+            <section className="neu-flat p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-4 sm:space-y-5">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
@@ -88,14 +99,14 @@ const PatientMessages = () => {
                   <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white mt-1">
                     Messages
                   </h1>
-                  <p className="text-2xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 max-w-xl">
+                  <p className="text-2xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 max-w-xl">
                     Chat in real-time or start teleconsultations with your healthcare providers.
                   </p>
                 </div>
               </div>
 
               {/* Neumorphic Inset Search Bar */}
-              <div className="neu-inset p-1.5 sm:p-2 rounded-2xl flex items-center gap-2.5 h-[46px] sm:h-[50px]">
+              <div className="neu-inset p-1.5 sm:p-2 rounded-2xl flex items-center gap-2.5 h-[48px] sm:h-[52px]">
                 <Search className="w-4 h-4 text-primary ml-2 shrink-0" />
                 <input
                   type="text"
@@ -108,7 +119,7 @@ const PatientMessages = () => {
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="neu-btn w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors shrink-0 mr-1"
+                    className="neu-btn w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors shrink-0 mr-1 cursor-pointer"
                     title="Clear search"
                   >
                     <span className="text-xs font-bold leading-none">✕</span>
@@ -117,44 +128,33 @@ const PatientMessages = () => {
               </div>
             </section>
 
-            {/* Conversation List Card */}
-            <div className="flex-1 neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col relative min-h-0">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key="list"
-                  variants={slideVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  className="h-full flex flex-col min-h-0"
-                >
-                  <ConversationList user={user} onSelect={handleSelect} searchTerm={searchTerm} />
-                </motion.div>
-              </AnimatePresence>
+            {/* Conversation Feed */}
+            <div className="flex-1 min-h-0">
+              <ConversationList user={user} onSelect={handleSelect} searchTerm={searchTerm} />
             </div>
           </div>
-        ) : isDesktop && currentUserData && selectedPartner?.id ? (
-          <div className="max-w-6xl h-[calc(100vh-130px)] md:h-[calc(100vh-85px)] neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl flex flex-col mx-auto w-full">
+        ) : null}
+      </DashboardLayout>
+
+      {/* Full-Screen Immersive Chat Window (Covers Side and Top Panels on Desktop & Mobile) */}
+      <AnimatePresence>
+        {view === 'chat' && currentUserData && selectedPartner?.id && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 z-[60] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col"
+          >
             <ChatWindow
               currentUser={currentUserData}
               otherUser={selectedPartner}
               onBack={handleBack}
               autoStartVideo={autoStartVideo}
             />
-          </div>
-        ) : null}
-      </DashboardLayout>
-
-      {view === 'chat' && !isDesktop && currentUserData && selectedPartner?.id && (
-        <div className="fixed inset-0 z-50 bg-[#ebf1f8] dark:bg-[#172236]">
-          <ChatWindow
-            currentUser={currentUserData}
-            otherUser={selectedPartner}
-            onBack={handleBack}
-            autoStartVideo={autoStartVideo}
-          />
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </CallProvider>
   );
 };

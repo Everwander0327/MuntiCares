@@ -32,30 +32,30 @@ const features = [
 const FeatureCard = ({ feature }) => (
   <motion.div
     variants={staggerItem}
-    className="group h-full transition-transform duration-700 ease-fluid hover:-translate-y-1 active:scale-[0.98]"
+    className="group h-full transition-transform duration-300 hover:-translate-y-1 active:scale-[0.98]"
     whileTap={{ scale: 0.98 }}
   >
-    <div className="bezel h-full">
-      <div className="bezel-inner h-full shadow-card overflow-hidden">
-        {feature.image && (
-          <div className="relative h-52 md:h-60 overflow-hidden">
-            <img
-              src={feature.image}
-              alt={feature.title}
-              loading="lazy"
-              className="h-full w-full object-cover object-center opacity-100 contrast-105 saturate-110 transition-transform duration-700 ease-out group-hover:scale-105"
-            />
-            <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-white via-white/20 to-transparent dark:from-slate-800 dark:via-slate-800/20 dark:to-transparent" />
-          </div>
-        )}
-        <div className="p-6 md:p-8">
-        <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-4 ring-1 ring-primary/20 group-hover:bg-primary transition-all duration-700 ease-fluid [&_svg]:group-hover:text-white">
-          <div className="card-icon-animate">
-            {feature.icon}
-          </div>
+    <div className="neu-flat h-full rounded-2xl md:rounded-[2.25rem] overflow-hidden flex flex-col justify-between">
+      {feature.image && (
+        <div className="relative h-52 md:h-60 overflow-hidden">
+          <img
+            src={feature.image}
+            alt={feature.title}
+            loading="lazy"
+            className="h-full w-full object-cover object-center opacity-100 contrast-105 saturate-110 transition-transform duration-500 ease-out group-hover:scale-105"
+          />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#ebf1f8] via-[#ebf1f8]/30 to-transparent dark:from-[#172236] dark:via-[#172236]/30 dark:to-transparent" />
         </div>
-        <h3 className="font-display text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">{feature.title}</h3>
-        <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm">{feature.description}</p>
+      )}
+      <div className="p-6 md:p-8 flex-1 flex flex-col justify-between">
+        <div>
+          <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-primary group-hover:scale-105 transition-transform duration-300">
+            <div className="card-icon-animate">
+              {feature.icon}
+            </div>
+          </div>
+          <h3 className="font-display text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">{feature.title}</h3>
+          <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-sm">{feature.description}</p>
         </div>
       </div>
     </div>

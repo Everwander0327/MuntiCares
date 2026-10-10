@@ -1,10 +1,35 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { ShieldCheck, Info, Calendar, ChevronDown, ChevronUp, History, Eye, Check, X, Clock } from 'lucide-react';
+import { 
+  ShieldCheck, Info, Calendar, ChevronDown, ChevronUp, 
+  History, Eye, Check, X, Clock, Lock, FileText, Activity,
+  Search, ShieldAlert, Sparkles, RefreshCw
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import toast from 'react-hot-toast';
+
+const PERMISSION_CONFIG = [
+  {
+    key: 'medical_history',
+    label: 'Medical History',
+    desc: 'Diagnoses, allergies, blood type, and conditions',
+    icon: Activity,
+  },
+  {
+    key: 'documents',
+    label: 'Clinical Documents',
+    desc: 'Uploaded test results, lab clearances, and imaging',
+    icon: FileText,
+  },
+  {
+    key: 'visit_notes',
+    label: 'Visit & Session Notes',
+    desc: 'Past consultation logs and provider encounter notes',
+    icon: Clock,
+  },
+];
 
 const PERMISSION_LABELS = {
   medical_history: 'Medical History',
@@ -15,101 +40,118 @@ const PERMISSION_LABELS = {
 const DEFAULT_PERMS = { medical_history: true, documents: true, visit_notes: true };
 
 const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.08 } },
-};
-const staggerItem = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  animate: { transition: { staggerChildren: 0.05 } },
 };
 
-const ProviderCard = ({ providerName, service, lastAccess, isEnabled, permissions, onToggle, onPermChange, loading, expanded, onToggleExpand }) => {
+const staggerItem = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.16, 1, 0.3, 1] } },
+};
+
+/* Neumorphic Provider Access Card */
+const ProviderCard = ({ 
+  providerName, 
+  service, 
+  lastAccess, 
+  isEnabled, 
+  permissions, 
+  onToggle, 
+  onPermChange, 
+  loading, 
+  onOpenPermissions 
+}) => {
+  const activeCount = useMemo(() => {
+    return Object.values(permissions || {}).filter(Boolean).length;
+  }, [permissions]);
+
   return (
-    <motion.div
-      className="group bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-[1.5rem] border border-black/5 dark:border-white/10 shadow-softer hover:shadow-soft hover:-translate-y-0.5 transition-all duration-700 ease-fluid overflow-hidden"
-      variants={staggerItem}
-    >
-      <div className="flex items-center justify-between p-6">
-        <div className="flex items-center gap-4 min-w-0 flex-1">
-          <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900 flex items-center justify-center text-lg font-bold text-slate-400 dark:text-slate-500 shrink-0">
-            {providerName.split(' ').map(n => n[0]).join('')}
+    <div className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden select-text">
+      {/* Header Row */}
+      <div className="p-3.5 sm:p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {/* Tactile Provider Avatar */}
+          <div className="neu-flat-sm w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-primary font-black text-xs sm:text-sm shrink-0 select-none aspect-square">
+            {providerName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{providerName}</h4>
-            <p className="text-slate-500 dark:text-slate-400 text-sm truncate">{service}</p>
-            <div className="flex items-center gap-1 text-slate-400 dark:text-slate-500 text-xs mt-1">
-              <Calendar className="w-3 h-3 shrink-0" />
-              <span className="truncate">Last access: {lastAccess || 'Never'}</span>
+          
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h4 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base md:text-lg truncate">
+                {providerName}
+              </h4>
+              <span className={`px-2 py-0.5 rounded-lg text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
+                isEnabled 
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+              }`}>
+                {isEnabled ? 'Active' : 'Paused'}
+              </span>
+            </div>
+
+            <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm font-semibold truncate mt-0.5">
+              {service}
+            </p>
+
+            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-2xs sm:text-xs mt-0.5 sm:mt-1">
+              <span className="flex items-center gap-1 font-medium truncate">
+                <Calendar className="w-3 h-3 text-primary shrink-0" />
+                <span className="truncate">Last: {lastAccess || 'Never'}</span>
+              </span>
+              <span className="text-slate-300 dark:text-slate-600">•</span>
+              <span className="font-medium text-slate-500 dark:text-slate-400 truncate">
+                {isEnabled ? `${activeCount}/3 permissions` : 'Access disabled'}
+              </span>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+
+        {/* Action Controls: Compact Mobile-Friendly Row */}
+        <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/40 dark:border-white/5 shrink-0">
           <button
-            onClick={onToggleExpand}
-            className="p-2 text-slate-400 dark:text-slate-500 hover:text-primary hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-colors"
+            type="button"
+            onClick={onOpenPermissions}
+            className="neu-btn px-3.5 py-2 rounded-xl text-2xs sm:text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-700 dark:text-slate-200 hover:text-primary active:scale-[0.98]"
+            aria-label="Manage permissions"
           >
-            {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            <Lock className="w-3.5 h-3.5 text-primary" />
+            <span>Permissions</span>
           </button>
-          <motion.button
-            onClick={onToggle}
-            disabled={loading}
-            className={`w-14 h-8 rounded-full p-1 relative overflow-hidden transition-colors duration-300 ${isEnabled ? 'bg-green-500' : 'bg-slate-200 dark:bg-slate-600'} ${loading ? 'opacity-50' : ''}`}
-            whileTap={{ scale: 0.95 }}
-          >
-            <motion.div
-              className="w-6 h-6 bg-white dark:bg-slate-800 rounded-full shadow-sm dark:shadow-slate-900/50"
-              animate={{ x: isEnabled ? 22 : 0 }}
-              transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-            />
-          </motion.button>
+
+          {/* Tactile Neumorphic Pill Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-3xs sm:text-2xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">
+              {isEnabled ? 'ON' : 'OFF'}
+            </span>
+            <button
+              type="button"
+              onClick={onToggle}
+              disabled={loading}
+              role="switch"
+              aria-checked={isEnabled}
+              className={`w-14 h-8 rounded-full p-1 neu-inset relative flex items-center transition-all cursor-pointer select-none ${
+                loading ? 'opacity-50 pointer-events-none' : ''
+              }`}
+            >
+              <motion.div
+                className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                  isEnabled 
+                    ? 'neu-btn-primary' 
+                    : 'neu-flat-sm text-slate-400 dark:text-slate-500'
+                }`}
+                animate={{ x: isEnabled ? 24 : 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+              >
+                {isEnabled ? (
+                  <Check className="w-3.5 h-3.5 text-white stroke-[3]" />
+                ) : (
+                  <X className="w-3 h-3 stroke-[2.5]" />
+                )}
+              </motion.div>
+            </button>
+          </div>
         </div>
       </div>
-
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="overflow-hidden"
-          >
-            <div className="px-6 pb-6 pt-2 border-t border-slate-50 dark:border-slate-700">
-              <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">
-                Data Sharing Permissions
-              </p>
-              <div className="space-y-2">
-                {Object.entries(PERMISSION_LABELS).map(([key, label]) => (
-                  <label
-                    key={key}
-                    className={`flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-colors ${
-                      isEnabled ? 'hover:bg-slate-50 dark:hover:bg-slate-700' : 'opacity-50 cursor-not-allowed'
-                    }`}
-                  >
-                    <div
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (isEnabled) onPermChange(key);
-                      }}
-                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
-                        permissions[key]
-                          ? 'bg-primary border-primary text-white'
-                          : 'border-slate-300 bg-white dark:bg-slate-800'
-                      }`}
-                    >
-                      {permissions[key] && <Check className="w-3 h-3" />}
-                    </div>
-                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{label}</span>
-                  </label>
-                ))}
-              </div>
-              {!isEnabled && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Enable data sharing to modify permissions.</p>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+    </div>
   );
 };
 
@@ -118,16 +160,20 @@ const PatientConsent = () => {
   const [consents, setConsents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState(null);
-  const [expandedId, setExpandedId] = useState(null);
-  const [activeTab, setActiveTab] = useState('history');
+  const [selectedPermProvider, setSelectedPermProvider] = useState(null);
   const [consentHistory, setConsentHistory] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditTab, setAuditTab] = useState('history');
 
   const getHistoryKey = () => `consent_history_${user?.id}`;
 
   const loadConsentHistory = () => {
     try {
       return JSON.parse(localStorage.getItem(getHistoryKey()) || '[]');
-    } catch { return []; }
+    } catch { 
+      return []; 
+    }
   };
 
   const addHistoryEntry = (entry) => {
@@ -142,79 +188,87 @@ const PatientConsent = () => {
     setConsentHistory(loadConsentHistory());
   }, [user]);
 
-  useEffect(() => {
-    const fetchConsents = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from('consent_access')
-          .select('*, provider:provider_id(full_name)')
-          .eq('patient_id', user.id);
+  const fetchConsents = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('consent_access')
+        .select('*, provider:provider_id(full_name)')
+        .eq('patient_id', user.id);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        const providerIds = (data || []).map(c => c.provider_id);
-        let providerDetails = {};
+      const providerIds = (data || []).map(c => c.provider_id);
+      let providerDetails = {};
 
-        if (providerIds.length > 0) {
-          const { data: provData } = await supabase
-            .from('providers')
-            .select('user_id, services')
-            .in('user_id', providerIds);
+      if (providerIds.length > 0) {
+        const { data: provData } = await supabase
+          .from('providers')
+          .select('user_id, services')
+          .in('user_id', providerIds);
 
-          (provData || []).forEach(p => {
-            providerDetails[p.user_id] = p;
-          });
-        }
-
-        const formatted = (data || []).map(c => {
-          const provInfo = providerDetails[c.provider_id];
-          const perms = c.permissions || { ...DEFAULT_PERMS };
-          return {
-            id: c.id,
-            providerId: c.provider_id,
-            providerName: c.provider?.full_name || 'Unknown',
-            service: (provInfo?.services && provInfo.services.length > 0) ? provInfo.services[0] : 'General Care',
-            lastAccess: c.last_access ? new Date(c.last_access).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never',
-            lastAccessRaw: c.last_access,
-            isEnabled: c.is_enabled,
-            permissions: perms,
-          };
+        (provData || []).forEach(p => {
+          providerDetails[p.user_id] = p;
         });
-
-        setConsents(formatted);
-      } catch (err) {
-        console.error('Error fetching consents:', err);
-      } finally {
-        setLoading(false);
       }
-    };
 
+      const formatted = (data || []).map(c => {
+        const provInfo = providerDetails[c.provider_id];
+        const perms = c.permissions || { ...DEFAULT_PERMS };
+        return {
+          id: c.id,
+          providerId: c.provider_id,
+          providerName: c.provider?.full_name || 'Care Specialist',
+          service: (provInfo?.services && provInfo.services.length > 0) ? provInfo.services[0] : 'General Care',
+          lastAccess: c.last_access ? new Date(c.last_access).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never',
+          lastAccessRaw: c.last_access,
+          isEnabled: c.is_enabled,
+          permissions: perms,
+        };
+      });
+
+      setConsents(formatted);
+    } catch (err) {
+      console.error('Error fetching consents:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchConsents();
   }, [user]);
 
   const handleToggle = async (consentId, currentValue, providerName, providerId) => {
     setTogglingId(consentId);
     try {
+      const nextValue = !currentValue;
       const { error } = await supabase
         .from('consent_access')
-        .update({ is_enabled: !currentValue })
+        .update({ is_enabled: nextValue })
         .eq('id', consentId);
 
       if (error) throw error;
 
       setConsents(prev => prev.map(c =>
-        c.id === consentId ? { ...c, isEnabled: !currentValue } : c
+        c.id === consentId ? { ...c, isEnabled: nextValue } : c
       ));
 
-      if (!currentValue) {
-        addHistoryEntry({ providerName, providerId, action: 'Granted', details: 'Data sharing enabled' });
+      if (selectedPermProvider?.id === consentId) {
+        setSelectedPermProvider(prev => prev ? { ...prev, isEnabled: nextValue } : null);
+      }
+
+      if (nextValue) {
+        addHistoryEntry({ providerName, providerId, action: 'Granted', details: 'Full data sharing enabled' });
+        toast.success(`Access granted for ${providerName}`);
       } else {
-        addHistoryEntry({ providerName, providerId, action: 'Revoked', details: 'Data sharing disabled' });
+        addHistoryEntry({ providerName, providerId, action: 'Revoked', details: 'Data access paused' });
+        toast.success(`Access paused for ${providerName}`);
       }
     } catch (err) {
       console.error('Error toggling consent:', err);
-      toast.error('Failed to update. Check your permissions.');
+      toast.error('Failed to update. Check your connection.');
     } finally {
       setTogglingId(null);
     }
@@ -238,17 +292,21 @@ const PatientConsent = () => {
         c.id === consent.id ? { ...c, permissions: updatedPerms } : c
       ));
 
+      if (selectedPermProvider?.id === consent.id) {
+        setSelectedPermProvider(prev => prev ? { ...prev, permissions: updatedPerms } : null);
+      }
+
       addHistoryEntry({
         providerName,
         providerId,
         action: 'Updated',
-        details: `${updatedPerms[permKey] ? 'Enabled' : 'Disabled'} ${PERMISSION_LABELS[permKey]}`,
+        details: `${updatedPerms[permKey] ? 'Granted' : 'Revoked'} ${PERMISSION_LABELS[permKey]}`,
       });
 
-      toast.success(`Updated permission for ${PERMISSION_LABELS[permKey]}`, { duration: 2000 });
+      toast.success(`${updatedPerms[permKey] ? 'Enabled' : 'Disabled'} ${PERMISSION_LABELS[permKey]}`);
     } catch (err) {
       console.error('Error updating permissions:', err);
-      toast.error('Failed to update permissions.');
+      toast.error('Failed to update permission.');
     }
   };
 
@@ -262,216 +320,430 @@ const PatientConsent = () => {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const getActionIcon = (action) => {
+  const getActionBadge = (action) => {
     switch (action) {
-      case 'Granted': return <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-300" />;
-      case 'Revoked': return <X className="w-3.5 h-3.5 text-red-500 dark:text-red-300" />;
-      case 'Updated': return <Clock className="w-3.5 h-3.5 text-amber-500 dark:text-amber-300" />;
-      default: return <History className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />;
+      case 'Granted': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
+      case 'Revoked': return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
+      case 'Updated': return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
+      default: return 'bg-slate-200/50 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
     }
   };
 
-  const getActionBadge = (action) => {
-    switch (action) {
-      case 'Granted': return 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200';
-      case 'Revoked': return 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300';
-      case 'Updated': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
-      default: return 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300';
+  // Filtered providers
+  const filteredConsents = useMemo(() => {
+    if (!searchQuery.trim()) return consents;
+    const q = searchQuery.toLowerCase().trim();
+    return consents.filter(c => 
+      c.providerName.toLowerCase().includes(q) || 
+      c.service.toLowerCase().includes(q)
+    );
+  }, [consents, searchQuery]);
+
+  const accessLogs = useMemo(() => {
+    return consents
+      .filter(c => c.lastAccessRaw)
+      .sort((a, b) => new Date(b.lastAccessRaw) - new Date(a.lastAccessRaw));
+  }, [consents]);
+
+  // Prevent background scroll and repaint lag when modal is open
+  useEffect(() => {
+    if (showAuditModal || selectedPermProvider) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
     }
-  };
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showAuditModal, selectedPermProvider]);
 
   return (
     <DashboardLayout role="patient">
-      <div className="max-w-4xl space-y-6 overflow-x-hidden w-full max-w-full">
-        <motion.section
-          className="relative overflow-hidden rounded-[2rem] bg-ink text-white border border-black/5 dark:border-white/10 shadow-soft"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="absolute inset-0 mesh-ambient opacity-60" />
-          <div className="absolute -right-20 -top-20 w-[320px] h-[320px] rounded-full bg-emerald-500/20 blur-[90px]" />
-          <div className="absolute inset-0 grain" />
-          <div className="relative flex items-start gap-4 p-7 md:p-10">
-            <div className="p-3 bg-white/10 ring-1 ring-white/15 text-white rounded-2xl shrink-0">
-              <ShieldCheck className="w-7 h-7" />
+      <div className="space-y-3.5 sm:space-y-6 relative w-full max-w-full pb-8">
+        
+        {/* Unified Clean Neumorphic Header Card */}
+        <section className="neu-flat p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="neu-flat-sm w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black shrink-0 aspect-square">
+                <ShieldCheck className="w-5 h-5 sm:w-7 sm:h-7" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-display font-extrabold tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white truncate">
+                  Consent & Data Privacy
+                </h1>
+                <p className="text-3xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 font-medium truncate sm:whitespace-normal">
+                  Review and govern medical record permissions granted to your healthcare providers in real time.
+                </p>
+              </div>
             </div>
-            <div className="max-w-5xl w-full">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Trust center</p>
-              <h1 className="font-display font-bold tracking-tight text-3xl md:text-5xl leading-[1.02] mt-2" style={{ textWrap: 'balance' }}>Manage Your Health Data Access</h1>
-              <p className="text-slate-300 mt-2 text-sm md:text-[15px]">Securely control which providers can view your medical information.</p>
-            </div>
-          </div>
-        </motion.section>
 
-        <motion.div
-          className="bg-primary/5 border border-primary/10 rounded-3xl p-6 flex gap-4 items-start"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.1 }}
-        >
-          <div className="p-2 bg-primary text-white rounded-xl mt-1">
-            <Info className="w-4 h-4" />
-          </div>
-          <div className="text-slate-700 dark:text-slate-200">
-            <p className="font-bold text-primary mb-1">Privacy Notice</p>
-            <p className="text-sm leading-relaxed">
-              You have full control over who can access your health information and what they can see.
-              Click the arrow on any provider card to set granular permissions for Medical History, Documents, and Visit Notes.
-              Revoking the master toggle will immediately prevent all data access.
-            </p>
-          </div>
-        </motion.div>
-
-        {loading ? (
-          <div className="text-center py-10 text-slate-400 dark:text-slate-500">Loading consent settings...</div>
-        ) : (
-          <>
-            {/* Provider Cards */}
-            <motion.div
-              className="space-y-4"
-              variants={staggerContainer}
-              initial="initial"
-              animate="animate"
+            {/* Compact Neumorphic Audit Trail Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setShowAuditModal(true)}
+              className="neu-btn w-full sm:w-auto px-4 py-2.5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200 hover:text-primary active:scale-[0.98]"
+              title="Open Access & Consent Audit Log"
             >
-              <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100 px-2">Authorized Providers</h3>
-              {consents.length > 0 ? (
-                consents.map((c) => (
-                  <ProviderCard
-                    key={c.id}
-                    providerName={c.providerName}
-                    service={c.service}
-                    lastAccess={c.lastAccess}
-                    isEnabled={c.isEnabled}
-                    permissions={c.permissions}
-                    loading={togglingId === c.id}
-                    onToggle={() => handleToggle(c.id, c.isEnabled, c.providerName, c.providerId)}
-                    onPermChange={(key) => handlePermChange(c.providerId, c.providerName, key)}
-                    expanded={expandedId === c.id}
-                    onToggleExpand={() => setExpandedId(expandedId === c.id ? null : c.id)}
-                  />
-                ))
-              ) : (
-                <div className="p-10 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
-                  No providers to manage yet. Request a service from a provider first!
-                </div>
+              <History className="w-4 h-4 text-primary" />
+              <span>Audit Trail</span>
+            </button>
+          </div>
+
+          {/* Full Search Bar */}
+          <div className="relative w-full">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search providers..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full neu-inset rounded-xl sm:rounded-2xl py-2.5 sm:py-3 pl-9 sm:pl-10 pr-3 sm:pr-4 text-xs sm:text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 bg-transparent outline-none border-none font-medium"
+            />
+          </div>
+        </section>
+
+        {/* Authorized Providers List */}
+        <div className="space-y-3 sm:space-y-4">
+          {loading ? (
+            <div className="neu-flat p-8 sm:p-10 rounded-2xl sm:rounded-[2rem] text-center text-slate-400 dark:text-slate-500 flex flex-col items-center justify-center gap-2">
+              <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-primary" />
+              <p className="text-xs sm:text-sm font-bold">Loading consent records...</p>
+            </div>
+          ) : filteredConsents.length > 0 ? (
+            <div className="space-y-3 sm:space-y-3.5">
+              {filteredConsents.map((c) => (
+                <ProviderCard
+                  key={c.id}
+                  providerName={c.providerName}
+                  service={c.service}
+                  lastAccess={c.lastAccess}
+                  isEnabled={c.isEnabled}
+                  permissions={c.permissions}
+                  loading={togglingId === c.id}
+                  onToggle={() => handleToggle(c.id, c.isEnabled, c.providerName, c.providerId)}
+                  onPermChange={(key) => handlePermChange(c.providerId, c.providerName, key)}
+                  onOpenPermissions={() => setSelectedPermProvider(c)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="neu-flat p-6 sm:p-12 rounded-2xl sm:rounded-[2.25rem] text-center">
+              <div className="neu-flat-sm w-12 h-12 sm:w-16 sm:h-16 rounded-2xl mx-auto flex items-center justify-center text-slate-400 dark:text-slate-500 mb-2.5 sm:mb-3">
+                <ShieldAlert className="w-6 h-6 sm:w-8 sm:h-8 opacity-60" />
+              </div>
+              <h3 className="font-extrabold text-sm sm:text-lg text-slate-800 dark:text-white">
+                {searchQuery ? 'No matching providers found' : 'No Authorized Providers'}
+              </h3>
+              <p className="text-2xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
+                {searchQuery 
+                  ? `We couldn't find any provider matching "${searchQuery}". Clear your search to view all.`
+                  : 'When you book a consultation or request care, the provider will appear here with granular permission controls.'}
+              </p>
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="mt-3.5 neu-btn px-4 py-2 rounded-xl text-xs font-bold text-primary cursor-pointer active:scale-[0.98]"
+                >
+                  Clear Search
+                </button>
               )}
-            </motion.div>
+            </div>
+          )}
+        </div>
 
-            {/* Privacy Activity Section */}
-            {consents.length > 0 && (
+        {/* Modal: Granular Permissions Sheet (Zero page resizing!) */}
+        <AnimatePresence>
+          {selectedPermProvider && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 md:backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              onClick={() => setSelectedPermProvider(null)}
+            >
               <motion.div
-                className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 }}
+                exit={{ opacity: 0, y: 30 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                onClick={(e) => e.stopPropagation()}
+                className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-lg rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 space-y-4 shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
               >
-                {/* Tabs */}
-                <div className="flex border-b border-slate-100 dark:border-slate-700">
+                {/* Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
+                        {selectedPermProvider.providerName}
+                      </h3>
+                      <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                        Configure data sharing categories
+                      </p>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setActiveTab('history')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-4 font-bold text-sm border-b-2 transition-colors ${
-                      activeTab === 'history'
-                        ? 'border-primary text-primary bg-blue-50/50'
-                        : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-300'
-                    }`}
+                    type="button"
+                    onClick={() => setSelectedPermProvider(null)}
+                    className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95"
                   >
-                    <History className="w-4 h-4" />
-                    Consent History
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('access')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-4 font-bold text-sm border-b-2 transition-colors ${
-                      activeTab === 'access'
-                        ? 'border-primary text-primary bg-blue-50/50'
-                        : 'border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-300'
-                    }`}
-                  >
-                    <Eye className="w-4 h-4" />
-                    Data Access Log
+                    <X className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </div>
 
-                {/* Consent History Tab */}
-                {activeTab === 'history' && (
-                  <div className="p-6 max-h-80 overflow-y-auto">
-                    {consentHistory.length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 dark:text-slate-500">
-                        <History className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No consent changes recorded yet.</p>
-                        <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Toggle data sharing to see activity here.</p>
+                {/* Status notice */}
+                {!selectedPermProvider.isEnabled && (
+                  <div className="neu-inset p-3 rounded-xl flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+                    <ShieldAlert className="w-4 h-4 shrink-0" />
+                    <span>Master toggle is OFF. Turn ON master access to enable sharing.</span>
+                  </div>
+                )}
+
+                {/* Categories */}
+                <div className="space-y-2.5">
+                  {PERMISSION_CONFIG.map(({ key, label, desc, icon: Icon }) => {
+                    const isChecked = !!selectedPermProvider.permissions[key];
+                    const isEnabled = selectedPermProvider.isEnabled;
+                    return (
+                      <div
+                        key={key}
+                        onClick={() => isEnabled && handlePermChange(selectedPermProvider.providerId, selectedPermProvider.providerName, key)}
+                        className={`p-3.5 rounded-2xl transition-all select-none flex items-center justify-between gap-3 ${
+                          isEnabled
+                            ? isChecked
+                              ? 'neu-inset border border-primary/20 cursor-pointer'
+                              : 'neu-flat-sm cursor-pointer hover:border-slate-300 dark:hover:border-slate-700'
+                            : 'neu-flat-sm opacity-50 cursor-not-allowed'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                            isChecked && isEnabled 
+                              ? 'neu-btn-primary text-white' 
+                              : 'neu-flat-sm text-slate-500 dark:text-slate-400'
+                          }`}>
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 block truncate">
+                              {label}
+                            </span>
+                            <span className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 block truncate font-medium">
+                              {desc}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                          isChecked && isEnabled
+                            ? 'neu-btn-primary text-white'
+                            : 'neu-inset text-transparent'
+                        }`}>
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Footer action */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedPermProvider(null)}
+                  className="w-full neu-btn-primary py-2.5 rounded-xl font-bold text-xs sm:text-sm cursor-pointer shadow-sm active:scale-[0.98]"
+                >
+                  Done
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal: Audit Trail - Lightweight 60fps Sheet with zero jitter */}
+        <AnimatePresence>
+          {showAuditModal && (
+            <motion.div 
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 md:backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              onClick={() => setShowAuditModal(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 30 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                onClick={(e) => e.stopPropagation()}
+                className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-4 sm:p-6 md:p-7 space-y-3.5 h-[80vh] sm:h-[560px] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+              >
+                {/* Modal Header */}
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5 shrink-0">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                      <History className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-extrabold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
+                        Audit Trail
+                      </h3>
+                      <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                        Inspection records and permission history
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowAuditModal(false)}
+                    className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95 shrink-0"
+                  >
+                    <X className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                </div>
+
+                {/* Subtabs inside Modal */}
+                <div className="neu-inset p-1 rounded-xl flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setAuditTab('history')}
+                    className={`flex-1 py-2 rounded-lg text-2xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      auditTab === 'history'
+                        ? 'neu-btn-primary shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <History className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">Permission Changes ({consentHistory.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuditTab('access')}
+                    className={`flex-1 py-2 rounded-lg text-2xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      auditTab === 'access'
+                        ? 'neu-btn-primary shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    <Eye className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">File Views ({accessLogs.length})</span>
+                  </button>
+                </div>
+
+                {/* Modal Body Content - Fixed Height, Pure CSS Smooth Scroll */}
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1 overscroll-contain no-scrollbar">
+                  {auditTab === 'history' ? (
+                    consentHistory.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
+                        <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-xs sm:text-sm font-bold">No permission changes logged yet</p>
+                        <p className="text-3xs text-slate-400 mt-0.5">Toggle a provider's access to see audit entries here.</p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {consentHistory.map((entry, idx) => (
-                          <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
-                            <div className={`p-1.5 rounded-lg ${entry.action === 'Granted' ? 'bg-green-100 dark:bg-green-900/40' : entry.action === 'Revoked' ? 'bg-red-100 dark:bg-red-900/40' : 'bg-amber-100 dark:bg-amber-900/40'}`}>
-                              {getActionIcon(entry.action)}
+                      consentHistory.map((entry, idx) => (
+                        <div key={idx} className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                              entry.action === 'Granted'
+                                ? 'neu-btn-primary text-white'
+                                : entry.action === 'Revoked'
+                                ? 'neu-flat-sm text-rose-500'
+                                : 'neu-flat-sm text-amber-500'
+                            }`}>
+                              {entry.action === 'Granted' ? <Check className="w-3 h-3 stroke-[3]" /> : entry.action === 'Revoked' ? <X className="w-3 h-3 stroke-[3]" /> : <Clock className="w-3 h-3" />}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{entry.providerName}</span>
-                                <span className={`px-1.5 py-0.5 rounded text-2xs font-bold ${getActionBadge(entry.action)}`}>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                                  {entry.providerName}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded text-3xs font-extrabold uppercase ${getActionBadge(entry.action)}`}>
                                   {entry.action}
                                 </span>
                               </div>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{entry.details}</p>
+                              <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                {entry.details}
+                              </p>
                             </div>
-                            <span className="text-2xs text-slate-400 dark:text-slate-500 shrink-0">{formatTimestamp(entry.timestamp)}</span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Data Access Log Tab */}
-                {activeTab === 'access' && (
-                  <div className="p-6 max-h-80 overflow-y-auto">
-                    {consents.filter(c => c.lastAccessRaw).length === 0 ? (
-                      <div className="text-center py-8 text-slate-400 dark:text-slate-500">
-                        <Eye className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No data access recorded yet.</p>
-                        <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">When a provider views your records, it will be logged here.</p>
+                          <span className="text-3xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
+                            {formatTimestamp(entry.timestamp)}
+                          </span>
+                        </div>
+                      ))
+                    )
+                  ) : (
+                    accessLogs.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
+                        <Eye className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                        <p className="text-xs sm:text-sm font-bold">No recorded provider file views</p>
+                        <p className="text-3xs text-slate-400 mt-0.5">When doctors view your medical profile, logs will appear here.</p>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        {consents
-                          .filter(c => c.lastAccessRaw)
-                          .sort((a, b) => new Date(b.lastAccessRaw) - new Date(a.lastAccessRaw))
-                          .map((c) => (
-                            <div key={c.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900 rounded-xl">
-                              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 text-primary rounded-lg">
-                                <Eye className="w-3.5 h-3.5" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{c.providerName}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                  Viewed your {Object.entries(PERMISSION_LABELS)
-                                    .filter(([k]) => c.permissions?.[k])
-                                    .map(([, v]) => v)
-                                    .join(', ') || 'records'}
-                                </p>
-                              </div>
-                              <span className="text-2xs text-slate-400 dark:text-slate-500 shrink-0">
-                                {new Date(c.lastAccessRaw).toLocaleDateString('en-US', {
-                                  month: 'short', day: 'numeric', year: 'numeric',
-                                  hour: '2-digit', minute: '2-digit'
-                                })}
-                              </span>
+                      accessLogs.map((c) => (
+                        <div key={c.id} className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div className="neu-flat-sm w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-primary shrink-0">
+                              <Eye className="w-3 h-3" />
                             </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                            <div className="min-w-0 flex-1">
+                              <h5 className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                                {c.providerName}
+                              </h5>
+                              <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                Inspected: {Object.entries(PERMISSION_LABELS)
+                                  .filter(([k]) => c.permissions?.[k])
+                                  .map(([, v]) => v)
+                                  .join(', ') || 'records'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-3xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
+                            {new Date(c.lastAccessRaw).toLocaleDateString('en-US', {
+                              month: 'short', 
+                              day: 'numeric', 
+                              hour: '2-digit', 
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                      ))
+                    )
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-white/5 text-3xs text-slate-400 shrink-0">
+                  <span className="truncate">Stored locally</span>
+                  {consentHistory.length > 0 && auditTab === 'history' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.removeItem(getHistoryKey());
+                        setConsentHistory([]);
+                        toast.success('Audit history cleared');
+                      }}
+                      className="text-rose-500 hover:underline font-bold cursor-pointer shrink-0"
+                    >
+                      Clear log
+                    </button>
+                  )}
+                </div>
               </motion.div>
-            )}
-          </>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </DashboardLayout>
   );
 };
 
 export default PatientConsent;
+

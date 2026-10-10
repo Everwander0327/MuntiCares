@@ -369,23 +369,12 @@ const PatientDashboard = () => {
         className="space-y-6 md:space-y-8"
         style={pullDistance > 0 ? { transform: `translateY(${pullDistance}px)`, transition: 'transform 0.1s ease-out' } : { transition: 'transform 0.3s ease-out' }}
       >
-        {/* Top Section: Greeting Card (Left) and Quick Actions Card (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-stretch">
-          {/* Greeting Card (lg:col-span-7) */}
-          <section className="lg:col-span-7 neu-flat p-6 md:p-8 rounded-[2.25rem] flex flex-col justify-between gap-5">
-            <div className="min-w-0">
-              <h1 className="font-display font-extrabold tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white">
-                Good day, {firstName}
-              </h1>
-              {activeVisit && (
-                <p className="text-sm font-medium text-primary mt-1 leading-snug">
-                  {activeVisit.provider} is {activeVisit.status.toLowerCase()} for {activeVisit.service}.
-                </p>
-              )}
-            </div>
-
-            {/* Muntinlupa Health Progress & Community Highlights Carousel (Effortless Native Swipe Track) */}
-            <div className="relative overflow-hidden rounded-2xl neu-flat-sm p-2 sm:p-2.5 flex-1 flex flex-col justify-between">
+        {/* Top Section: Community Highlights Carousel (Left) and Quick Actions Card (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-stretch">
+          {/* Highlights Hero Card (lg:col-span-7) - Image completely covers the entire card */}
+          <section className="lg:col-span-7 neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden relative flex flex-col justify-between min-h-[380px] sm:min-h-[440px] md:min-h-[480px]">
+            {/* Full-Bleed Carousel Track - Image occupies 100% of the entire card */}
+            <div className="absolute inset-0 z-0">
               <div
                 ref={carouselTrackRef}
                 onScroll={handleCarouselScroll}
@@ -400,37 +389,37 @@ const PatientDashboard = () => {
                 onTouchEnd={() => {
                   setTimeout(() => { isInteractingRef.current = false; }, 2000);
                 }}
-                className="relative h-56 sm:h-64 md:h-72 w-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar rounded-xl select-none cursor-grab active:cursor-grabbing touch-pan-x overscroll-x-contain"
+                className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar select-none cursor-grab active:cursor-grabbing touch-pan-x overscroll-x-contain"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
               >
                 {muntiHighlights.map((slide) => (
                   <div
                     key={slide.id}
-                    className="w-full flex-shrink-0 h-full relative snap-center rounded-xl overflow-hidden"
+                    className="w-full flex-shrink-0 h-full relative snap-center overflow-hidden"
                   >
                     <img
                       src={slide.image}
                       alt={slide.title}
                       draggable={false}
-                      className="w-full h-full object-cover rounded-xl pointer-events-none"
+                      className="w-full h-full object-cover pointer-events-none"
                     />
-                    {/* Gradient overlay for readability */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent rounded-xl pointer-events-none" />
+                    {/* Deep gradient overlay spanning the whole card for high contrast */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
-                    {/* Content / Badge & Caption */}
-                    <div className="absolute inset-0 p-4 sm:p-6 flex flex-col justify-between pointer-events-none">
+                    {/* Content / Badge & Caption - Balanced nicely just above bottom buttons and dots */}
+                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-between pointer-events-none pb-24 sm:pb-28 md:pb-32">
                       <div className="flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider bg-primary text-white backdrop-blur-md shadow-md">
-                          <Sparkles className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-3xs sm:text-2xs font-extrabold uppercase tracking-wider bg-primary/90 text-white backdrop-blur-md shadow-lg border border-white/25">
+                          <Sparkles className="w-3.5 h-3.5" />
                           {slide.tag}
                         </span>
                       </div>
 
-                      <div className="space-y-1.5 max-w-xl">
-                        <h3 className="text-base sm:text-lg md:text-xl font-display font-bold text-white drop-shadow-md line-clamp-1">
+                      <div className="space-y-1.5 sm:space-y-2 max-w-xl">
+                        <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
-                        <p className="text-xs sm:text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm">
+                        <p className="text-2xs sm:text-xs md:text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
                           {slide.description}
                         </p>
                       </div>
@@ -438,40 +427,63 @@ const PatientDashboard = () => {
                   </div>
                 ))}
               </div>
-
-              {/* Dots indicator (Interactive, clicks scroll instantly) */}
-              <div className="flex items-center justify-center pt-2.5 pb-1 gap-2">
-                {muntiHighlights.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => scrollToSlide(idx)}
-                    aria-label={`Go to slide ${idx + 1}`}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      currentSlide === idx
-                        ? 'w-7 bg-primary shadow-sm'
-                        : 'w-2 bg-slate-300 dark:bg-slate-700 hover:bg-slate-400'
-                    }`}
-                  />
-                ))}
-              </div>
             </div>
 
-            {/* Action Buttons: Expanded across full width */}
-            <div className="grid grid-cols-2 gap-3.5 w-full shrink-0">
-              <Link
-                to="/patient/providers"
-                className="neu-btn-primary w-full py-3.5 sm:py-4 px-4 sm:px-6 rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform text-center shadow-sm"
-              >
-                <Search className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0" />
-                <span>Find a Provider</span>
-              </Link>
-              <Link
-                to="/patient/requests"
-                className="neu-btn w-full py-3.5 sm:py-4 px-4 sm:px-6 rounded-2xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-transform text-center"
-              >
-                <FileText className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-primary shrink-0" />
-                <span>View Requests</span>
-              </Link>
+            {/* Overlaid Header Chip (If active visit exists) */}
+            <div className="relative z-10 p-4 sm:p-6 pointer-events-none">
+              {activeVisit && (
+                <div className="neu-inset px-3.5 py-2 rounded-xl flex items-center justify-between gap-2 text-2xs sm:text-xs bg-slate-950/50 backdrop-blur-md text-white border border-white/10 pointer-events-auto max-w-md shadow-md">
+                  <span className="font-bold truncate">
+                    {activeVisit.provider} &bull; {activeVisit.service}
+                  </span>
+                  <span className="font-black text-primary-300 uppercase tracking-wider shrink-0">
+                    {activeVisit.status}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Overlaid Bottom Controls: Glassmorphic Dots + Compact Action Buttons */}
+            <div className="relative z-10 p-4 sm:p-6 space-y-3 mt-auto">
+              {/* Dots indicator inside the image */}
+              <div className="flex items-center justify-center">
+                <div className="flex items-center gap-1.5 py-1">
+                  {muntiHighlights.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        scrollToSlide(idx);
+                      }}
+                      aria-label={`Go to slide ${idx + 1}`}
+                      className={`h-1 rounded-full transition-all duration-300 cursor-pointer ${
+                        currentSlide === idx
+                          ? 'w-3.5 bg-white shadow-xs'
+                          : 'w-1 bg-white/40 hover:bg-white/80'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons: Glassmorphism + Neumorphism Fusion */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
+                <Link
+                  to="/patient/providers"
+                  className="btn-glass-neu-primary w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer"
+                >
+                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-white" />
+                  <span className="truncate">Find Provider</span>
+                </Link>
+                <Link
+                  to="/patient/requests"
+                  className="btn-glass-neu-secondary w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer"
+                >
+                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white shrink-0" />
+                  <span className="truncate">View Requests</span>
+                </Link>
+              </div>
             </div>
           </section>
 
@@ -486,38 +498,29 @@ const PatientDashboard = () => {
                   </h4>
                 </div>
                 <div className="grid grid-cols-3 gap-2.5">
-                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm select-text">
-                    <div className="neu-flat-sm w-8 h-8 rounded-xl flex items-center justify-center mb-1 text-blue-500 shrink-0">
-                      <Clock className="w-4 h-4" />
-                    </div>
-                    <p className="text-base sm:text-lg font-display font-black text-slate-800 dark:text-slate-100 leading-none">
+                  <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl neu-flat-sm select-text">
+                    <p className="text-xl sm:text-2xl font-display font-black text-blue-600 dark:text-blue-400 leading-none">
                       {stats.active}
                     </p>
-                    <p className="text-3xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate mt-1">
+                    <p className="text-2xs sm:text-xs font-extrabold text-blue-600/80 dark:text-blue-400/80 uppercase tracking-wider mt-1.5">
                       Active
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm select-text">
-                    <div className="neu-flat-sm w-8 h-8 rounded-xl flex items-center justify-center mb-1 text-emerald-500 shrink-0">
-                      <CheckCircle2 className="w-4 h-4" />
-                    </div>
-                    <p className="text-base sm:text-lg font-display font-black text-slate-800 dark:text-slate-100 leading-none">
+                  <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl neu-flat-sm select-text">
+                    <p className="text-xl sm:text-2xl font-display font-black text-emerald-600 dark:text-emerald-400 leading-none">
                       {stats.accepted}
                     </p>
-                    <p className="text-3xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate mt-1">
+                    <p className="text-2xs sm:text-xs font-extrabold text-emerald-600/80 dark:text-emerald-400/80 uppercase tracking-wider mt-1.5">
                       Accepted
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-center text-center p-2.5 rounded-2xl neu-flat-sm select-text">
-                    <div className="neu-flat-sm w-8 h-8 rounded-xl flex items-center justify-center mb-1 text-amber-500 shrink-0">
-                      <AlertCircle className="w-4 h-4" />
-                    </div>
-                    <p className="text-base sm:text-lg font-display font-black text-slate-800 dark:text-slate-100 leading-none">
+                  <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl neu-flat-sm select-text">
+                    <p className="text-xl sm:text-2xl font-display font-black text-amber-600 dark:text-amber-400 leading-none">
                       {stats.pending}
                     </p>
-                    <p className="text-3xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-tighter truncate mt-1">
+                    <p className="text-2xs sm:text-xs font-extrabold text-amber-600/80 dark:text-amber-400/80 uppercase tracking-wider mt-1.5">
                       Pending
                     </p>
                   </div>
@@ -764,48 +767,48 @@ const PatientDashboard = () => {
           </div>
         </motion.div>
 
-        {/* Recent Requests Section with Neumorphic Table / List */}
-        <section className="neu-flat rounded-[2.25rem] p-6 sm:p-7 overflow-hidden">
-          <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-200/50 dark:border-white/5">
+        {/* Recent Requests Section with Neumorphic Table / List (Compact layout) */}
+        <section className="neu-flat rounded-2xl sm:rounded-[2.25rem] p-4 sm:p-6 overflow-hidden">
+          <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-slate-200/50 dark:border-white/5">
             <div>
-              <h2 className="font-display font-extrabold text-lg sm:text-xl text-slate-900 dark:text-white">
+              <h2 className="font-display font-extrabold text-base sm:text-lg text-slate-900 dark:text-white">
                 Recent Requests
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-3xs sm:text-xs text-slate-500 mt-0.5">
                 Showing {Math.min(requests.length, 5)} of {requests.length} records
               </p>
             </div>
             <Link
               to="/patient/requests"
-              className="neu-btn px-4 py-2 rounded-xl text-xs font-bold text-primary inline-flex items-center gap-1.5"
+              className="neu-btn px-3 py-1.5 rounded-xl text-3xs sm:text-xs font-bold text-primary inline-flex items-center gap-1 active:scale-95"
             >
-              View All <ArrowRight className="w-3.5 h-3.5" />
+              View All <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
           {requests.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-2.5">
               {requests.slice(0, 5).map((req, idx) => (
                 <div
                   key={idx}
-                  className="neu-flat-sm p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 select-text"
+                  className="neu-flat-sm p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2.5 select-text"
                 >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-primary text-xs font-black shrink-0">
+                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                    <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-primary text-2xs sm:text-xs font-black shrink-0">
                       {req.provider.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                      <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                         {req.provider}
                       </p>
-                      <p className="text-xs text-slate-500 truncate mt-0.5">
+                      <p className="text-3xs sm:text-2xs text-slate-500 truncate mt-0.5">
                         {req.service} &bull; {req.date} {req.time ? `(${req.time})` : ''}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-                    <span className={`neu-flat-sm text-2xs font-extrabold px-3 py-1.5 rounded-full uppercase tracking-wider ${
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`neu-flat-sm text-3xs font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
                       ['Accepted', 'Completed'].includes(req.status)
                         ? 'text-emerald-600 dark:text-emerald-400'
                         : req.status === 'Pending'

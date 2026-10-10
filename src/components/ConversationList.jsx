@@ -190,70 +190,71 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-2 select-none">
+    <div className="space-y-3 sm:space-y-4 select-text">
       {filtered.map((conv, i) => {
         const preview = getLastMessagePreview(conv.lastMessage, user.id);
         const hasUnread = conv.unreadCount > 0;
         return (
-          <motion.button
+          <motion.div
             key={conv.id}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.03 }}
+            transition={{ duration: 0.25, delay: Math.min(i, 8) * 0.03 }}
             onClick={() => onSelect(conv)}
-            className={`w-full flex items-center gap-3.5 p-3 sm:p-3.5 rounded-2xl transition-all text-left cursor-pointer ${
+            className={`neu-flat p-4 sm:p-5 rounded-2xl sm:rounded-[2rem] flex items-center justify-between gap-3.5 sm:gap-4 transition-all cursor-pointer transform-gpu will-change-transform ${
               hasUnread 
-                ? 'neu-convex border border-primary/25' 
-                : 'neu-flat-sm hover:neu-flat'
+                ? 'border border-primary/30 ring-1 ring-primary/20' 
+                : 'hover:scale-[1.008]'
             }`}
           >
-            <div className="relative shrink-0">
-              <div className="neu-flat-sm w-12 h-12 rounded-2xl overflow-hidden p-0.5 flex items-center justify-center">
-                <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+            <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+              <div className="relative shrink-0">
+                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden p-0.5 flex items-center justify-center aspect-square">
+                  <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+                </div>
+                <div 
+                  className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#172236] transition-colors ${
+                    isUserOnline(conv.id) ? 'bg-emerald-500' : 'bg-slate-400'
+                  }`} 
+                  title={isUserOnline(conv.id) ? 'Online' : 'Offline'}
+                />
               </div>
-              <div 
-                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#172236] transition-colors ${
-                  isUserOnline(conv.id) ? 'bg-emerald-500' : 'bg-slate-400'
-                }`} 
-                title={isUserOnline(conv.id) ? 'Online' : 'Offline'}
-              />
-              {hasUnread && (
-                <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-primary rounded-full border-2 border-white dark:border-[#172236] flex items-center justify-center text-3xs font-black text-white px-1 shadow-md">
-                  {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-                </span>
-              )}
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className={`font-display font-extrabold text-sm sm:text-base truncate ${
+                    hasUnread ? 'text-primary' : 'text-slate-900 dark:text-white'
+                  }`}>
+                    {conv.name}
+                  </p>
+                  <span className="text-3xs sm:text-2xs text-slate-400 dark:text-slate-500 shrink-0 font-bold tabular-nums">
+                    {formatRelativeTime(conv.lastMessage?.created_at)}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-2 mt-1">
+                  {preview.text ? (
+                    <p className={`text-xs sm:text-sm truncate ${
+                      hasUnread 
+                        ? 'text-slate-800 dark:text-slate-100 font-bold' 
+                        : 'text-slate-500 dark:text-slate-400 font-medium'
+                    }`}>
+                      {preview.isYou && <span className="text-slate-400 font-normal">You: </span>}
+                      {preview.text}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">No messages yet</p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <p className={`font-extrabold text-sm truncate ${
-                  hasUnread ? 'text-primary' : 'text-slate-800 dark:text-slate-100'
-                }`}>
-                  {conv.name}
-                </p>
-                <span className="text-3xs text-slate-400 dark:text-slate-500 shrink-0 font-bold tabular-nums">
-                  {formatRelativeTime(conv.lastMessage?.created_at)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                {preview.text ? (
-                  <p className={`text-xs truncate ${
-                    hasUnread 
-                      ? 'text-slate-800 dark:text-slate-100 font-bold' 
-                      : 'text-slate-500 dark:text-slate-400 font-medium'
-                  }`}>
-                    {preview.isYou && <span className="text-slate-400 font-normal">You: </span>}
-                    {preview.text}
-                  </p>
-                ) : (
-                  <p className="text-xs text-slate-400 italic">No messages yet</p>
-                )}
-                {hasUnread && (
-                  <span className="w-2 h-2 bg-primary rounded-full shrink-0 shadow-sm" />
-                )}
-              </div>
-            </div>
-          </motion.button>
+            {hasUnread && (
+              <span className="min-w-[22px] h-[22px] bg-primary rounded-full flex items-center justify-center text-3xs font-black text-white px-1.5 shadow-sm shrink-0">
+                {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+              </span>
+            )}
+          </motion.div>
         );
       })}
     </div>

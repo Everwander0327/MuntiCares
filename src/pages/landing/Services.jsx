@@ -52,40 +52,40 @@ const ServiceCard = ({ service }) => (
   >
     <Link
       to="/patient/providers"
-      className="group block h-full text-left transition-transform duration-700 ease-fluid hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-[2rem]"
+      className="group block h-full text-left transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl md:rounded-[2.25rem]"
       aria-label={`View providers offering ${service.title}`}
     >
-      <div className="bezel h-full">
-        <div className="bezel-inner h-full shadow-card overflow-hidden flex flex-col justify-between">
-          <div>
+      <div className="neu-flat h-full rounded-2xl md:rounded-[2.25rem] overflow-hidden flex flex-col justify-between">
+        <div>
+          {service.image && (
             <div className="relative h-44 md:h-52 overflow-hidden">
               <img
                 src={service.image}
                 alt={service.title}
                 loading="lazy"
-                className="h-full w-full object-cover object-center opacity-100 contrast-105 saturate-110 transition-transform duration-700 ease-out group-hover:scale-105"
+                className="h-full w-full object-cover object-center opacity-100 contrast-105 saturate-110 transition-transform duration-500 ease-out group-hover:scale-105"
               />
-              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-white via-white/20 to-transparent dark:from-slate-800 dark:via-slate-800/20 dark:to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#ebf1f8] via-[#ebf1f8]/30 to-transparent dark:from-[#172236] dark:via-[#172236]/30 dark:to-transparent" />
             </div>
-            <div className="p-6 md:p-8">
-              <div className="bg-primary/10 w-12 h-12 rounded-full flex items-center justify-center mb-3 ring-1 ring-primary/20 group-hover:bg-primary transition-all duration-700 ease-fluid [&_svg]:group-hover:text-white">
-                <div className="card-icon-animate">
-                  {service.icon}
-                </div>
+          )}
+          <div className="p-6 md:p-8">
+            <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mb-3 text-primary group-hover:scale-105 transition-transform duration-300">
+              <div className="card-icon-animate">
+                {service.icon}
               </div>
-              <h3 className="font-display text-base font-semibold text-slate-900 dark:text-slate-100 mb-2 flex items-center justify-between">
-                <span>{service.title}</span>
-                <ArrowUpRight size={16} weight="bold" className="text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{service.description}</p>
             </div>
+            <h3 className="font-display text-base font-bold text-slate-900 dark:text-slate-100 mb-2 flex items-center justify-between">
+              <span>{service.title}</span>
+              <ArrowUpRight size={16} weight="bold" className="text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </h3>
+            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{service.description}</p>
           </div>
-          <div className="px-6 pb-6 md:px-8 md:pb-8 pt-0">
-            <span className="text-xs font-semibold text-primary group-hover:underline inline-flex items-center gap-1">
-              Find specialists
-              <ArrowUpRight size={14} weight="bold" />
-            </span>
-          </div>
+        </div>
+        <div className="px-6 pb-6 md:px-8 md:pb-8 pt-0">
+          <span className="text-xs font-bold text-primary group-hover:underline inline-flex items-center gap-1">
+            Find specialists
+            <ArrowUpRight size={14} weight="bold" />
+          </span>
         </div>
       </div>
     </Link>

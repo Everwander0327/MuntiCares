@@ -18,11 +18,15 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     const root = document.documentElement;
+    // Add disable-transitions temporarily so thousands of elements don't simultaneously compute transition interpolations
+    root.classList.add('disable-transitions');
+    
     if (dark) {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
+
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem('mc_theme', dark ? 'dark' : 'light');
@@ -30,6 +34,15 @@ export const ThemeProvider = ({ children }) => {
     } catch {
       // ignore
     }
+
+    // Force style flush then restore interactive transitions on next frame
+    const timer = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        root.classList.remove('disable-transitions');
+      });
+    });
+
+    return () => cancelAnimationFrame(timer);
   }, [dark]);
 
   const toggle = useCallback(() => setDark(prev => !prev), []);

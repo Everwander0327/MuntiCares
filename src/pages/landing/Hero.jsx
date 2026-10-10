@@ -56,16 +56,16 @@ const Hero = () => {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 justify-center pt-2">
-              <Link to="/patient/providers" className="btn-primary group w-full sm:w-auto justify-center">
+              <Link to="/patient/providers" className="neu-btn-primary group w-full sm:w-auto px-7 py-3.5 rounded-full font-bold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-md">
                 Find a Provider
-                <span className="btn-island-icon !bg-white/20">
-                  <ArrowUpRight size={16} weight="light" className="text-white" />
+                <span className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:scale-105">
+                  <ArrowUpRight size={15} weight="bold" className="text-white" />
                 </span>
               </Link>
-              <Link to="/register" className="btn-secondary group w-full sm:w-auto justify-center">
+              <Link to="/register" className="neu-btn group w-full sm:w-auto px-7 py-3.5 rounded-full font-bold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-all text-slate-800 dark:text-slate-100">
                 Register as Provider
-                <span className="btn-island-icon !bg-white/10 dark:!bg-black/10">
-                  <ArrowUpRight size={16} weight="light" className="text-white dark:text-slate-900" />
+                <span className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:scale-105">
+                  <ArrowUpRight size={15} weight="bold" className="text-primary" />
                 </span>
               </Link>
             </div>

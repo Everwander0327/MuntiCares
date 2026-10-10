@@ -372,95 +372,131 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-slate-800 relative overflow-hidden">
-      {/* Video Call Overlay */}
+      {/* Video Call Overlay - Neumorphic Teleconsultation Suite */}
       <AnimatePresence>
         {callStatus !== 'idle' && (
           <motion.div
-            initial={{ opacity: 0, y: '100%' }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute inset-0 z-[100] bg-slate-900 flex flex-col"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+            className="absolute inset-0 z-[100] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col select-text"
           >
             {/* Connecting Screen */}
             {callStatus === 'connecting' && (
               <div className="flex-1 flex flex-col items-center justify-center px-6">
                 {jitsiError ? (
-                  <>
-                    <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mb-6">
-                      <PhoneOff className="w-9 h-9 text-red-400" />
+                  <div className="neu-flat p-8 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
+                    <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-rose-500">
+                      <PhoneOff className="w-7 h-7" />
                     </div>
-                    <h3 className="text-white text-lg font-bold">Connection Failed</h3>
-                    <p className="text-slate-400 text-sm mt-2 text-center max-w-xs">{jitsiError}</p>
-                    <p className="text-slate-500 text-xs mt-3 text-center max-w-xs">
-                      Make sure the app is served over HTTPS (required for camera/mic access on mobile browsers).
+                    <h3 className="text-slate-900 dark:text-white text-lg font-display font-black">Connection Failed</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-2 max-w-xs mx-auto">{jitsiError}</p>
+                    <p className="text-slate-400 dark:text-slate-500 text-3xs mt-2 text-center max-w-xs mx-auto">
+                      Make sure the app is served over HTTPS (required for camera/mic access).
                     </p>
                     <button
+                      type="button"
                       onClick={() => { endVideoCall(); closeVideoOverlay(); }}
-                      className="mt-8 px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm transition-all active:scale-95 backdrop-blur-sm"
+                      className="mt-6 px-6 py-2.5 neu-btn text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer"
                     >
-                      Close
+                      Close Window
                     </button>
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <div className="relative w-24 h-24 mb-6">
+                  <div className="neu-flat p-8 sm:p-10 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
+                    {/* Radar Pulse Avatar */}
+                    <div className="relative w-28 h-28 mx-auto mb-5">
                       <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-blue-400"
-                        animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0, 0.5] }}
-                        transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                        className="absolute inset-0 rounded-full border-2 border-primary/40"
+                        animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0, 0.6] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
                       />
-                      <div className="absolute inset-1 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <span className="text-2xl font-bold text-blue-400">
+                      <motion.div
+                        className="absolute inset-0 rounded-full border-2 border-emerald-400/40"
+                        animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0, 0.6] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                      />
+                      <div className="absolute inset-1.5 rounded-full neu-flat flex items-center justify-center p-1 overflow-hidden shadow-inner">
+                        <span className="text-2xl font-black text-primary">
                           {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
                         </span>
                       </div>
                     </div>
-                    <h3 className="text-white text-lg font-bold">Connecting...</h3>
-                    <p className="text-slate-400 text-sm mt-1">{otherUser?.name || 'User'}</p>
-                    <div className="flex items-center gap-2 mt-6">
-                      <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
-                      <span className="text-slate-400 text-sm">Establishing secure connection</span>
+
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-3xs font-extrabold text-primary uppercase tracking-widest mb-2">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+                      Connecting Teleconsultation
                     </div>
-                    <button
-                      onClick={() => { endVideoCall(); closeVideoOverlay(); }}
-                      className="mt-10 w-14 h-14 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30 active:scale-90"
-                      title="Cancel Call"
-                    >
-                      <PhoneOff className="w-6 h-6" />
-                    </button>
-                  </>
+
+                    <h3 className="text-slate-900 dark:text-white text-lg font-display font-black truncate">
+                      {otherUser?.name || 'Healthcare Provider'}
+                    </h3>
+                    
+                    <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-500 dark:text-slate-400">
+                      <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                      <span>Securing encrypted video stream...</span>
+                    </div>
+
+                    <div className="mt-8 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => { endVideoCall(); closeVideoOverlay(); }}
+                        className="neu-btn w-14 h-14 rounded-2xl flex items-center justify-center text-rose-500 hover:text-rose-600 transition-all active:scale-90 shadow-md cursor-pointer"
+                        title="Cancel Call"
+                      >
+                        <PhoneOff className="w-6 h-6 stroke-[2.5]" />
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Jitsi always mounts here but is hidden behind connecting/ended overlays */}
+            {/* Jitsi Teleconsultation Screen */}
             <div className={`absolute inset-0 flex flex-col ${callStatus === 'connected' ? 'z-0' : 'z-[-1] opacity-0 pointer-events-none'}`}>
-              <div className="flex items-center justify-between px-4 py-3 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 text-white shrink-0 shadow-lg">
+              {/* Neumorphic Header Bar */}
+              <div className="flex items-center justify-between px-5 py-3.5 bg-[#ebf1f8] dark:bg-[#172236] neu-flat border-b border-white/60 dark:border-white/10 shrink-0 z-10 shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
-                    <Video className="w-4 h-4 text-blue-400" />
+                  <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-primary">
+                    <Video className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-sm">Teleconsultation</h3>
-                    <p className="text-nano text-slate-400 font-mono font-medium">{formatTime(callTimer)}</p>
+                    <h3 className="font-display font-black text-xs sm:text-sm text-slate-900 dark:text-white leading-tight">
+                      Teleconsultation Session
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <p className="text-3xs text-emerald-600 dark:text-emerald-400 font-mono font-bold tracking-wider">
+                        {formatTime(callTimer)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={endVideoCall}
-                  className="w-9 h-9 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30 active:scale-90"
-                  title="End Call"
-                >
-                  <PhoneOff className="w-4 h-4" />
-                </button>
+
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline-block text-2xs text-slate-400 font-semibold truncate max-w-[150px]">
+                    {otherUser?.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={endVideoCall}
+                    className="neu-btn px-3 py-1.5 rounded-xl text-rose-500 hover:text-rose-600 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+                    title="End Call"
+                  >
+                    <PhoneOff className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>Leave</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex-1 w-full bg-black relative">
+              {/* Jitsi Video Embed Container */}
+              <div className="flex-1 w-full bg-slate-950 relative overflow-hidden">
                 {!jitsiReady && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
-                    <div className="text-center">
-                      <Loader2 className="w-8 h-8 text-blue-400 animate-spin mx-auto mb-3" />
-                      <p className="text-slate-400 text-sm">Connecting to video...</p>
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#ebf1f8] dark:bg-[#172236] z-10">
+                    <div className="neu-flat p-6 rounded-2xl text-center border border-white/80 dark:border-white/10 shadow-lg">
+                      <Loader2 className="w-7 h-7 text-primary animate-spin mx-auto mb-2.5" />
+                      <p className="text-slate-700 dark:text-slate-200 text-xs font-bold">Initializing video feed...</p>
                     </div>
                   </div>
                 )}
@@ -502,28 +538,41 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                 />
               </div>
 
-              {/* Bottom Controls */}
-              <div className="px-6 py-4 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 flex items-center justify-center gap-6 shrink-0">
+              {/* Bottom Tactile Neumorphic Controls Bar */}
+              <div className="px-6 py-4 bg-[#ebf1f8] dark:bg-[#172236] neu-flat border-t border-white/60 dark:border-white/10 flex items-center justify-center gap-5 shrink-0 z-10 shadow-lg">
                 <button
+                  type="button"
                   onClick={toggleMute}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 ${isMuted ? 'bg-red-500/20 text-red-400' : 'bg-slate-700/60 text-white hover:bg-slate-600'}`}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
+                    isMuted 
+                      ? 'neu-pressed text-rose-500 border border-rose-500/30' 
+                      : 'neu-btn text-slate-700 dark:text-slate-200'
+                  }`}
                   title={isMuted ? 'Unmute' : 'Mute'}
                 >
-                  {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  {isMuted ? <MicOff className="w-5 h-5 stroke-[2.5]" /> : <Mic className="w-5 h-5" />}
                 </button>
+
                 <button
+                  type="button"
                   onClick={toggleCamera}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 ${isCameraOff ? 'bg-red-500/20 text-red-400' : 'bg-slate-700/60 text-white hover:bg-slate-600'}`}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
+                    isCameraOff 
+                      ? 'neu-pressed text-rose-500 border border-rose-500/30' 
+                      : 'neu-btn text-slate-700 dark:text-slate-200'
+                  }`}
                   title={isCameraOff ? 'Turn Camera On' : 'Turn Camera Off'}
                 >
-                  {isCameraOff ? <CameraOff className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+                  {isCameraOff ? <CameraOff className="w-5 h-5 stroke-[2.5]" /> : <Camera className="w-5 h-5" />}
                 </button>
+
                 <button
+                  type="button"
                   onClick={endVideoCall}
-                  className="w-14 h-14 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-all shadow-lg shadow-red-500/30 active:scale-90"
+                  className="w-14 h-14 rounded-2xl neu-btn text-rose-600 hover:text-rose-700 flex items-center justify-center transition-all active:scale-90 shadow-lg cursor-pointer"
                   title="End Call"
                 >
-                  <PhoneOff className="w-6 h-6" />
+                  <PhoneOff className="w-6 h-6 stroke-[2.5]" />
                 </button>
               </div>
             </div>
@@ -531,24 +580,27 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
             {/* Ended Screen */}
             {callStatus === 'ended' && (
               <div className="flex-1 flex flex-col items-center justify-center px-6">
-                <div className="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-5 border border-slate-700">
-                  <PhoneOff className="w-9 h-9 text-slate-400" />
-                </div>
-                <h3 className="text-white text-xl font-bold">Call Ended</h3>
-                {callTimer > 0 && (
-                  <p className="text-slate-400 text-sm mt-1 font-mono">
-                    Duration: {formatTime(callTimer)}
+                <div className="neu-flat p-8 sm:p-10 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
+                  <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-slate-400">
+                    <PhoneOff className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-slate-900 dark:text-white text-xl font-display font-black">Session Concluded</h3>
+                  {callTimer > 0 && (
+                    <div className="mt-2 inline-block px-3 py-1 rounded-full neu-flat-sm text-xs font-mono font-bold text-primary">
+                      Duration: {formatTime(callTimer)}
+                    </div>
+                  )}
+                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-3 text-center max-w-xs mx-auto">
+                    {otherUser?.name || 'The provider'} has left the teleconsultation room.
                   </p>
-                )}
-                <p className="text-slate-500 text-xs mt-4 text-center max-w-xs">
-                  {otherUser?.name || 'The other party'} has left the call
-                </p>
-                <button
-                  onClick={closeVideoOverlay}
-                  className="mt-8 px-8 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold text-sm transition-all active:scale-95 backdrop-blur-sm"
-                >
-                  Return to Chat
-                </button>
+                  <button
+                    type="button"
+                    onClick={closeVideoOverlay}
+                    className="mt-6 px-6 py-2.5 neu-btn text-primary rounded-xl font-extrabold text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
+                  >
+                    Return to Conversation
+                  </button>
+                </div>
               </div>
             )}
           </motion.div>

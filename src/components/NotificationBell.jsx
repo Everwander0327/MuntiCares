@@ -82,35 +82,66 @@ const NotificationBell = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [dismissedIds, setDismissedIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`dismissed_notifs_${user?.id}`);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
   const [panelPos, setPanelPos] = useState({ top: 0, right: 16 });
   const panelRef = useRef(null);
   const buttonRef = useRef(null);
   const prevNotifsRef = useRef([]);
+  const isUpdatingPosRef = useRef(false);
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Sync dismissedIds when user changes
+  useEffect(() => {
+    if (user?.id) {
+      try {
+        const stored = localStorage.getItem(`dismissed_notifs_${user.id}`);
+        setDismissedIds(stored ? JSON.parse(stored) : []);
+      } catch {
+        setDismissedIds([]);
+      }
+    }
+  }, [user?.id]);
+
   // Anchor the dropdown to the bell button in viewport coords.
-  // Rendered via portal so glass blur / overflow-hidden ancestors cannot clip it.
+  // Use requestAnimationFrame throttle and avoid re-rendering if unchanged.
   const updatePanelPos = useCallback(() => {
-    if (!buttonRef.current) return;
-    const rect = buttonRef.current.getBoundingClientRect();
-    const width = Math.min(384, window.innerWidth - 32);
-    const right = Math.max(16, window.innerWidth - rect.right - (384 - width) / 2 - 160);
-    setPanelPos({
-      top: rect.bottom + 12,
-      right,
-      width,
+    if (!buttonRef.current || isUpdatingPosRef.current) return;
+    isUpdatingPosRef.current = true;
+    requestAnimationFrame(() => {
+      isUpdatingPosRef.current = false;
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      const isMobile = window.innerWidth < 640;
+      const width = isMobile ? Math.min(window.innerWidth - 24, 380) : 384;
+      const right = isMobile ? Math.max(12, (window.innerWidth - width) / 2) : Math.max(16, window.innerWidth - rect.right - (384 - width) / 2);
+      
+      setPanelPos(prev => {
+        const nextTop = rect.bottom + 12;
+        if (prev.top === nextTop && prev.right === right && prev.width === width) {
+          return prev;
+        }
+        return { top: nextTop, right, width };
+      });
     });
   }, []);
 
   useEffect(() => {
     if (!isOpen) return;
     updatePanelPos();
-    window.addEventListener('resize', updatePanelPos);
-    window.addEventListener('scroll', updatePanelPos, true);
+    window.addEventListener('resize', updatePanelPos, { passive: true });
+    // Passive scroll listener only for desktop/tablet; on mobile window is static or locked
+    window.addEventListener('scroll', updatePanelPos, { passive: true });
     return () => {
       window.removeEventListener('resize', updatePanelPos);
-      window.removeEventListener('scroll', updatePanelPos, true);
+      window.removeEventListener('scroll', updatePanelPos);
     };
   }, [isOpen, updatePanelPos]);
 
@@ -294,9 +325,13 @@ const NotificationBell = () => {
         });
       }
 
+      // Filter out dismissed notifications
+      const dismissed = JSON.parse(localStorage.getItem(`dismissed_notifs_${user.id}`) || '[]');
+      const activeNotifs = notifs.filter(n => !dismissed.includes(n.id));
+
       // Compare with previous fetch to trigger real-time toasts on updates (essential for anon auth)
       if (prevNotifsRef.current.length > 0) {
-        const newlyAdded = notifs.filter(n => !prevNotifsRef.current.some(pn => pn.id === n.id));
+        const newlyAdded = activeNotifs.filter(n => !prevNotifsRef.current.some(pn => pn.id === n.id));
         newlyAdded.forEach(notif => {
           playChime();
           let icon = '🔔';
@@ -332,12 +367,12 @@ const NotificationBell = () => {
         });
       }
       
-      prevNotifsRef.current = notifs;
-      setNotifications(notifs);
+      prevNotifsRef.current = activeNotifs;
+      setNotifications(activeNotifs);
 
       // Count unread based on localStorage
       const readIds = JSON.parse(localStorage.getItem(`read_notifs_${user.id}`) || '[]');
-      const unread = notifs.filter(n => !readIds.includes(n.id)).length;
+      const unread = activeNotifs.filter(n => !readIds.includes(n.id)).length;
       setUnreadCount(unread);
     } catch (err) {
       console.error('Error fetching notifications:', err);
@@ -410,6 +445,19 @@ const NotificationBell = () => {
     setUnreadCount(0);
   };
 
+  const clearAllNotifications = (e) => {
+    if (e) e.stopPropagation();
+    if (!user) return;
+    const allIds = notifications.map(n => n.id);
+    const existingDismissed = JSON.parse(localStorage.getItem(`dismissed_notifs_${user.id}`) || '[]');
+    const nextDismissed = Array.from(new Set([...existingDismissed, ...allIds]));
+    localStorage.setItem(`dismissed_notifs_${user.id}`, JSON.stringify(nextDismissed));
+    setDismissedIds(nextDismissed);
+    setNotifications([]);
+    setUnreadCount(0);
+    toast.success('All notifications cleared');
+  };
+
   const handleNotifClick = (notif) => {
     // Mark this one as read
     if (user) {
@@ -427,10 +475,14 @@ const NotificationBell = () => {
   const dismissNotification = (e, id) => {
     e.stopPropagation(); // Avoid triggering navigation
     if (user) {
+      const existingDismissed = JSON.parse(localStorage.getItem(`dismissed_notifs_${user.id}`) || '[]');
+      const nextDismissed = Array.from(new Set([...existingDismissed, id]));
+      localStorage.setItem(`dismissed_notifs_${user.id}`, JSON.stringify(nextDismissed));
+      setDismissedIds(nextDismissed);
+      setNotifications(prev => prev.filter(n => n.id !== id));
+      
       const readIds = JSON.parse(localStorage.getItem(`read_notifs_${user.id}`) || '[]');
       if (!readIds.includes(id)) {
-        readIds.push(id);
-        localStorage.setItem(`read_notifs_${user.id}`, JSON.stringify(readIds));
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     }
@@ -473,84 +525,150 @@ const NotificationBell = () => {
         {isOpen && (
           <motion.div
             ref={panelRef}
-            className="fixed neu-flat rounded-3xl overflow-hidden"
-            style={{ top: panelPos.top, right: panelPos.right, width: panelPos.width || 384, zIndex: 200 }}
-            initial={{ opacity: 0, y: -10, scale: 0.97 }}
+            className="fixed neu-flat rounded-3xl overflow-hidden transform-gpu will-change-transform shadow-2xl"
+            style={{ 
+              top: panelPos.top, 
+              right: panelPos.right, 
+              width: panelPos.width || 384, 
+              maxHeight: 'calc(100vh - 90px)',
+              zIndex: 200,
+              contain: 'paint layout'
+            }}
+            initial={{ opacity: 0, y: -8, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.97 }}
-            transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="font-bold text-slate-900 dark:text-slate-100">Notifications</h3>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllRead}
-                  className="text-xs text-primary font-bold hover:underline"
-                >
-                  Mark all read
-                </button>
-              )}
+            <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-slate-200/60 dark:border-white/5 bg-transparent">
+              <div>
+                <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100">Notifications</h3>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllRead}
+                    className="neu-btn px-2.5 py-1 rounded-xl text-3xs font-extrabold text-primary hover:text-primary-600 cursor-pointer active:scale-95"
+                  >
+                    Mark read
+                  </button>
+                )}
+                {notifications.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAllNotifications}
+                    className="neu-btn px-2.5 py-1 rounded-xl text-3xs font-extrabold text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 cursor-pointer active:scale-95"
+                    title="Clear all notifications"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
             </div>
 
-            {/* Notification List - show all, unread first */}
-            <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-50 dark:divide-white/5">
+            {/* Notification List - hardware-accelerated smooth mobile scrolling */}
+            <div 
+              className="max-h-[350px] sm:max-h-[380px] overflow-y-auto overscroll-contain p-2.5 sm:p-3 space-y-2"
+              style={{ 
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-y'
+              }}
+            >
               {notifications.length > 0 ? (
-                [...notifications].sort((a, b) => {
-                  const aUnread = unreadNotifications.some((n) => n.id === a.id) ? 0 : 1;
-                  const bUnread = unreadNotifications.some((n) => n.id === b.id) ? 0 : 1;
-                  return aUnread - bUnread;
-                }).map((notif) => {
-                  const isUnread = unreadNotifications.some((n) => n.id === notif.id);
-                  return (
-                    <div
-                      key={notif.id}
-                      className={`w-full text-left px-5 py-3.5 flex items-start gap-3 transition-colors relative group cursor-pointer ${isUnread ? 'hover:bg-slate-50 dark:hover:bg-white/5 bg-blue-50/40 dark:bg-blue-500/10' : 'hover:bg-slate-50 dark:hover:bg-white/5 opacity-75'}`}
-                      onClick={() => handleNotifClick(notif)}
-                    >
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${getNotifBg(notif.type)}`}>
-                        {getNotifIcon(notif.type)}
-                      </div>
-                      <div className="flex-1 min-w-0 pr-6">
-                        <div className="flex items-center gap-2">
-                          <p className={`text-sm truncate ${isUnread ? 'font-bold text-slate-900 dark:text-white' : 'font-medium text-slate-600 dark:text-slate-300'}`}>
-                            {notif.title}
-                          </p>
-                          {isUnread && <span className="w-1.5 h-1.5 bg-primary rounded-full shrink-0" />}
-                        </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{notif.message}</p>
-                        <p className="text-2xs text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {timeAgo(notif.time)}
-                        </p>
-                      </div>
-
-                      {/* X / Dismiss Button on Hover */}
-                      <button
-                        onClick={(e) => dismissNotification(e, notif.id)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                        title="Dismiss"
+                <AnimatePresence initial={false}>
+                  {[...notifications].sort((a, b) => {
+                    const aUnread = unreadNotifications.some((n) => n.id === a.id) ? 0 : 1;
+                    const bUnread = unreadNotifications.some((n) => n.id === b.id) ? 0 : 1;
+                    return aUnread - bUnread;
+                  }).map((notif, idx) => {
+                    const isUnread = unreadNotifications.some((n) => n.id === notif.id);
+                    return (
+                      <motion.div
+                        key={notif.id}
+                        layout
+                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, x: -100, height: 0, marginBottom: 0, transition: { duration: 0.22, ease: 'easeOut' } }}
+                        transition={{ 
+                          type: 'spring', 
+                          damping: 24, 
+                          stiffness: 280, 
+                          delay: Math.min(idx * 0.03, 0.15) 
+                        }}
+                        drag="x"
+                        dragConstraints={{ left: 0, right: 0 }}
+                        dragElastic={0.4}
+                        onDragEnd={(_, info) => {
+                          if (info.offset.x < -80 || info.offset.x > 80) {
+                            dismissNotification({ stopPropagation: () => {} }, notif.id);
+                          }
+                        }}
+                        whileTap={{ scale: 0.985 }}
+                        className={`w-full text-left p-3 sm:p-3.5 rounded-2xl flex items-start gap-3 transition-colors relative group cursor-pointer select-none ${
+                          isUnread 
+                            ? 'neu-flat border border-primary/25 bg-[#e4ecf6] dark:bg-[#1c2940]' 
+                            : 'neu-flat-sm opacity-90 hover:opacity-100'
+                        }`}
+                        onClick={() => handleNotifClick(notif)}
                       >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  );
-                })
+                        <motion.div 
+                          className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+                          whileHover={{ scale: 1.08 }}
+                          transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                        >
+                          {getNotifIcon(notif.type)}
+                        </motion.div>
+                        <div className="flex-1 min-w-0 pr-6">
+                          <div className="flex items-center gap-2">
+                            <p className={`text-xs sm:text-[13px] truncate ${isUnread ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300'}`}>
+                              {notif.title}
+                            </p>
+                            {isUnread && <span className="w-2 h-2 bg-primary rounded-full shrink-0 shadow-sm animate-pulse" />}
+                          </div>
+                          <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{notif.message}</p>
+                          <p className="text-3xs text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1 font-semibold">
+                            <Clock className="w-3 h-3" />
+                            {timeAgo(notif.time)}
+                          </p>
+                        </div>
+
+                        {/* X / Dismiss Button - Always visible & easily tapable on mobile, hover on desktop */}
+                        <button
+                          type="button"
+                          onClick={(e) => dismissNotification(e, notif.id)}
+                          className="neu-btn absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 dark:hover:text-red-400 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 cursor-pointer active:scale-90"
+                          title="Dismiss notification"
+                        >
+                          <X className="w-3 h-3 stroke-[2.5]" />
+                        </button>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               ) : (
-                <div className="p-8 text-center">
-                  <CheckCircle2 className="w-8 h-8 text-green-400 mx-auto mb-2" />
-                  <p className="text-sm text-slate-500 font-bold">You{'\u2019'}re all caught up!</p>
-                  <p className="text-xs text-slate-400 mt-1">No notifications at the moment.</p>
-                </div>
+                <motion.div 
+                  className="neu-inset p-8 rounded-2xl text-center"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 text-emerald-500">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-extrabold">You{'\u2019'}re all caught up!</p>
+                  <p className="text-3xs sm:text-xs text-slate-400 mt-1">No notifications at the moment.</p>
+                </motion.div>
               )}
             </div>
 
             {/* Footer */}
-            {unreadNotifications.length > 0 && (
-              <div className="px-5 py-3 border-t border-slate-100 dark:border-slate-700 text-center">
-                <p className="text-2xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider">
-                  Showing latest {unreadNotifications.length} notifications
-                </p>
+            {notifications.length > 0 && (
+              <div className="px-5 py-2.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-3xs text-slate-400 dark:text-slate-500 font-bold">
+                <span>{notifications.length} notification{notifications.length > 1 ? 's' : ''}</span>
+                {unreadCount > 0 && (
+                  <span className="text-primary font-extrabold">{unreadCount} unread</span>
+                )}
               </div>
             )}
           </motion.div>

@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { IMAGES } from '../../lib/images';
 const heroImage = IMAGES.brand.heroAuth;
-import { Heart, Envelope, LockKey, User, ShieldCheck, Eye, EyeSlash, Stethoscope, ArrowUpRight } from '@phosphor-icons/react';
+import { Heart, Stethoscope, ArrowUpRight } from '@phosphor-icons/react';
+import { Mail, Lock, User, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -18,12 +19,6 @@ import { FormInput, FormCheckbox } from '../../components/ui/form-input';
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const FLUID = [0.32, 0.72, 0, 1];
-
-// Phosphor Light wrappers — FormInput renders icons via className sizing
-const EnvelopeLight = (props) => <Envelope weight="light" {...props} />;
-const LockLight = (props) => <LockKey weight="light" {...props} />;
-const UserLight = (props) => <User weight="light" {...props} />;
-const ShieldLight = (props) => <ShieldCheck weight="light" {...props} />;
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -77,11 +72,11 @@ const PasswordToggle = ({ show, onToggle }) => (
   <button
     type="button"
     onClick={onToggle}
-    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all duration-700 ease-fluid"
+    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
     tabIndex={-1}
     aria-label={show ? 'Hide password' : 'Show password'}
   >
-    {show ? <EyeSlash size={20} weight="light" /> : <Eye size={20} weight="light" />}
+    {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
   </button>
 );
 
@@ -228,7 +223,7 @@ const AuthPage = () => {
               label="New Password"
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
-              icon={LockLight}
+              icon={Lock}
               className="!py-2.5"
               error={setPasswordForm.formState.errors.password?.message}
               rightElement={<PasswordToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
@@ -240,16 +235,16 @@ const AuthPage = () => {
             <motion.button
               type="submit"
               disabled={loading}
-              className={`btn-primary w-full py-3 text-sm ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-              whileHover={!loading ? { scale: 1.02 } : {}}
-              whileTap={!loading ? { scale: 0.97 } : {}}
+              className={`neu-btn-primary w-full py-3.5 rounded-2xl text-xs sm:text-sm font-bold shadow-md cursor-pointer ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              whileHover={!loading ? { scale: 1.01 } : {}}
+              whileTap={!loading ? { scale: 0.98 } : {}}
             >
               {loading ? 'Setting password...' : 'Set Password'}
             </motion.button>
             <button
               type="button"
               onClick={() => { setPendingSetPassword(null); setError(''); }}
-              className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium transition-all duration-700 ease-fluid"
+              className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors"
             >
               Use a different account
             </button>
@@ -272,7 +267,7 @@ const AuthPage = () => {
                     label="Email Address"
                     type="email"
                     placeholder="juan.delacruz@example.com"
-                    icon={EnvelopeLight}
+                    icon={Mail}
                     className="!py-2.5"
                     error={loginForm.formState.errors.email?.message}
                     {...loginForm.register('email')}
@@ -282,7 +277,7 @@ const AuthPage = () => {
                     label="Password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    icon={LockLight}
+                    icon={Lock}
                     className="!py-2.5"
                     error={loginForm.formState.errors.password?.message}
               rightElement={<PasswordToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
@@ -309,9 +304,9 @@ const AuthPage = () => {
             <motion.button
               type="submit"
               disabled={loading}
-            className={`btn-primary w-full py-3 text-sm ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-              whileHover={!loading ? { scale: 1.02 } : {}}
-              whileTap={!loading ? { scale: 0.97 } : {}}
+              className={`neu-btn-primary w-full py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold shadow-md cursor-pointer ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              whileHover={!loading ? { scale: 1.01 } : {}}
+              whileTap={!loading ? { scale: 0.98 } : {}}
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </motion.button>
@@ -331,20 +326,20 @@ const AuthPage = () => {
         <form className="space-y-2" onSubmit={registerForm.handleSubmit(handleRegister)}>
           {/* Role Pills */}
           <div>
-            <label className="text-xs font-semibold text-slate-800 dark:text-slate-200 ml-1 block mb-1.5">I am a...</label>
+            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 ml-1 block mb-1.5">I am a...</label>
             <div className="flex gap-2">
               {[
-                { value: 'patient', label: 'Patient', icon: <User size={16} weight="light" /> },
-                { value: 'provider', label: 'Provider', icon: <Stethoscope size={16} weight="light" /> },
+                { value: 'patient', label: 'Patient', icon: <User size={15} weight="light" /> },
+                { value: 'provider', label: 'Provider', icon: <Stethoscope size={15} weight="light" /> },
               ].map((r) => (
                 <button
                   key={r.value}
                   type="button"
                   onClick={() => setRole(r.value)}
-                  className={`flex-1 py-2 rounded-full text-xs font-semibold transition-all duration-700 ease-fluid ring-1 flex items-center justify-center gap-2 active:scale-[0.98] ${
+                  className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] cursor-pointer ${
                     role === r.value
-                      ? 'ring-primary bg-primary text-white shadow-card'
-                      : 'ring-black/10 dark:ring-white/10 text-slate-700 dark:text-slate-300 bg-white/60 dark:bg-slate-800/60 hover:ring-black/20 dark:hover:ring-white/20'
+                      ? 'neu-btn-primary shadow-sm'
+                      : 'neu-btn text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   {r.icon}
@@ -360,7 +355,7 @@ const AuthPage = () => {
               <FormInput
                 label="Full Name"
                 placeholder="Juan Dela Cruz"
-                icon={UserLight}
+                icon={User}
                 className="!py-2"
                 error={registerForm.formState.errors.fullName?.message}
                 {...registerForm.register('fullName')}
@@ -369,7 +364,7 @@ const AuthPage = () => {
                 label="Email Address"
                 type="email"
                 placeholder="juan@example.com"
-                icon={EnvelopeLight}
+                icon={Mail}
                 className="!py-2"
                 error={registerForm.formState.errors.email?.message}
                 {...registerForm.register('email')}
@@ -380,7 +375,7 @@ const AuthPage = () => {
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                icon={LockLight}
+                icon={Lock}
                 className="!py-2"
                 error={registerForm.formState.errors.password?.message}
                 rightElement={<PasswordToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
@@ -390,7 +385,7 @@ const AuthPage = () => {
                 label="Confirm Password"
                 type={showConfirmPassword ? 'text' : 'password'}
                 placeholder="••••••••"
-                icon={ShieldLight}
+                icon={ShieldCheck}
                 className="!py-2"
                 error={registerForm.formState.errors.confirmPassword?.message}
                 rightElement={<PasswordToggle show={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />}
@@ -435,9 +430,9 @@ const AuthPage = () => {
           <motion.button
             type="submit"
             disabled={loading}
-            className={`btn-primary w-full py-3 text-sm ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
-            whileHover={!loading ? { scale: 1.02 } : {}}
-            whileTap={!loading ? { scale: 0.97 } : {}}
+            className={`neu-btn-primary w-full py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold shadow-md cursor-pointer ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+            whileHover={!loading ? { scale: 1.01 } : {}}
+            whileTap={!loading ? { scale: 0.98 } : {}}
           >
             {loading ? 'Creating Account...' : 'Create Account'}
           </motion.button>
@@ -447,7 +442,7 @@ const AuthPage = () => {
   };
 
   return (
-    <main ref={pageRef} className="relative overflow-x-hidden w-full max-w-full bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white">
+    <main ref={pageRef} className="relative min-h-[100dvh] overflow-x-hidden w-full max-w-full flex items-center justify-center bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white py-4 sm:py-8 md:py-12 px-3 sm:px-6">
       {/* Theme-aware cinema backdrop */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
         <div ref={bgRef} className="h-full w-full">
@@ -462,56 +457,60 @@ const AuthPage = () => {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(30,111,191,0.08)_78%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(2,6,23,0.6)_78%)]" />
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-md px-4 md:px-6 pt-28 lg:pt-32 pb-16 lg:pb-24">
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="bg-primary p-2 rounded-full shadow-card">
-            <Heart size={18} weight="fill" className="text-white" />
-          </div>
-          <span className="font-display text-lg font-semibold tracking-tight text-slate-900 dark:text-white">MuntiCares</span>
-        </div>
-
-        <div className="text-center mb-8">
-          <h1 className="font-display font-semibold text-slate-900 dark:text-white w-full" style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', lineHeight: 1.08, letterSpacing: '-0.02em' }}>
-            Welcome back
+      <div className="relative z-10 mx-auto w-full max-w-sm sm:max-w-md">
+        <div className="text-center mb-3 sm:mb-5">
+          <h1 className="font-display font-black text-slate-900 dark:text-white w-full tracking-tight text-xl sm:text-2xl md:text-3xl">
+            {mode === 'login' ? 'Welcome back' : 'Create an Account'}
           </h1>
-          <p className="mt-2 text-sm md:text-base text-slate-600 dark:text-white/70">
-            Sign in or create your account to continue.
+          <p className="mt-0.5 sm:mt-1 text-2xs sm:text-xs md:text-[13px] font-medium text-slate-500 dark:text-slate-400">
+            {mode === 'login' ? 'Sign in to access your healthcare portal.' : 'Register to connect with verified home care.'}
           </p>
         </div>
 
         <motion.div
           className={`relative w-full transform-gpu ${shake ? 'animate-shake' : ''}`}
-          initial={{ opacity: 0, y: 32 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: FLUID }}
+          transition={{ duration: 0.5, ease: FLUID }}
         >
-          <div className="bezel">
-            <div className="bezel-inner p-5 md:p-8 shadow-soft">
-              {redirectTarget && !pendingSetPassword && (
-                <div className="mb-4 p-3 rounded-2xl bg-primary/10 dark:bg-primary/20 text-xs font-medium text-primary dark:text-blue-300 ring-1 ring-primary/20 flex items-center gap-2">
-                  <ShieldCheck size={18} weight="fill" className="shrink-0 text-primary dark:text-blue-300" />
-                  <span>Sign in or register to browse verified providers and book home care visits.</span>
-                </div>
-              )}
+          <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] p-4 sm:p-6 md:p-8">
+            {!pendingSetPassword && (
+              <div className="flex neu-inset rounded-xl sm:rounded-2xl mb-3.5 sm:mb-5 p-1 gap-1">
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); setError(''); }}
+                  className={`flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none ${
+                    mode === 'login'
+                      ? 'neu-flat text-primary font-black shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Login
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('register'); setError(''); }}
+                  className={`flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none ${
+                    mode === 'register'
+                      ? 'neu-flat text-primary font-black shadow-xs'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  Register
+                </button>
+              </div>
+            )}
 
-              {!pendingSetPassword && (
-                <div className="flex justify-center ring-1 ring-black/5 dark:ring-white/10 rounded-full mb-4 p-1">
-                  <TabButton active={mode === 'login'} label="Login" onClick={() => { setMode('login'); setError(''); }} />
-                  <TabButton active={mode === 'register'} label="Register" onClick={() => { setMode('register'); setError(''); }} />
-                </div>
-              )}
+            <AnimatePresence mode="wait">
+              {formContent(mode === 'login')}
+            </AnimatePresence>
 
-              <AnimatePresence mode="wait">
-                {formContent(mode === 'login')}
-              </AnimatePresence>
-
-              {!pendingSetPassword && mode === 'login' && (
-                <Link to="/register" className="group mt-4 flex items-center justify-center gap-2 text-sm font-semibold text-primary hover:text-primary-700 transition-all duration-700 ease-fluid">
-                  New here? Create an account
-                  <ArrowUpRight size={16} weight="light" className="transition-transform duration-700 ease-fluid group-hover:translate-x-1 group-hover:-translate-y-[1px]" />
-                </Link>
-              )}
-            </div>
+            {!pendingSetPassword && mode === 'login' && (
+              <Link to="/register" className="group mt-3.5 sm:mt-5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-primary hover:text-primary-700 transition-colors">
+                New here? Create an account
+                <ArrowUpRight size={14} weight="bold" className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+            )}
           </div>
         </motion.div>
       </div>

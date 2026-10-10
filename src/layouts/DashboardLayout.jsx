@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
+import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell';
 import ThemeToggle from '../components/ThemeToggle';
 import { supabase } from '../lib/supabase';
@@ -18,9 +18,11 @@ import {
   MessageCircle,
   Megaphone
 } from 'lucide-react';
-import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import MobileNavItem from '../components/MobileNavItem';
+
+const DashboardLayoutContext = createContext(false);
 
 const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
   <Link
@@ -51,8 +53,28 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
 );
 
 const DashboardLayout = ({ children, role = 'patient' }) => {
+  const isInsidePersistentLayout = useContext(DashboardLayoutContext);
+
+  // If already inside the Persistent Dashboard Shell, just pass through the children
+  // so existing page components don't duplicate the shell or re-mount layout.
+  if (isInsidePersistentLayout) {
+    return <>{children || <Outlet />}</>;
+  }
+
+  return (
+    <DashboardLayoutContext.Provider value={true}>
+      <DashboardShell role={role}>
+        {children || <Outlet />}
+      </DashboardShell>
+    </DashboardLayoutContext.Provider>
+  );
+};
+
+const DashboardShell = ({ children, role = 'patient' }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
+  const [isRollupCollapsing, setIsRollupCollapsing] = useState(false);
+  const [isRollupExpanding, setIsRollupExpanding] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
@@ -62,7 +84,23 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
   const channelRef = useRef(null);
 
   const toggleDesktopCollapse = () => {
-    setIsDesktopCollapsed(prev => !prev);
+    if (!isDesktopCollapsed) {
+      // CLOSE: Stage 1 - Tupi pataas mula bottom habang umiikot ang heart
+      setIsRollupCollapsing(true);
+      setTimeout(() => {
+        // CLOSE: Stage 2 - Lilipad na ang heart papuntang top panel
+        setIsDesktopCollapsed(true);
+        setIsRollupCollapsing(false);
+      }, 340);
+    } else {
+      // OPEN (REVERSE): Stage 1 - Lilipad pabalik ang heart sa sidebar habang umiikot in place
+      setIsDesktopCollapsed(false);
+      setIsRollupExpanding(true);
+      setTimeout(() => {
+        // OPEN (REVERSE): Stage 2 - Pagka-land ng heart, bubuka at mag-uunroll ang panel pababa
+        setIsRollupExpanding(false);
+      }, 380);
+    }
   };
 
   const patientLinks = [
@@ -176,10 +214,6 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
     };
   }, [authUser, fetchCounts, deleteOldMessages]);
 
-  useEffect(() => {
-    fetchCounts();
-  }, [location.pathname, fetchCounts]);
-
   const buildMobileLinks = (links) => {
     const primaryIndex = links.findIndex(l => l.primary);
     if (primaryIndex === -1) return links;
@@ -201,8 +235,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 
   return (
     <>
-      <LayoutGroup id="munti-sidebar-flight">
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex overflow-hidden mesh-ambient dark:mesh-ambient-dark">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex overflow-hidden">
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {isSidebarOpen && (
@@ -216,7 +249,7 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           )}
         </AnimatePresence>
 
-        {/* Sidebar - floating neumorphic island with desktop rollup collapse */}
+        {/* Sidebar - floating neumorphic island with rollup bottom-to-top collapse */}
         <motion.aside
           initial={false}
           animate={{
@@ -225,37 +258,43 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
             paddingLeft: isDesktopCollapsed ? 0 : undefined,
             paddingRight: isDesktopCollapsed ? 0 : undefined,
           }}
-          transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: 0.38, ease: [0.25, 1, 0.5, 1] }}
           className={`fixed inset-y-0 left-0 z-50 transition-transform duration-500 ease-fluid transform ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } lg:static lg:translate-x-0 lg:p-4 overflow-hidden shrink-0 select-none`}
         >
-          <div className="h-full w-[280px] flex flex-col p-6 neu-flat lg:rounded-[2.25rem]">
-            {/* Logo with spinning heart collapse trigger on desktop */}
-            <div className="flex items-center justify-between mb-8">
+          <div className="h-full w-[280px] flex flex-col p-6 neu-flat lg:rounded-[2.25rem] transform-gpu overflow-hidden">
+            {/* Logo row - ALWAYS natural 1:1 scale, NEVER stretched */}
+            <div className="flex items-center justify-between mb-8 shrink-0">
               <div className="flex items-center gap-2.5">
                 {!isDesktopCollapsed ? (
                   <motion.button
                     layoutId="munti-heart-badge"
+                    layout="position"
                     type="button"
                     onClick={toggleDesktopCollapse}
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     transition={{
-                      layout: { duration: 0.55, ease: [0.34, 1.56, 0.64, 1] },
+                      layout: { duration: 0.42, ease: [0.25, 1, 0.5, 1] },
                     }}
-                    className="neu-flat-sm w-10 h-10 rounded-2xl flex items-center justify-center text-primary cursor-pointer active:scale-95 transition-transform shrink-0 shadow-sm"
-                    title="Collapse sidebar"
+                    className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-primary cursor-pointer active:scale-95 transition-all shrink-0 shadow-sm group hover:text-primary-600"
+                    title="Collapse sidebar (click to toggle)"
                   >
                     <motion.div
-                      animate={{ rotate: 0 }}
-                      transition={{ duration: 0.5 }}
+                      animate={{ 
+                        rotate: isRollupCollapsing ? 720 : isRollupExpanding ? -720 : 0,
+                      }}
+                      whileHover={{ rotate: 360 }}
+                      transition={{ 
+                        rotate: { duration: isRollupCollapsing || isRollupExpanding ? 0.38 : 0.55, ease: [0.25, 1, 0.5, 1] },
+                      }}
                     >
-                      <Heart className="w-5 h-5 text-primary fill-primary" />
+                      <Heart className="w-5 h-5 text-primary fill-primary group-hover:scale-110 transition-transform duration-200" />
                     </motion.div>
                   </motion.button>
                 ) : (
-                  <div className="w-10 h-10" />
+                  <div className="w-11 h-11" />
                 )}
                 <Link to="/" className="flex items-center">
                   <span className="text-xl font-display font-extrabold text-primary tracking-tight">MuntiCares</span>
@@ -266,67 +305,84 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
               </button>
             </div>
 
-            {/* Nav section label */}
-            <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
-
-            {/* Nav links */}
-            <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
-              {links.map((link) => {
-                let badge = 0;
-                if (currentRole === 'patient') {
-                  if (link.label === 'My Requests') badge = pendingCount;
-                  if (link.label === 'Messages') badge = unreadMsgCount;
-                } else if (currentRole === 'provider') {
-                  if (link.label === 'Incoming Requests') badge = pendingCount;
-                  if (link.label === 'Messages') badge = unreadMsgCount;
-                }
-                return (
-                  <SidebarItem 
-                    key={link.label} 
-                    icon={link.icon}
-                    label={link.label}
-                    to={link.to}
-                    active={location.pathname === link.to}
-                    onClick={() => setIsSidebarOpen(false)}
-                    badge={badge}
-                  />
-                );
-              })}
-            </nav>
-
-            {/* Divider */}
-            <div className="border-t border-slate-200/50 dark:border-white/5 my-4" />
-
-            {/* User Info - Raised Neumorphic Card */}
-            <div className="flex items-center gap-3 px-4 py-3 neu-flat-sm rounded-2xl mb-3">
-              <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0">
-                {authUser?.avatar_url ? (
-                  <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  user.initials
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">{user.name}</p>
-                <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-primary text-3xs font-black rounded-full uppercase tracking-wider mt-0.5">
-                  {user.badge}
-                </span>
-              </div>
-            </div>
-
-            {/* Logout */}
-            <button 
-              onClick={() => {
-                logout();
-                navigate('/login');
+            {/* Nav Body - Roll up when collapsing; Unroll downwards when expanding in reverse */}
+            <motion.div 
+              animate={{
+                opacity: isRollupCollapsing || isDesktopCollapsed || isRollupExpanding ? 0 : 1,
+                y: isRollupCollapsing || isDesktopCollapsed || isRollupExpanding ? -16 : 0,
+                scaleY: isRollupCollapsing || isDesktopCollapsed || isRollupExpanding ? 0.05 : 1,
+                originY: 0,
               }}
-              className="neu-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
+              transition={{ duration: 0.36, ease: [0.25, 1, 0.5, 1] }}
+              className="flex-1 flex flex-col min-h-0 overflow-hidden"
             >
-              <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-red-500">
-                <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-500 dark:group-hover:text-red-400" />
-              </div>
-              <span className="font-bold text-xs">Logout</span>
-            </button>
+              {/* Nav section label */}
+              <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
+
+              {/* Nav links */}
+              <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
+                {links.map((link) => {
+                  let badge = 0;
+                  if (currentRole === 'patient') {
+                    if (link.label === 'My Requests') badge = pendingCount;
+                    if (link.label === 'Messages') badge = unreadMsgCount;
+                  } else if (currentRole === 'provider') {
+                    if (link.label === 'Incoming Requests') badge = pendingCount;
+                    if (link.label === 'Messages') badge = unreadMsgCount;
+                  }
+                  return (
+                    <SidebarItem 
+                      key={link.label} 
+                      icon={link.icon}
+                      label={link.label}
+                      to={link.to}
+                      active={location.pathname === link.to}
+                      onClick={() => setIsSidebarOpen(false)}
+                      badge={badge}
+                    />
+                  );
+                })}
+              </nav>
+
+              {/* Divider */}
+              <div className="border-t border-slate-200/50 dark:border-white/5 my-4" />
+
+              {/* User Info - Clickable Raised Neumorphic Card leading to Profile */}
+              <Link 
+                to={`/${currentRole}/profile`}
+                onClick={() => setIsSidebarOpen(false)}
+                className="group flex items-center gap-3 px-4 py-3 neu-flat-sm hover:neu-flat rounded-2xl mb-3 transition-all cursor-pointer active:scale-95"
+                title="View Profile"
+              >
+                <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                  {authUser?.avatar_url ? (
+                    <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    user.initials
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate group-hover:text-primary transition-colors">{user.name}</p>
+                  <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-primary text-3xs font-black rounded-full uppercase tracking-wider mt-0.5">
+                    {user.badge}
+                  </span>
+                </div>
+              </Link>
+
+              {/* Logout */}
+              <button 
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }}
+                className="neu-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
+              >
+                <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-red-500">
+                  <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-500 dark:group-hover:text-red-400" />
+                </div>
+                <span className="font-bold text-xs">Logout</span>
+              </button>
+            </motion.div>
           </div>
         </motion.aside>
 
@@ -339,21 +395,24 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
               {isDesktopCollapsed && (
                 <motion.button
                   layoutId="munti-heart-badge"
+                  layout="position"
                   type="button"
                   onClick={toggleDesktopCollapse}
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.92 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   transition={{
-                    layout: { duration: 0.55, ease: [0.34, 1.56, 0.64, 1] },
+                    layout: { duration: 0.45, ease: [0.25, 1, 0.5, 1] },
                   }}
-                  className="hidden lg:flex neu-btn w-11 h-11 rounded-2xl items-center justify-center text-primary cursor-pointer shrink-0 shadow-md group"
-                  title="Expand sidebar"
+                  className="hidden lg:flex neu-btn w-11 h-11 rounded-2xl items-center justify-center text-primary cursor-pointer shrink-0 shadow-md group hover:text-primary-600"
+                  title="Expand sidebar (click to expand)"
                 >
                   <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 0.55, ease: 'easeInOut' }}
+                    initial={{ rotate: -360 }}
+                    animate={{ rotate: 0 }}
+                    whileHover={{ rotate: 360 }}
+                    transition={{ duration: 0.55, ease: [0.25, 1, 0.5, 1] }}
                   >
-                    <Heart className="w-5 h-5 text-primary fill-primary group-hover:scale-110 transition-transform" />
+                    <Heart className="w-5 h-5 text-primary fill-primary group-hover:scale-110 transition-transform duration-200" />
                   </motion.div>
                 </motion.button>
               )}
@@ -386,15 +445,9 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
         </header>
 
         <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-7 pb-28 lg:pb-10 neu-flat lg:rounded-[2.25rem] flex flex-col">
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="w-full max-w-full p-1 flex-1 flex flex-col"
-          >
-            {children}
-          </motion.div>
+          <div className="w-full max-w-full p-1 flex-1 flex flex-col">
+            {children || <Outlet />}
+          </div>
         </main>
       </div>
     </div>
@@ -434,7 +487,6 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
           </div>
         </div>
       </div>
-      </LayoutGroup>
     </>
   );
 };

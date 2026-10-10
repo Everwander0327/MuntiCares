@@ -110,26 +110,28 @@ const ProviderMessages = () => {
               </AnimatePresence>
             </div>
           </div>
-        ) : isDesktop && currentUserData && selectedPartner?.id ? (
-          <ChatWindow
-            currentUser={currentUserData}
-            otherUser={selectedPartner}
-            onBack={handleBack}
-            autoStartVideo={autoStartVideo}
-          />
         ) : null}
       </DashboardLayout>
 
-      {view === 'chat' && !isDesktop && currentUserData && selectedPartner?.id && (
-        <div className="fixed inset-0 z-50">
-          <ChatWindow
-            currentUser={currentUserData}
-            otherUser={selectedPartner}
-            onBack={handleBack}
-            autoStartVideo={autoStartVideo}
-          />
-        </div>
-      )}
+      {/* Full-Screen Immersive Chat Window */}
+      <AnimatePresence>
+        {view === 'chat' && currentUserData && selectedPartner?.id && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-0 z-[60] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col"
+          >
+            <ChatWindow
+              currentUser={currentUserData}
+              otherUser={selectedPartner}
+              onBack={handleBack}
+              autoStartVideo={autoStartVideo}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </CallProvider>
   );
 };

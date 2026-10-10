@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Phone, MapPin, Activity, HeartPulse, LogOut, Save, Mail, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download, User, Stethoscope, FolderOpen, Clock, FileCode } from 'lucide-react';
+import { Activity, LogOut, Save, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download, User, Stethoscope, FolderOpen, Clock, FileCode } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '../../contexts/AuthContext';
@@ -592,149 +592,159 @@ const PatientProfile = () => {
   return (
     <>
     <DashboardLayout role="patient">
-      <div className="max-w-5xl mx-auto space-y-6 md:space-y-8 overflow-x-hidden w-full max-w-full">
-        <section className="relative overflow-hidden rounded-[2rem] bg-ink text-white border border-black/5 dark:border-white/10 shadow-soft">
-          <div className="absolute inset-0 mesh-ambient opacity-60" />
-          <div className="absolute -right-20 -top-20 w-[320px] h-[320px] rounded-full bg-primary/30 blur-[90px]" />
-          <div className="absolute inset-0 grain" />
-          <div className="relative p-7 md:p-10">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-200">Health passport</p>
-            <h1 className="font-display font-bold tracking-tight text-3xl md:text-5xl leading-[1.02] mt-3 max-w-5xl w-full" style={{ textWrap: 'balance' }}>Your profile, ready for care</h1>
-            <p className="text-slate-300 mt-2 text-sm md:text-[15px] max-w-xl">Keep contact, medical history and documents current so providers arrive prepared.</p>
-          </div>
-        </section>
-        {/* Completion Alert */}
+      <div className="space-y-4 sm:space-y-6 relative w-full max-w-full pb-8 select-text">
+        
+        {/* Clean Patient Profile Header */}
+        <div className="pt-1 pb-2">
+          <h1 className="font-display font-black tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
+            Patient Profile
+          </h1>
+          <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+            Manage your personal information, medical history, and consultation records.
+          </p>
+        </div>
+
+        {/* Completion Alert Banner (Neumorphic Inset / Flat) */}
         {!profile.is_profile_complete && (
           <motion.div 
-            initial={{ opacity: 0, y: -20 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 dark:border-yellow-900/50 rounded-2xl md:rounded-3xl p-4 md:p-6"
+            className="neu-flat p-4 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-amber-500/30 bg-amber-500/5"
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-yellow-800 dark:text-yellow-200 font-bold text-base md:text-lg">Complete Your Profile</h3>
-                <p className="text-yellow-700 dark:text-yellow-200 text-xs md:text-sm mt-1">Your address is required so providers know where to deliver home care services.</p>
+              <div className="flex items-center gap-3">
+                <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-amber-500 shrink-0">
+                  <Activity className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-amber-800 dark:text-amber-300 font-extrabold text-sm sm:text-base">Complete Your Profile</h3>
+                  <p className="text-amber-700/80 dark:text-amber-200/70 text-3xs sm:text-xs mt-0.5">Your address is required so providers know where to deliver home care services.</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="w-24 h-2 bg-yellow-200 dark:bg-yellow-900/50 rounded-full overflow-hidden">
+              <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                <div className="w-28 h-2.5 neu-inset rounded-full overflow-hidden p-0.5">
                   <motion.div 
-                    className="h-full bg-yellow-500 rounded-full"
+                    className="h-full bg-amber-500 rounded-full"
                     initial={{ width: 0 }}
                     animate={{ width: `${completionPercent}%` }}
-                    transition={{ duration: 0.8, delay: 0.3 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
                   />
                 </div>
-                <span className="text-yellow-700 dark:text-yellow-200 font-bold text-sm">{completionPercent}%</span>
+                <span className="text-amber-700 dark:text-amber-300 font-black text-xs sm:text-sm">{completionPercent}%</span>
               </div>
             </div>
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-7">
           {/* Profile Sidebar Card */}
           <div className="lg:col-span-1">
             <motion.div 
-              className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden"
+              className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              {/* Gradient Banner */}
-              <div className="h-28 md:h-32 bg-gradient-to-br from-primary via-blue-500 to-blue-400 relative">
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+              {/* Neumorphic Header Accent */}
+              <div className="h-20 sm:h-24 neu-convex relative flex items-center justify-center overflow-hidden border-b border-white/50 dark:border-white/5">
+                <div className="absolute inset-0 bg-primary/10 dark:bg-primary/5" />
               </div>
 
               {/* Avatar overlapping the banner */}
-              <div className="px-6 md:px-8 -mt-14 md:-mt-16 relative z-10">
-                <ProfilePhotoUpload
-                  userId={user.id}
-                  fullName={profile.full_name}
-                  currentUrl={avatarUrl}
-                  onUpdate={setAvatarUrl}
-                />
+              <div className="px-5 sm:px-6 -mt-12 sm:-mt-14 relative z-10 flex justify-center">
+                <div className="neu-flat rounded-full p-1.5 shadow-lg">
+                  <ProfilePhotoUpload
+                    userId={user.id}
+                    fullName={profile.full_name}
+                    currentUrl={avatarUrl}
+                    onUpdate={setAvatarUrl}
+                  />
+                </div>
               </div>
 
-              <div className="px-6 md:px-8 pt-4 pb-6 md:pb-8 text-center">
-                <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">{profile.full_name}</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1">{profile.email}</p>
+              <div className="px-5 sm:px-6 pt-3 pb-6 sm:pb-7 text-center">
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 truncate">{profile.full_name}</h2>
+                <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold mt-0.5 truncate">{profile.email}</p>
                 
                 <div className="flex items-center justify-center gap-2 mt-3">
-                  <span className="inline-flex items-center px-3 py-1 bg-blue-50 dark:bg-blue-900/30 text-primary font-bold text-2xs uppercase tracking-widest rounded-full border border-blue-100 dark:border-blue-900/50">
+                  <span className="neu-flat-sm px-3 py-1 text-primary font-black text-3xs uppercase tracking-widest rounded-full">
                     Patient
                   </span>
                   {profile.is_profile_complete && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-200 font-bold text-2xs uppercase tracking-widest rounded-full border border-green-100 dark:border-green-900/50">
-                      <CheckCircle2 className="w-3 h-3" /> Complete
+                    <span className="neu-flat-sm px-3 py-1 text-emerald-600 dark:text-emerald-400 font-black text-3xs uppercase tracking-widest rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Complete
                     </span>
                   )}
                 </div>
 
-                {/* Quick Info */}
-                <div className="mt-6 space-y-3 text-left">
-                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
-                      <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    </div>
-                    <span className="truncate">{profile.email}</span>
+                {/* Quick Info - Unified Single Card */}
+                <div className="mt-5 neu-inset p-3.5 sm:p-4 rounded-2xl text-left space-y-2.5">
+                  <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                    <span className="text-3xs uppercase font-extrabold text-slate-400">Email</span>
+                    <span className="truncate font-semibold max-w-[65%] text-right">{profile.email}</span>
                   </div>
+
                   {profile.phone && (
-                    <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                      <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
-                        <Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <>
+                      <div className="border-t border-slate-200/50 dark:border-white/5" />
+                      <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                        <span className="text-3xs uppercase font-extrabold text-slate-400">Phone</span>
+                        <span className="font-semibold">{profile.phone}</span>
                       </div>
-                      <span>{profile.phone}</span>
-                    </div>
+                    </>
                   )}
+
                   {profile.address && (
-                    <div className="flex items-start gap-3 text-sm text-slate-600 dark:text-slate-300">
-                      <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0 mt-0.5">
-                        <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <>
+                      <div className="border-t border-slate-200/50 dark:border-white/5" />
+                      <div className="flex items-start justify-between gap-3 text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                        <span className="text-3xs uppercase font-extrabold text-slate-400 shrink-0 pt-0.5">Address</span>
+                        <span className="font-semibold text-right leading-relaxed max-w-[70%] break-words">{profile.address}</span>
                       </div>
-                      <span className="line-clamp-2">{profile.address}</span>
-                    </div>
+                    </>
                   )}
-                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
-                      <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    </div>
-                    <span>Member since {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}</span>
+
+                  <div className="border-t border-slate-200/50 dark:border-white/5" />
+                  <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                    <span className="text-3xs uppercase font-extrabold text-slate-400">Member Since</span>
+                    <span className="font-semibold">{profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}</span>
                   </div>
                 </div>
 
                 {/* Data Export Section */}
-                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
-                  <p className="text-2xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-3">Data Export</p>
-                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-2 space-y-2">
+                <div className="mt-6 pt-5 border-t border-slate-200/60 dark:border-white/5">
+                  <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-3">Health Data Export</p>
+                  <div className="neu-inset p-2 rounded-2xl space-y-2">
                     <motion.button
                       whileTap={{ scale: 0.96 }}
                       onClick={generatePDF}
                       disabled={generatingPdf}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-primary bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-sm disabled:opacity-50 shadow-sm"
+                      className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-primary transition-all text-xs cursor-pointer disabled:opacity-50"
                     >
                       {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                      {generatingPdf ? 'Generating...' : 'Medical Summary (PDF)'}
+                      <span>{generatingPdf ? 'Generating...' : 'Medical Summary (PDF)'}</span>
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.96 }}
                       onClick={handleFhirExport}
                       disabled={fhirLoading}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-emerald-600 dark:text-emerald-300 bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all text-sm disabled:opacity-50 shadow-sm"
+                      className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-emerald-600 dark:text-emerald-400 transition-all text-xs cursor-pointer disabled:opacity-50"
                     >
                       {fhirLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />}
-                      {fhirLoading ? 'Generating...' : 'FHIR (Interoperability)'}
+                      <span>{fhirLoading ? 'Exporting...' : 'FHIR Record (JSON)'}</span>
                     </motion.button>
                   </div>
                 </div>
 
-                {/* Logout */}
+                {/* Logout Button */}
                 <div className="pt-4">
-                <motion.button
-                  whileTap={{ scale: 0.96 }}
-                  onClick={handleLogout}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 dark:text-red-300 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all text-sm"
-                >
-                  <LogOut className="w-4 h-4" />
-                  Logout
-                </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleLogout}
+                    className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-rose-500 dark:text-rose-400 hover:text-rose-600 transition-all text-xs cursor-pointer active:scale-95"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign Out</span>
+                  </motion.button>
                 </div>
               </div>
             </motion.div>
@@ -747,94 +757,92 @@ const PatientProfile = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-              <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-                <Tabs.List className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-2xl mb-6">
-                  {[
-                    { value: 'overview', icon: User, label: 'Overview' },
-                    { value: 'medical', icon: Stethoscope, label: 'Medical' },
-                    { value: 'documents', icon: FolderOpen, label: 'Documents' },
-                    { value: 'history', icon: Clock, label: 'History' },
-                  ].map(tab => (
-                    <Tabs.Trigger
-                      key={tab.value}
-                      value={tab.value}
-                      className={`flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2.5 rounded-xl text-2xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-slate-500 dark:data-[state=inactive]:text-slate-400`}
-                    >
-                      <tab.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${activeTab === tab.value ? 'text-primary' : ''}`} />
-                      <span>{tab.label}</span>
-                    </Tabs.Trigger>
-                  ))}
-                </Tabs.List>
+            <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
+              {/* Neumorphic Tabs Header */}
+              <Tabs.List className="neu-inset p-1.5 rounded-2xl mb-5 flex gap-1.5 overflow-x-auto no-scrollbar">
+                {[
+                  { value: 'overview', icon: User, label: 'Overview' },
+                  { value: 'medical', icon: Stethoscope, label: 'Medical' },
+                  { value: 'documents', icon: FolderOpen, label: 'Documents' },
+                  { value: 'history', icon: Clock, label: 'History' },
+                ].map(tab => (
+                  <Tabs.Trigger
+                    key={tab.value}
+                    value={tab.value}
+                    className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex-1 cursor-pointer select-none ${
+                      activeTab === tab.value
+                        ? 'neu-flat text-primary font-black shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.value ? 'text-primary' : 'text-slate-400'}`} />
+                    <span>{tab.label}</span>
+                  </Tabs.Trigger>
+                ))}
+              </Tabs.List>
 
               {/* Overview Tab */}
               <Tabs.Content value="overview" className="outline-none">
-                <form onSubmit={handleSave} className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
-                  <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-                    <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Personal Information</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Your contact details and medical notes.</p>
+                <form onSubmit={handleSave} className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
+                  <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Personal Information</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Your contact details and medical notes.</p>
                   </div>
-                  <div className="p-6 md:p-8 space-y-5 md:space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
-                        <div className="relative group">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                          <input 
-                            type="tel" name="phone" required
-                            value={profile.phone}
-                            onChange={e => setProfile({...profile, phone: e.target.value})}
-                            placeholder="e.g., 09123456789"
-                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
-                          />
-                        </div>
+
+                  <div className="p-5 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
+                        <input 
+                          type="tel" name="phone" required
+                          value={profile.phone}
+                          onChange={e => setProfile({...profile, phone: e.target.value})}
+                          placeholder="e.g., 09123456789"
+                          className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-semibold outline-none transition-all"
+                        />
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
-                        <div className="relative group">
-                          <HeartPulse className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                          <input 
-                            type="text" name="emergency_contact" required
-                            value={profile.emergency_contact}
-                            onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
-                            placeholder="Name & Number"
-                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all"
-                          />
-                        </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
+                        <input 
+                          type="text" name="emergency_contact" required
+                          value={profile.emergency_contact}
+                          onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
+                          placeholder="Name & Contact Number"
+                          className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-semibold outline-none transition-all"
+                        />
                       </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Home Address</label>
-                        <div className="relative group">
-                          <MapPin className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                          <textarea name="address" required value={profile.address}
-                            onChange={e => setProfile({...profile, address: e.target.value})}
-                            placeholder="Full home address in Muntinlupa..." rows={3}
-                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
-                          />
-                        </div>
+
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Home Address</label>
+                        <textarea name="address" required value={profile.address}
+                          onChange={e => setProfile({...profile, address: e.target.value})}
+                          placeholder="Complete home address in Muntinlupa..." rows={3}
+                          className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                        />
                       </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Medical Notes</label>
-                        <div className="relative group">
-                          <Activity className="absolute left-4 top-4 w-5 h-5 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
-                          <textarea name="medical_notes" value={profile.medical_notes}
-                            onChange={e => setProfile({...profile, medical_notes: e.target.value})}
-                            placeholder="Any additional notes providers should know?" rows={3}
-                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
-                          />
-                        </div>
+
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">General Medical Notes</label>
+                        <textarea name="medical_notes" value={profile.medical_notes}
+                          onChange={e => setProfile({...profile, medical_notes: e.target.value})}
+                          placeholder="Special needs, mobility notes, or care instructions..." rows={3}
+                          className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                        />
                       </div>
                     </div>
-                    <div className="pt-4 md:pt-6 border-t border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-end gap-3">
+
+                    <div className="pt-4 border-t border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row justify-end items-center gap-2.5">
                       <motion.button whileTap={{ scale: 0.96 }} type="button"
                         onClick={() => setProfile({...profile, medical_notes: ''})}
-                        className="px-6 py-3.5 text-slate-500 dark:text-slate-400 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 rounded-xl transition-all text-sm"
+                        className="neu-btn px-5 py-2.5 text-slate-500 dark:text-slate-400 font-bold rounded-xl text-xs cursor-pointer w-full sm:w-auto"
                       >
                         Clear Notes
                       </motion.button>
                       <motion.button whileTap={{ scale: 0.96 }} type="submit" disabled={saving}
-                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-xl md:rounded-2xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all disabled:opacity-50 w-full sm:w-auto"
+                        className="neu-btn-primary px-7 py-2.5 font-black rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer disabled:opacity-50 w-full sm:w-auto"
                       >
-                        <Save className="w-5 h-5" />
+                        <Save className="w-4 h-4" />
                         {saving ? 'Saving...' : 'Save Profile'}
                       </motion.button>
                     </div>
@@ -844,65 +852,75 @@ const PatientProfile = () => {
 
               {/* Medical Tab */}
               <Tabs.Content value="medical" className="outline-none">
-                <form onSubmit={handleSave} className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
-                  <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-                    <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Medical History</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Your allergies, conditions, and past surgeries.</p>
+                <form onSubmit={handleSave} className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
+                  <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Medical History</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Your allergies, chronic conditions, and past surgeries.</p>
                   </div>
-                  <div className="p-6 md:p-8 space-y-5 md:space-y-6">
+
+                  <div className="p-5 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
+                    {/* Allergies */}
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Allergies</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Known Allergies</label>
+                        <span className="text-3xs font-extrabold text-rose-500 uppercase">Critical</span>
+                      </div>
                       <textarea name="allergies" value={profile.allergies}
                         onChange={e => setProfile({...profile, allergies: e.target.value})}
-                        placeholder="List any allergies..." rows={2}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                        placeholder="List any medication, food, or contact allergies..." rows={2}
+                        className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
                       />
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {['No known allergies', 'Penicillin', 'Sulfa', 'Iodine', 'Latex', 'Peanuts'].filter(s => !(profile.allergies || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                          <motion.button key={s} type="button" whileTap={{ scale: 0.9 }}
+                          <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
                             onClick={() => setProfile({...profile, allergies: ((profile.allergies || '').trim() ? `${profile.allergies.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="px-2.5 py-1 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-600 dark:text-red-300 rounded-lg text-xs font-semibold border border-red-100 dark:border-red-900/50 transition-colors"
+                            className="neu-btn px-2.5 py-1 text-rose-600 dark:text-rose-400 rounded-lg text-3xs font-bold cursor-pointer"
                           >+ {s}</motion.button>
                         ))}
                       </div>
                     </div>
+
+                    {/* Chronic Conditions */}
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Chronic Conditions</label>
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Chronic Conditions</label>
                       <textarea name="chronic_conditions" value={profile.chronic_conditions}
                         onChange={e => setProfile({...profile, chronic_conditions: e.target.value})}
-                        placeholder="List any chronic conditions..." rows={2}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                        placeholder="e.g. Hypertension, Type 2 Diabetes, Asthma..." rows={2}
+                        className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
                       />
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {['Diabetes', 'High Blood Pressure', 'Asthma', 'Heart Disease', 'Arthritis', 'None'].filter(s => !(profile.chronic_conditions || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                          <motion.button key={s} type="button" whileTap={{ scale: 0.9 }}
+                          <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
                             onClick={() => setProfile({...profile, chronic_conditions: ((profile.chronic_conditions || '').trim() ? `${profile.chronic_conditions.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-primary rounded-lg text-xs font-semibold border border-blue-100 dark:border-blue-900/50 transition-colors"
+                            className="neu-btn px-2.5 py-1 text-primary rounded-lg text-3xs font-bold cursor-pointer"
                           >+ {s}</motion.button>
                         ))}
                       </div>
                     </div>
+
+                    {/* Past Surgeries */}
                     <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700 dark:text-slate-200 ml-1">Past Surgeries</label>
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Past Surgeries or Procedures</label>
                       <textarea name="past_surgeries" value={profile.past_surgeries}
                         onChange={e => setProfile({...profile, past_surgeries: e.target.value})}
-                        placeholder="List any past surgeries..." rows={2}
-                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl md:rounded-2xl py-3 px-4 focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white outline-none transition-all resize-none"
+                        placeholder="List any past surgeries and approximate year..." rows={2}
+                        className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
                       />
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {['Appendectomy', 'C-Section', 'Gallbladder Removal', 'Knee Surgery', 'Tonsillectomy', 'None'].filter(s => !(profile.past_surgeries || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                          <motion.button key={s} type="button" whileTap={{ scale: 0.9 }}
+                          <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
                             onClick={() => setProfile({...profile, past_surgeries: ((profile.past_surgeries || '').trim() ? `${profile.past_surgeries.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="px-2.5 py-1 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-purple-600 dark:text-purple-300 rounded-lg text-xs font-semibold border border-purple-100 dark:border-purple-900/50 transition-colors"
+                            className="neu-btn px-2.5 py-1 text-indigo-600 dark:text-indigo-400 rounded-lg text-3xs font-bold cursor-pointer"
                           >+ {s}</motion.button>
                         ))}
                       </div>
                     </div>
-                    <div className="pt-4 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+
+                    <div className="pt-4 border-t border-slate-200/60 dark:border-white/5 flex justify-end">
                       <motion.button whileTap={{ scale: 0.96 }} type="submit" disabled={saving}
-                        className="flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-white font-bold rounded-xl md:rounded-2xl hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all disabled:opacity-50"
+                        className="neu-btn-primary px-7 py-2.5 font-black rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer disabled:opacity-50 w-full sm:w-auto"
                       >
-                        <Save className="w-5 h-5" />
+                        <Save className="w-4 h-4" />
                         {saving ? 'Saving...' : 'Save Medical History'}
                       </motion.button>
                     </div>
@@ -912,52 +930,55 @@ const PatientProfile = () => {
 
               {/* Documents Tab */}
               <Tabs.Content value="documents" className="outline-none">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
-                  <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
+                <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
+                  <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Medical Documents</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Upload lab results, prescriptions, etc. (Max 500KB)</p>
+                      <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Medical Documents</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Upload lab results, prescriptions, or imaging (Max 500KB)</p>
                     </div>
                     <div>
                       <input type="file" id="doc-upload" className="hidden" accept="image/jpeg, image/png, application/pdf"
                         onChange={handleFileUpload} disabled={uploading} />
                       <label htmlFor="doc-upload"
-                        className={`flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-primary font-semibold rounded-xl cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`neu-btn px-4 py-2 text-primary font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all active:scale-95 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                        {uploading ? 'Uploading...' : 'Upload File'}
+                        <span>{uploading ? 'Uploading...' : 'Upload File'}</span>
                       </label>
                     </div>
                   </div>
+
                   {uploading && (
-                    <div className="px-6 md:px-8 pb-4">
-                      <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-semibold mb-1">
+                    <div className="px-5 sm:px-7 py-3 neu-inset mx-5 sm:mx-7 my-4 rounded-xl">
+                      <div className="flex justify-between text-3xs text-slate-500 dark:text-slate-400 font-bold mb-1">
                         <span>Uploading document...</span>
                         <span className="text-primary animate-pulse">Processing</span>
                       </div>
-                      <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                         <motion.div className="h-full bg-primary rounded-full"
                           initial={{ width: "0%" }} animate={{ width: "100%" }}
                           transition={{ duration: 1.5, repeat: Infinity }} />
                       </div>
                     </div>
                   )}
-                  <div className="p-6 md:p-8">
+
+                  <div className="p-5 sm:p-6 md:p-7">
                     {documents.length === 0 ? (
-                      <EmptyState icon="document" title="No documents uploaded yet" message="Upload lab results, prescriptions, or other medical documents." variant="compact" />
+                      <EmptyState icon="document" title="No documents uploaded yet" message="Upload lab results, prescriptions, or other medical records." variant="compact" />
                     ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                         {documents.map((doc) => (
-                          <div key={doc.id} className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-xl">
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg text-primary">
-                              <FileText className="w-5 h-5" />
+                          <div key={doc.id} className="neu-flat-sm p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center gap-3 select-text">
+                            <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate">{doc.document_title}</p>
-                              <p className="text-xs text-slate-400 dark:text-slate-500">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                            <div className="flex-1 min-w-0 pr-2">
+                              <p className="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm truncate">{doc.document_title}</p>
+                              <p className="text-3xs text-slate-400 dark:text-slate-500 mt-0.5">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                             </div>
-                            <motion.button whileTap={{ scale: 0.96 }} type="button"
-                              className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                            <motion.button whileTap={{ scale: 0.9 }} type="button"
+                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors shrink-0"
+                              title="Delete Document"
                               onClick={async () => {
                                 if(window.confirm('Delete this document?')) {
                                   await supabase.storage.from('medical_documents').remove([doc.file_path]);
@@ -967,7 +988,7 @@ const PatientProfile = () => {
                                 }
                               }}
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-4 h-4 stroke-[2.5]" />
                             </motion.button>
                           </div>
                         ))}
@@ -979,75 +1000,82 @@ const PatientProfile = () => {
 
               {/* History Tab */}
               <Tabs.Content value="history" className="outline-none">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
-                  <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-                    <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Visit History</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Past consultations, vitals, and provider notes.</p>
+                <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
+                  <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Consultation & Visit History</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Past medical visits, vital signs, and provider clinical notes.</p>
                   </div>
-                  <div className="p-6 md:p-8">
+
+                  <div className="p-5 sm:p-6 md:p-7">
                     {visitNotes.length === 0 ? (
                       <div className="text-center py-8">
-                        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <Activity className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                        <div className="neu-flat-sm w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 text-slate-400">
+                          <Activity className="w-6 h-6" />
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium">No past visits recorded.</p>
+                        <p className="text-slate-600 dark:text-slate-300 font-bold text-sm">No past visits recorded.</p>
+                        <p className="text-slate-400 text-3xs mt-1">Consultation summaries will appear here after provider appointments.</p>
                       </div>
                     ) : (
-                      <div className="space-y-6">
+                      <div className="space-y-4 sm:space-y-5">
                         {visitNotes.map((note) => (
-                          <div key={note.id} className="p-5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-700 rounded-2xl space-y-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-600 pb-3">
+                          <div key={note.id} className="neu-flat-sm p-4 sm:p-5 rounded-2xl space-y-3.5 select-text">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 dark:border-white/5 pb-3">
                               <div>
-                                <p className="font-bold text-slate-900 dark:text-slate-100 text-lg">Dr. {note.provider?.full_name || 'Unknown'}</p>
-                                <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                  <Calendar className="w-4 h-4" />
+                                <p className="font-black text-slate-900 dark:text-slate-100 text-sm sm:text-base">Dr. {note.provider?.full_name || 'Healthcare Provider'}</p>
+                                <div className="flex items-center gap-1.5 text-3xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                  <Calendar className="w-3.5 h-3.5 text-primary" />
                                   <span>{new Date(note.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
                                 </div>
                               </div>
                               {note.services_rendered && (
-                                <span className="inline-flex items-center px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-primary font-semibold text-2xs uppercase tracking-widest rounded-full self-start sm:self-auto">
+                                <span className="neu-flat-sm px-3 py-1 text-primary font-black text-3xs uppercase tracking-widest rounded-full self-start sm:self-auto">
                                   {note.services_rendered}
                                 </span>
                               )}
                             </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+                            {/* Vitals Grid with Inset or Flat-sm Tiles */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                               {note.vitals_bp && (
-                                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                                  <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase">BP</p>
-                                  <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_bp}</p>
+                                <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl text-center">
+                                  <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-wider">Blood Pressure</p>
+                                  <p className="font-black text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_bp}</p>
                                 </div>
                               )}
                               {note.vitals_temp && (
-                                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                                  <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase">Temp</p>
-                                  <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_temp}°C</p>
+                                <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl text-center">
+                                  <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-wider">Temperature</p>
+                                  <p className="font-black text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_temp}°C</p>
                                 </div>
                               )}
                               {note.vitals_hr && (
-                                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                                  <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase">HR</p>
-                                  <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_hr} bpm</p>
+                                <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl text-center">
+                                  <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-wider">Heart Rate</p>
+                                  <p className="font-black text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_hr} bpm</p>
                                 </div>
                               )}
                               {note.vitals_spo2 && (
-                                <div className="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                                  <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase">SpO2</p>
-                                  <p className="font-bold text-slate-700 dark:text-slate-200">{note.vitals_spo2}%</p>
+                                <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl text-center">
+                                  <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-wider">Oxygen (SpO2)</p>
+                                  <p className="font-black text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_spo2}%</p>
                                 </div>
                               )}
                             </div>
+
                             {note.notes && (
-                              <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
-                                <p className="text-2xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-1">Notes</p>
-                                <p className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">{note.notes}</p>
+                              <div className="neu-inset p-3 sm:p-4 rounded-xl">
+                                <p className="text-3xs font-black text-slate-400 uppercase tracking-wider mb-1">Clinical Notes</p>
+                                <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">{note.notes}</p>
                               </div>
                             )}
+
                             {note.attachment_url && (
                               <motion.button whileTap={{ scale: 0.96 }} type="button"
                                 onClick={async () => { const url = await getSignedUrl(note.attachment_url, 3600); if (url) window.open(url, '_blank'); }}
-                                className="inline-flex items-center gap-2 text-sm text-primary font-medium hover:underline"
+                                className="neu-btn px-3 py-1.5 rounded-lg inline-flex items-center gap-2 text-xs text-primary font-bold transition-all cursor-pointer"
                               >
-                                <FileText className="w-4 h-4" /> View Attachment
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>View Attachment</span>
                               </motion.button>
                             )}
                           </div>
@@ -1061,7 +1089,7 @@ const PatientProfile = () => {
           </motion.div>
         </div>
       </div>
-      </DashboardLayout>
+    </DashboardLayout>
 
       <FhirExportModal
         open={fhirOpen}
