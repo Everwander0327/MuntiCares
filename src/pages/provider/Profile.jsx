@@ -205,117 +205,155 @@ const ProviderProfile = () => {
 
   return (
     <DashboardLayout role="provider">
-      <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
-        {/* Status Alerts */}
+      <div className="w-full max-w-full lg:max-w-6xl mx-auto space-y-3.5 sm:space-y-6 pb-12 px-0 sm:px-2 select-text">
+        {/* Header */}
+        <div className="pt-0.5 pb-1 sm:pt-1 sm:pb-2">
+          <h1 className="font-display font-black tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
+            Provider Profile
+          </h1>
+          <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+            Manage your credentials, professional bio, services offered, and trust score.
+          </p>
+        </div>
+
+        {/* Status Alerts (Neumorphic Flat/Inset) */}
         {!profile.is_profile_complete && (
           <motion.div 
-            className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 text-yellow-800 p-4 md:p-5 rounded-2xl flex items-start gap-3 dark:from-yellow-900/30 dark:to-orange-900/30 dark:border-yellow-900/50 dark:text-yellow-200"
-            initial={{ opacity: 0, y: -20 }}
+            className="neu-flat p-3.5 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-amber-500/30 bg-amber-500/5 flex items-start gap-3"
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Award className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-            <p className="text-sm font-medium">Your profile is incomplete. Please fill out your details so you can be approved by an Admin and become visible to patients.</p>
+            <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-amber-500 shrink-0">
+              <Award className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <h3 className="text-amber-800 dark:text-amber-300 font-extrabold text-xs sm:text-base">Profile Incomplete</h3>
+              <p className="text-amber-700/80 dark:text-amber-200/70 text-3xs sm:text-xs mt-0.5 leading-relaxed">
+                Please fill out your contact details, bio, and rates so you can be approved by an Admin and become visible to patients.
+              </p>
+            </div>
           </motion.div>
         )}
 
         {profile.is_profile_complete && !profile.is_approved && (
           <motion.div 
-            className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 text-blue-800 p-4 md:p-5 rounded-2xl flex items-start gap-3 dark:from-blue-900/30 dark:to-indigo-900/30 dark:border-blue-900/50 dark:text-blue-200"
-            initial={{ opacity: 0, y: -20 }}
+            className="neu-flat p-3.5 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-blue-500/30 bg-blue-500/5 flex items-start gap-3"
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Clock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-            <p className="text-sm font-medium">Your profile is currently under review. You will be visible to patients once approved by an Admin.</p>
+            <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+            </div>
+            <div>
+              <h3 className="text-blue-800 dark:text-blue-300 font-extrabold text-xs sm:text-base">Under Review</h3>
+              <p className="text-blue-700/80 dark:text-blue-200/70 text-3xs sm:text-xs mt-0.5 leading-relaxed">
+                Your profile is currently under review by the municipal health office. You will appear to patients once approved.
+              </p>
+            </div>
           </motion.div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3.5 sm:gap-6 md:gap-7">
           {/* Sidebar Card */}
           <div className="lg:col-span-1">
             <motion.div 
-              className="bg-white rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden dark:bg-slate-800"
+              className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              {/* Gradient Banner */}
-              <div className="h-28 md:h-32 bg-gradient-to-br from-primary via-blue-500 to-blue-400 relative">
-                <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+              {/* Neumorphic Accent Banner */}
+              <div className="h-16 sm:h-24 neu-convex relative flex items-center justify-center overflow-hidden border-b border-white/50 dark:border-white/5">
+                <div className="absolute inset-0 bg-primary/10 dark:bg-primary/5" />
               </div>
 
-              {/* Avatar */}
-              <div className="px-6 md:px-8 -mt-14 md:-mt-16 relative z-10">
-                <ProfilePhotoUpload
-                  userId={user.id}
-                  fullName={profile.full_name}
-                  currentUrl={avatarUrl}
-                  onUpdate={setAvatarUrl}
-                />
+              {/* Avatar overlapping banner */}
+              <div className="px-4 sm:px-6 -mt-10 sm:-mt-14 relative z-10 flex justify-center">
+                <div className="neu-flat rounded-full p-1 sm:p-1.5 shadow-lg">
+                  <ProfilePhotoUpload
+                    userId={user.id}
+                    fullName={profile.full_name}
+                    currentUrl={avatarUrl}
+                    onUpdate={setAvatarUrl}
+                  />
+                </div>
               </div>
 
-              <div className="px-6 md:px-8 pt-4 pb-6 md:pb-8 text-center">
-                <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">{profile.full_name}</h2>
-                <p className="text-primary text-sm font-semibold mt-1">{profile.bio || 'No bio provided'}</p>
+              <div className="px-4 sm:px-6 pt-2.5 sm:pt-3 pb-5 sm:pb-7 text-center">
+                <h2 className="text-base sm:text-xl font-black text-slate-900 dark:text-slate-100 truncate">{profile.full_name}</h2>
+                <p className="text-primary text-xs font-bold mt-0.5 truncate">{profile.bio || 'Healthcare Professional'}</p>
 
-                <div className="flex items-center justify-center flex-wrap gap-2 mt-3">
-                  <span className="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 font-bold text-2xs uppercase tracking-widest rounded-full border border-purple-100 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-900/50">
+                <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 mt-2.5 sm:mt-3">
+                  <span className="neu-flat-sm px-2.5 py-1 text-primary font-black text-3xs uppercase tracking-widest rounded-full">
                     Healthcare Provider
                   </span>
                   {profile.is_approved ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 font-bold text-2xs uppercase tracking-widest rounded-full border border-green-100 dark:bg-green-900/30 dark:text-green-300 dark:border-green-900/50">
-                      <ShieldCheck className="w-3 h-3" /> Approved
+                    <span className="neu-flat-sm px-2.5 py-1 text-emerald-600 dark:text-emerald-400 font-black text-3xs uppercase tracking-widest rounded-full flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-emerald-500" /> Approved
                     </span>
                   ) : profile.is_profile_complete ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 font-bold text-2xs uppercase tracking-widest rounded-full border border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-900/50">
-                      <Clock className="w-3 h-3" /> Under Review
+                    <span className="neu-flat-sm px-2.5 py-1 text-amber-600 dark:text-amber-400 font-black text-3xs uppercase tracking-widest rounded-full flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-amber-500" /> In Review
                     </span>
                   ) : null}
                 </div>
 
-                {/* Trust Score Badge */}
-                <div className={`mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl ${trustLevel.bg} ${trustLevel.border} border`}>
-                  <Shield className={`w-4 h-4 ${trustLevel.color}`} />
-                  <span className={`text-sm font-bold ${trustLevel.color}`}>Trust Score: {profile.trust_score}/100</span>
+                {/* Trust Score Badge (Neumorphic Raised) */}
+                <div className="mt-3 sm:mt-4 neu-btn inline-flex items-center gap-2 px-3.5 py-1.5 sm:py-2 rounded-xl border border-primary/20">
+                  <Shield className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${trustLevel.color}`} />
+                  <span className={`text-xs sm:text-sm font-black ${trustLevel.color}`}>
+                    Trust Score: {profile.trust_score}/100
+                  </span>
                 </div>
 
-                {/* Quick Info */}
-                <div className="mt-6 space-y-3 text-left">
-                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
-                      <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    </div>
-                    <span className="truncate">{profile.email}</span>
+                {/* Quick Info - Unified Neumorphic Inset */}
+                <div className="mt-4 sm:mt-5 neu-inset p-3 sm:p-4 rounded-2xl text-left space-y-2 sm:space-y-2.5">
+                  <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                    <span className="text-3xs uppercase font-extrabold text-slate-400">Email</span>
+                    <span className="truncate font-semibold max-w-[62%] text-right">{profile.email}</span>
                   </div>
+
                   {profile.phone && (
-                    <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                      <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
-                        <Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <>
+                      <div className="border-t border-slate-200/50 dark:border-white/5" />
+                      <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                        <span className="text-3xs uppercase font-extrabold text-slate-400">Phone</span>
+                        <span className="font-semibold">{profile.phone}</span>
                       </div>
-                      <span>{profile.phone}</span>
-                    </div>
+                    </>
                   )}
-                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
-                      <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    </div>
-                    <span>{profile.location || 'No location set'}</span>
+
+                  {profile.location && (
+                    <>
+                      <div className="border-t border-slate-200/50 dark:border-white/5" />
+                      <div className="flex items-start justify-between gap-2.5 text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                        <span className="text-3xs uppercase font-extrabold text-slate-400 shrink-0 pt-0.5">Location</span>
+                        <span className="font-semibold text-right leading-relaxed max-w-[65%] break-words">{profile.location}</span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="border-t border-slate-200/50 dark:border-white/5" />
+                  <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                    <span className="text-3xs uppercase font-extrabold text-slate-400">Rate</span>
+                    <span className="font-black text-primary">₱{Number(profile.price_per_service || 0).toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-sm text-slate-600 dark:text-slate-300">
-                    <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg shrink-0">
-                      <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    </div>
-                    <span>Member since {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}</span>
+
+                  <div className="border-t border-slate-200/50 dark:border-white/5" />
+                  <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
+                    <span className="text-3xs uppercase font-extrabold text-slate-400">Joined</span>
+                    <span className="font-semibold">{profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}</span>
                   </div>
                 </div>
 
-                {/* Logout — very bottom */}
-                <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700">
+                {/* Sign Out Button */}
+                <div className="mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t border-slate-200/60 dark:border-white/5">
                   <motion.button
                     whileTap={{ scale: 0.96 }}
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-red-50 hover:bg-red-100 transition-all text-sm dark:bg-red-900/30 dark:hover:bg-red-900/20"
+                    className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-rose-500 dark:text-rose-400 hover:text-rose-600 transition-all text-xs cursor-pointer active:scale-95"
                   >
                     <LogOut className="w-4 h-4" />
-                    Logout
+                    <span>Sign Out</span>
                   </motion.button>
                 </div>
               </div>
@@ -330,18 +368,23 @@ const ProviderProfile = () => {
               transition={{ delay: 0.1 }}
             >
               <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-                <Tabs.List className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-2xl mb-6">
+                {/* Neumorphic Tab Switcher matching Patient Profile */}
+                <Tabs.List className="neu-inset p-1 sm:p-1.5 rounded-2xl mb-3.5 sm:mb-5 flex gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar">
                   {[
                     { value: 'overview', icon: User, label: 'Overview' },
-                    { value: 'specializations', icon: Award, label: 'Specializations' },
-                    { value: 'trust', icon: Shield, label: 'Trust' },
+                    { value: 'specializations', icon: Award, label: 'Services' },
+                    { value: 'trust', icon: Shield, label: 'Trust Score' },
                   ].map(tab => (
                     <Tabs.Trigger
                       key={tab.value}
                       value={tab.value}
-                      className={`flex items-center justify-center gap-1 md:gap-2 px-2 md:px-4 py-2 md:py-2.5 rounded-xl text-2xs md:text-sm font-medium transition-all whitespace-nowrap flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-slate-800 data-[state=active]:text-primary data-[state=active]:shadow-sm data-[state=inactive]:text-slate-500 dark:data-[state=inactive]:text-slate-400`}
+                      className={`flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-3xs sm:text-sm font-bold transition-all whitespace-nowrap flex-1 cursor-pointer select-none ${
+                        activeTab === tab.value
+                          ? 'neu-pressed text-primary font-black shadow-inner'
+                          : 'neu-btn text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
                     >
-                      <tab.icon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${activeTab === tab.value ? 'text-primary' : ''}`} />
+                      <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.value ? 'text-primary' : 'text-slate-400'}`} />
                       <span>{tab.label}</span>
                     </Tabs.Trigger>
                   ))}
@@ -349,17 +392,17 @@ const ProviderProfile = () => {
 
                 {/* Overview Tab */}
                 <Tabs.Content value="overview" className="outline-none">
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
-                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden">
+                    <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Contact & Rates</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Your professional info visible to patients</p>
+                        <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Professional Details & Rates</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Your bio, location, and fees displayed during patient booking</p>
                       </div>
                       {!editingOverview ? (
                         <motion.button
                           whileTap={{ scale: 0.96 }}
                           onClick={() => { setEditingOverview(true); setEditForm(profile); }}
-                          className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all w-full sm:w-auto"
+                          className="neu-btn px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-primary flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                         >
                           <Save className="w-4 h-4" />
                           Edit Profile
@@ -369,7 +412,7 @@ const ProviderProfile = () => {
                           <motion.button
                             whileTap={{ scale: 0.96 }}
                             onClick={() => { setEditingOverview(false); setEditForm(profile); }}
-                            className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl font-bold text-xs text-slate-500 hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
                           >
                             Cancel
                           </motion.button>
@@ -377,95 +420,106 @@ const ProviderProfile = () => {
                             whileTap={{ scale: 0.96 }}
                             onClick={handleSaveOverview}
                             disabled={saving}
-                            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-green-500 text-white shadow-lg shadow-green-200 hover:bg-green-600 transition-all disabled:opacity-50"
+                            className="neu-btn px-4 sm:px-5 py-2 rounded-xl font-bold text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
                           >
-                            <Save className="w-4 h-4" />
+                            <Save className="w-3.5 h-3.5" />
                             {saving ? 'Saving...' : 'Save Changes'}
                           </motion.button>
                         </div>
                       )}
                     </div>
-                    <div className="p-6 md:p-8 space-y-5">
+
+                    <div className="p-4 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
                       <div>
-                        <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Bio / Title</p>
+                        <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Bio / Professional Title</p>
                         {editingOverview ? (
                           <input
-                            type="text" name="bio"
+                            type="text" 
+                            name="bio"
                             value={editForm.bio}
                             onChange={e => setEditForm({...editForm, bio: e.target.value})}
                             placeholder="E.g. Registered Nurse • Wound Care Specialist"
-                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 px-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
+                            className="w-full neu-inset rounded-xl py-2.5 sm:py-3 px-3.5 sm:px-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                           />
                         ) : (
-                          <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.bio || 'No bio provided'}</p>
+                          <div className="neu-inset p-3 sm:p-3.5 rounded-xl text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-semibold leading-relaxed">
+                            {profile.bio || 'No bio provided'}
+                          </div>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5">
                         <div>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Phone Number</p>
+                          <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Phone Number</p>
                           {editingOverview ? (
-                            <div className="relative group">
-                              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                            <div className="relative">
+                              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                               <input
-                                type="text" name="phone"
+                                type="text" 
+                                name="phone"
                                 value={editForm.phone}
                                 onChange={e => setEditForm({...editForm, phone: e.target.value})}
                                 placeholder="+63 912 345 6789"
-                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
+                                className="w-full neu-inset rounded-xl py-2.5 sm:py-3 pl-10 pr-3.5 sm:pr-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                               />
                             </div>
                           ) : (
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                              <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.phone || 'Not provided'}</p>
+                            <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                              <Phone className="w-4 h-4 text-primary shrink-0" />
+                              <span>{profile.phone || 'Not provided'}</span>
                             </div>
                           )}
                         </div>
+
                         <div>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Location</p>
+                          <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Service Location / Area</p>
                           {editingOverview ? (
-                            <div className="relative group">
-                              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                            <div className="relative">
+                              <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                               <input
-                                type="text" name="location"
+                                type="text" 
+                                name="location"
                                 value={editForm.location}
                                 onChange={e => setEditForm({...editForm, location: e.target.value})}
-                                placeholder="Location"
-                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
+                                placeholder="e.g. Poblacion, Muntinlupa"
+                                className="w-full neu-inset rounded-xl py-2.5 sm:py-3 pl-10 pr-3.5 sm:pr-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                               />
                             </div>
                           ) : (
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                              <p className="text-slate-700 dark:text-slate-200 font-medium">{profile.location || 'No location set'}</p>
+                            <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                              <MapPin className="w-4 h-4 text-primary shrink-0" />
+                              <span>{profile.location || 'No location set'}</span>
                             </div>
                           )}
                         </div>
+
                         <div>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Rate per Service (₱)</p>
+                          <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Rate per Service (₱)</p>
                           {editingOverview ? (
-                            <div className="relative group">
-                              <BookOpen className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-primary transition-colors" />
+                            <div className="relative">
+                              <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                               <input
-                                type="number" name="price_per_service"
+                                type="number" 
+                                name="price_per_service"
                                 value={editForm.price_per_service}
                                 onChange={e => setEditForm({...editForm, price_per_service: Number(e.target.value)})}
                                 placeholder="e.g. 1500"
-                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl py-3 pl-11 pr-4 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 transition-all"
+                                className="w-full neu-inset rounded-xl py-2.5 sm:py-3 pl-10 pr-3.5 sm:pr-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                               />
                             </div>
                           ) : (
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><BookOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                              <p className="text-slate-700 dark:text-slate-200 font-medium">₱{profile.price_per_service || '0.00'}</p>
+                            <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
+                              <BookOpen className="w-4 h-4 text-primary shrink-0" />
+                              <span className="text-primary font-black">₱{Number(profile.price_per_service || 0).toLocaleString()}</span>
                             </div>
                           )}
                         </div>
+
                         <div>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 font-semibold uppercase tracking-wider mb-2">Email (Read Only)</p>
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-50 dark:bg-slate-900 rounded-lg"><Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" /></div>
-                            <p className="text-slate-700 dark:text-slate-200 font-medium truncate">{profile.email}</p>
+                          <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Email (Read Only)</p>
+                          <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
+                            <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span className="truncate">{profile.email}</span>
                           </div>
                         </div>
                       </div>
@@ -475,17 +529,17 @@ const ProviderProfile = () => {
 
                 {/* Specializations Tab */}
                 <Tabs.Content value="specializations" className="outline-none">
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
-                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden">
+                    <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Specializations</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">Services you offer to patients</p>
+                        <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Specializations & Services</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">List of medical and healthcare services you deliver</p>
                       </div>
                       {!editingSpecializations ? (
                         <motion.button
                           whileTap={{ scale: 0.96 }}
                           onClick={() => setEditingSpecializations(true)}
-                          className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all w-full sm:w-auto"
+                          className="neu-btn px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-primary flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                         >
                           <Save className="w-4 h-4" />
                           Edit Specializations
@@ -495,7 +549,7 @@ const ProviderProfile = () => {
                           <motion.button
                             whileTap={{ scale: 0.96 }}
                             onClick={() => { setEditingSpecializations(false); setServicesInput((profile.services || []).join(', ')); }}
-                            className="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl font-bold text-xs text-slate-500 hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
                           >
                             Cancel
                           </motion.button>
@@ -503,43 +557,45 @@ const ProviderProfile = () => {
                             whileTap={{ scale: 0.96 }}
                             onClick={handleSaveSpecializations}
                             disabled={saving}
-                            className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-green-500 text-white shadow-lg shadow-green-200 hover:bg-green-600 transition-all disabled:opacity-50"
+                            className="neu-btn px-4 sm:px-5 py-2 rounded-xl font-bold text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
                           >
-                            <Save className="w-4 h-4" />
-                            {saving ? 'Saving...' : 'Save'}
+                            <Save className="w-3.5 h-3.5" />
+                            {saving ? 'Save' : 'Save'}
                           </motion.button>
                         </div>
                       )}
                     </div>
-                    <div className="p-6 md:p-8">
+
+                    <div className="p-4 sm:p-6 md:p-7">
                       {editingSpecializations ? (
-                        <div className="space-y-4">
+                        <div className="space-y-3.5 sm:space-y-4">
                           <div>
-                            <p className="text-xs text-slate-400 dark:text-slate-500 font-bold uppercase mb-2">Comma separated services</p>
+                            <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Comma-Separated Services</p>
                             <textarea
                               name="services"
                               value={servicesInput}
                               onChange={e => setServicesInput(e.target.value)}
                               placeholder="Wound Care, Post-Surgery Recovery, Elderly Care"
-                              className="w-full h-28 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 outline-none focus:border-primary focus:bg-white focus:dark:bg-slate-800 focus:ring-2 focus:ring-primary/20 text-sm resize-none transition-all"
+                              className="w-full h-24 sm:h-28 neu-inset rounded-xl px-3.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 resize-none transition-all"
                             />
                           </div>
+
                           <div>
-                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Suggested Services to Add:</p>
-                            <div className="flex flex-wrap gap-2">
+                            <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-2">Suggested Services to Add:</p>
+                            <div className="flex flex-wrap gap-1.5 sm:gap-2">
                               {['Wound Care', 'Elderly Care', 'Post-Surgery Recovery', 'Physical Therapy', 'Vital Signs Monitoring', 'Medication Administration', 'Dementia Care', 'Stroke Rehab']
                                 .filter(s => !(servicesInput || '').toLowerCase().includes(s.toLowerCase()))
                                 .map(s => (
                                   <motion.button
                                     key={s}
                                     type="button"
-                                    whileTap={{ scale: 0.9 }}
+                                    whileTap={{ scale: 0.92 }}
                                     onClick={() => {
                                       const curr = (servicesInput || '').trim();
                                       const newServices = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
                                       setServicesInput(newServices);
                                     }}
-                                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-primary rounded-lg text-xs font-bold border border-blue-100 transition-colors dark:bg-blue-900/30 dark:hover:bg-blue-900/20 dark:border-blue-900/50"
+                                    className="neu-btn px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-3xs sm:text-xs font-bold text-primary cursor-pointer active:scale-95"
                                   >
                                     + {s}
                                   </motion.button>
@@ -548,21 +604,25 @@ const ProviderProfile = () => {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 sm:gap-2.5">
                           {profile.services.length > 0 ? (
                             profile.services.map((s, i) => (
                               <motion.span
                                 key={i}
-                                className="px-4 py-2 bg-blue-50 text-primary rounded-xl text-sm font-bold border border-blue-100 dark:bg-blue-900/30 dark:border-blue-900/50"
+                                className="neu-btn px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-3xs sm:text-sm font-extrabold text-primary shadow-sm"
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.3 + i * 0.08 }}
+                                transition={{ delay: 0.05 + i * 0.04 }}
                               >
                                 {s}
                               </motion.span>
                             ))
                           ) : (
-                            <p className="text-slate-500 dark:text-slate-400 text-sm">No specializations added yet. Click {'\u201C'}Edit Specializations{'\u201D'} to add your services.</p>
+                            <div className="neu-inset p-3.5 sm:p-4 rounded-xl text-center w-full">
+                              <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                                No specializations added yet. Click &ldquo;Edit Specializations&rdquo; to add services you provide.
+                              </p>
+                            </div>
                           )}
                         </div>
                       )}
@@ -570,34 +630,45 @@ const ProviderProfile = () => {
                   </div>
                 </Tabs.Content>
 
-                {/* Trust Tab */}
+                {/* Trust Score Breakdown Tab */}
                 <Tabs.Content value="trust" className="outline-none">
-                  <div className="bg-white dark:bg-slate-800 rounded-2xl md:rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm dark:shadow-slate-900/50 overflow-hidden">
-                    <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-700">
-                      <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-100">Trust Score Breakdown</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">How your trust score is calculated</p>
+                  <div className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden">
+                    <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/50 dark:border-white/5">
+                      <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Trust Score Breakdown</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Calculated based on credentials, verification status, and profile completion</p>
                     </div>
-                    <div className="p-6 md:p-8">
-                      <div className="space-y-2">
+
+                    <div className="p-4 sm:p-6 md:p-7">
+                      <div className="neu-inset p-3.5 sm:p-5 rounded-2xl space-y-2.5 sm:space-y-3">
                         {[
-                          { label: 'Profile completed', met: profile.is_profile_complete, points: 20 },
-                          { label: 'Professional ID verified', met: profile.professional_id_status === 'verified', points: 30 },
-                          { label: 'Approved by admin', met: profile.is_approved, points: 30 },
-                          { label: 'Rating 4.0 or higher', met: profile.rating >= 4.0, points: 20 },
+                          { label: 'Profile Completed', met: profile.is_profile_complete, points: 20 },
+                          { label: 'PRC / Medical ID Verified', met: profile.professional_id_status === 'verified', points: 30 },
+                          { label: 'Approved by City Health Office', met: profile.is_approved, points: 30 },
+                          { label: 'Patient Rating 4.0 or Higher', met: profile.rating >= 4.0, points: 20 },
                         ].map((item, i) => (
-                          <div key={i} className="flex items-center justify-between py-1.5">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-4 h-4 rounded-full flex items-center justify-center ${item.met ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                                {item.met && <CheckCircle2 className="w-3 h-3 text-white" />}
+                          <div key={i} className="flex items-center justify-between py-1 border-b border-slate-200/40 dark:border-white/5 last:border-0">
+                            <div className="flex items-center gap-2 sm:gap-2.5">
+                              <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center ${item.met ? 'bg-emerald-500 text-white shadow-sm' : 'neu-pressed text-slate-400'}`}>
+                                {item.met ? <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />}
                               </div>
-                              <span className="text-sm text-slate-600 dark:text-slate-300">{item.label}</span>
+                              <span className="text-3xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label}</span>
                             </div>
-                            <span className={`text-xs font-bold ${item.met ? 'text-green-600 dark:text-green-300' : 'text-slate-400 dark:text-slate-500'}`}>+{item.points}</span>
+                            <span className={`text-3xs sm:text-xs font-black ${item.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                              +{item.points} pts
+                            </span>
                           </div>
                         ))}
-                        <div className="flex items-center justify-between pt-2 mt-2 border-t border-slate-100 dark:border-slate-700">
-                          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">Total Trust Score</span>
-                          <span className={`text-lg font-bold ${trustLevel.color}`}>{profile.trust_score}/100</span>
+                      </div>
+
+                      <div className="mt-3.5 sm:mt-5 neu-flat p-3.5 sm:p-5 rounded-2xl flex items-center justify-between">
+                        <div>
+                          <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 block">Total Calculated Score</span>
+                          <span className="text-3xs uppercase tracking-wider font-bold text-slate-400">Level: {trustLevel.label}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-lg sm:text-2xl font-black ${trustLevel.color}`}>
+                            {profile.trust_score}/100
+                          </span>
                         </div>
                       </div>
                     </div>

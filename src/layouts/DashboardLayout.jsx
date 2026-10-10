@@ -79,9 +79,54 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user: authUser, logout } = useAuth();
+  const { user: authUser, logout, updateUser } = useAuth();
+  const [currentUserProfile, setCurrentUserProfile] = useState(() => authUser);
   const mainRef = useRef(null);
   const channelRef = useRef(null);
+
+  // Keep local user profile fresh and subscribe to Supabase users changes
+  useEffect(() => {
+    setCurrentUserProfile(authUser);
+  }, [authUser]);
+
+  useEffect(() => {
+    if (!authUser?.id) return;
+
+    const fetchLiveUser = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('full_name, avatar_url, role')
+        .eq('id', authUser.id)
+        .maybeSingle();
+
+      if (data) {
+        setCurrentUserProfile(prev => ({ ...prev, ...data }));
+        if (data.avatar_url !== authUser.avatar_url || data.full_name !== authUser.full_name) {
+          updateUser?.(data);
+        }
+      }
+    };
+
+    fetchLiveUser();
+
+    // Subscribe to postgres changes for the current user's profile
+    const userChannel = supabase
+      .channel(`live-user-${authUser.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${authUser.id}` }, payload => {
+        if (payload?.new) {
+          setCurrentUserProfile(prev => ({ ...prev, ...payload.new }));
+          updateUser?.({
+            full_name: payload.new.full_name,
+            avatar_url: payload.new.avatar_url,
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(userChannel);
+    };
+  }, [authUser?.id, updateUser]);
 
   const toggleDesktopCollapse = () => {
     if (!isDesktopCollapsed) {
@@ -128,7 +173,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   ];
 
   // Use the actual logged in user data, fallback to dummy info if not available
-  const currentRole = authUser?.role || role;
+  const currentRole = currentUserProfile?.role || role;
   const links = currentRole === 'patient' ? patientLinks : currentRole === 'provider' ? providerLinks : adminLinks;
 
   const getInitials = (name) => {
@@ -143,9 +188,10 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   };
 
   const user = {
-    name: authUser?.full_name || userInfo[currentRole]?.name,
-    initials: getInitials(authUser?.full_name) || userInfo[currentRole]?.initials,
-    badge: authUser?.role ? authUser.role.charAt(0).toUpperCase() + authUser.role.slice(1) : userInfo[currentRole]?.badge,
+    name: currentUserProfile?.full_name || userInfo[currentRole]?.name,
+    initials: getInitials(currentUserProfile?.full_name) || userInfo[currentRole]?.initials,
+    badge: currentUserProfile?.role ? currentUserProfile.role.charAt(0).toUpperCase() + currentUserProfile.role.slice(1) : userInfo[currentRole]?.badge,
+    avatar_url: currentUserProfile?.avatar_url || '',
   };
 
   const deleteOldMessages = useCallback(async () => {
@@ -214,6 +260,97 @@ const DashboardShell = ({ children, role = 'patient' }) => {
     };
   }, [authUser, fetchCounts, deleteOldMessages]);
 
+  // Auto-hide mobile bottom nav on scroll down or input typing/focus
+  const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
+  const lastScrollTopRef = useRef(0);
+
+  useEffect(() => {
+    // Show nav whenever route changes
+    setIsMobileNavVisible(true);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const mainEl = mainRef.current;
+    if (!mainEl) return;
+
+    let ticking = false;
+    let touchStartY = 0;
+
+    const handleScrollEvent = (currentScrollTop) => {
+      const delta = currentScrollTop - lastScrollTopRef.current;
+      if (Math.abs(delta) > 8) {
+        if (delta > 0 && currentScrollTop > 30) {
+          // Scrolling down -> hide bottom nav
+          setIsMobileNavVisible(false);
+        } else if (delta < 0) {
+          // Scrolling up -> show bottom nav
+          setIsMobileNavVisible(true);
+        }
+        lastScrollTopRef.current = currentScrollTop;
+      }
+    };
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScrollEvent(mainEl.scrollTop || window.scrollY || document.documentElement.scrollTop);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    // Touch gesture detection for mobile devices
+    const handleTouchStart = (e) => {
+      if (e.touches && e.touches[0]) {
+        touchStartY = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (e.touches && e.touches[0]) {
+        const touchCurrentY = e.touches[0].clientY;
+        const diff = touchStartY - touchCurrentY; // positive = swipe up (scrolling down page)
+        if (Math.abs(diff) > 15) {
+          if (diff > 0) {
+            setIsMobileNavVisible(false);
+          } else {
+            setIsMobileNavVisible(true);
+          }
+          touchStartY = touchCurrentY;
+        }
+      }
+    };
+
+    // Auto-hide when virtual keyboard opens or user focuses on search/input/textarea
+    const handleFocusIn = (e) => {
+      const tag = e.target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) {
+        setIsMobileNavVisible(false);
+      }
+    };
+
+    const handleFocusOut = () => {
+      setIsMobileNavVisible(true);
+    };
+
+    mainEl.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('touchstart', handleTouchStart, { passive: true });
+    document.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('focusin', handleFocusIn);
+    window.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      mainEl.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('focusin', handleFocusIn);
+      window.removeEventListener('focusout', handleFocusOut);
+    };
+  }, []);
+
   const buildMobileLinks = (links) => {
     const primaryIndex = links.findIndex(l => l.primary);
     if (primaryIndex === -1) return links;
@@ -263,9 +400,9 @@ const DashboardShell = ({ children, role = 'patient' }) => {
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } lg:static lg:translate-x-0 lg:p-4 overflow-hidden shrink-0 select-none`}
         >
-          <div className="h-full w-[280px] flex flex-col p-6 neu-flat lg:rounded-[2.25rem] transform-gpu overflow-hidden">
+          <div className="h-full w-[280px] flex flex-col p-5 neu-flat lg:rounded-[2.25rem] transform-gpu">
             {/* Logo row - ALWAYS natural 1:1 scale, NEVER stretched */}
-            <div className="flex items-center justify-between mb-8 shrink-0">
+            <div className="flex items-center justify-between mb-6 shrink-0 px-1 pt-1">
               <div className="flex items-center gap-2.5">
                 {!isDesktopCollapsed ? (
                   <motion.button
@@ -314,13 +451,13 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 originY: 0,
               }}
               transition={{ duration: 0.36, ease: [0.25, 1, 0.5, 1] }}
-              className="flex-1 flex flex-col min-h-0 overflow-hidden"
+              className="flex-1 flex flex-col min-h-0 p-1"
             >
               {/* Nav section label */}
-              <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest px-4 mb-3">Navigation</p>
+              <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest px-3 mb-2.5">Navigation</p>
 
-              {/* Nav links */}
-              <nav className="flex-1 space-y-2 overflow-y-auto pr-1">
+              {/* Nav links with padding so shadows never cut off */}
+              <nav className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden p-1 pr-1.5 -mr-1">
                 {links.map((link) => {
                   let badge = 0;
                   if (currentRole === 'patient') {
@@ -345,43 +482,47 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               </nav>
 
               {/* Divider */}
-              <div className="border-t border-slate-200/50 dark:border-white/5 my-4" />
+              <div className="border-t border-slate-200/50 dark:border-white/5 my-3" />
 
               {/* User Info - Clickable Raised Neumorphic Card leading to Profile */}
-              <Link 
-                to={`/${currentRole}/profile`}
-                onClick={() => setIsSidebarOpen(false)}
-                className="group flex items-center gap-3 px-4 py-3 neu-flat-sm hover:neu-flat rounded-2xl mb-3 transition-all cursor-pointer active:scale-95"
-                title="View Profile"
-              >
-                <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
-                  {authUser?.avatar_url ? (
-                    <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    user.initials
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate group-hover:text-primary transition-colors">{user.name}</p>
-                  <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-primary text-3xs font-black rounded-full uppercase tracking-wider mt-0.5">
-                    {user.badge}
-                  </span>
-                </div>
-              </Link>
+              <div className="p-1">
+                <Link 
+                  to={`/${currentRole}/profile`}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="group flex items-center gap-3 px-3.5 py-3 neu-flat-sm hover:neu-flat rounded-2xl transition-all cursor-pointer active:scale-95 shadow-sm"
+                  title="View Profile"
+                >
+                  <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      user.initials
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate group-hover:text-primary transition-colors">{user.name}</p>
+                    <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-primary text-3xs font-black rounded-full uppercase tracking-wider mt-0.5">
+                      {user.badge}
+                    </span>
+                  </div>
+                </Link>
+              </div>
 
-              {/* Logout */}
-              <button 
-                onClick={() => {
-                  logout();
-                  navigate('/login');
-                }}
-                className="neu-btn flex items-center gap-3 px-4 py-3 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
-              >
-                <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-red-500">
-                  <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-500 dark:group-hover:text-red-400" />
-                </div>
-                <span className="font-bold text-xs">Logout</span>
-              </button>
+              {/* Logout with padding so shadow doesn't clip */}
+              <div className="p-1 pt-0">
+                <button 
+                  onClick={() => {
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="neu-btn flex items-center gap-3 px-3.5 py-3 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
+                >
+                  <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-red-500">
+                    <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-500 dark:group-hover:text-red-400" />
+                  </div>
+                  <span className="font-bold text-xs">Logout</span>
+                </button>
+              </div>
             </motion.div>
           </div>
         </motion.aside>
@@ -435,8 +576,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               className="neu-btn w-11 h-11 rounded-2xl flex items-center justify-center text-primary font-black shadow-sm shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden"
               title="Profile"
             >
-              {authUser?.avatar_url ? (
-                <img src={authUser.avatar_url} alt="" className="w-full h-full object-cover" />
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
               ) : (
                 user.initials
               )}
@@ -455,7 +596,9 @@ const DashboardShell = ({ children, role = 'patient' }) => {
       {/* Mobile Bottom Navigation */}
       <div 
         id="mobile-bottom-nav" 
-        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
+        className={`fixed bottom-0 left-0 right-0 z-50 lg:hidden transition-all duration-300 ease-fluid ${
+          isMobileNavVisible ? 'translate-y-0 opacity-100 pointer-events-auto' : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
       >
         <div className="mx-3 mb-3 rounded-2xl neu-flat">

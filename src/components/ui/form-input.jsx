@@ -14,7 +14,7 @@ const FormInput = React.forwardRef(({ label, error, icon: Icon, rightElement, cl
         <input
           ref={ref}
           className={cn(
-            "w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3",
+            "w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3",
             Icon ? "!pl-10 sm:!pl-12" : "px-3.5 sm:px-4",
             rightElement ? "!pr-10 sm:!pr-12" : "pr-3.5 sm:pr-4",
             "focus:outline-none text-xs sm:text-sm font-semibold transition-all duration-300",
@@ -42,7 +42,7 @@ const FormTextarea = React.forwardRef(({ label, error, className, ...props }, re
     <textarea
       ref={ref}
       className={cn(
-        "w-full neu-inset text-slate-800 dark:text-slate-100 rounded-2xl p-4",
+        "w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-2xl p-4",
         "focus:outline-none text-xs sm:text-sm font-semibold transition-all duration-300 resize-none",
         error ? "ring-1 ring-red-400 dark:ring-red-500" : "",
         className

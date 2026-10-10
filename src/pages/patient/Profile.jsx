@@ -798,7 +798,7 @@ const PatientProfile = () => {
                           value={profile.phone}
                           onChange={e => setProfile({...profile, phone: e.target.value})}
                           placeholder="e.g., 09123456789"
-                          className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-semibold outline-none transition-all"
+                          className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-semibold outline-none transition-all"
                         />
                       </div>
 
@@ -809,7 +809,7 @@ const PatientProfile = () => {
                           value={profile.emergency_contact}
                           onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
                           placeholder="Name & Contact Number"
-                          className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-semibold outline-none transition-all"
+                          className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-semibold outline-none transition-all"
                         />
                       </div>
 
@@ -818,7 +818,7 @@ const PatientProfile = () => {
                         <textarea name="address" required value={profile.address}
                           onChange={e => setProfile({...profile, address: e.target.value})}
                           placeholder="Complete home address in Muntinlupa..." rows={3}
-                          className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                          className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
                         />
                       </div>
 
@@ -827,7 +827,7 @@ const PatientProfile = () => {
                         <textarea name="medical_notes" value={profile.medical_notes}
                           onChange={e => setProfile({...profile, medical_notes: e.target.value})}
                           placeholder="Special needs, mobility notes, or care instructions..." rows={3}
-                          className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                          className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
                         />
                       </div>
                     </div>
@@ -868,7 +868,7 @@ const PatientProfile = () => {
                       <textarea name="allergies" value={profile.allergies}
                         onChange={e => setProfile({...profile, allergies: e.target.value})}
                         placeholder="List any medication, food, or contact allergies..." rows={2}
-                        className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                        className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
                       />
                       <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {['No known allergies', 'Penicillin', 'Sulfa', 'Iodine', 'Latex', 'Peanuts'].filter(s => !(profile.allergies || '').toLowerCase().includes(s.toLowerCase())).map(s => (
@@ -886,7 +886,7 @@ const PatientProfile = () => {
                       <textarea name="chronic_conditions" value={profile.chronic_conditions}
                         onChange={e => setProfile({...profile, chronic_conditions: e.target.value})}
                         placeholder="e.g. Hypertension, Type 2 Diabetes, Asthma..." rows={2}
-                        className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                        className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
                       />
                       <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {['Diabetes', 'High Blood Pressure', 'Asthma', 'Heart Disease', 'Arthritis', 'None'].filter(s => !(profile.chronic_conditions || '').toLowerCase().includes(s.toLowerCase())).map(s => (
@@ -904,7 +904,7 @@ const PatientProfile = () => {
                       <textarea name="past_surgeries" value={profile.past_surgeries}
                         onChange={e => setProfile({...profile, past_surgeries: e.target.value})}
                         placeholder="List any past surgeries and approximate year..." rows={2}
-                        className="w-full neu-inset text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                        className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
                       />
                       <div className="flex flex-wrap gap-1.5 pt-0.5">
                         {['Appendectomy', 'C-Section', 'Gallbladder Removal', 'Knee Surgery', 'Tonsillectomy', 'None'].filter(s => !(profile.past_surgeries || '').toLowerCase().includes(s.toLowerCase())).map(s => (

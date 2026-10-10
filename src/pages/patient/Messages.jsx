@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -31,7 +32,7 @@ const PatientMessages = () => {
     if (!user) return;
     supabase
       .from('users')
-      .select('full_name, email')
+      .select('full_name, email, avatar_url')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
@@ -39,6 +40,7 @@ const PatientMessages = () => {
           id: user.id,
           name: data?.full_name || 'Patient',
           email: data?.email,
+          avatar_url: data?.avatar_url || '',
         });
       });
   }, [user]);
@@ -48,7 +50,22 @@ const PatientMessages = () => {
     const targetId = params.get('provider') || params.get('partner');
     if (targetId && currentUserData) {
       const partnerName = params.get('name') || undefined;
-      setSelectedPartner({ id: targetId, name: partnerName });
+      supabase
+        .from('users')
+        .select('full_name, avatar_url')
+        .eq('id', targetId)
+        .single()
+        .then(({ data: partData }) => {
+          setSelectedPartner({
+            id: targetId,
+            name: partData?.full_name || partnerName || 'Provider',
+            photoUrl: partData?.avatar_url || '',
+          });
+        })
+        .catch(() => {
+          setSelectedPartner({ id: targetId, name: partnerName });
+        });
+
       setView('chat');
       if (params.get('startVideo') === '1') {
         setAutoStartVideo(true);
@@ -136,25 +153,28 @@ const PatientMessages = () => {
         ) : null}
       </DashboardLayout>
 
-      {/* Full-Screen Immersive Chat Window (Covers Side and Top Panels on Desktop & Mobile) */}
-      <AnimatePresence>
-        {view === 'chat' && currentUserData && selectedPartner?.id && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.98 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-[60] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col"
-          >
-            <ChatWindow
-              currentUser={currentUserData}
-              otherUser={selectedPartner}
-              onBack={handleBack}
-              autoStartVideo={autoStartVideo}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Full-Screen Immersive Chat Window (Escapes DashboardLayout stacking via Portal) */}
+      {createPortal(
+        <AnimatePresence>
+          {view === 'chat' && currentUserData && selectedPartner?.id && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.99 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.99 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="fixed inset-0 z-[9999] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col w-screen h-screen overflow-hidden"
+            >
+              <ChatWindow
+                currentUser={currentUserData}
+                otherUser={selectedPartner}
+                onBack={handleBack}
+                autoStartVideo={autoStartVideo}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </CallProvider>
   );
 };

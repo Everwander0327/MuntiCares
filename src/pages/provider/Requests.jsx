@@ -1,138 +1,154 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Check, X, MapPin, Calendar, Clock, CheckCircle, Loader2 } from 'lucide-react';
+import { 
+  Check, X, MapPin, Calendar, Clock, CheckCircle2, Loader2, 
+  Search, SlidersHorizontal, Navigation, Home, MessageSquare, 
+  ChevronLeft, ChevronRight, User, Stethoscope, AlertCircle, Sparkles, Filter
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { SkeletonPage } from '../../components/Skeleton';
 import toast from 'react-hot-toast';
 import EmptyState from '../../components/EmptyState';
+import { Link } from 'react-router-dom';
 
 const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.1 } },
+  animate: { transition: { staggerChildren: 0.05 } },
 };
 const staggerItem = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
 };
 
-const tabs = [
-  { id: 'incoming', label: 'Incoming' },
-  { id: 'active', label: 'Active' },
-];
+const STATUS_FLOW = {
+  Accepted: { next: 'On The Way', icon: <Navigation className="w-3.5 h-3.5" />, label: 'Start Travel (On The Way)', color: 'neu-btn-primary text-white' },
+  'On The Way': { next: 'Arrived', icon: <Home className="w-3.5 h-3.5" />, label: 'Mark Arrived on Site', color: 'neu-btn bg-amber-500 text-white hover:bg-amber-600' },
+  Arrived: { next: 'Completed', icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: 'Complete Visit', color: 'neu-btn bg-emerald-600 text-white hover:bg-emerald-700' },
+};
+
+const getStatusBadge = (status) => {
+  switch (status) {
+    case 'Completed':
+      return (
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 shadow-xs">
+          Completed
+        </span>
+      );
+    case 'Pending':
+      return (
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 shadow-xs">
+          Pending
+        </span>
+      );
+    case 'Accepted':
+    case 'On The Way':
+    case 'Arrived':
+      return (
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30 shadow-xs">
+          {status}
+        </span>
+      );
+    case 'Rejected':
+      return (
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 shadow-xs">
+          Rejected
+        </span>
+      );
+    case 'Cancelled':
+      return (
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/50 dark:border-white/10 shadow-xs">
+          Cancelled
+        </span>
+      );
+    default:
+      return (
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-slate-500 bg-slate-200/50">
+          {status}
+        </span>
+      );
+  }
+};
 
 const ProviderRequests = () => {
-  const [activeTab, setActiveTab] = useState('incoming');
-  const [pending, setPending] = useState([]);
-  const [active, setActive] = useState([]);
+  const [filter, setFilter] = useState('All'); // 'All' | 'Pending' | 'Active' | 'Completed' | 'History'
+  const [searchTerm, setSearchTerm] = useState('');
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState({});
-  const [completing, setCompleting] = useState({});
+  const [updatingVisitId, setUpdatingVisitId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   const { user } = useAuth();
 
-  useEffect(() => {
+  const fetchAll = async () => {
     if (!user) return;
-    const fetchAll = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('requests')
-          .select('id, patient_id, service, date, time, notes, status, patient:patient_id(full_name)')
-          .eq('provider_id', user.id)
-          .in('status', ['Pending', 'Accepted'])
-          .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('requests')
+        .select('id, patient_id, service, date, time, notes, status, created_at, patient:patient_id(full_name, avatar_url)')
+        .eq('provider_id', user.id)
+        .order('created_at', { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        const patientIds = [...new Set((data || []).map(r => r.patient_id))];
+      const patientIds = [...new Set((data || []).map(r => r.patient_id).filter(Boolean))];
+      let addressMap = {};
+      if (patientIds.length > 0) {
         const { data: patientProfiles } = await supabase
           .from('patients')
           .select('user_id, address')
           .in('user_id', patientIds);
 
-        const format = (r) => {
-          const profile = patientProfiles?.find(p => p.user_id === r.patient_id);
-          return {
-            id: r.id,
-            patient: r.patient?.full_name || 'Unknown Patient',
-            service: r.service,
-            date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            time: new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-            notes: r.notes || '',
-            status: r.status,
-            location: profile?.address || 'Muntinlupa',
-          };
-        };
-
-        setPending((data || []).filter(r => r.status === 'Pending').map(format));
-        setActive((data || []).filter(r => r.status === 'Accepted').map(format));
-      } catch (err) {
-        console.error('Error fetching requests:', err);
-      } finally {
-        setLoading(false);
+        (patientProfiles || []).forEach(p => {
+          if (p.user_id && p.address) addressMap[p.user_id] = p.address;
+        });
       }
-    };
 
+      const formatted = (data || []).map(r => {
+        let timeLabel = '';
+        try {
+          if (r.time) {
+            timeLabel = new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          }
+        } catch { timeLabel = r.time || ''; }
+
+        return {
+          id: r.id,
+          patientId: r.patient_id,
+          patient: r.patient?.full_name || 'Unknown Patient',
+          avatarUrl: r.patient?.avatar_url || '',
+          service: r.service,
+          date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          time: timeLabel,
+          notes: r.notes || '',
+          status: r.status,
+          location: addressMap[r.patient_id] || 'Muntinlupa City',
+        };
+      });
+
+      setRequests(formatted);
+    } catch (err) {
+      console.error('Error fetching requests:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchAll();
 
     const channel = supabase
-      .channel('provider-requests-changes')
+      .channel('provider-requests-live')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'requests',
-          filter: `provider_id=eq.${user.id}`,
+          filter: `provider_id=eq.${user?.id}`,
         },
-        (payload) => {
-          const newRow = payload.new;
-          const oldRow = payload.old;
-
-          if (payload.eventType === 'DELETE') {
-            setPending(prev => prev.filter(r => r.id !== oldRow?.id));
-            setActive(prev => prev.filter(r => r.id !== oldRow?.id));
-            return;
-          }
-
-          if (payload.eventType !== 'INSERT' && payload.eventType !== 'UPDATE') return;
-
-          if (newRow?.status === 'Pending') {
-            setActive(prev => prev.filter(r => r.id !== newRow.id));
-            const exists = pending.some(r => r.id === newRow.id);
-            if (!exists) {
-              setPending(prev => [{
-                id: newRow.id,
-                patient: newRow.patient?.full_name || 'Unknown Patient',
-                service: newRow.service,
-                date: new Date(newRow.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                time: new Date(`2000-01-01T${newRow.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-                notes: newRow.notes || '',
-                status: newRow.status,
-                location: 'Muntinlupa',
-              }, ...prev]);
-            } else {
-              setPending(prev => prev.map(r => r.id === newRow.id ? { ...r, notes: newRow.notes || '' } : r));
-            }
-          } else if (newRow?.status === 'Accepted') {
-            setPending(prev => prev.filter(r => r.id !== newRow.id));
-            setActive(prev => {
-              const exists = prev.some(r => r.id === newRow.id);
-              if (exists) return prev;
-              return [{ id: newRow.id,
-                patient: newRow.patient?.full_name || 'Unknown Patient',
-                service: newRow.service,
-                date: new Date(newRow.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                time: new Date(`2000-01-01T${newRow.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-                notes: newRow.notes || '',
-                status: newRow.status,
-                location: 'Muntinlupa' }, ...prev];
-            });
-          } else if (newRow?.status === 'Completed' || newRow?.status === 'Cancelled' || newRow?.status === 'Rejected') {
-            setPending(prev => prev.filter(r => r.id !== newRow.id));
-            setActive(prev => prev.filter(r => r.id !== newRow.id));
-          }
-        }
+        () => fetchAll()
       )
       .subscribe();
 
@@ -141,39 +157,24 @@ const ProviderRequests = () => {
     };
   }, [user]);
 
-  const handleAccept = async (id) => {
-    const { data: current } = await supabase
-      .from('requests')
-      .select('status')
-      .eq('id', id)
-      .single();
+  // Quick Action: Accept or Reject incoming request
+  const handleAction = async (id, action, patientName) => {
+    setActionStates(prev => ({ ...prev, [id]: action }));
+    const newStatus = action === 'accepted' ? 'Accepted' : 'Rejected';
 
-    if (!current || current.status !== 'Pending') {
-      toast.error('This request is no longer available.');
-      setPending(prev => prev.filter(r => r.id !== id));
-      return;
-    }
-
-    setActionStates(prev => ({ ...prev, [id]: 'accepted' }));
     try {
       const { error } = await supabase
         .from('requests')
-        .update({ status: 'Accepted' })
+        .update({ status: newStatus })
         .eq('id', id);
 
       if (error) throw error;
-
-      setTimeout(() => {
-        setPending(prev => prev.filter(r => r.id !== id));
-        setActionStates(prev => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-      }, 800);
+      toast.success(action === 'accepted' ? `Accepted visit for ${patientName}!` : `Declined request.`);
+      fetchAll();
     } catch (err) {
-      console.error('Error accepting request:', err);
-      toast.error('Failed to accept request.');
+      console.error('Error updating request:', err);
+      toast.error('Failed to update request.');
+    } finally {
       setActionStates(prev => {
         const next = { ...prev };
         delete next[id];
@@ -182,286 +183,376 @@ const ProviderRequests = () => {
     }
   };
 
-  const handleReject = async (id, name) => {
-    setActionStates(prev => ({ ...prev, [id]: 'rejected' }));
+  // Progression: Accepted -> On The Way -> Arrived -> Completed
+  const handleAdvanceVisit = async (visitId, nextStatus) => {
+    setUpdatingVisitId(visitId);
     try {
       const { error } = await supabase
         .from('requests')
-        .update({ status: 'Rejected' })
-        .eq('id', id);
+        .update({ status: nextStatus })
+        .eq('id', visitId);
 
       if (error) throw error;
-
-      toast.success(`Rejected ${name}'s request.`, { icon: '👋' });
-      setTimeout(() => {
-        setPending(prev => prev.filter(r => r.id !== id));
-        setActionStates(prev => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-      }, 800);
+      toast.success(`Visit updated to "${nextStatus}"!`);
+      fetchAll();
     } catch (err) {
-      console.error('Error rejecting request:', err);
-      toast.error('Failed to reject request.');
-      setActionStates(prev => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
+      console.error('Error advancing visit:', err);
+      toast.error('Failed to update visit status.');
+    } finally {
+      setUpdatingVisitId(null);
     }
   };
 
-  const handleMarkComplete = async (req) => {
-    setCompleting(prev => ({ ...prev, [req.id]: true }));
-    try {
-      const { error } = await supabase
-        .from('requests')
-        .update({ status: 'Completed' })
-        .eq('id', req.id);
+  // Stats calculation
+  const stats = useMemo(() => {
+    const pending = requests.filter(r => r.status === 'Pending').length;
+    const active = requests.filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
+    const completed = requests.filter(r => r.status === 'Completed').length;
+    const history = requests.filter(r => ['Rejected', 'Cancelled'].includes(r.status)).length;
+    return { pending, active, completed, history, total: requests.length };
+  }, [requests]);
 
-      if (error) throw error;
+  // Filter & Search Logic
+  const filteredRequests = useMemo(() => {
+    return requests.filter(r => {
+      let matchesFilter = true;
+      if (filter === 'Pending') matchesFilter = r.status === 'Pending';
+      else if (filter === 'Active') matchesFilter = ['Accepted', 'On The Way', 'Arrived'].includes(r.status);
+      else if (filter === 'Completed') matchesFilter = r.status === 'Completed';
+      else if (filter === 'History') matchesFilter = ['Rejected', 'Cancelled', 'Completed'].includes(r.status);
 
-      toast.success('Service marked complete!');
+      const term = searchTerm.toLowerCase().trim();
+      const matchesSearch = !term ||
+        r.patient.toLowerCase().includes(term) ||
+        r.service.toLowerCase().includes(term) ||
+        r.location.toLowerCase().includes(term) ||
+        r.notes.toLowerCase().includes(term);
 
-      setTimeout(() => {
-        setActive(prev => prev.filter(r => r.id !== req.id));
-        setCompleting(prev => {
-          const next = { ...prev };
-          delete next[req.id];
-          return next;
-        });
-      }, 500);
-    } catch (err) {
-      console.error('Error marking complete:', err);
-      toast.error('Failed to mark as complete.');
-      setCompleting(prev => {
-        const next = { ...prev };
-        delete next[req.id];
-        return next;
-      });
-    }
+      return matchesFilter && matchesSearch;
+    });
+  }, [requests, filter, searchTerm]);
+
+  // Reset page when filtering or searching
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredRequests.slice(start, start + itemsPerPage);
+  }, [filteredRequests, currentPage, itemsPerPage]);
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    const mainEl = document.querySelector('main');
+    if (mainEl) mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading) {
-    return <DashboardLayout role="provider"><SkeletonPage /></DashboardLayout>;
+    return (
+      <DashboardLayout role="provider">
+        <SkeletonPage />
+      </DashboardLayout>
+    );
   }
 
   return (
     <DashboardLayout role="provider">
-      <div className="space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Service Requests</h1>
-          <p className="text-slate-500 dark:text-slate-400">Manage incoming and active service requests</p>
-        </motion.div>
+      <div className="flex-1 flex flex-col justify-between space-y-4 sm:space-y-6 relative w-full max-w-full pb-10">
 
-        {/* Tabs */}
-        <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-2xl p-1 w-fit">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-5 py-2 rounded-xl text-sm font-bold transition-all ${
-                activeTab === tab.id
-                  ? 'bg-white dark:bg-slate-700 text-primary shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-              }`}
-            >
-              {tab.label}
-              {tab.id === 'incoming' && pending.length > 0 && (
-                <span className="ml-2 px-1.5 py-0.5 bg-primary/10 text-primary rounded-full text-2xs">{pending.length}</span>
+        {/* HEADER SECTION: Unified Neumorphic Card with Stats & Sunken Search */}
+        <section className="neu-flat p-3.5 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div>
+              <h1 className="font-display font-extrabold tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
+                Incoming & Active Requests
+              </h1>
+              <p className="text-3xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 max-w-xl">
+                Review bookings, update home visits, and coordinate patient consultations across Muntinlupa.
+              </p>
+            </div>
+
+            {/* Quick Filter Pills with scroll on small screens */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-wrap">
+              <button
+                type="button"
+                onClick={() => setFilter(filter === 'Pending' ? 'All' : 'Pending')}
+                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  filter === 'Pending'
+                    ? 'neu-pressed text-amber-600 dark:text-amber-400 border border-amber-500/40 bg-amber-500/15'
+                    : 'neu-btn text-amber-600 dark:text-amber-400 hover:text-amber-700'
+                }`}
+                title="Filter Pending requests"
+              >
+                <Clock className="w-3 h-3 text-amber-500 shrink-0" />
+                <span>{stats.pending} Pending</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilter(filter === 'Active' ? 'All' : 'Active')}
+                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  filter === 'Active'
+                    ? 'neu-pressed text-blue-600 dark:text-blue-400 border border-blue-500/40 bg-blue-500/15'
+                    : 'neu-btn text-blue-600 dark:text-blue-400 hover:text-blue-700'
+                }`}
+                title="Filter Active / In-progress visits"
+              >
+                <Navigation className="w-3 h-3 text-blue-500 shrink-0" />
+                <span>{stats.active} Active</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFilter(filter === 'Completed' ? 'All' : 'Completed')}
+                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  filter === 'Completed'
+                    ? 'neu-pressed text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 bg-emerald-500/15'
+                    : 'neu-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-700'
+                }`}
+                title="Filter Completed visits"
+              >
+                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span>{stats.completed} Completed</span>
+              </button>
+
+              {filter !== 'All' && (
+                <button
+                  type="button"
+                  onClick={() => setFilter('All')}
+                  className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-full text-3xs font-extrabold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                  title="Clear filter and show all"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Show All</span>
+                </button>
               )}
-              {tab.id === 'active' && active.length > 0 && (
-                <span className="ml-2 px-1.5 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full text-2xs">{active.length}</span>
-              )}
-            </button>
-          ))}
+            </div>
+          </div>
+
+          {/* Sunken Search Box */}
+          <div className="flex items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
+            <div className="relative flex-1 min-w-0">
+              <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[42px] sm:h-[50px] border border-slate-200/50 dark:border-white/5">
+                <Search className="w-4 h-4 text-primary ml-1.5 sm:ml-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search patient, service, address..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm('')}
+                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* SECTION HEADER & FAR-RIGHT PAGINATION */}
+        <div className="flex items-center justify-between gap-3 px-1">
+          <div className="min-w-0">
+            <h2 className="font-display font-extrabold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
+              {filter === 'All' ? 'All Service Bookings' : `${filter} Requests`}
+            </h2>
+            <p className="text-3xs sm:text-xs text-slate-500 mt-0.5">
+              Showing {filteredRequests.length} {filteredRequests.length === 1 ? 'request' : 'requests'}
+              {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
+            </p>
+          </div>
+
+          {/* Minimalist Far-Right Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                title="Previous page"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-3xs font-extrabold text-slate-500 px-1 select-none">
+                {currentPage} / {totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage >= totalPages}
+                className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                title="Next page"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
 
-        {activeTab === 'incoming' && (
-          <>
-            {pending.length > 0 ? (
-              <motion.div
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-                variants={staggerContainer}
-                initial="initial"
-                animate="animate"
-              >
-                <AnimatePresence>
-                  {pending.map((req) => (
-                    <motion.div
-                      key={req.id}
-                      className={`bg-white p-6 rounded-[2rem] border shadow-sm transition-all duration-300 dark:bg-slate-800 dark:shadow-slate-900/50 ${
-                        actionStates[req.id] === 'accepted' ? 'border-green-200 bg-green-50/50 dark:border-green-900/50 dark:bg-green-900/30' :
-                        actionStates[req.id] === 'rejected' ? 'border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-900/30' :
-                        'border-slate-100 hover:shadow-xl dark:border-slate-700'
-                      }`}
-                      variants={staggerItem}
-                      layout
-                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.3 } }}
-                    >
-                      <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-primary font-bold dark:bg-blue-900/30">
-                            {req.patient.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-slate-100">{req.patient}</h3>
-                            <p className="text-primary text-sm font-semibold">{req.service}</p>
-                          </div>
-                        </div>
+        {/* REQUEST CARDS GRID */}
+        {paginatedRequests.length > 0 ? (
+          <motion.div
+            className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
+            <AnimatePresence mode="popLayout">
+              {paginatedRequests.map((req) => (
+                <motion.div
+                  key={req.id}
+                  variants={staggerItem}
+                  layout
+                  className="neu-flat rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 flex flex-col justify-between space-y-3 sm:space-y-3.5 select-text transition-all"
+                >
+                  {/* Top Bar: Patient Avatar + Name + Chat Button & Status Badge */}
+                  <div className="flex items-start justify-between gap-2.5 sm:gap-3">
+                    <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                      <div className="neu-flat-sm w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-primary font-black text-xs sm:text-base shrink-0 p-0.5">
+                        {req.avatarUrl ? (
+                          <img src={req.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
+                        ) : (
+                          req.patient.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'
+                        )}
                       </div>
+                      <div className="min-w-0">
+                        <h3 className="font-display font-extrabold text-slate-900 dark:text-white text-xs sm:text-base truncate">
+                          {req.patient}
+                        </h3>
+                        <p className="text-3xs sm:text-xs font-semibold text-primary truncate mt-0.5">
+                          {req.service}
+                        </p>
+                      </div>
+                    </div>
 
-                      <div className="space-y-3 mb-6">
-                        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-                          <Calendar className="w-4 h-4" />
-                          <span>{req.date}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-                          <Clock className="w-4 h-4" />
+                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                      {/* Chat with Patient Button beside the status chip */}
+                      <Link
+                        to={`/provider/messages?partner=${req.patientId}&name=${encodeURIComponent(req.patient)}`}
+                        className="neu-btn p-1.5 sm:px-2.5 sm:py-1 rounded-xl text-3xs font-bold text-primary flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                        title="Chat with Patient"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Chat</span>
+                      </Link>
+
+                      {getStatusBadge(req.status)}
+                    </div>
+                  </div>
+
+                  {/* Middle Meta Details: Date, Time, Location */}
+                  <div className="py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-slate-600 dark:text-slate-300 font-medium text-3xs sm:text-xs w-full">
+                      <span className="flex items-center gap-1.5 shrink-0">
+                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span>{req.date}</span>
+                      </span>
+                      {req.time && (
+                        <span className="flex items-center gap-1.5 shrink-0">
+                          <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
                           <span>{req.time}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-                          <MapPin className="w-4 h-4" />
-                          <span>{req.location}</span>
-                        </div>
-                      </div>
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span className="truncate max-w-[170px] sm:max-w-none">{req.location}</span>
+                      </span>
+                    </div>
+                  </div>
 
-                      {req.notes && (
-                        <div className="mb-6 p-4 bg-yellow-50/50 rounded-2xl border border-yellow-100 dark:bg-yellow-900/30 dark:border-yellow-900/50">
-                          <p className="text-xs font-bold text-yellow-800 uppercase tracking-wider mb-1 dark:text-yellow-200">Patient Notes</p>
-                          <p className="text-sm text-yellow-900 leading-relaxed italic dark:text-yellow-100">{'\u201C'}{req.notes}{'\u201D'}</p>
+                  {/* Patient Notes (Sunken Inset Well) */}
+                  <div className="neu-inset p-2.5 sm:p-3 rounded-xl border border-slate-200/40 dark:border-white/5 space-y-1">
+                    <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">
+                      Patient Notes
+                    </p>
+                    {req.notes && req.notes.trim() ? (
+                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                        "{req.notes}"
+                      </p>
+                    ) : (
+                      <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                        No additional notes provided by patient.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action Buttons for Pending or Active visits */}
+                  {(req.status === 'Pending' || STATUS_FLOW[req.status]) && (
+                    <div className="pt-2 border-t border-slate-200/40 dark:border-white/5 flex flex-wrap items-center justify-end gap-2">
+                      {/* Pending Request: Accept / Decline */}
+                      {req.status === 'Pending' && (
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <button
+                            type="button"
+                            disabled={!!actionStates[req.id]}
+                            onClick={() => handleAction(req.id, 'accepted', req.patient)}
+                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-1.5"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Accept</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!!actionStates[req.id]}
+                            onClick={() => handleAction(req.id, 'rejected', req.patient)}
+                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-1.5"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            <span>Decline</span>
+                          </button>
                         </div>
                       )}
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <motion.button
-                          onClick={() => handleAccept(req.id)}
-                          className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all shadow-lg ${
-                            actionStates[req.id] === 'accepted'
-                              ? 'bg-green-500 text-white shadow-green-200 dark:shadow-green-900/50'
-                              : 'bg-green-500 text-white hover:bg-green-600 shadow-green-200 dark:shadow-green-900/50'
+                      {/* Active In-Progress Visits: Progression Stepper Button */}
+                      {STATUS_FLOW[req.status] && (
+                        <button
+                          type="button"
+                          disabled={updatingVisitId === req.id}
+                          onClick={() => handleAdvanceVisit(req.id, STATUS_FLOW[req.status].next)}
+                          className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 ${
+                            STATUS_FLOW[req.status].color
                           }`}
-                          whileTap={{ scale: 0.95 }}
-                          animate={actionStates[req.id] === 'accepted' ? { scale: [1, 1.1, 1] } : {}}
-                          disabled={!!actionStates[req.id]}
                         >
-                          <Check className="w-4 h-4" />
-                          {actionStates[req.id] === 'accepted' ? 'Accepted ✓' : 'Accept'}
-                        </motion.button>
-                        <motion.button
-                          onClick={() => handleReject(req.id, req.patient)}
-                          className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all ${
-                            actionStates[req.id] === 'rejected'
-                              ? 'bg-red-500 text-white'
-                              : 'bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30'
-                          }`}
-                          whileTap={{ scale: 0.95 }}
-                          animate={actionStates[req.id] === 'rejected' ? { scale: [1, 1.1, 1] } : {}}
-                          disabled={!!actionStates[req.id]}
-                        >
-                          <X className="w-4 h-4" />
-                          {actionStates[req.id] === 'rejected' ? 'Rejected' : 'Reject'}
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            ) : (
-              <motion.div
-                className="text-center py-20 bg-white rounded-[2rem] border border-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50 shadow-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <EmptyState icon="inbox" title="No incoming requests" message="New service requests from patients will appear here." />
-              </motion.div>
-            )}
-          </>
-        )}
-
-        {activeTab === 'active' && (
-          <>
-            {active.length > 0 ? (
-              <motion.div
-                className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-                variants={staggerContainer}
-                initial="initial"
-                animate="animate"
-              >
-                <AnimatePresence>
-                  {active.map((req) => (
-                    <motion.div
-                      key={req.id}
-                      className="bg-white p-6 rounded-[2rem] border border-blue-100 shadow-sm hover:shadow-xl transition-all dark:bg-slate-800 dark:border-blue-900/50"
-                      variants={staggerItem}
-                      layout
-                      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.3 } }}
-                    >
-                      <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 font-bold dark:bg-green-900/30 dark:text-green-300">
-                            {req.patient.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
-                          </div>
-                          <div>
-                            <h3 className="font-bold text-slate-900 dark:text-slate-100">{req.patient}</h3>
-                            <p className="text-primary text-sm font-semibold">{req.service}</p>
-                          </div>
-                        </div>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                          Active
-                        </span>
-                      </div>
-
-                      <div className="space-y-3 mb-6">
-                        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-                          <Calendar className="w-4 h-4" />
-                          <span>{req.date}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-                          <Clock className="w-4 h-4" />
-                          <span>{req.time}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-sm">
-                          <MapPin className="w-4 h-4" />
-                          <span>{req.location}</span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-2">
-                        <motion.button
-                          onClick={() => handleMarkComplete(req)}
-                          className="flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all shadow-lg bg-primary text-white hover:bg-primary/90 shadow-primary/20"
-                          whileTap={{ scale: 0.95 }}
-                          disabled={!!completing[req.id]}
-                        >
-                          {completing[req.id] ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /> Completing...</>
+                          {updatingVisitId === req.id ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...</>
                           ) : (
-                            <><CheckCircle className="w-4 h-4" /> Mark Complete</>
+                            <>
+                              {STATUS_FLOW[req.status].icon}
+                              <span>{STATUS_FLOW[req.status].label}</span>
+                            </>
                           )}
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-            ) : (
-              <motion.div
-                className="text-center py-20 bg-white rounded-[2rem] border border-slate-100 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50 shadow-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-              >
-                <EmptyState icon="check-circle" title="No active services" message="Accepted service requests will appear here. Mark them complete when done." />
-              </motion.div>
-            )}
-          </>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        ) : (
+          <div className="neu-flat p-8 sm:p-12 rounded-2xl sm:rounded-[2.25rem] text-center">
+            <EmptyState
+              icon="inbox"
+              title={searchTerm ? 'No matching requests found' : 'No requests in this category'}
+              message={
+                searchTerm
+                  ? 'Try refining your search terms or clearing filters.'
+                  : 'New patient appointments and service requests will appear here.'
+              }
+            />
+          </div>
         )}
+
       </div>
     </DashboardLayout>
   );

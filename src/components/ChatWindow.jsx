@@ -418,9 +418,13 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                         transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
                       />
                       <div className="absolute inset-1.5 rounded-full neu-flat flex items-center justify-center p-1 overflow-hidden shadow-inner">
-                        <span className="text-2xl font-black text-primary">
-                          {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
-                        </span>
+                        {otherUser?.photoUrl ? (
+                          <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                          <span className="text-2xl font-black text-primary">
+                            {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                          </span>
+                        )}
                       </div>
                     </div>
 

@@ -45,7 +45,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
 
         const { data: reqData } = await supabase
           .from('requests')
-          .select(`${otherCol}, partner:${otherCol}(full_name, email)`)
+          .select(`${otherCol}, partner:${otherCol}(full_name, email, avatar_url)`)
           .eq(filterCol, user.id)
           .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed']);
 
@@ -58,7 +58,8 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
             id: rawId,
             name: p.full_name || (isPatient ? 'Provider' : 'Patient'),
             email: p.email,
-            photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(p.full_name || 'U')}&background=${isPatient ? 'F3E8FF&color=9333EA' : 'E0F2FE&color=2563EB'}`,
+            avatar_url: p.avatar_url || '',
+            photoUrl: p.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.full_name || 'U')}&background=${isPatient ? 'F3E8FF&color=9333EA' : 'E0F2FE&color=2563EB'}`,
           };
         });
 

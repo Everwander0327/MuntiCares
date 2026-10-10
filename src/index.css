@@ -363,10 +363,29 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Form inputs - remove forced blue highlight glow */
-input:focus, textarea:focus, select:focus {
+/* Form inputs - remove forced blue highlight glow, keep neu-inset sunken */
+input:not(.neu-inset):not(.neu-input):focus, 
+textarea:not(.neu-inset):not(.neu-input):focus, 
+select:focus {
   outline: none !important;
   box-shadow: none !important;
+}
+
+/* Deep sunken feel for neu-inset on focus/typing */
+.neu-inset:focus,
+.neu-inset:focus-within,
+.neu-input:focus,
+.neu-input:focus-within {
+  background: #e4ecf5 !important;
+  box-shadow: inset 4px 4px 8px rgba(163, 177, 198, 0.55), inset -3px -3px 7px rgba(255, 255, 255, 0.9) !important;
+}
+
+.dark .neu-inset:focus,
+.dark .neu-inset:focus-within,
+.dark .neu-input:focus,
+.dark .neu-input:focus-within {
+  background: #111a28 !important;
+  box-shadow: inset 4px 4px 8px rgba(7, 11, 20, 0.75), inset -3px -3px 7px rgba(35, 52, 80, 0.45) !important;
 }
 
 /* Bare search field - no highlight on focus or click */
@@ -380,8 +399,10 @@ input:focus, textarea:focus, select:focus {
   box-shadow: none !important;
 }
 
-/* Remove ring/outline/shadow on focus-visible for all interactive elements */
-button:focus-visible, a:focus-visible, [tabindex]:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+/* Remove ring/outline/shadow on focus-visible for all interactive elements except neu-inset/neu-input */
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible, select:focus-visible,
+input:not(.neu-inset):not(.neu-input):focus-visible, 
+textarea:not(.neu-inset):not(.neu-input):focus-visible {
   outline: none !important;
   box-shadow: none !important;
   border-radius: inherit;

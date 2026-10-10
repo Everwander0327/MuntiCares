@@ -177,9 +177,38 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((updates) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...updates };
+      localStorage.setItem('munticares_user', JSON.stringify(updated));
+      return updated;
+    });
+    // Trigger custom event so any listener updates immediately
+    window.dispatchEvent(new Event('munticares-user-updated'));
+  }, []);
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const stored = localStorage.getItem('munticares_user');
+      if (stored) {
+        try {
+          setUser(JSON.parse(stored));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('munticares-user-updated', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('munticares-user-updated', handleStorageChange);
+    };
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, setPassword, logout, authInitialized }}>
+    <AuthContext.Provider value={{ user, login, register, setPassword, logout, updateUser, authInitialized }}>
       {children}
     </AuthContext.Provider>
   );
 };
+
