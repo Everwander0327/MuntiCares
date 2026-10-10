@@ -170,6 +170,7 @@ const PatientDashboard = () => {
         try { if (req.time) timeStr = new Date(`2000-01-01T${req.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { timeStr = req.time || ''; }
         return {
           provider: req.provider || 'Unknown',
+          providerAvatarUrl: req.providerAvatarUrl || '',
           service: req.service,
           date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
           time: timeStr,
@@ -196,6 +197,7 @@ const PatientDashboard = () => {
         setActiveVisit({
           providerId: activeReq.providerId,
           provider: activeReq.provider || 'Unknown',
+          providerAvatarUrl: activeReq.providerAvatarUrl || '',
           service: activeReq.service,
           date: new Date(activeReq.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
           time: timeLabel,
@@ -794,8 +796,12 @@ const PatientDashboard = () => {
                   className="neu-flat-sm p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2.5 select-text"
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                    <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-primary text-2xs sm:text-xs font-black shrink-0">
-                      {req.provider.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden flex items-center justify-center text-primary text-2xs sm:text-xs font-black shrink-0 p-0.5">
+                      {req.providerAvatarUrl ? (
+                        <img src={req.providerAvatarUrl} alt="" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        req.provider.split(' ').map(n => n[0]).join('').slice(0, 2)
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">

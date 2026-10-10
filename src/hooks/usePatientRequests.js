@@ -18,7 +18,7 @@ export default function usePatientRequests(patientId) {
       // Select request rows and include provider user (provider is a user id)
       const { data, error } = await supabase
         .from('requests')
-        .select('*, provider:provider_id(full_name, email)')
+        .select('*, provider:provider_id(full_name, email, avatar_url)')
         .eq('patient_id', patientId)
         .order('created_at', { ascending: false });
 
@@ -28,6 +28,7 @@ export default function usePatientRequests(patientId) {
         id: req.id,
         providerId: req.provider_id,
         provider: req.provider?.full_name || 'Unknown',
+        providerAvatarUrl: req.provider?.avatar_url || '',
         service: req.service,
         date: req.date,
         time: req.time,

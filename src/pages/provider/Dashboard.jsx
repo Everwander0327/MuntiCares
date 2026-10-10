@@ -171,7 +171,7 @@ const ProviderDashboard = () => {
     try {
       const { data, error } = await supabase
         .from('requests')
-        .select('id, patient_id, service, date, time, status, created_at, notes, price, patient:patient_id(full_name)')
+        .select('id, patient_id, service, date, time, status, created_at, notes, price, patient:patient_id(full_name, avatar_url)')
         .eq('provider_id', user.id)
         .order('date', { ascending: false });
 
@@ -221,6 +221,7 @@ const ProviderDashboard = () => {
           id: ongoing.id,
           patientId: ongoing.patient_id,
           patient: ongoing.patient?.full_name || 'Patient',
+          patientAvatarUrl: ongoing.patient?.avatar_url || '',
           service: ongoing.service,
           date: new Date(ongoing.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
           time: timeLabel,
@@ -236,6 +237,7 @@ const ProviderDashboard = () => {
       setRecentRequests(allRequests.slice(0, 20).map(r => ({
         id: r.id,
         patient: r.patient?.full_name || 'Unknown Patient',
+        patientAvatarUrl: r.patient?.avatar_url || '',
         service: r.service,
         date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
         status: r.status,
@@ -245,7 +247,7 @@ const ProviderDashboard = () => {
       // Fetch reviews (up to 20 for in-card pagination)
       const { data: reviewData } = await supabase
         .from('provider_reviews')
-        .select('id, rating, review_text, created_at, patient:patient_id(full_name)')
+        .select('id, rating, review_text, created_at, patient:patient_id(full_name, avatar_url)')
         .eq('provider_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20);
@@ -647,8 +649,12 @@ const ProviderDashboard = () => {
                   className="neu-flat-sm p-3 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 hover:translate-x-0.5 transition-all"
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-                    <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-xs font-black text-primary shrink-0">
-                      {(req.patient || 'P')[0]}
+                    <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex items-center justify-center text-xs font-black text-primary shrink-0 p-0.5">
+                      {req.patientAvatarUrl ? (
+                        <img src={req.patientAvatarUrl} alt="" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        (req.patient || 'P')[0]
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 truncate">
@@ -778,8 +784,12 @@ const ProviderDashboard = () => {
                   <div key={review.id} className="neu-flat-sm p-3.5 sm:p-4 rounded-xl sm:rounded-2xl space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl neu-flat-sm flex items-center justify-center text-xs font-black text-primary shrink-0">
-                          {(review.patient?.full_name || 'A')[0]}
+                        <div className="w-8 h-8 rounded-xl neu-flat-sm overflow-hidden flex items-center justify-center text-xs font-black text-primary shrink-0 p-0.5">
+                          {review.patient?.avatar_url ? (
+                            <img src={review.patient.avatar_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                          ) : (
+                            (review.patient?.full_name || 'A')[0]
+                          )}
                         </div>
                         <div className="min-w-0">
                           <span className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-200 truncate block">
