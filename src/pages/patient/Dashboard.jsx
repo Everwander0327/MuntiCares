@@ -816,10 +816,10 @@ const PatientDashboard = () => {
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`neu-flat-sm text-3xs font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
                       ['Accepted', 'Completed'].includes(req.status)
-                        ? 'text-emerald-600 dark:text-emerald-400'
+                        ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10'
                         : req.status === 'Pending'
-                        ? 'text-amber-600 dark:text-amber-400'
-                        : 'text-slate-500'
+                        ? 'text-amber-600 dark:text-amber-400 border border-amber-500/30 bg-amber-500/10'
+                        : 'text-slate-500 border border-slate-300 dark:border-slate-700'
                     }`}>
                       {req.status}
                     </span>

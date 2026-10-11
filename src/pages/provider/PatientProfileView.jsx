@@ -217,9 +217,10 @@ const PatientProfileView = () => {
           {/* Sidebar Patient Card */}
           <div className="lg:col-span-1">
             <motion.div
-              className="neu-card rounded-2xl sm:rounded-[2rem] border border-white/60 dark:border-slate-700/50 overflow-hidden shadow-sm"
-              initial={{ opacity: 0, y: 20 }}
+              className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden"
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
               {/* Header Banner */}
               <div className="h-24 sm:h-28 md:h-32 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 relative">
@@ -228,7 +229,7 @@ const PatientProfileView = () => {
 
               {/* Avatar */}
               <div className="px-4 sm:px-8 -mt-12 sm:-mt-14 md:-mt-16 relative z-10">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full border-4 border-[#e8ecf2] dark:border-slate-800 shadow-xl mx-auto overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center neu-btn p-1">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full border-4 border-[#ebf1f8] dark:border-[#172236] shadow-xl mx-auto overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center neu-btn p-1">
                   {patient.avatar_url ? (
                     <img src={patient.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
                   ) : (
@@ -241,16 +242,16 @@ const PatientProfileView = () => {
 
               {/* Bio & Details */}
               <div className="px-4 sm:px-8 pt-3 sm:pt-4 pb-5 sm:pb-8 text-center">
-                <h2 className="text-lg sm:text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight leading-snug">{patient.full_name}</h2>
+                <h2 className="text-lg sm:text-xl md:text-2xl font-display font-extrabold text-slate-800 dark:text-slate-100 tracking-tight leading-snug">{patient.full_name}</h2>
                 <p className="text-slate-500 text-xs font-semibold mt-0.5 dark:text-slate-400 break-all">{patient.email}</p>
 
                 {!consent?.is_enabled ? (
-                  <div className="mt-3 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-3xs sm:text-2xs font-bold text-amber-600 dark:text-amber-400">
+                  <div className="mt-3 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-xl text-3xs sm:text-2xs font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
                     <Lock className="w-3.5 h-3.5 shrink-0" />
                     <span>Consent Required for Full Records</span>
                   </div>
                 ) : (
-                  <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-3xs sm:text-2xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-3xs sm:text-2xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
                     <Shield className="w-3.5 h-3.5 shrink-0" />
                     <span>Active Consent Granted</span>
                   </div>
@@ -259,45 +260,45 @@ const PatientProfileView = () => {
                 {/* Patient Info Fields */}
                 <div className="mt-4 sm:mt-5 space-y-2.5 text-left neu-inset p-3.5 sm:p-4 rounded-2xl">
                   <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
-                    <div className="p-1.5 bg-white/70 dark:bg-slate-800/80 rounded-lg shrink-0 shadow-sm">
+                    <div className="p-1.5 neu-flat-sm rounded-lg shrink-0">
                       <Mail className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <span className="truncate font-medium">{patient.email}</span>
+                    <span className="truncate font-semibold">{patient.email}</span>
                   </div>
                   {patient.phone && (
                     <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
-                      <div className="p-1.5 bg-white/70 dark:bg-slate-800/80 rounded-lg shrink-0 shadow-sm">
+                      <div className="p-1.5 neu-flat-sm rounded-lg shrink-0">
                         <Phone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <span className="font-medium">{patient.phone}</span>
+                      <span className="font-semibold">{patient.phone}</span>
                     </div>
                   )}
                   {patient.address && (
                     <div className="flex items-start gap-2.5 text-xs text-slate-600 dark:text-slate-300">
-                      <div className="p-1.5 bg-white/70 dark:bg-slate-800/80 rounded-lg shrink-0 shadow-sm mt-0.5">
+                      <div className="p-1.5 neu-flat-sm rounded-lg shrink-0 mt-0.5">
                         <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <span className="line-clamp-2 font-medium">{patient.address}</span>
+                      <span className="line-clamp-2 font-semibold">{patient.address}</span>
                     </div>
                   )}
                   {patient.emergency_contact && (
                     <div className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
-                      <div className="p-1.5 bg-white/70 dark:bg-slate-800/80 rounded-lg shrink-0 shadow-sm">
+                      <div className="p-1.5 neu-flat-sm rounded-lg shrink-0">
                         <HeartPulse className="w-3.5 h-3.5 text-rose-500" />
                       </div>
-                      <span className="font-medium truncate">EC: {patient.emergency_contact}</span>
+                      <span className="font-semibold truncate">EC: {patient.emergency_contact}</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/50 dark:border-slate-700/50">
-                    <div className="p-1.5 bg-white/70 dark:bg-slate-800/80 rounded-lg shrink-0 shadow-sm">
+                  <div className="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400 pt-1.5 border-t border-slate-200/50 dark:border-white/5">
+                    <div className="p-1.5 neu-flat-sm rounded-lg shrink-0">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
                     </div>
-                    <span className="text-3xs sm:text-2xs font-semibold">Joined {new Date(patient.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                    <span className="text-3xs sm:text-2xs font-extrabold uppercase tracking-wider">Joined {new Date(patient.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
                   </div>
                 </div>
 
                 {/* Actions Section */}
-                <div className="mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
+                <div className="mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t border-slate-200/50 dark:border-white/5">
                   <p className="text-3xs sm:text-2xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-2.5 sm:mb-3">Quick Actions</p>
                   <div className="space-y-2">
                     <motion.button
@@ -343,12 +344,12 @@ const PatientProfileView = () => {
           {/* Tabbed Content Area */}
           <div className="lg:col-span-2">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
+              transition={{ delay: 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
               <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-                {/* Neumorphic Tab Bar - Consistent with modal tab styling */}
+                {/* Neumorphic Tab Bar */}
                 <Tabs.List className="neu-inset p-1.5 rounded-2xl mb-4 sm:mb-6 grid grid-cols-4 gap-1.5">
                   {[
                     { value: 'overview', icon: User, label: 'Overview', shortLabel: 'Info' },
@@ -378,33 +379,33 @@ const PatientProfileView = () => {
 
                 {/* Overview Tab */}
                 <Tabs.Content value="overview" className="outline-none">
-                  <div className="neu-card rounded-2xl sm:rounded-[2rem] border border-white/60 dark:border-slate-700/50 overflow-hidden shadow-sm">
-                    <div className="p-4 sm:p-6 md:p-8 border-b border-slate-200/50 dark:border-slate-700/50">
-                      <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-800 dark:text-slate-100">Patient Demographics</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-0.5">Verified profile details & contact info</p>
+                  <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
+                    <div className="p-4 sm:p-6 md:p-8 border-b border-slate-200/50 dark:border-white/5">
+                      <h3 className="text-base sm:text-lg md:text-xl font-display font-extrabold text-slate-800 dark:text-slate-100">Patient Demographics</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold mt-0.5">Verified profile details & contact info</p>
                     </div>
                     <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-5">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
                         <div className="neu-inset p-3.5 sm:p-4 rounded-2xl">
                           <p className="text-2xs text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider mb-1">Full Legal Name</p>
-                          <p className="text-slate-800 dark:text-slate-100 font-bold text-xs sm:text-sm">{patient.full_name}</p>
+                          <p className="text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm">{patient.full_name}</p>
                         </div>
                         <div className="neu-inset p-3.5 sm:p-4 rounded-2xl">
                           <p className="text-2xs text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider mb-1">Email Address</p>
-                          <p className="text-slate-800 dark:text-slate-100 font-bold text-xs sm:text-sm truncate">{patient.email}</p>
+                          <p className="text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm truncate">{patient.email}</p>
                         </div>
                         <div className="neu-inset p-3.5 sm:p-4 rounded-2xl">
                           <p className="text-2xs text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider mb-1">Mobile Contact</p>
-                          <p className="text-slate-800 dark:text-slate-100 font-bold text-xs sm:text-sm">{patient.phone || 'Not provided'}</p>
+                          <p className="text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm">{patient.phone || 'Not provided'}</p>
                         </div>
                         <div className="neu-inset p-3.5 sm:p-4 rounded-2xl">
                           <p className="text-2xs text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider mb-1">Emergency Contact</p>
-                          <p className="text-slate-800 dark:text-slate-100 font-bold text-xs sm:text-sm">{patient.emergency_contact || 'Not provided'}</p>
+                          <p className="text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm">{patient.emergency_contact || 'Not provided'}</p>
                         </div>
                       </div>
                       <div className="neu-inset p-3.5 sm:p-4 rounded-2xl">
                         <p className="text-2xs text-slate-400 dark:text-slate-500 font-extrabold uppercase tracking-wider mb-1">Registered Address / Barangay</p>
-                        <p className="text-slate-700 dark:text-slate-200 font-medium text-xs sm:text-sm leading-relaxed">{patient.address || 'No residential address provided'}</p>
+                        <p className="text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm leading-relaxed">{patient.address || 'No residential address provided'}</p>
                       </div>
                     </div>
                   </div>
@@ -412,10 +413,10 @@ const PatientProfileView = () => {
 
                 {/* Medical Tab */}
                 <Tabs.Content value="medical" className="outline-none">
-                  <div className="neu-card rounded-2xl sm:rounded-[2rem] border border-white/60 dark:border-slate-700/50 overflow-hidden shadow-sm">
-                    <div className="p-4 sm:p-6 md:p-8 border-b border-slate-200/50 dark:border-slate-700/50">
-                      <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-800 dark:text-slate-100">Medical History</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-0.5">Clinical baseline, allergies, and chronic conditions</p>
+                  <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
+                    <div className="p-4 sm:p-6 md:p-8 border-b border-slate-200/50 dark:border-white/5">
+                      <h3 className="text-base sm:text-lg md:text-xl font-display font-extrabold text-slate-800 dark:text-slate-100">Medical History</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold mt-0.5">Clinical baseline, allergies, and chronic conditions</p>
                     </div>
                     <div className="p-4 sm:p-6 md:p-8">
                       {!consent?.is_enabled ? (
@@ -423,7 +424,7 @@ const PatientProfileView = () => {
                           <div className="w-14 h-14 neu-btn rounded-full flex items-center justify-center mx-auto mb-3 text-amber-500">
                             <Lock className="w-6 h-6" />
                           </div>
-                          <p className="text-slate-700 dark:text-slate-200 font-bold text-sm">Patient Consent Required</p>
+                          <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">Patient Consent Required</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
                             The patient has not granted electronic health access for this category yet under local privacy governance.
                           </p>
@@ -433,8 +434,8 @@ const PatientProfileView = () => {
                           <div className="w-14 h-14 neu-btn rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
                             <Activity className="w-6 h-6" />
                           </div>
-                          <p className="text-slate-700 dark:text-slate-200 font-bold text-sm">No medical history recorded</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">No recorded baseline history available for this patient.</p>
+                          <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">No Medical History Recorded</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">No recorded baseline history available for this patient.</p>
                         </div>
                       ) : (
                         <div className="space-y-3.5 sm:space-y-4">
@@ -467,10 +468,10 @@ const PatientProfileView = () => {
 
                 {/* Documents Tab */}
                 <Tabs.Content value="documents" className="outline-none">
-                  <div className="neu-card rounded-2xl sm:rounded-[2rem] border border-white/60 dark:border-slate-700/50 overflow-hidden shadow-sm">
-                    <div className="p-4 sm:p-6 md:p-8 border-b border-slate-200/50 dark:border-slate-700/50">
-                      <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-800 dark:text-slate-100">Medical Documents</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-0.5">Uploaded laboratory results & prescriptions</p>
+                  <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
+                    <div className="p-4 sm:p-6 md:p-8 border-b border-slate-200/50 dark:border-white/5">
+                      <h3 className="text-base sm:text-lg md:text-xl font-display font-extrabold text-slate-800 dark:text-slate-100">Medical Documents</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold mt-0.5">Uploaded laboratory results & prescriptions</p>
                     </div>
                     <div className="p-4 sm:p-6 md:p-8">
                       {!consent?.is_enabled || !consent?.permissions?.documents ? (
@@ -478,7 +479,7 @@ const PatientProfileView = () => {
                           <div className="w-14 h-14 neu-btn rounded-full flex items-center justify-center mx-auto mb-3 text-amber-500">
                             <Lock className="w-6 h-6" />
                           </div>
-                          <p className="text-slate-700 dark:text-slate-200 font-bold text-sm">Document Access Restricted</p>
+                          <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">Document Access Restricted</p>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
                             The patient has not granted document inspection permissions.
                           </p>
@@ -493,7 +494,7 @@ const PatientProfileView = () => {
                                 <FileText className="w-5 h-5" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">{doc.document_title}</p>
+                                <p className="font-extrabold text-slate-800 dark:text-slate-100 text-xs truncate">{doc.document_title}</p>
                                 <p className="text-2xs text-slate-400 dark:text-slate-500 mt-0.5">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                               </div>
                             </div>
@@ -506,10 +507,10 @@ const PatientProfileView = () => {
 
                 {/* History / Visit Notes Tab */}
                 <Tabs.Content value="history" className="outline-none">
-                  <div className="neu-card rounded-2xl sm:rounded-[2rem] border border-white/60 dark:border-slate-700/50 overflow-hidden shadow-sm">
-                    <div className="p-4 sm:p-6 md:p-8 border-b border-slate-200/50 dark:border-slate-700/50">
-                      <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-800 dark:text-slate-100">Visit Notes History</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-xs font-medium mt-0.5">Recorded consultations and vital assessments</p>
+                  <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
+                    <div className="p-4 sm:p-6 md:p-8 border-b border-slate-200/50 dark:border-white/5">
+                      <h3 className="text-base sm:text-lg md:text-xl font-display font-extrabold text-slate-800 dark:text-slate-100">Visit Notes History</h3>
+                      <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold mt-0.5">Recorded consultations and vital assessments</p>
                     </div>
                     <div className="p-4 sm:p-6 md:p-8">
                       {visitNotes.length === 0 ? (
@@ -517,20 +518,20 @@ const PatientProfileView = () => {
                           <div className="w-14 h-14 neu-btn rounded-full flex items-center justify-center mx-auto mb-3 text-slate-400">
                             <Clock className="w-6 h-6" />
                           </div>
-                          <p className="text-slate-700 dark:text-slate-200 font-bold text-sm">No past visits recorded</p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Use the patient card modal to log new clinical notes.</p>
+                          <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">No past visits recorded</p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">Use the patient card modal to log new clinical notes.</p>
                         </div>
                       ) : (
                         <div className="space-y-4">
                           {visitNotes.map((note) => (
-                            <div key={note.id} className="neu-card p-4 sm:p-5 rounded-2xl space-y-3.5 sm:space-y-4 border border-white/60 dark:border-slate-700/50">
+                            <div key={note.id} className="neu-flat p-4 sm:p-6 rounded-2xl sm:rounded-[2rem] space-y-3.5 sm:space-y-4">
                               <div className="flex items-center justify-between text-xs">
                                 <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
                                   <Calendar className="w-4 h-4 text-emerald-600" />
                                   <span>{new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                                 </div>
                                 {note.services_rendered && (
-                                  <span className="px-2.5 py-1 neu-inset rounded-xl text-3xs sm:text-2xs font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+                                  <span className="px-3 py-1 neu-inset rounded-xl text-3xs sm:text-2xs font-extrabold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
                                     {note.services_rendered}
                                   </span>
                                 )}
@@ -541,26 +542,26 @@ const PatientProfileView = () => {
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
                                   {note.vitals_bp && (
                                     <div className="neu-inset p-2.5 rounded-xl text-center">
-                                      <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase">BP</p>
-                                      <p className="font-black text-slate-800 dark:text-slate-100 text-xs mt-0.5">{note.vitals_bp}</p>
+                                      <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">BP</p>
+                                      <p className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_bp}</p>
                                     </div>
                                   )}
                                   {note.vitals_temp && (
                                     <div className="neu-inset p-2.5 rounded-xl text-center">
-                                      <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase">Temp</p>
-                                      <p className="font-black text-slate-800 dark:text-slate-100 text-xs mt-0.5">{note.vitals_temp}°C</p>
+                                      <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Temp</p>
+                                      <p className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_temp}°C</p>
                                     </div>
                                   )}
                                   {note.vitals_hr && (
                                     <div className="neu-inset p-2.5 rounded-xl text-center">
-                                      <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase">Heart Rate</p>
-                                      <p className="font-black text-slate-800 dark:text-slate-100 text-xs mt-0.5">{note.vitals_hr} bpm</p>
+                                      <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Heart Rate</p>
+                                      <p className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_hr} bpm</p>
                                     </div>
                                   )}
                                   {note.vitals_spo2 && (
                                     <div className="neu-inset p-2.5 rounded-xl text-center">
-                                      <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase">SpO2</p>
-                                      <p className="font-black text-slate-800 dark:text-slate-100 text-xs mt-0.5">{note.vitals_spo2}%</p>
+                                      <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">SpO2</p>
+                                      <p className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_spo2}%</p>
                                     </div>
                                   )}
                                 </div>
@@ -568,8 +569,8 @@ const PatientProfileView = () => {
 
                               {/* Doctor's Note */}
                               {note.notes && (
-                                <div className="neu-inset p-3 sm:p-3.5 rounded-xl">
-                                  <p className="text-3xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Doctor's Note</p>
+                                <div className="neu-inset p-3.5 sm:p-4 rounded-2xl">
+                                  <p className="text-3xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Doctor's Clinical Assessment</p>
                                   <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">{note.notes}</p>
                                 </div>
                               )}

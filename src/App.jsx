@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
+import NeumorphicToast from './components/NeumorphicToast';
 import { unlockAudio } from './lib/audio';
 import { useTheme } from './contexts/ThemeContext';
 
@@ -108,28 +109,22 @@ function AppContent() {
       </Routes>
     </AnimatePresence>
     <Toaster
-      position="top-right"
-      toastOptions={{
-        duration: 4000,
-        style: {
-          background: dark ? '#1e293b' : '#fff',
-          color: dark ? '#f1f5f9' : '#0f172a',
-          border: dark ? '1px solid #334155' : '1px solid #e2e8f0',
-          borderRadius: '16px',
-          padding: '16px 20px',
-          fontSize: '14px',
-          boxShadow: dark
-            ? '0 8px 32px rgba(0,0,0,0.4)'
-            : '0 8px 32px rgba(0,0,0,0.1)',
-        },
-        success: {
-          iconTheme: { primary: '#22c55e', secondary: '#fff' },
-        },
-        error: {
-          iconTheme: { primary: '#ef4444', secondary: '#fff' },
-        },
+      position="top-center"
+      gutter={8}
+      containerStyle={{
+        top: 'max(0.75rem, env(safe-area-inset-top, 12px))',
+        left: 0,
+        right: 0,
+        zIndex: 99999,
+        pointerEvents: 'none',
       }}
-    />
+      toastOptions={{
+        duration: 3500,
+        removeDelay: 1000,
+      }}
+    >
+      {(t) => <NeumorphicToast t={t} />}
+    </Toaster>
   </>
   );
 }

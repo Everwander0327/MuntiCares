@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from './ui/dialog';
-import { Copy, Check, Download, Upload, Globe, Loader2, FileCode, X } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Copy, Check, Download, Upload, Globe, Loader2, X } from 'lucide-react';
 import { uploadToHapiFhir } from '../lib/fhir';
 import toast from 'react-hot-toast';
 
@@ -10,8 +10,22 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
 
-  const json = bundle ? JSON.stringify(bundle, null, 2) : '';
-  const lines = useMemo(() => json.split('\n'), [json]);
+  const json = useMemo(() => {
+    if (!open || !bundle) return '';
+    return JSON.stringify(bundle, null, 2);
+  }, [open, bundle]);
+
+  // Lock background scroll when open
+  useEffect(() => {
+    if (open) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [open]);
 
   const handleCopy = async () => {
     try {
@@ -62,129 +76,167 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) { onClose(); setUploadResult(null); } }}>
-      <DialogContent hideClose className="max-w-2xl w-[94vw] p-0 overflow-hidden rounded-2xl md:rounded-[2rem]">
-        <div className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-slate-100 dark:border-slate-700">
-          <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <div className="p-1.5 md:p-2 bg-blue-100 dark:bg-blue-900/40 text-primary rounded-lg md:rounded-xl shrink-0">
-              <FileCode className="w-4 h-4 md:w-5 md:h-5" />
-            </div>
-            <div className="min-w-0">
-              <DialogTitle className="text-sm md:text-base truncate">FHIR R4 Export</DialogTitle>
-              <DialogDescription className="text-xs mt-0.5 truncate">
-                {patientName} — {bundle?.entry?.length || 0} resources
-              </DialogDescription>
-            </div>
-          </div>
-          <button
-            onClick={() => { onClose(); setUploadResult(null); }}
-            className="p-1.5 md:p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shrink-0"
+  const handleClose = () => {
+    onClose();
+    setUploadResult(null);
+  };
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden">
+          {/* Backdrop */}
+          <motion.div
+            className="fixed inset-0 bg-slate-950/70 sm:backdrop-blur-sm z-[9999]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={handleClose}
+          />
+
+          {/* Neumorphic Modal Dialog */}
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fhir-modal-title"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full sm:max-w-3xl h-[92dvh] sm:h-[82vh] max-h-[92dvh] sm:max-h-[82vh] neu-flat bg-[#ebf1f8] dark:bg-[#172236] rounded-t-[2.25rem] sm:rounded-[2.25rem] flex flex-col overflow-hidden z-[10000] border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           >
-            <X className="w-4 h-4 md:w-5 md:h-5 text-slate-400" />
-          </button>
-        </div>
+            {/* Mobile Drag Indicator Bar */}
+            <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mt-2.5 sm:hidden shrink-0" />
 
-        <div className="max-h-[50vh] md:max-h-[55vh] overflow-auto bg-slate-50 dark:bg-slate-900 mx-3 md:mx-6 my-3 md:my-4 rounded-xl border border-slate-100 dark:border-slate-700">
-          <table className="w-full text-[10px] md:text-xs font-mono leading-relaxed">
-            <tbody>
-              {lines.map((line, i) => (
-                <tr key={i}>
-                  <td className="text-right py-0 pr-2 md:pr-3 pl-1 md:pl-2 text-slate-400 dark:text-slate-600 select-none w-8 md:w-10 border-r border-slate-100 dark:border-slate-700 align-top">
-                    {i + 1}
-                  </td>
-                  <td className="py-0 pl-2 md:pl-3 pr-1 md:pr-2 whitespace-pre text-slate-700 dark:text-slate-200 break-all">
-                    {line || ' '}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="px-3 md:px-6 py-3 md:py-4 border-t border-slate-100 dark:border-slate-700 space-y-3">
-          <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={handleCopy}
-              className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-semibold text-xs md:text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-500" /> : <Copy className="w-3.5 h-3.5 md:w-4 md:h-4" />}
-              <span className="hidden sm:inline">{copied ? 'Copied!' : 'Copy'}</span>
-              <span className="sm:hidden">{copied ? 'Copied!' : 'Copy'}</span>
-            </motion.button>
-
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={handleDownload}
-              className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-semibold text-xs md:text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-all"
-            >
-              <Download className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              <span className="hidden sm:inline">Download</span>
-              <span className="sm:hidden">Download</span>
-            </motion.button>
-
-            <div className="hidden sm:block flex-1" />
-
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={handleUpload}
-              disabled={uploading}
-              className="flex items-center gap-1.5 md:gap-2 px-4 md:px-5 py-2 md:py-2.5 rounded-xl font-bold text-xs md:text-sm bg-primary text-white hover:bg-primary/90 transition-all disabled:opacity-50 shadow-lg shadow-primary/20 w-full sm:w-auto justify-center"
-            >
-              {uploading ? (
-                <Loader2 className="w-3.5 h-3.5 md:w-4 md:h-4 animate-spin" />
-              ) : (
-                <Upload className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              )}
-              {uploading ? 'Uploading...' : 'Upload to HAPI FHIR'}
-            </motion.button>
-          </div>
-
-          {uploadResult && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`p-3 md:p-4 rounded-xl border text-xs md:text-sm ${
-                uploadResult.success
-                  ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-900/50 text-green-700 dark:text-green-200'
-                  : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-300'
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                {uploadResult.success ? (
-                  <Globe className="w-4 h-4 mt-0.5 shrink-0 text-green-500" />
-                ) : (
-                  <X className="w-4 h-4 mt-0.5 shrink-0 text-red-500" />
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-white/60 dark:border-white/5 shrink-0">
+              <div className="min-w-0">
+                <h2 id="fhir-modal-title" className="font-display font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate">
+                  FHIR R4 Export
+                </h2>
+                {patientName && (
+                  <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5 truncate font-semibold">
+                    {patientName}
+                  </p>
                 )}
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{uploadResult.message}</p>
-                  {uploadResult.success && (
-                    <a
-                      href={uploadResult.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] md:text-xs underline mt-1 block hover:text-primary transition-colors break-all"
-                    >
-                      {uploadResult.url}
-                    </a>
-                  )}
-                  {!uploadResult.success && (
-                    <p className="text-[10px] md:text-xs mt-1 opacity-75 break-all">{uploadResult.message}</p>
-                  )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleClose}
+                className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer active:scale-95"
+                title="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Code / JSON Viewer Body */}
+            <div className="flex-1 min-h-0 p-3 sm:p-5 overflow-hidden flex flex-col">
+              <div 
+                tabIndex={0}
+                className="neu-inset rounded-2xl sm:rounded-3xl p-3 sm:p-4 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain select-text font-mono text-[11px] sm:text-xs leading-relaxed outline-none focus:outline-none"
+                style={{ 
+                  WebkitOverflowScrolling: 'touch',
+                  contain: 'content'
+                }}
+              >
+                <pre className="text-slate-800 dark:text-slate-200 font-mono whitespace-pre-wrap break-words [word-break:break-word] text-[11px] sm:text-xs leading-relaxed">
+                  {json || '// No data available'}
+                </pre>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="px-4 sm:px-6 py-3 sm:py-3.5 border-t border-white/60 dark:border-white/5 shrink-0 space-y-2.5">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="neu-btn px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-bold text-2xs sm:text-xs text-slate-700 dark:text-slate-200 hover:text-primary transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copied ? 'Copied!' : 'Copy'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="neu-btn px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-bold text-2xs sm:text-xs text-slate-700 dark:text-slate-200 hover:text-primary transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download</span>
+                  </button>
                 </div>
+
                 <button
-                  onClick={() => setUploadResult(null)}
-                  className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors shrink-0"
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={uploading}
+                  className="neu-btn-primary px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-extrabold text-2xs sm:text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer active:scale-95 shadow-md w-full sm:w-auto"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  {uploading ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Upload className="w-3.5 h-3.5" />
+                  )}
+                  <span>{uploading ? 'Uploading...' : 'Upload to HAPI FHIR'}</span>
                 </button>
               </div>
-            </motion.div>
-          )}
+
+              {/* Upload Result Feedback */}
+              {uploadResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`neu-flat p-2.5 sm:p-3 rounded-2xl text-xs flex items-start gap-2.5 border ${
+                    uploadResult.success
+                      ? 'border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                      : 'border-rose-500/30 text-rose-800 dark:text-rose-300'
+                  }`}
+                >
+                  {uploadResult.success ? (
+                    <div className="neu-flat-sm w-6 h-6 rounded-lg flex items-center justify-center text-emerald-500 shrink-0 mt-0.5">
+                      <Globe className="w-3.5 h-3.5" />
+                    </div>
+                  ) : (
+                    <div className="neu-flat-sm w-6 h-6 rounded-lg flex items-center justify-center text-rose-500 shrink-0 mt-0.5">
+                      <X className="w-3.5 h-3.5" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-extrabold text-2xs sm:text-xs leading-snug">{uploadResult.message}</p>
+                    {uploadResult.success && uploadResult.url && (
+                      <a
+                        href={uploadResult.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-3xs underline mt-0.5 block font-mono text-primary hover:text-primary-600 transition-colors break-all"
+                      >
+                        {uploadResult.url}
+                      </a>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUploadResult(null)}
+                    className="neu-btn w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+    </AnimatePresence>,
+    document.body
   );
 };
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, FileText, MessageCircle, Star, CheckCircle2, XCircle, Navigation, Clock, X } from 'lucide-react';
+import { Bell, FileText, MessageCircle, Star, CheckCircle2, XCircle, Navigation, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -545,15 +545,6 @@ const NotificationBell = () => {
                 <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100">Notifications</h3>
               </div>
               <div className="flex items-center gap-1.5">
-                {unreadCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={markAllRead}
-                    className="neu-btn px-2.5 py-1 rounded-xl text-3xs font-extrabold text-primary hover:text-primary-600 cursor-pointer active:scale-95"
-                  >
-                    Mark read
-                  </button>
-                )}
                 {notifications.length > 0 && (
                   <button
                     type="button"
@@ -619,7 +610,7 @@ const NotificationBell = () => {
                         >
                           {getNotifIcon(notif.type)}
                         </motion.div>
-                        <div className="flex-1 min-w-0 pr-6">
+                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className={`text-xs sm:text-[13px] truncate ${isUnread ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300'}`}>
                               {notif.title}
@@ -632,16 +623,6 @@ const NotificationBell = () => {
                             {timeAgo(notif.time)}
                           </p>
                         </div>
-
-                        {/* X / Dismiss Button - Always visible & easily tapable on mobile, hover on desktop */}
-                        <button
-                          type="button"
-                          onClick={(e) => dismissNotification(e, notif.id)}
-                          className="neu-btn absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 dark:hover:text-red-400 opacity-80 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 cursor-pointer active:scale-90"
-                          title="Dismiss notification"
-                        >
-                          <X className="w-3 h-3 stroke-[2.5]" />
-                        </button>
                       </motion.div>
                     );
                   })}

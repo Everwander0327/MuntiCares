@@ -79,10 +79,10 @@ const ProviderCard = ({
               <h4 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base md:text-lg truncate">
                 {providerName}
               </h4>
-              <span className={`px-2 py-0.5 rounded-lg text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
+              <span className={`neu-flat-sm px-2.5 py-0.5 rounded-lg text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
                 isEnabled 
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
-                  : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                  ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15' 
+                  : 'text-rose-600 dark:text-rose-400 border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15'
               }`}>
                 {isEnabled ? 'Active' : 'Paused'}
               </span>
@@ -322,10 +322,10 @@ const PatientConsent = () => {
 
   const getActionBadge = (action) => {
     switch (action) {
-      case 'Granted': return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20';
-      case 'Revoked': return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20';
-      case 'Updated': return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20';
-      default: return 'bg-slate-200/50 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+      case 'Granted': return 'neu-flat-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
+      case 'Revoked': return 'neu-flat-sm bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30';
+      case 'Updated': return 'neu-flat-sm bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30';
+      default: return 'neu-flat-sm bg-slate-200/50 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
     }
   };
 

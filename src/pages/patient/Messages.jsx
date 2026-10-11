@@ -162,7 +162,7 @@ const PatientMessages = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.99 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed inset-0 z-[9999] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col w-screen h-screen overflow-hidden"
+              className="fixed inset-0 z-[9999] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col w-screen h-[100dvh] max-h-[100dvh] overflow-hidden"
             >
               <ChatWindow
                 currentUser={currentUserData}

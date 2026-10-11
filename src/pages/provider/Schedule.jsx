@@ -12,16 +12,16 @@ const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 const STATUS_FLOW = {
-  Accepted: { next: 'On The Way', icon: <Navigation className="w-4 h-4" />, label: 'On The Way', color: 'bg-blue-500 hover:bg-blue-600 shadow-blue-200' },
-  'On The Way': { next: 'Arrived', icon: <Home className="w-4 h-4" />, label: 'Mark Arrived', color: 'bg-orange-500 hover:bg-orange-600 shadow-orange-200' },
-  Arrived: { next: 'Completed', icon: <CheckCircle2 className="w-4 h-4" />, label: 'Complete Visit', color: 'bg-green-500 hover:bg-green-600 shadow-green-200' },
+  Accepted: { next: 'On The Way', icon: <Navigation className="w-4 h-4" />, label: 'On The Way', color: 'neu-btn-primary text-white' },
+  'On The Way': { next: 'Arrived', icon: <Home className="w-4 h-4" />, label: 'Mark Arrived', color: 'neu-btn bg-amber-500 text-white hover:bg-amber-600' },
+  Arrived: { next: 'Completed', icon: <CheckCircle2 className="w-4 h-4" />, label: 'Complete Visit', color: 'neu-btn bg-emerald-600 text-white hover:bg-emerald-700' },
 };
 
 const STATUS_BADGE = {
-  Accepted: 'neu-btn text-blue-600 dark:text-blue-400 border border-blue-500/20 shadow-sm',
-  'On The Way': 'neu-btn text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-sm',
-  Arrived: 'neu-btn text-purple-600 dark:text-purple-400 border border-purple-500/20 shadow-sm',
-  Completed: 'neu-btn text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-sm',
+  Accepted: 'neu-flat-sm text-blue-600 dark:text-blue-400 border border-blue-500/20',
+  'On The Way': 'neu-flat-sm text-amber-600 dark:text-amber-400 border border-amber-500/20',
+  Arrived: 'neu-flat-sm text-purple-600 dark:text-purple-400 border border-purple-500/20',
+  Completed: 'neu-flat-sm text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
 };
 
 const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
@@ -217,67 +217,67 @@ const ProviderSchedule = () => {
           </motion.button>
         </motion.div>
 
-        {/* Quick Stats (Neumorphic Wells) */}
+        {/* Quick Stats (Neumorphic Cards with Count-up feel) */}
         <motion.div 
-          className="grid grid-cols-3 gap-2 sm:gap-4"
-          initial={{ opacity: 0, y: 20 }}
+          className="grid grid-cols-3 gap-2.5 sm:gap-4"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
         >
-          <div className="neu-card rounded-2xl p-2.5 sm:p-4 text-center border border-white/60 dark:border-slate-700/50 shadow-sm">
-            <p className="text-lg sm:text-2xl font-black text-primary leading-tight">{todayAppts.length}</p>
-            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 truncate">Today's Visits</p>
+          <div className="neu-flat rounded-2xl sm:rounded-[2rem] p-3 sm:p-5 text-center">
+            <p className="text-xl sm:text-3xl font-display font-extrabold text-primary leading-tight">{todayAppts.length}</p>
+            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1 truncate">Today's Visits</p>
           </div>
-          <div className="neu-card rounded-2xl p-2.5 sm:p-4 text-center border border-white/60 dark:border-slate-700/50 shadow-sm">
-            <p className="text-lg sm:text-2xl font-black text-amber-500 leading-tight">{activeVisits}</p>
-            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 truncate">In Progress</p>
+          <div className="neu-flat rounded-2xl sm:rounded-[2rem] p-3 sm:p-5 text-center">
+            <p className="text-xl sm:text-3xl font-display font-extrabold text-amber-500 leading-tight">{activeVisits}</p>
+            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1 truncate">In Progress</p>
           </div>
-          <div className="neu-card rounded-2xl p-2.5 sm:p-4 text-center border border-white/60 dark:border-slate-700/50 shadow-sm">
-            <p className="text-lg sm:text-2xl font-black text-emerald-500 leading-tight">{completedToday}</p>
-            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 truncate">Completed</p>
+          <div className="neu-flat rounded-2xl sm:rounded-[2rem] p-3 sm:p-5 text-center">
+            <p className="text-xl sm:text-3xl font-display font-extrabold text-emerald-500 leading-tight">{completedToday}</p>
+            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1 truncate">Completed</p>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3.5 md:gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-3.5 sm:gap-6">
           {/* Calendar Panel */}
           <motion.div
-            className="lg:col-span-2 neu-card rounded-2xl sm:rounded-[2rem] border border-white/60 dark:border-slate-700/50 p-3.5 sm:p-5 shadow-sm"
-            initial={{ opacity: 0, y: 20 }}
+            className="lg:col-span-2 neu-flat rounded-2xl sm:rounded-[2.25rem] p-4 sm:p-6"
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Calendar Month & Nav */}
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <div className="flex items-center justify-between mb-3.5 sm:mb-5">
               <button 
                 onClick={prevMonth} 
-                className="neu-btn p-1.5 sm:p-2 rounded-xl transition-all cursor-pointer active:scale-95"
+                className="neu-btn p-2 rounded-xl transition-all cursor-pointer active:scale-95 text-slate-600 dark:text-slate-300"
                 title="Previous Month"
               >
-                <ChevronLeft className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-              <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight">
+              <h3 className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight">
                 {MONTHS[month]} {year}
               </h3>
               <button 
                 onClick={nextMonth} 
-                className="neu-btn p-1.5 sm:p-2 rounded-xl transition-all cursor-pointer active:scale-95"
+                className="neu-btn p-2 rounded-xl transition-all cursor-pointer active:scale-95 text-slate-600 dark:text-slate-300"
                 title="Next Month"
               >
-                <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
             {/* Day Names Row */}
-            <div className="grid grid-cols-7 gap-1 mb-1.5">
+            <div className="grid grid-cols-7 gap-1 mb-2">
               {DAYS.map(d => (
-                <div key={d} className="text-center text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider py-1">
+                <div key={d} className="text-center text-3xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider py-1">
                   {d}
                 </div>
               ))}
             </div>
 
             {/* Date Grid */}
-            <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
               {/* Empty cells for initial day offset */}
               {Array.from({ length: firstDay }).map((_, i) => (
                 <div key={`empty-${i}`} className="aspect-square" />
@@ -300,9 +300,9 @@ const ProviderSchedule = () => {
                       ${selected 
                         ? 'neu-pressed text-primary font-black shadow-inner ring-1 ring-primary/40' 
                         : today 
-                          ? 'neu-btn text-primary ring-2 ring-primary/30 font-black' 
+                          ? 'neu-btn text-primary ring-2 ring-primary/40 font-black' 
                           : hasAppts 
-                            ? 'neu-btn text-slate-800 dark:text-slate-100'
+                            ? 'neu-btn text-slate-800 dark:text-slate-100 font-extrabold'
                             : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}
                     `}
                   >
@@ -314,7 +314,7 @@ const ProviderSchedule = () => {
                             <div key={idx} className={`w-1 h-1 rounded-full ${selected ? 'bg-primary' : 'bg-primary'}`} />
                           ))
                         ) : (
-                          <span className={`text-3xs font-extrabold leading-none ${selected ? 'text-primary' : 'text-primary'}`}>{count}</span>
+                          <span className="text-3xs font-extrabold leading-none text-primary">{count}</span>
                         )}
                       </div>
                     )}
@@ -324,7 +324,7 @@ const ProviderSchedule = () => {
             </div>
 
             {/* Legend */}
-            <div className="mt-4 pt-3 border-t border-slate-200/50 dark:border-slate-700/50 flex flex-wrap gap-4 text-3xs font-bold text-slate-400 dark:text-slate-500">
+            <div className="mt-4 pt-3.5 border-t border-slate-200/50 dark:border-white/5 flex flex-wrap gap-4 text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> Has Visits</span>
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full ring-2 ring-primary/40 bg-white" /> Today</span>
             </div>
@@ -332,32 +332,32 @@ const ProviderSchedule = () => {
 
           {/* Appointments for Selected Day */}
           <motion.div
-            className="lg:col-span-3 space-y-4"
-            initial={{ opacity: 0, y: 20 }}
+            className="lg:col-span-3 space-y-3.5 sm:space-y-4"
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.1, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           >
             {/* Selected Date Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-1">
               <div>
-                <h3 className="font-black text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight">{selectedDayLabel}</h3>
+                <h3 className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight">{selectedDayLabel}</h3>
               </div>
-              <span className={`text-xs font-bold px-3 py-1.5 rounded-xl neu-btn shadow-sm ${selectedAppts.length > 0 ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+              <span className={`text-3xs sm:text-xs font-extrabold px-3 py-1.5 rounded-xl neu-btn uppercase tracking-wider ${selectedAppts.length > 0 ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
                 {selectedAppts.length} visit{selectedAppts.length !== 1 ? 's' : ''}
               </span>
             </div>
 
             {selectedAppts.length === 0 ? (
-              <div className="text-center py-16 neu-card rounded-2xl sm:rounded-[2rem] border border-white/60 dark:border-slate-700/50 p-6">
+              <div className="text-center py-16 neu-flat rounded-2xl sm:rounded-[2.25rem] p-6 sm:p-8">
                 <div className="w-14 h-14 neu-btn rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
                   <Stethoscope className="w-6 h-6 text-slate-400" />
                 </div>
-                <p className="text-slate-700 dark:text-slate-200 font-bold text-sm">No Appointments</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">You have no scheduled visits recorded for this day.</p>
+                <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">No Scheduled Visits</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">You have no scheduled patient home visits recorded for this day.</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                <AnimatePresence>
+              <div className="space-y-3.5 sm:space-y-4">
+                <AnimatePresence mode="popLayout">
                   {selectedAppts.map((appt, idx) => {
                     const statusAction = STATUS_FLOW[appt.status];
                     const isUpdating = updatingId === appt.id;
@@ -367,10 +367,10 @@ const ProviderSchedule = () => {
                       <motion.div
                         key={appt.id}
                         layout
-                        initial={{ opacity: 0, y: 15 }}
+                        initial={{ opacity: 0, y: 14 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="neu-card rounded-2xl sm:rounded-3xl border border-white/60 dark:border-slate-700/50 overflow-hidden shadow-sm"
+                        transition={{ delay: idx * 0.04, duration: 0.25 }}
+                        className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden"
                       >
                         {/* Progress Stepper Bar */}
                         <div className="h-1.5 neu-inset flex overflow-hidden">
@@ -392,49 +392,49 @@ const ProviderSchedule = () => {
                           ))}
                         </div>
 
-                        <div className="p-4 sm:p-5">
+                        <div className="p-4 sm:p-6">
                           {/* Top row */}
-                          <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-start justify-between gap-3 mb-3.5">
                             <div className="flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl neu-btn flex items-center justify-center text-primary font-black text-xs shrink-0 shadow-sm">
+                              <div className="neu-flat-sm w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-primary font-black text-xs sm:text-sm shrink-0">
                                 {appt.patient.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                               </div>
                               <div className="min-w-0">
-                                <h4 className="font-bold text-slate-800 dark:text-slate-100 text-sm sm:text-base truncate">{appt.patient}</h4>
+                                <h4 className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-sm sm:text-base truncate">{appt.patient}</h4>
                                 <p className="text-xs text-primary font-bold">{appt.service}</p>
                               </div>
                             </div>
-                            <span className={`text-2xs font-extrabold px-3 py-1.5 rounded-xl shrink-0 ${STATUS_BADGE[appt.status] || 'neu-btn text-slate-500'}`}>
+                            <span className={`text-3xs font-extrabold px-3 py-1.5 rounded-xl uppercase tracking-wider shrink-0 ${STATUS_BADGE[appt.status] || 'neu-btn text-slate-500'}`}>
                               {appt.status}
                             </span>
                           </div>
 
                           {/* Time & Location Details */}
-                          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-3.5 text-xs text-slate-500 dark:text-slate-400">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1.5 mb-4 text-xs text-slate-500 dark:text-slate-400">
                             <div className="flex items-center gap-1.5 font-semibold">
-                              <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
                               <span>{appt.timeLabel}</span>
                             </div>
                             <div className="flex items-center gap-1.5 min-w-0 font-medium">
-                              <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                               <span className="truncate">{appt.address}</span>
                             </div>
                           </div>
 
                           {/* Patient Request Notes */}
                           {appt.notes && (
-                            <div className="mb-4 p-3 neu-inset rounded-xl">
-                              <p className="text-3xs font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-0.5">Patient Request Note</p>
+                            <div className="mb-4 p-3.5 neu-inset rounded-2xl">
+                              <p className="text-3xs font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">Patient Note</p>
                               <p className="text-xs text-slate-700 dark:text-slate-300 italic leading-relaxed">{'\u201C'}{appt.notes}{'\u201D'}</p>
                             </div>
                           )}
 
                           {/* Status Stepper Indicator */}
-                          <div className="neu-inset p-2.5 rounded-2xl mb-4">
+                          <div className="neu-inset p-3 rounded-2xl mb-4">
                             <div className="flex items-center gap-1 mb-1.5">
                               {STATUS_STEPS.map((step, i) => (
                                 <React.Fragment key={step}>
-                                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-3xs font-bold transition-all ${
+                                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-3xs font-bold transition-all ${
                                     i < currentStep 
                                       ? 'bg-emerald-500 text-white shadow-sm' 
                                       : i === currentStep 
@@ -449,9 +449,9 @@ const ProviderSchedule = () => {
                                 </React.Fragment>
                               ))}
                             </div>
-                            <div className="flex items-center justify-between px-0.5">
+                            <div className="flex items-center justify-between px-1">
                               {STATUS_STEPS.map((step, i) => (
-                                <span key={step} className={`text-3xs font-bold ${i <= currentStep ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>
+                                <span key={step} className={`text-3xs font-extrabold uppercase tracking-wider ${i <= currentStep ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>
                                   {step === 'On The Way' ? 'On Route' : step}
                                 </span>
                               ))}
@@ -459,7 +459,7 @@ const ProviderSchedule = () => {
                           </div>
 
                           {/* Action Buttons */}
-                          <div className="flex gap-2">
+                          <div className="flex gap-2.5">
                             {statusAction ? (
                               <motion.button
                                 whileTap={{ scale: 0.97 }}

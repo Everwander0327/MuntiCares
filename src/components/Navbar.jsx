@@ -46,80 +46,118 @@ const Navbar = () => {
           initial={{ y: -64, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.8, ease: FLUID }}
-          className="pointer-events-auto w-full max-w-4xl rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl ring-1 ring-black/5 dark:ring-white/10 shadow-soft px-4 md:px-6 py-3 flex justify-between items-center"
+          className="pointer-events-auto w-full max-w-4xl neu-flat rounded-full px-4 md:px-6 py-2.5 sm:py-3 flex justify-between items-center"
           aria-label="Primary navigation"
         >
-          <Link to="/" className="flex items-center gap-2 group shrink-0" aria-label="MuntiCares home">
+          <Link to="/" className="flex items-center gap-2.5 group shrink-0" aria-label="MuntiCares home">
             <motion.div
-              className="bg-primary p-2 rounded-full shadow-card"
+              className="neu-flat-sm p-2 rounded-2xl"
               whileHover={{ rotate: 12 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >
-              <Heart size={20} weight="fill" className="text-white" />
+              <Heart size={20} weight="fill" className="text-primary fill-primary" />
             </motion.div>
-            <span className="font-display text-lg md:text-xl font-semibold text-primary tracking-tight">MuntiCares</span>
+            <span className="font-display text-lg md:text-xl font-black text-primary tracking-tight">MuntiCares</span>
           </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
             <div className="flex gap-6">
-              <Link to="/" className={`link-underline font-medium transition-all duration-700 ease-fluid ${isActive('/') ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`}>Home</Link>
-              <Link to="/patient/providers" className={`link-underline font-medium transition-all duration-700 ease-fluid ${isActive('/patient/providers') ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`}>Find Providers</Link>
-              <button type="button" onClick={scrollToFooter} className="link-underline text-slate-600 dark:text-slate-300 hover:text-primary font-medium transition-all duration-700 ease-fluid">About</button>
+              <Link to="/" className={`font-bold text-sm transition-all ${isActive('/') ? 'text-primary underline underline-offset-4 decoration-2' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`}>Home</Link>
+              <Link to="/patient/providers" className={`font-bold text-sm transition-all ${isActive('/patient/providers') ? 'text-primary underline underline-offset-4 decoration-2' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`}>Find Providers</Link>
+              <button type="button" onClick={scrollToFooter} className="cursor-pointer text-slate-600 dark:text-slate-300 hover:text-primary font-bold text-sm transition-all">About</button>
             </div>
             <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <Link to="/login" className="font-semibold transition-all duration-700 ease-fluid text-sm text-primary dark:text-blue-300 hover:text-primary-700 dark:hover:text-white px-3 py-1.5 rounded-full hover:bg-primary/5 dark:hover:bg-white/5">Login</Link>
-              <Link to="/register" className="group inline-flex items-center gap-2 bg-primary text-white pl-6 pr-2 py-2 rounded-full font-semibold text-sm transition-all duration-700 ease-fluid hover:bg-primary-700 hover:shadow-soft active:scale-[0.98]">
+              <ThemeToggle className="!w-10 !h-10 !rounded-2xl" />
+              <Link to="/login" className="neu-btn font-bold text-xs sm:text-sm text-primary px-4 py-2 rounded-xl transition-all">Login</Link>
+              <Link to="/register" className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
                 Get Started
-                <span className="btn-island-icon !bg-white/20">
-                  <ArrowUpRight size={16} weight="light" className="text-white" />
+                <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                  <ArrowUpRight size={14} weight="bold" className="text-white" />
                 </span>
               </Link>
             </div>
           </div>
 
-          {/* Mobile hamburger morph — 2 lines rotate to X */}
-          <div className="md:hidden flex items-center gap-1">
-            <ThemeToggle />
+          {/* Mobile hamburger icon button with seamless animated morph */}
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle className="!w-10 !h-10 !rounded-xl" />
             <button
               type="button"
               onClick={() => setIsMenuOpen((v) => !v)}
-              className="relative w-11 h-11 rounded-full ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-all duration-700 ease-fluid hover:bg-black/[0.04] dark:hover:bg-white/[0.06] active:scale-[0.98]"
+              className="neu-btn relative w-10 h-10 rounded-xl flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-primary cursor-pointer active:scale-95 transition-all"
               aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMenuOpen}
             >
-              <span className={`absolute w-5 h-[1.5px] bg-current transition-all duration-700 ease-fluid ${isMenuOpen ? 'rotate-45 translate-y-0' : '-translate-y-[4px]'}`} />
-              <span className={`absolute w-5 h-[1.5px] bg-current transition-all duration-700 ease-fluid ${isMenuOpen ? '-rotate-45 translate-y-0' : 'translate-y-[4px]'}`} />
+              <svg 
+                className="w-5 h-5 text-slate-800 dark:text-slate-100 transition-colors" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <motion.line
+                  x1="4"
+                  y1={isMenuOpen ? "4" : "6"}
+                  x2="20"
+                  y2={isMenuOpen ? "20" : "6"}
+                  animate={{
+                    x1: 4,
+                    y1: isMenuOpen ? 4 : 6,
+                    x2: 20,
+                    y2: isMenuOpen ? 20 : 6,
+                  }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                />
+                <motion.line
+                  x1="4"
+                  y1="12"
+                  x2="20"
+                  y2="12"
+                  animate={{
+                    opacity: isMenuOpen ? 0 : 1,
+                  }}
+                  transition={{ duration: 0.15 }}
+                />
+                <motion.line
+                  x1="4"
+                  y1={isMenuOpen ? "20" : "18"}
+                  x2="20"
+                  y2={isMenuOpen ? "4" : "18"}
+                  animate={{
+                    x1: 4,
+                    y1: isMenuOpen ? 20 : 18,
+                    x2: 20,
+                    y2: isMenuOpen ? 4 : 18,
+                  }}
+                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                />
+              </svg>
             </button>
           </div>
         </motion.nav>
       </div>
 
-      {/* Fullscreen glass overlay menu */}
+      {/* Fullscreen neumorphic overlay drawer — GPU Accelerated 60fps */}
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
-            className="fixed inset-0 z-30 md:hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-3xl"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: FLUID }}
+            className="fixed inset-0 z-30 md:hidden bg-[#ebf1f8] dark:bg-[#151f31] transform-gpu will-change-transform"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="flex flex-col gap-2 px-6 pt-28 pb-10 h-full overflow-y-auto" style={{ minHeight: '100dvh' }}>
-              {mobileLinks.map((link, i) => (
-                <motion.div
-                  key={link.label}
-                  initial={{ translateY: 48, opacity: 0 }}
-                  animate={{ translateY: 0, opacity: 1 }}
-                  exit={{ translateY: 24, opacity: 0 }}
-                  transition={{ duration: 0.7, ease: FLUID, delay: 0.1 + i * 0.05 }}
-                >
+            <div className="flex flex-col gap-3 px-6 pt-24 pb-10 h-full overflow-y-auto" style={{ minHeight: '100dvh' }}>
+              {mobileLinks.map((link) => (
+                <div key={link.label}>
                   {link.isAnchor ? (
                     <button
                       type="button"
                       onClick={scrollToFooter}
-                      className="w-full flex items-center gap-4 px-4 py-4 rounded-[1.5rem] font-display text-2xl font-semibold text-slate-800 dark:text-slate-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition-all duration-700 ease-fluid text-left"
+                      className="neu-btn w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-display text-lg font-bold text-slate-800 dark:text-slate-100 transition-all text-left cursor-pointer"
                     >
                       <span className="text-primary">{link.icon}</span>
                       {link.label}
@@ -128,45 +166,37 @@ const Navbar = () => {
                     <Link
                       to={link.to}
                       onClick={() => setIsMenuOpen(false)}
-                      className={`flex items-center gap-4 px-4 py-4 rounded-[1.5rem] font-display text-2xl font-semibold transition-all duration-700 ease-fluid ${
+                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-display text-lg font-bold transition-all ${
                         isActive(link.to)
-                          ? 'text-primary bg-primary/5'
-                          : 'text-slate-800 dark:text-slate-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                          ? 'neu-pressed text-primary font-black'
+                          : 'neu-btn text-slate-800 dark:text-slate-100'
                       }`}
                     >
                       <span className="text-primary">{link.icon}</span>
                       {link.label}
                     </Link>
                   )}
-                </motion.div>
+                </div>
               ))}
 
-              <motion.div
-                initial={{ translateY: 48, opacity: 0 }}
-                animate={{ translateY: 0, opacity: 1 }}
-                exit={{ translateY: 24, opacity: 0 }}
-                transition={{ duration: 0.7, ease: FLUID, delay: 0.25 }}
-                className="mt-4 pt-6 ring-1 ring-black/5 dark:ring-white/10 rounded-[2rem] p-2 flex flex-col gap-2"
-              >
+              <div className="neu-flat rounded-3xl p-3.5 mt-3 flex flex-col gap-2.5">
                 <Link
                   to="/login"
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-3 px-4 py-4 rounded-full font-semibold text-primary hover:bg-primary/5 transition-all duration-700 ease-fluid"
+                  className="neu-btn flex items-center justify-center gap-2.5 py-3 rounded-2xl font-bold text-sm text-primary transition-all cursor-pointer"
                 >
-                  <SignIn size={18} weight="light" />
-                  Login
+                  <SignIn size={18} weight="bold" />
+                  Login to Account
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setIsMenuOpen(false)}
-                  className="btn-primary w-full text-center group"
+                  className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-2xl text-white font-bold text-sm shadow-md cursor-pointer"
                 >
                   Get Started
-                  <span className="btn-island-icon !bg-white/20">
-                    <ArrowUpRight size={16} weight="light" className="text-white" />
-                  </span>
+                  <ArrowUpRight size={16} weight="bold" />
                 </Link>
-              </motion.div>
+              </div>
             </div>
           </motion.div>
         )}

@@ -27,31 +27,29 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   };
 
   return (
-    <div className="flex items-center justify-between">
-      <p className="text-sm text-slate-500 dark:text-slate-400">
-        Page {currentPage} of {totalPages}
-      </p>
-      <div className="flex items-center gap-1">
+    <div className="flex items-center justify-center select-none py-1">
+      <div className="flex items-center gap-1.5 flex-wrap justify-center">
         <motion.button
-          whileTap={{ scale: 0.96 }}
+          whileTap={{ scale: 0.94 }}
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors dark:hover:bg-slate-700 dark:text-slate-400"
+          className="neu-btn p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          title="Previous Page"
         >
           <ChevronLeft className="w-4 h-4" />
         </motion.button>
         {getVisiblePages().map((page, i) =>
           page === '...' ? (
-            <span key={`ellipsis-${i}`} className="px-2 text-slate-400 dark:text-slate-500 text-sm">...</span>
+            <span key={`ellipsis-${i}`} className="px-2 text-slate-400 dark:text-slate-500 text-xs font-black">...</span>
           ) : (
             <motion.button
               key={page}
-              whileTap={{ scale: 0.96 }}
+              whileTap={{ scale: 0.94 }}
               onClick={() => onPageChange(page)}
-              className={`min-w-[36px] h-9 rounded-xl text-sm font-bold transition-all ${
+              className={`min-w-[36px] h-9 px-3 rounded-xl text-xs font-black transition-all ${
                 currentPage === page
-                  ? 'bg-primary text-white shadow-sm shadow-primary/20'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                  ? 'neu-inset text-primary ring-2 ring-primary/30 bg-primary/10 shadow-inner'
+                  : 'neu-btn text-slate-700 dark:text-slate-200 hover:text-primary'
               }`}
             >
               {page}
@@ -59,10 +57,11 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           )
         )}
         <motion.button
-          whileTap={{ scale: 0.96 }}
+          whileTap={{ scale: 0.94 }}
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors dark:hover:bg-slate-700 dark:text-slate-400"
+          className="neu-btn p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          title="Next Page"
         >
           <ChevronRight className="w-4 h-4" />
         </motion.button>

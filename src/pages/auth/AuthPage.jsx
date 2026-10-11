@@ -15,6 +15,8 @@ import confetti from 'canvas-confetti';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { FormInput, FormCheckbox } from '../../components/ui/form-input';
+import ThemeToggle from '../../components/ThemeToggle';
+import { ArrowLeft } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -30,7 +32,6 @@ const registerSchema = z.object({
   email: z.string().email('Enter a valid email address'),
   password: z.string().min(6, 'At least 6 characters'),
   confirmPassword: z.string(),
-  terms: z.literal(true, { errorMap: () => ({ message: 'You must accept the terms' }) }),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -53,9 +54,8 @@ const strengthColors = ['', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-
 const TabButton = ({ active, label, onClick }) => (
   <button
     onClick={onClick}
-    className={`relative px-4 md:px-8 py-1.5 md:py-3 text-sm md:text-lg font-semibold transition-all duration-700 ease-fluid ${
-      active ? 'text-primary' : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'
-    }`}
+    className={`relative px-4 md:px-8 py-1.5 md:py-3 text-sm md:text-lg font-semibold transition-all duration-700 ease-fluid ${active ? 'text-primary' : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'
+      }`}
   >
     {label}
     {active && (
@@ -255,31 +255,31 @@ const AuthPage = () => {
 
     if (isLogin) {
       return (
-          <motion.div
-            key="login"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            transition={{ duration: 0.5, ease: FLUID }}
-          >
-            <form className="space-y-2" onSubmit={loginForm.handleSubmit(handleLogin)}>
-                  <FormInput
-                    label="Email Address"
-                    type="email"
-                    placeholder="juan.delacruz@example.com"
-                    icon={Mail}
-                    className="!py-2.5"
-                    error={loginForm.formState.errors.email?.message}
-                    {...loginForm.register('email')}
-                  />
+        <motion.div
+          key="login"
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 16 }}
+          transition={{ duration: 0.35, ease: FLUID }}
+        >
+          <form className="space-y-4" onSubmit={loginForm.handleSubmit(handleLogin)}>
+            <FormInput
+              label="Email Address"
+              type="email"
+              placeholder="juan.delacruz@example.com"
+              icon={Mail}
+              className="!py-2.5"
+              error={loginForm.formState.errors.email?.message}
+              {...loginForm.register('email')}
+            />
 
-                  <FormInput
-                    label="Password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    icon={Lock}
-                    className="!py-2.5"
-                    error={loginForm.formState.errors.password?.message}
+            <FormInput
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              placeholder="••••••••"
+              icon={Lock}
+              className="!py-2.5"
+              error={loginForm.formState.errors.password?.message}
               rightElement={<PasswordToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />}
               {...loginForm.register('password')}
             />
@@ -289,7 +289,7 @@ const AuthPage = () => {
               <button
                 type="button"
                 onClick={() => toast.info('Password reset coming soon')}
-                className="text-xs text-red-800 font-semibold hover:text-red-900 transition-all duration-700 ease-fluid"
+                className="text-xs text-primary font-bold hover:underline transition-all cursor-pointer"
               >
                 Forgot Password?
               </button>
@@ -297,8 +297,8 @@ const AuthPage = () => {
 
             {error && (
               <div className="bg-red-500/10 text-red-500 dark:text-red-300 p-3 rounded-[1.25rem] text-xs font-medium text-center ring-1 ring-red-500/20">
-                  {error}
-                </div>
+                {error}
+              </div>
             )}
 
             <motion.button
@@ -318,12 +318,12 @@ const AuthPage = () => {
     return (
       <motion.div
         key="register"
-        initial={{ opacity: 0, x: 20 }}
+        initial={{ opacity: 0, x: 16 }}
         animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-        transition={{ duration: 0.5, ease: FLUID }}
+        exit={{ opacity: 0, x: -16 }}
+        transition={{ duration: 0.35, ease: FLUID }}
       >
-        <form className="space-y-2" onSubmit={registerForm.handleSubmit(handleRegister)}>
+        <form className="space-y-3" onSubmit={registerForm.handleSubmit(handleRegister)}>
           {/* Role Pills */}
           <div>
             <label className="text-xs font-bold text-slate-800 dark:text-slate-200 ml-1 block mb-1.5">I am a...</label>
@@ -336,11 +336,10 @@ const AuthPage = () => {
                   key={r.value}
                   type="button"
                   onClick={() => setRole(r.value)}
-                  className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] cursor-pointer ${
-                    role === r.value
+                  className={`flex-1 py-2 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] cursor-pointer ${role === r.value
                       ? 'neu-btn-primary shadow-sm'
                       : 'neu-btn text-slate-700 dark:text-slate-300'
-                  }`}
+                    }`}
                 >
                   {r.icon}
                   {r.label}
@@ -400,26 +399,19 @@ const AuthPage = () => {
                 {[1, 2, 3, 4, 5].map((i) => (
                   <div
                     key={i}
-                    className={`h-1 flex-1 rounded-full transition-all duration-700 ease-fluid ${
-                      i <= strength ? strengthColors[strength] : 'bg-slate-200 dark:bg-slate-700'
-                    }`}
+                    className={`h-1 flex-1 rounded-full transition-all duration-700 ease-fluid ${i <= strength ? strengthColors[strength] : 'bg-slate-200 dark:bg-slate-700'
+                      }`}
                   />
                 ))}
               </div>
-              <p className={`text-xs font-medium text-right mt-1 ${
-                strength <= 2 ? 'text-red-400' : strength <= 3 ? 'text-yellow-400' : 'text-green-400'
-              }`}>
+              <p className={`text-xs font-medium text-right mt-1 ${strength <= 2 ? 'text-red-400' : strength <= 3 ? 'text-yellow-400' : 'text-green-400'
+                }`}>
                 {strengthLabels[strength]}
               </p>
             </div>
           )}
 
-          <FormCheckbox
-            label="I accept the Terms & Conditions"
-            labelClassName="text-slate-900 dark:text-slate-100"
-            error={registerForm.formState.errors.terms?.message}
-            {...registerForm.register('terms')}
-          />
+
 
           {error && (
             <div className="bg-red-500/10 text-red-500 dark:text-red-300 p-3 rounded-[1.25rem] text-sm font-medium text-center ring-1 ring-red-500/20">
@@ -442,7 +434,7 @@ const AuthPage = () => {
   };
 
   return (
-    <main ref={pageRef} className="relative min-h-[100dvh] overflow-x-hidden w-full max-w-full flex items-center justify-center bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white py-4 sm:py-8 md:py-12 px-3 sm:px-6">
+    <main ref={pageRef} className="relative min-h-[100dvh] overflow-x-hidden w-full max-w-full flex items-center justify-center bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white pt-24 sm:pt-28 pb-8 px-3 sm:px-6">
       {/* Theme-aware cinema backdrop */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
         <div ref={bgRef} className="h-full w-full">
@@ -457,7 +449,7 @@ const AuthPage = () => {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(30,111,191,0.08)_78%)] dark:bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(2,6,23,0.6)_78%)]" />
       </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-sm sm:max-w-md">
+      <div className="relative z-10 mx-auto w-full max-w-sm sm:max-w-md my-auto">
         <div className="text-center mb-3 sm:mb-5">
           <h1 className="font-display font-black text-slate-900 dark:text-white w-full tracking-tight text-xl sm:text-2xl md:text-3xl">
             {mode === 'login' ? 'Welcome back' : 'Create an Account'}
@@ -475,26 +467,24 @@ const AuthPage = () => {
         >
           <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] p-4 sm:p-6 md:p-8">
             {!pendingSetPassword && (
-              <div className="flex neu-inset rounded-xl sm:rounded-2xl mb-3.5 sm:mb-5 p-1 gap-1">
+              <div className="flex neu-inset rounded-xl sm:rounded-2xl mb-4 sm:mb-5 p-1 gap-1">
                 <button
                   type="button"
                   onClick={() => { setMode('login'); setError(''); }}
-                  className={`flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none ${
-                    mode === 'login'
+                  className={`flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none ${mode === 'login'
                       ? 'neu-flat text-primary font-black shadow-xs'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   Login
                 </button>
                 <button
                   type="button"
                   onClick={() => { setMode('register'); setError(''); }}
-                  className={`flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none ${
-                    mode === 'register'
+                  className={`flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none ${mode === 'register'
                       ? 'neu-flat text-primary font-black shadow-xs'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
+                    }`}
                 >
                   Register
                 </button>
@@ -506,10 +496,12 @@ const AuthPage = () => {
             </AnimatePresence>
 
             {!pendingSetPassword && mode === 'login' && (
-              <Link to="/register" className="group mt-3.5 sm:mt-5 flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-primary hover:text-primary-700 transition-colors">
-                New here? Create an account
-                <ArrowUpRight size={14} weight="bold" className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </Link>
+              <div className="pt-4">
+                <Link to="/register" className="group flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-primary hover:text-primary-700 transition-colors">
+                  New here? Create an account
+                  <ArrowUpRight size={14} weight="bold" className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              </div>
             )}
           </div>
         </motion.div>

@@ -55,27 +55,55 @@ const FormTextarea = React.forwardRef(({ label, error, className, ...props }, re
 
 FormTextarea.displayName = 'FormTextarea';
 
-const FormCheckbox = React.forwardRef(({ label, error, className, labelClassName, ...props }, ref) => (
-  <div className="space-y-1">
-    <label className="flex items-center gap-3 cursor-pointer group">
-      <input
-        type="checkbox"
-        ref={ref}
-        className={cn(
-          "w-5 h-5 rounded-md border-2 transition-all duration-700 ease-fluid cursor-pointer",
-          "focus:outline-none focus:ring-0",
-          "accent-primary",
-          className
-        )}
-        {...props}
-      />
-      <span className={cn("text-sm text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100 transition-all duration-700 ease-fluid", labelClassName)}>
-        {label}
-      </span>
-    </label>
-    {error && <p className="text-xs text-red-500 dark:text-red-400 ml-1">{error}</p>}
-  </div>
-));
+const FormCheckbox = React.forwardRef(({ label, error, className, labelClassName, checked, defaultChecked, onChange, ...props }, ref) => {
+  const [internalChecked, setInternalChecked] = React.useState(defaultChecked || false);
+  const isChecked = checked !== undefined ? checked : internalChecked;
+
+  const handleChange = (e) => {
+    if (checked === undefined) {
+      setInternalChecked(e.target.checked);
+    }
+    if (onChange) onChange(e);
+  };
+
+  return (
+    <div className="space-y-1">
+      <label className="inline-flex items-center gap-2.5 cursor-pointer group select-none">
+        <div className="relative flex items-center justify-center shrink-0">
+          <input
+            type="checkbox"
+            ref={ref}
+            checked={checked}
+            defaultChecked={defaultChecked}
+            onChange={handleChange}
+            className="sr-only peer"
+            {...props}
+          />
+          <div className={cn(
+            "w-5 h-5 rounded-lg transition-all duration-200 flex items-center justify-center",
+            "peer-checked:neu-btn-primary peer-checked:text-white",
+            "peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40",
+            isChecked ? "neu-btn-primary text-white" : "neu-inset border border-slate-200/40 dark:border-white/5 text-transparent",
+            className
+          )}>
+            <svg 
+              className={cn("w-3.5 h-3.5 stroke-[3] transition-transform duration-200", isChecked ? "scale-100 text-white" : "scale-0 text-transparent")} 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+        </div>
+        <span className={cn("text-xs sm:text-[13px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors", labelClassName)}>
+          {label}
+        </span>
+      </label>
+      {error && <p className="text-xs text-red-500 dark:text-red-400 ml-1">{error}</p>}
+    </div>
+  );
+});
 
 FormCheckbox.displayName = 'FormCheckbox';
 

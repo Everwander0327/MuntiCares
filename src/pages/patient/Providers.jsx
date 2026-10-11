@@ -1155,9 +1155,12 @@ const PatientProviders = () => {
                       </div>
                       <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/5">
                         <span className="text-slate-400 font-medium">Online Status</span>
-                        <span className={`inline-flex items-center gap-1.5 font-bold ${isUserOnline(viewingProvider.id) ? 'text-emerald-500' : 'text-slate-400'}`}>
-                          <span className={`w-2 h-2 rounded-full ${isUserOnline(viewingProvider.id) ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                          {isUserOnline(viewingProvider.id) ? 'Active Online Now' : 'Offline'}
+                        <span className={`neu-flat-sm inline-flex items-center px-2.5 py-1 rounded-xl text-3xs font-extrabold uppercase tracking-wider ${
+                          isUserOnline(viewingProvider.id) 
+                            ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10' 
+                            : 'text-slate-500 dark:text-slate-400'
+                        }`}>
+                          {isUserOnline(viewingProvider.id) ? 'Active Online' : 'Offline'}
                         </span>
                       </div>
                     </div>

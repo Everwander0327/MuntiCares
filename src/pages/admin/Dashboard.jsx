@@ -1,38 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Users, Briefcase, FileText, ShieldAlert, TrendingUp, Award } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, LineChart, Line } from 'recharts';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area, Label 
+} from 'recharts';
 import DateRangePicker from '../../components/DateRangePicker';
 import useCountUp from '../../hooks/useCountUp';
 import { SkeletonPage } from '../../components/Skeleton';
 import { supabase } from '../../lib/supabase';
 
 const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.1 } },
+  animate: { transition: { staggerChildren: 0.08 } },
 };
 const staggerItem = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
 };
 
-const StatCard = ({ label, value, icon, color }) => {
-  const { count, ref } = useCountUp(parseInt(value) || 0, 1500, false);
+const StatCard = ({ label, value, colorClass, borderAccent, subtitle }) => {
+  const { count, ref } = useCountUp(parseInt(value) || 0, 1400, false);
   return (
     <motion.div
-      className="p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between dark:border-slate-700 dark:shadow-slate-900/50 bg-gradient-to-br from-blue-50 to-white dark:from-slate-800 dark:to-slate-800"
       variants={staggerItem}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileHover={{ y: -2, transition: { duration: 0.2 } }}
+      className={`neu-flat-sm rounded-2xl sm:rounded-[1.25rem] p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden transition-all border-l-4 ${borderAccent} bg-white/40 dark:bg-slate-900/30`}
     >
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2 mb-2">
-        <div className={`p-2 md:p-3 w-fit rounded-xl md:rounded-2xl ${color}`}>
-          {React.cloneElement(icon, { className: 'w-4 h-4 md:w-6 md:h-6' })}
-        </div>
-      </div>
       <div>
-        <p className="text-slate-500 text-2xs md:text-sm font-medium mt-1 md:mt-3 leading-tight dark:text-slate-400">{label}</p>
-        <p className="text-lg md:text-2xl font-bold text-slate-900 dark:text-slate-100" ref={ref}>{count}</p>
+        <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-bold tracking-wide truncate">
+          {label}
+        </p>
+        <p className={`text-2xl sm:text-3xl md:text-4xl font-display font-black tracking-tight mt-1.5 leading-none ${colorClass}`} ref={ref}>
+          {count}
+        </p>
       </div>
+      {subtitle && (
+        <p className="text-3xs text-slate-400 dark:text-slate-500 font-semibold mt-2.5 truncate">
+          {subtitle}
+        </p>
+      )}
     </motion.div>
   );
 };
@@ -40,12 +47,13 @@ const StatCard = ({ label, value, icon, color }) => {
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-white px-4 py-2 rounded-xl shadow-lg border border-slate-100 z-50 relative dark:bg-slate-800 dark:border-slate-700">
-        <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{label}</p>
+      <div className="neu-flat px-4 py-2.5 rounded-2xl border border-white/80 dark:border-white/10 shadow-xl bg-[#ebf1f8]/95 dark:bg-[#172236]/95 backdrop-blur-md z-50">
+        <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-1">{label}</p>
         {payload.map((p, i) => (
-          <p key={i} className="text-sm font-semibold" style={{ color: p.color }}>
-            {p.name}: {p.value}
-          </p>
+          <div key={i} className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+            <span>{p.name}: <span className="font-mono font-black" style={{ color: p.color }}>{p.value}</span></span>
+          </div>
         ))}
       </div>
     );
@@ -102,7 +110,7 @@ const AdminDashboard = () => {
 
         setPieChartData([
           { name: 'Patients', value: patientCount || 0, color: '#1E6FBF' },
-          { name: 'Providers', value: providerCount || 0, color: '#60A5FA' },
+          { name: 'Providers', value: providerCount || 0, color: '#38bdf8' },
         ]);
 
         // Fetch requests for bar chart
@@ -203,191 +211,354 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout role="admin">
-      <div className="space-y-6 md:space-y-8">
-        {/* Header with Date Range */}
-        <motion.div
-          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Admin Dashboard</h1>
-            <p className="text-slate-500 dark:text-slate-400">Platform analytics and overview</p>
-          </div>
-          <DateRangePicker
-            startDate={startDate}
-            endDate={endDate}
-            onChange={({ start, end }) => { setStartDate(start); setEndDate(end); }}
-          />
-        </motion.div>
+      <div className="space-y-6 md:space-y-8 pb-10">
+        
+        {/* Unified Header & Analytics Master Card */}
+        <section className="neu-flat p-5 sm:p-7 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h1 className="font-display font-black tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
+                Platform Analytics
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Live overview of healthcare metrics, services, and community operations.
+              </p>
+            </div>
 
-        {/* Stat Cards */}
-        <motion.div
-          className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6"
-          variants={staggerContainer}
-          initial="initial"
-          animate="animate"
-        >
-          <StatCard label="Total Patients" value={stats.totalPatients} icon={<Users />} color="bg-blue-50 text-primary dark:bg-blue-900/30" />
-          <StatCard label="Total Providers" value={stats.totalProviders} icon={<Briefcase />} color="bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300" />
-          <StatCard label="Total Requests" value={stats.totalRequests} icon={<FileText />} color="bg-orange-50 text-orange-600 dark:bg-orange-900/30 dark:text-orange-300" />
-          <StatCard label="Pending Approvals" value={stats.pendingApprovals} icon={<ShieldAlert />} color="bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-300" />
-        </motion.div>
+            <div className="shrink-0">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onChange={({ start, end }) => { setStartDate(start); setEndDate(end); }}
+              />
+            </div>
+          </div>
+
+          {/* Stat Cards Row Inside Header */}
+          <motion.div
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-5 pt-2"
+            variants={staggerContainer}
+            initial="initial"
+            animate="animate"
+          >
+            <StatCard 
+              label="Total Patients" 
+              value={stats.totalPatients} 
+              colorClass="text-primary" 
+              borderAccent="border-primary" 
+              subtitle="Registered residents"
+            />
+            <StatCard 
+              label="Total Providers" 
+              value={stats.totalProviders} 
+              colorClass="text-sky-500" 
+              borderAccent="border-sky-500" 
+              subtitle="Healthcare pros"
+            />
+            <StatCard 
+              label="Total Requests" 
+              value={stats.totalRequests} 
+              colorClass="text-amber-500" 
+              borderAccent="border-amber-500" 
+              subtitle="All-time bookings"
+            />
+            <StatCard 
+              label="Pending Approvals" 
+              value={stats.pendingApprovals} 
+              colorClass="text-rose-500" 
+              borderAccent="border-rose-500" 
+              subtitle="Awaiting verification"
+            />
+          </motion.div>
+        </section>
 
         {/* Charts Row */}
         <motion.div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
-          initial={{ opacity: 0, y: 20 }}
+          className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ duration: 0.35, delay: 0.15 }}
         >
-          {/* Bar Chart */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50">
-            <h3 className="text-lg font-bold text-slate-900 mb-6 dark:text-slate-100">Requests Per Month</h3>
-            <div className="h-64">
+          {/* Bar Chart - Neumorphic Pillar Style */}
+          <div className="neu-flat rounded-3xl p-5 sm:p-6 md:p-7 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">Requests Per Month</h3>
+                <p className="text-3xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Service booking volume</p>
+              </div>
+            </div>
+
+            <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barChartData} barSize={32}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f1f5f9' }} />
-                  <Bar dataKey="requests" fill="#1E6FBF" radius={[8, 8, 0, 0]} />
+                <BarChart data={barChartData} barSize={26}>
+                  <defs>
+                    {/* Neumorphic 3D Bar Gradient */}
+                    <linearGradient id="neuBarGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.95} />
+                      <stop offset="60%" stopColor="#1E6FBF" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#0e3a6c" stopOpacity={0.85} />
+                    </linearGradient>
+                    <filter id="neuBarGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#1E6FBF" floodOpacity="0.35" />
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(30, 111, 191, 0.05)', radius: 12 }} />
+                  <Bar dataKey="requests" fill="url(#neuBarGrad)" radius={[12, 12, 6, 6]} filter="url(#neuBarGlow)" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* Pie Chart */}
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50">
-            <h3 className="text-lg font-bold text-slate-900 mb-6 dark:text-slate-100">User Distribution</h3>
-            <div className="h-64">
+          {/* Pie Chart - Neumorphic Beveled Donut */}
+          <div className="neu-flat rounded-3xl p-5 sm:p-6 md:p-7 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">User Distribution</h3>
+                <p className="text-3xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Patients vs. Providers ratio</p>
+              </div>
+            </div>
+
+            <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pieChartData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                  <defs>
+                    <linearGradient id="patientPieGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#2563eb" />
+                      <stop offset="100%" stopColor="#1E6FBF" />
+                    </linearGradient>
+                    <linearGradient id="providerPieGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#38bdf8" />
+                      <stop offset="100%" stopColor="#0ea5e9" />
+                    </linearGradient>
+                    <filter id="neuPieShadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#000" floodOpacity="0.18" />
+                    </filter>
+                    {/* Filter for center hub disc */}
+                    <filter id="hubShadow" x="-30%" y="-30%" width="160%" height="160%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.12" />
+                    </filter>
+                  </defs>
+
+                  {/* Centered SVG Hub Base Ring */}
+                  <Pie 
+                    data={pieChartData} 
+                    cx="50%" 
+                    cy="45%" 
+                    innerRadius={54} 
+                    outerRadius={86} 
+                    paddingAngle={6} 
+                    cornerRadius={8}
+                    dataKey="value"
+                    stroke="rgba(255,255,255,0.4)"
+                    strokeWidth={2}
+                    filter="url(#neuPieShadow)"
+                  >
                     {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={index === 0 ? "url(#patientPieGrad)" : "url(#providerPieGrad)"} 
+                      />
                     ))}
+                    <Label
+                      content={({ viewBox }) => {
+                        const { cx, cy } = viewBox || {};
+                        if (!cx || !cy) return null;
+                        return (
+                          <g pointerEvents="none">
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r={44}
+                              className="fill-[#e8f0f8] dark:fill-[#1b263b] stroke-white/80 dark:stroke-white/10"
+                              strokeWidth={2}
+                              filter="url(#hubShadow)"
+                            />
+                            <text
+                              x={cx}
+                              y={cy - 7}
+                              textAnchor="middle"
+                              dominantBaseline="central"
+                              className="fill-slate-400 dark:fill-slate-500 font-extrabold text-[9px] tracking-widest uppercase"
+                            >
+                              TOTAL
+                            </text>
+                            <text
+                              x={cx}
+                              y={cy + 10}
+                              textAnchor="middle"
+                              dominantBaseline="central"
+                              className="fill-slate-900 dark:fill-white font-display font-black text-sm"
+                            >
+                              {(stats.totalPatients + stats.totalProviders) || 0}
+                            </text>
+                          </g>
+                        );
+                      }}
+                      position="center"
+                    />
                   </Pie>
+
                   <Tooltip content={<CustomTooltip />} />
-                  <Legend verticalAlign="bottom"
-                    formatter={(value) => <span className="text-slate-600 font-medium text-sm dark:text-slate-200">{value}</span>} />
+                  <Legend 
+                    verticalAlign="bottom"
+                    formatter={(value) => <span className="text-slate-700 dark:text-slate-200 font-bold text-xs">{value}</span>} 
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </div>
         </motion.div>
 
-        {/* User Growth */}
+        {/* User Growth - Neumorphic Glowing Area / Wave Chart */}
         <motion.div
-          className="grid grid-cols-1 gap-6"
-          initial={{ opacity: 0, y: 20 }}
+          className="neu-flat rounded-3xl p-5 sm:p-6 md:p-7"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
+          transition={{ duration: 0.35, delay: 0.2 }}
         >
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50">
-            <h3 className="text-lg font-bold text-slate-900 mb-6 dark:text-slate-100 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              User Growth (12 Months)
-            </h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={growthChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="patients" stroke="#1E6FBF" strokeWidth={2} dot={false} name="Patients" />
-                  <Line type="monotone" dataKey="providers" stroke="#60A5FA" strokeWidth={2} dot={false} name="Providers" />
-                  <Line type="monotone" dataKey="total" stroke="#10B981" strokeWidth={2} dot={false} name="Total" />
-                </LineChart>
-              </ResponsiveContainer>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">User Growth (12 Months)</h3>
+              <p className="text-3xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Community onboarding trajectory</p>
             </div>
+          </div>
+
+          <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={growthChartData}>
+                <defs>
+                  {/* Patients Area Gradient */}
+                  <linearGradient id="patientAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#1E6FBF" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="#1E6FBF" stopOpacity={0.0} />
+                  </linearGradient>
+                  {/* Providers Area Gradient */}
+                  <linearGradient id="providerAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.0} />
+                  </linearGradient>
+                  {/* Total Area Gradient */}
+                  <linearGradient id="totalAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.0} />
+                  </linearGradient>
+                  <filter id="neuLineGlow" x="-10%" y="-10%" width="120%" height="120%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.25" />
+                  </filter>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="patients" 
+                  stroke="#1E6FBF" 
+                  strokeWidth={3} 
+                  fillOpacity={1} 
+                  fill="url(#patientAreaGrad)" 
+                  name="Patients" 
+                  dot={{ r: 3, fill: '#1E6FBF', stroke: '#fff', strokeWidth: 1.5 }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="providers" 
+                  stroke="#38bdf8" 
+                  strokeWidth={3} 
+                  fillOpacity={1} 
+                  fill="url(#providerAreaGrad)" 
+                  name="Providers" 
+                  dot={{ r: 3, fill: '#38bdf8', stroke: '#fff', strokeWidth: 1.5 }}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="total" 
+                  stroke="#10B981" 
+                  strokeWidth={3.5} 
+                  fillOpacity={1} 
+                  fill="url(#totalAreaGrad)" 
+                  name="Total Users" 
+                  dot={{ r: 3.5, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </motion.div>
 
         {/* Bottom Row: Recent Activity + Top Providers */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          
+          {/* Recent Activity Card */}
           <motion.div
-            className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
-            initial={{ opacity: 0, y: 20 }}
+            className="neu-flat rounded-3xl overflow-hidden p-5 sm:p-6 flex flex-col justify-between"
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
+            transition={{ duration: 0.35, delay: 0.25 }}
           >
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between dark:border-slate-700">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Recent Service Requests</h3>
+            <div className="flex items-center justify-between pb-4 border-b border-white/60 dark:border-white/5">
+              <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">Recent Service Requests</h3>
+              <span className="text-3xs font-extrabold uppercase tracking-widest text-slate-400">Latest 5</span>
             </div>
-            {/* Mobile Card View */}
-            <div className="block md:hidden divide-y divide-slate-50 dark:divide-slate-700">
+
+            {/* Mobile Cards */}
+            <div className="block md:hidden divide-y divide-slate-200/50 dark:divide-white/5 mt-2">
               {recentActivity.length > 0 ? recentActivity.map((act, idx) => (
-                <div key={idx} className="p-4 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-slate-100">{act.user}</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">{act.action}</p>
+                <div key={idx} className="py-3.5 space-y-1.5">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <p className="font-extrabold text-xs text-slate-900 dark:text-white truncate">{act.user}</p>
+                      <p className="text-2xs text-slate-500 dark:text-slate-400 font-semibold truncate">{act.action}</p>
                     </div>
-                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-wider ${
-                      act.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                      act.status === 'Accepted' ? 'bg-blue-100 text-blue-700' :
-                      act.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
+                      act.status === 'Completed' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' :
+                      act.status === 'Accepted' ? 'neu-flat-sm text-blue-600 dark:text-blue-400' :
+                      act.status === 'Pending' ? 'neu-flat-sm text-amber-600 dark:text-amber-400' :
+                      'neu-flat-sm text-rose-600 dark:text-rose-400'
                     }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                        act.status === 'Completed' ? 'bg-green-500' :
-                        act.status === 'Accepted' ? 'bg-blue-500' :
-                        act.status === 'Pending' ? 'bg-yellow-500' :
-                        'bg-red-500'
-                      }`} />
                       {act.status}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">{act.date}</p>
+                  <p className="text-3xs text-slate-400 font-mono font-medium">{act.date}</p>
                 </div>
               )) : (
-                <p className="text-sm text-slate-400 text-center py-10 dark:text-slate-500">No recent activity.</p>
+                <p className="text-xs text-slate-400 text-center py-8">No recent activity.</p>
               )}
             </div>
+
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <div className="hidden md:block overflow-x-auto mt-2">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
-                    <th className="px-6 py-4 font-semibold">Patient</th>
-                    <th className="px-6 py-4 font-semibold">Action</th>
-                    <th className="px-6 py-4 font-semibold">Date & Time</th>
-                    <th className="px-6 py-4 font-semibold">Status</th>
+                  <tr className="border-b border-slate-200/60 dark:border-white/5 text-slate-400 dark:text-slate-500 text-3xs font-extrabold uppercase tracking-wider">
+                    <th className="py-3 px-2">Patient</th>
+                    <th className="py-3 px-2">Action</th>
+                    <th className="py-3 px-2">Date & Time</th>
+                    <th className="py-3 px-2 text-right">Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-200/40 dark:divide-white/5">
                   {recentActivity.length > 0 ? recentActivity.map((act, idx) => (
-                    <motion.tr key={idx} className="transition-colors"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.5 + idx * 0.1 }}
-                    >
-                      <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">{act.user}</td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{act.action}</td>
-                      <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{act.date}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold uppercase tracking-wider ${
-                          act.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                          act.status === 'Accepted' ? 'bg-blue-100 text-blue-700' :
-                          act.status === 'Pending' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
+                    <tr key={idx} className="hover:bg-primary/5 transition-colors">
+                      <td className="py-3 px-2 font-bold text-slate-800 dark:text-slate-100">{act.user}</td>
+                      <td className="py-3 px-2 font-medium text-slate-600 dark:text-slate-300">{act.action}</td>
+                      <td className="py-3 px-2 font-mono text-3xs text-slate-400">{act.date}</td>
+                      <td className="py-3 px-2 text-right">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider ${
+                          act.status === 'Completed' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' :
+                          act.status === 'Accepted' ? 'neu-flat-sm text-blue-600 dark:text-blue-400' :
+                          act.status === 'Pending' ? 'neu-flat-sm text-amber-600 dark:text-amber-400' :
+                          'neu-flat-sm text-rose-600 dark:text-rose-400'
                         }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full status-dot ${
-                            act.status === 'Completed' ? 'bg-green-500' :
-                            act.status === 'Accepted' ? 'bg-blue-500' :
-                            act.status === 'Pending' ? 'bg-yellow-500' :
-                            'bg-red-500'
-                          }`} />
                           {act.status}
                         </span>
                       </td>
-                    </motion.tr>
+                    </tr>
                   )) : (
                     <tr>
-                      <td colSpan="4" className="px-6 py-10 text-center text-slate-500 dark:text-slate-400">No recent activity.</td>
+                      <td colSpan="4" className="py-8 text-center text-slate-400">No recent activity.</td>
                     </tr>
                   )}
                 </tbody>
@@ -395,84 +566,85 @@ const AdminDashboard = () => {
             </div>
           </motion.div>
 
-          {/* Top Providers */}
+          {/* Top Providers Card */}
           <motion.div
-            className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
-            initial={{ opacity: 0, y: 20 }}
+            className="neu-flat rounded-3xl overflow-hidden p-5 sm:p-6 flex flex-col justify-between"
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
+            transition={{ duration: 0.35, delay: 0.3 }}
           >
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between dark:border-slate-700">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Award className="w-5 h-5 text-yellow-500" />
+            <div className="flex items-center justify-between pb-4 border-b border-white/60 dark:border-white/5">
+              <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                 Top Rated Providers
               </h3>
+              <span className="text-3xs font-extrabold uppercase tracking-widest text-slate-400">Top 5</span>
             </div>
-            {/* Mobile Card View */}
-            <div className="block md:hidden divide-y divide-slate-50 dark:divide-slate-700">
+
+            {/* Mobile View */}
+            <div className="block md:hidden divide-y divide-slate-200/50 dark:divide-white/5 mt-2">
               {topProviders.length > 0 ? topProviders.map((p, idx) => (
-                <div key={idx} className="p-4 space-y-2">
-                  <div className="flex justify-between items-start">
-                    <p className="font-bold text-slate-900 dark:text-slate-100">{p.name}</p>
-                    <span className="flex items-center gap-1 text-yellow-500 font-bold text-sm">
+                <div key={idx} className="py-3.5 space-y-1.5">
+                  <div className="flex justify-between items-start gap-2">
+                    <div>
+                      <p className="font-extrabold text-xs text-slate-900 dark:text-white">{p.name}</p>
+                      <p className="text-2xs text-slate-500 dark:text-slate-400 font-semibold">{p.services.slice(0, 2).join(', ')}</p>
+                    </div>
+                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg flex items-center gap-1 text-amber-500 font-black text-2xs">
                       ★ {Number(p.rating).toFixed(1)}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">{p.services.slice(0, 2).join(', ')}</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full dark:bg-slate-700">
+                  <div className="flex items-center gap-2 pt-1">
+                    <div className="neu-inset flex-1 h-2 rounded-full overflow-hidden p-0.5">
                       <div className="h-full rounded-full bg-primary" style={{ width: `${p.trust_score}%` }} />
                     </div>
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{p.trust_score}%</span>
+                    <span className="text-3xs font-bold font-mono text-slate-500 dark:text-slate-400">{p.trust_score}%</span>
                   </div>
                 </div>
               )) : (
-                <p className="text-sm text-slate-400 text-center py-10 dark:text-slate-500">No providers yet.</p>
+                <p className="text-xs text-slate-400 text-center py-8">No providers yet.</p>
               )}
             </div>
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto mt-2">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
-                    <th className="px-6 py-4 font-semibold">Name</th>
-                    <th className="px-6 py-4 font-semibold">Services</th>
-                    <th className="px-6 py-4 font-semibold">Rating</th>
-                    <th className="px-6 py-4 font-semibold">Trust Score</th>
+                  <tr className="border-b border-slate-200/60 dark:border-white/5 text-slate-400 dark:text-slate-500 text-3xs font-extrabold uppercase tracking-wider">
+                    <th className="py-3 px-2">Provider</th>
+                    <th className="py-3 px-2">Specialties</th>
+                    <th className="py-3 px-2">Rating</th>
+                    <th className="py-3 px-2 text-right">Trust Score</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-200/40 dark:divide-white/5">
                   {topProviders.length > 0 ? topProviders.map((p, idx) => (
-                    <motion.tr key={idx} className="transition-colors"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.5 + idx * 0.1 }}
-                    >
-                      <td className="px-6 py-4 font-semibold text-slate-700 dark:text-slate-200">{p.name}</td>
-                      <td className="px-6 py-4 text-slate-600 text-sm dark:text-slate-300">{p.services.slice(0, 2).join(', ')}</td>
-                      <td className="px-6 py-4">
-                        <span className="flex items-center gap-1 text-yellow-500 font-bold text-sm">
+                    <tr key={idx} className="hover:bg-primary/5 transition-colors">
+                      <td className="py-3 px-2 font-bold text-slate-800 dark:text-slate-100">{p.name}</td>
+                      <td className="py-3 px-2 text-slate-600 dark:text-slate-300 font-medium text-2xs">{p.services.slice(0, 2).join(', ')}</td>
+                      <td className="py-3 px-2">
+                        <span className="neu-flat-sm px-2 py-0.5 rounded-lg inline-flex items-center gap-1 text-amber-500 font-black text-2xs">
                           ★ {Number(p.rating).toFixed(1)}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-20 h-2 bg-slate-100 rounded-full dark:bg-slate-700">
+                      <td className="py-3 px-2 text-right">
+                        <div className="inline-flex items-center gap-2 justify-end w-28">
+                          <div className="neu-inset flex-1 h-2 rounded-full overflow-hidden p-0.5">
                             <div className="h-full rounded-full bg-primary" style={{ width: `${p.trust_score}%` }} />
                           </div>
-                          <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{p.trust_score}%</span>
+                          <span className="text-3xs font-mono font-bold text-slate-500 dark:text-slate-400">{p.trust_score}%</span>
                         </div>
                       </td>
-                    </motion.tr>
+                    </tr>
                   )) : (
                     <tr>
-                      <td colSpan="4" className="px-6 py-10 text-center text-slate-500 dark:text-slate-400">No providers yet.</td>
+                      <td colSpan="4" className="py-8 text-center text-slate-400">No providers yet.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
           </motion.div>
+
         </div>
       </div>
     </DashboardLayout>

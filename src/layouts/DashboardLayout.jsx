@@ -16,7 +16,8 @@ import {
   Bell,
   CalendarDays,
   MessageCircle,
-  Megaphone
+  Megaphone,
+  Menu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -530,8 +531,13 @@ const DashboardShell = ({ children, role = 'patient' }) => {
         {/* Main Content */}
         <div className={`flex-1 flex flex-col min-w-0 h-screen lg:p-4 ${isDesktopCollapsed ? 'lg:pl-4' : 'lg:pl-4'} transition-all duration-500`}>
           {/* Upper Panel Header - Raised Neumorphic Banner */}
-          <header className="h-[76px] neu-flat lg:rounded-[2rem] flex items-center justify-between px-5 lg:px-7 shrink-0 lg:mb-4">
-            <div className="flex items-center gap-3.5 min-w-0">
+          <header className="h-[68px] sm:h-[76px] neu-flat rounded-2xl lg:rounded-[2.25rem] flex items-center justify-between px-4 sm:px-6 lg:px-7 shrink-0 mb-3 sm:mb-4 transition-all">
+            <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+              {/* Mobile Heart Logo branding */}
+              <div className="lg:hidden neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary shrink-0 shadow-sm">
+                <Heart className="w-4 h-4 text-primary fill-primary" />
+              </div>
+
               {/* When collapsed on desktop: The heart badge physically flies here from the sidebar while spinning! */}
               {isDesktopCollapsed && (
                 <motion.button
@@ -559,33 +565,33 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               )}
 
               <div className="min-w-0">
-              <h2 className="text-sm md:text-lg font-display font-extrabold text-slate-900 dark:text-slate-100 truncate max-w-[200px] md:max-w-none">
-                Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
-              </h2>
-              <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-              </p>
+                <h2 className="text-xs sm:text-base md:text-lg font-display font-black text-slate-900 dark:text-slate-100 truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
+                  Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
+                </h2>
+                <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-3 sm:gap-4">
-            <ThemeToggle />
-            <NotificationBell />
-            <Link 
-              to={`/${currentRole}/profile`} 
-              className="neu-btn w-11 h-11 rounded-2xl flex items-center justify-center text-primary font-black shadow-sm shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden"
-              title="Profile"
-            >
-              {user.avatar_url ? (
-                <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-              ) : (
-                user.initials
-              )}
-            </Link>
-          </div>
-        </header>
+            <div className="flex items-center gap-2 sm:gap-3.5 shrink-0">
+              <ThemeToggle />
+              <NotificationBell />
+              <Link 
+                to={`/${currentRole}/profile`} 
+                className="neu-btn w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary font-black shadow-sm shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden"
+                title="Profile"
+              >
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs sm:text-sm font-black">{user.initials}</span>
+                )}
+              </Link>
+            </div>
+          </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-7 pb-28 lg:pb-10 neu-flat lg:rounded-[2.25rem] flex flex-col">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-3.5 sm:p-6 lg:p-7 pb-24 sm:pb-28 lg:pb-10 neu-flat lg:rounded-[2.25rem] flex flex-col">
           <div className="w-full max-w-full p-1 flex-1 flex flex-col">
             {children || <Outlet />}
           </div>

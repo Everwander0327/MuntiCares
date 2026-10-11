@@ -123,12 +123,15 @@ const ProviderProfileView = () => {
           </motion.button>
           
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-3xs font-extrabold ${isUserOnline(id) ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-slate-200/60 dark:bg-slate-800 text-slate-500'}`}>
-              <span className={`w-2 h-2 rounded-full ${isUserOnline(id) ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+            <span className={`neu-flat-sm inline-flex items-center px-3 py-1.5 rounded-full text-3xs font-extrabold uppercase tracking-wider ${
+              isUserOnline(id) 
+                ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10' 
+                : 'text-slate-500 dark:text-slate-400'
+            }`}>
               {isUserOnline(id) ? 'Active Online' : 'Offline'}
             </span>
             {provider.professional_id_status === 'verified' && (
-              <span className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-3xs font-extrabold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <span className="neu-flat-sm hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-3xs font-extrabold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10">
                 <ShieldCheck className="w-3.5 h-3.5" /> Verified Practitioner
               </span>
             )}
@@ -152,7 +155,7 @@ const ProviderProfileView = () => {
 
               {/* Avatar & Main Identity */}
               <div className="px-5 -mt-10 relative z-10 flex flex-col items-center">
-                <div className="w-20 h-20 rounded-2xl neu-flat overflow-hidden p-1 ring-4 ring-white dark:ring-slate-900 shadow-xl relative bg-white dark:bg-slate-800">
+                <div className="w-20 h-20 rounded-2xl neu-flat overflow-hidden p-1 shadow-xl relative">
                   {provider.avatar_url ? (
                     <img src={provider.avatar_url} alt={provider.full_name} className="w-full h-full object-cover rounded-[14px]" />
                   ) : (

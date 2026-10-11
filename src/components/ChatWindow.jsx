@@ -631,7 +631,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       )}
 
       {/* Chat Header */}
-      <div className="px-4 py-3 sm:py-3.5 neu-flat border-b border-white/60 dark:border-white/5 flex items-center gap-3 shrink-0 z-10">
+      <div 
+        className="px-4 py-3 sm:py-3.5 neu-flat border-b border-white/60 dark:border-white/5 flex items-center gap-3 shrink-0 z-10"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}
+      >
         {onBack && (
           <button
             onClick={onBack}
@@ -714,7 +717,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4' : 'mt-1'}`}
+                      className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4 sm:mt-5' : 'mt-2 sm:mt-2.5'}`}
                     >
                       {!isMe && (
                         <div className={`neu-flat-sm w-8 h-8 rounded-xl overflow-hidden shrink-0 mr-2.5 self-end p-0.5 ${showAvatar ? '' : 'invisible'}`}>
@@ -736,7 +739,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                           <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.content}</p>
                         </div>
                         {showTime && (
-                          <div className="flex items-center gap-1.5 mt-1 px-1">
+                          <div className="flex items-center gap-1.5 mt-1.5 px-1">
                             <span className="text-3xs text-slate-400 dark:text-slate-500 font-semibold tabular-nums">
                               {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -752,10 +755,12 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
               })}
 
               {/* 24-Hour Notice */}
-              <div className="flex justify-center my-6">
-                <span className="neu-flat-sm text-3xs text-slate-400 dark:text-slate-500 font-extrabold tracking-widest uppercase px-3.5 py-1.5 rounded-full flex items-center gap-1.5">
-                  <span>🔒</span> Messages disappear after 24 hours
+              <div className="flex items-center gap-3 my-6 px-4">
+                <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
+                <span className="text-3xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider select-none shrink-0">
+                  Messages disappear after 24 hours
                 </span>
+                <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
               </div>
             </>
           )}
@@ -806,7 +811,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       </div>
 
       {/* Input Area */}
-      <div className="p-3 sm:p-4 neu-flat border-t border-white/60 dark:border-white/5 shrink-0">
+      <div 
+        className="p-3 sm:p-4 neu-flat border-t border-white/60 dark:border-white/5 shrink-0"
+        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+      >
         <form onSubmit={handleSend} className="flex gap-2.5 max-w-4xl mx-auto items-center">
           <div className="neu-inset flex-1 flex items-center rounded-2xl px-3.5 sm:px-4 h-[46px] sm:h-[50px] transition-all">
             <input

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import { Search, ShieldCheck, Star, X, MapPin, Phone, Mail, BookOpen, Check, Ban, Clock, ExternalLink, FileText, Download, ArrowUpDown } from 'lucide-react';
+import { Search, ShieldCheck, ShieldAlert, Star, X, MapPin, Phone, Mail, BookOpen, Check, Ban, Clock, ExternalLink, FileText, Download, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CustomSelect from '../../components/CustomSelect';
 import DateRangePicker from '../../components/DateRangePicker';
@@ -393,158 +394,217 @@ const AdminProviders = () => {
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
+        {/* Neumorphic Header & Controls Toolbar */}
         <motion.div
-          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-          initial={{ opacity: 0, y: 20 }}
+          className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-3xl flex flex-col gap-4"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.35 }}
         >
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Manage Providers</h1>
-            <p className="text-slate-500 dark:text-slate-400">Review, approve, and manage healthcare professionals</p>
+          {/* Header Title & Subtitle */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 border-b border-white/60 dark:border-white/5 pb-3 sm:pb-0 sm:border-0">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-display font-black tracking-tight text-slate-900 dark:text-white">
+                Manage Providers
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                Review, verify credentials, and administer registered healthcare professionals in Muntinlupa
+              </p>
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="neu-flat-sm px-3 py-1 rounded-xl text-xs font-black text-primary">
+                {filteredProviders.length} {filteredProviders.length === 1 ? 'Provider' : 'Providers'}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-            <div className="relative flex-1 md:w-56">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
+
+          {/* Controls Bar - Mobile Optimized Grid & Flex */}
+          <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center gap-2.5 w-full">
+            {/* Neumorphic Inset Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none z-10" />
               <input
                 type="text"
-                placeholder="Search providers..."
+                placeholder="Search providers by name, email, or specialization..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-100 rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/10 shadow-sm dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
+                className="w-full neu-inset rounded-xl py-2.5 pl-10 pr-4 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[42px]"
               />
             </div>
-            <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onChange={({ start, end }) => { setStartDate(start); setEndDate(end); }}
-            />
-            <CustomSelect
-              value={filter}
-              onChange={setFilter}
-              options={[
-                { value: 'All', label: 'All Status' },
-                { value: 'Approved', label: 'Approved' },
-                { value: 'Pending Approval', label: 'Pending Approval' },
-                { value: 'Incomplete', label: 'Incomplete' },
-                { value: 'Banned', label: 'Banned' },
-              ]}
-            />
+
+            {/* Filter and Date Grid on Mobile, Inline on Desktop */}
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5">
+              <div className="col-span-1 sm:w-auto">
+                <CustomSelect
+                  value={filter}
+                  onChange={setFilter}
+                  options={[
+                    { value: 'All', label: 'All Status' },
+                    { value: 'Approved', label: 'Approved' },
+                    { value: 'Pending Approval', label: 'Pending Approval' },
+                    { value: 'Incomplete', label: 'Incomplete' },
+                    { value: 'Banned', label: 'Banned' },
+                  ]}
+                  className="w-full sm:w-[155px]"
+                />
+              </div>
+
+              <div className="col-span-1 sm:w-auto">
+                <DateRangePicker
+                  startDate={startDate}
+                  endDate={endDate}
+                  onChange={({ start, end }) => { setStartDate(start); setEndDate(end); }}
+                  className="w-full sm:w-auto"
+                />
+              </div>
+            </div>
+
+            {/* Export Action Button */}
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={handleExport}
-              className="flex items-center gap-2 px-3 py-2 min-h-[44px] rounded-xl bg-white border border-slate-100 text-slate-600 font-medium text-sm hover:bg-slate-50 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300"
+              className="neu-btn px-4 py-2 min-h-[42px] rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 hover:text-primary transition-all shrink-0 w-full sm:w-auto shadow-sm"
             >
-              <Download className="w-4 h-4" />
-              Export
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
             </motion.button>
           </div>
         </motion.div>
 
+        {/* Neumorphic Table Card */}
         <motion.div
-          className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden dark:bg-slate-800 dark:border-slate-700 dark:shadow-slate-900/50"
-          initial={{ opacity: 0, y: 20 }}
+          className="rounded-2xl sm:rounded-3xl md:neu-flat md:overflow-hidden"
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.15 }}
         >
-          {/* Bulk Action Bar */}
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 px-4 py-3 bg-primary/5 border-b border-primary/10 dark:bg-primary/10 dark:border-primary/20">
-              <span className="text-sm font-semibold text-primary">{selectedIds.size} selected</span>
-              <div className="flex gap-2 ml-auto">
-                <button
-                  onClick={handleBulkApprove}
-                  disabled={bulkLoading}
-                  className="px-3 py-2.5 rounded-lg text-xs font-bold bg-green-50 text-green-700 hover:bg-green-100 transition-colors disabled:opacity-50"
-                >
-                  {bulkLoading ? '...' : 'Approve All'}
-                </button>
-                <button
-                  onClick={handleBulkBan}
-                  disabled={bulkLoading}
-                  className="px-3 py-2.5 rounded-lg text-xs font-bold bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition-colors disabled:opacity-50"
-                >
-                  {bulkLoading ? '...' : 'Ban All'}
-                </button>
-                <button
-                  onClick={handleBulkDelete}
-                  disabled={bulkLoading}
-                  className="px-3 py-2.5 rounded-lg text-xs font-bold bg-red-50 text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
-                >
-                  {bulkLoading ? '...' : 'Delete All'}
-                </button>
-                <button
-                  onClick={() => setSelectedIds(new Set())}
-                  className="px-3 py-2.5 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-100 transition-colors"
-                >
-                  Clear
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Mobile Card View */}
-          <div className="block md:hidden divide-y divide-slate-50 dark:divide-slate-700">
+          {/* Mobile Card View - Separated Neumorphic Cards */}
+          <div className="block md:hidden space-y-3.5">
             {paginatedProviders.length === 0 ? (
-              <EmptyState icon="users" title="No providers found" message="No providers match your current search or filter." variant="compact" />
+              <div className="neu-flat p-6 rounded-2xl">
+                <EmptyState icon="users" title="No providers found" message="No providers match your current search or filter." variant="compact" />
+              </div>
             ) : (
               paginatedProviders.map((p, idx) => {
-                const style = getStatusStyle(p.status);
+                const isSelected = selectedIds.has(p.id);
                 return (
                   <motion.div
                     key={p.id}
-                    className="p-4 space-y-3 cursor-pointer hover:bg-slate-50/50 transition-colors dark:hover:bg-slate-700/50"
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: idx * 0.05 }}
-                    onClick={() => setSelectedProvider(p)}
+                    className={`neu-flat p-4 sm:p-5 rounded-2xl space-y-3.5 transition-all ${
+                      isSelected ? 'ring-2 ring-primary/60 bg-primary/[0.04] dark:bg-primary/[0.08]' : ''
+                    }`}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.04 }}
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(p.id)}
-                          onChange={(e) => { e.stopPropagation(); toggleSelect(p.id); }}
-                          className="appearance-none w-4 h-4 rounded border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary/30 checked:bg-[url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27%3e%3cpath fill=%27white%27 d=%27M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:12px]"
-                        />
-                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary dark:bg-blue-900/30 overflow-hidden shrink-0">
-                          {p.avatar_url ? (
+                    <div className="flex justify-between items-start gap-2">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {/* Interactive Avatar Selection Ring */}
+                        <motion.button
+                          whileTap={{ scale: 0.92 }}
+                          onClick={() => toggleSelect(p.id)}
+                          className={`relative w-11 h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all shrink-0 overflow-hidden ${
+                            isSelected 
+                              ? 'neu-inset ring-2 ring-primary text-white bg-primary shadow-inner' 
+                              : 'neu-flat-sm text-primary hover:ring-1 hover:ring-primary/40'
+                          }`}
+                          title={isSelected ? "Click to deselect" : "Click to select"}
+                        >
+                          {isSelected ? (
+                            <Check className="w-5 h-5 text-primary stroke-[3]" />
+                          ) : p.avatar_url ? (
                             <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
                             p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
                           )}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 dark:text-slate-100">{p.name}</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500">{p.email}</p>
+                        </motion.button>
+
+                        <div 
+                          className="min-w-0 flex-1 cursor-pointer"
+                          onClick={() => setSelectedProvider(p)}
+                        >
+                          <p className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-primary transition-colors">{p.name}</p>
+                          <p className="text-2xs text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5">{p.email}</p>
                         </div>
                       </div>
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-widest ${style.bg}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full status-dot ${style.dot}`} />
+
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
+                        p.status === 'Approved' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' :
+                        p.status === 'Pending Approval' ? 'neu-flat-sm text-amber-600 dark:text-amber-400' :
+                        p.status === 'Banned' ? 'neu-flat-sm text-rose-600 dark:text-rose-400' :
+                        'neu-flat-sm text-slate-500'
+                      }`}>
                         {p.status}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600 dark:text-slate-300">{p.services.length > 0 ? p.services[0] : 'No services'}</span>
-                      <div className="flex items-center gap-1 text-yellow-500 font-bold">
-                        <Star className="w-3 h-3 fill-current" />
-                        {Number(p.rating).toFixed(1)}
+
+                    <div className="flex items-center justify-between text-xs gap-2">
+                      <span className="neu-flat-sm px-2.5 py-1 rounded-xl text-primary font-bold text-3xs truncate max-w-[200px]">
+                        {p.services.length > 0 ? p.services[0] : 'General Healthcare'}
+                      </span>
+                      <div className="neu-flat-sm px-2.5 py-1 rounded-xl flex items-center gap-1 text-amber-500 font-black text-2xs shrink-0">
+                        <Star className="w-3 h-3 fill-amber-500" />
+                        <span>{Number(p.rating).toFixed(1)}</span>
                       </div>
                     </div>
-                    <div className="pt-1">
-                      {p.professional_id_status === 'verified' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                          <ShieldCheck className="w-3 h-3" /> Verified
-                        </span>
-                      ) : p.professional_id_status === 'pending' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                          <Clock className="w-3 h-3" /> ID Pending
-                        </span>
-                      ) : p.professional_id_status === 'rejected' ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-2xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                          <X className="w-3 h-3" /> Rejected
-                        </span>
-                      ) : null}
+
+                    <div className="neu-inset px-3 py-2 rounded-xl text-2xs text-slate-400 font-semibold flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        {p.professional_id_status === 'verified' ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-black text-3xs uppercase">
+                            <ShieldCheck className="w-3.5 h-3.5" /> ID Verified
+                          </span>
+                        ) : p.professional_id_status === 'pending' ? (
+                          <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400 font-black text-3xs uppercase">
+                            <Clock className="w-3.5 h-3.5" /> Pending ID
+                          </span>
+                        ) : p.professional_id_status === 'rejected' ? (
+                          <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400 font-black text-3xs uppercase">
+                            <X className="w-3.5 h-3.5" /> Rejected ID
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-slate-500 dark:text-slate-400 font-black text-3xs uppercase">
+                            <ShieldAlert className="w-3.5 h-3.5 text-slate-400" /> Unverified
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setSelectedProvider(p)}
+                        className="text-primary font-bold hover:underline flex items-center gap-1 text-3xs uppercase tracking-wider"
+                      >
+                        Verification Record →
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {p.status === 'Pending Approval' ? (
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          className="text-xs font-bold py-2.5 rounded-xl neu-btn text-emerald-600 dark:text-emerald-400 transition-all text-center"
+                          onClick={() => handleApprove(p)}
+                          disabled={actionLoading}
+                        >
+                          Approve Provider
+                        </motion.button>
+                      ) : (
+                        <motion.button
+                          whileTap={{ scale: 0.96 }}
+                          className={`text-xs font-bold py-2.5 rounded-xl neu-btn transition-all text-center ${
+                            p.is_banned ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                          }`}
+                          onClick={() => handleBan(p)}
+                          disabled={actionLoading}
+                        >
+                          {p.is_banned ? 'Unban Provider' : 'Ban Provider'}
+                        </motion.button>
+                      )}
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        className="text-xs font-bold text-slate-700 dark:text-slate-200 neu-btn py-2.5 rounded-xl transition-all text-center hover:text-primary"
+                        onClick={() => setSelectedProvider(p)}
+                      >
+                        Full Details
+                      </motion.button>
                     </div>
                   </motion.div>
                 );
@@ -554,101 +614,121 @@ const AdminProviders = () => {
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse table-striped">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider dark:bg-slate-900 dark:text-slate-400">
-                  <th className="px-4 py-4 w-10">
-                    <input
-                      type="checkbox"
-                      checked={filteredProviders.length > 0 && selectedIds.size === filteredProviders.length}
-                      onChange={toggleSelectAll}
-                      className="appearance-none w-4 h-4 rounded border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary/30 checked:bg-[url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27%3e%3cpath fill=%27white%27 d=%27M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:12px]"
-                    />
+                <tr className="border-b border-white/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30 text-slate-400 dark:text-slate-500 text-3xs font-black uppercase tracking-wider">
+                  <th className="px-6 py-4 w-12 text-center select-none">
+                    <span className="text-4xs font-mono opacity-60">SELECT</span>
                   </th>
-                  <SortableHeader label="Name" sortKey="name" />
+                  <SortableHeader label="Healthcare Professional" sortKey="name" />
                   <SortableHeader label="Specialization" sortKey="services" />
                   <SortableHeader label="Rating" sortKey="rating" />
-                  <th className="px-6 py-4 font-semibold">Documents</th>
-                  <SortableHeader label="Joined" sortKey="joinTimestamp" />
+                  <th className="px-6 py-4 font-black">Credentials</th>
+                  <SortableHeader label="Joined Date" sortKey="joinTimestamp" />
                   <SortableHeader label="Status" sortKey="status" />
-                  <th className="px-6 py-4 font-semibold text-right">Action</th>
+                  <th className="px-6 py-4 font-black text-right">Review Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/60 dark:divide-white/5">
                 {paginatedProviders.length === 0 ? (
                   <tr>
                     <td colSpan="8"><EmptyState icon="users" title="No providers found" message="No providers match your current search or filter." variant="compact" /></td>
                   </tr>
                 ) : (
                   paginatedProviders.map((p, idx) => {
-                    const style = getStatusStyle(p.status);
+                    const isSelected = selectedIds.has(p.id);
                     return (
                       <motion.tr
                         key={p.id}
-                        className="transition-colors cursor-pointer hover:bg-blue-50/30 dark:hover:bg-blue-900/20"
+                        className={`transition-colors cursor-pointer ${
+                          isSelected 
+                            ? 'bg-primary/[0.08] dark:bg-primary/[0.15]' 
+                            : 'hover:bg-primary/5'
+                        }`}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 + idx * 0.03 }}
+                        transition={{ delay: 0.15 + idx * 0.02 }}
                         onClick={() => setSelectedProvider(p)}
                       >
-                        <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.has(p.id)}
-                            onChange={() => toggleSelect(p.id)}
-                            className="appearance-none w-4 h-4 rounded border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 checked:bg-primary checked:border-primary focus:ring-2 focus:ring-primary/30 checked:bg-[url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 20 20%27%3e%3cpath fill=%27white%27 d=%27M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z%27/%3e%3c/svg%3e')] bg-center bg-no-repeat bg-[length:12px]"
-                          />
+                        {/* Interactive Avatar Selection Column */}
+                        <td className="px-6 py-3.5 text-center" onClick={e => e.stopPropagation()}>
+                          <motion.button
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => toggleSelect(p.id)}
+                            className={`w-9 h-9 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all overflow-hidden ${
+                              isSelected
+                                ? 'neu-inset ring-2 ring-primary text-primary bg-primary/10 shadow-inner'
+                                : 'neu-flat-sm text-primary hover:ring-2 hover:ring-primary/40'
+                            }`}
+                            title={isSelected ? "Selected (Click to deselect)" : "Click avatar to select"}
+                          >
+                            {isSelected ? (
+                              <Check className="w-4 h-4 text-primary stroke-[3]" />
+                            ) : p.avatar_url ? (
+                              <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                            )}
+                          </motion.button>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-bold text-primary dark:bg-blue-900/30 overflow-hidden shrink-0">
-                              {p.avatar_url ? (
-                                <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                              )}
-                            </div>
-                            <div>
-                              <span className="font-bold text-slate-700 block dark:text-slate-200">{p.name}</span>
-                              <span className="text-xs text-slate-400 dark:text-slate-500">{p.email}</span>
-                            </div>
+
+                        <td className="px-6 py-3.5">
+                          <div>
+                            <span className="font-bold text-slate-800 dark:text-slate-100 block group-hover:text-primary transition-colors">{p.name}</span>
+                            <span className="text-3xs text-slate-400 font-medium">{p.email}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-slate-600 text-sm dark:text-slate-300">{p.services.length > 0 ? p.services.join(', ') : '—'}</td>
-                        <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                          <div className="flex items-center gap-1 text-yellow-500 font-bold text-sm">
-                            <Star className="w-4 h-4 fill-current" />
-                            {Number(p.rating).toFixed(1)}
+
+                        <td className="px-6 py-3.5">
+                          <span className="neu-flat-sm px-2.5 py-1 rounded-xl text-primary font-bold text-3xs inline-block max-w-[180px] truncate">
+                            {p.services.length > 0 ? p.services.join(', ') : '—'}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-3.5 text-slate-700 dark:text-slate-200">
+                          <div className="neu-flat-sm px-2.5 py-1 rounded-xl inline-flex items-center gap-1 text-amber-500 font-black text-2xs">
+                            <Star className="w-3 h-3 fill-amber-500" />
+                            <span>{Number(p.rating).toFixed(1)}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
+
+                        <td className="px-6 py-3.5">
                           {p.professional_id_status === 'verified' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-3xs font-black uppercase tracking-wider neu-flat-sm text-emerald-600 dark:text-emerald-400">
                               <ShieldCheck className="w-3 h-3" /> Verified
                             </span>
                           ) : p.professional_id_status === 'pending' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                              <Clock className="w-3 h-3" /> Pending
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-3xs font-black uppercase tracking-wider neu-flat-sm text-amber-600 dark:text-amber-400">
+                              <Clock className="w-3 h-3" /> Pending ID
                             </span>
                           ) : p.professional_id_status === 'rejected' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-2xs font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-3xs font-black uppercase tracking-wider neu-flat-sm text-rose-600 dark:text-rose-400">
                               <X className="w-3 h-3" /> Rejected
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">—</span>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-3xs font-black uppercase tracking-wider neu-flat-sm text-slate-500 dark:text-slate-400">
+                              <ShieldAlert className="w-3 h-3 text-slate-400" /> Unverified
+                            </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-slate-500 text-sm dark:text-slate-400">{p.joinDate}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-semibold uppercase tracking-widest ${style.bg}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full status-dot ${style.dot}`} />
+
+                        <td className="px-6 py-3.5 text-slate-400 font-mono text-2xs">{p.joinDate}</td>
+
+                        <td className="px-6 py-3.5">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider ${
+                            p.status === 'Approved' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' :
+                            p.status === 'Pending Approval' ? 'neu-flat-sm text-amber-600 dark:text-amber-400' :
+                            p.status === 'Banned' ? 'neu-flat-sm text-rose-600 dark:text-rose-400' :
+                            'neu-flat-sm text-slate-500'
+                          }`}>
                             {p.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-right" onClick={e => e.stopPropagation()}>
+
+                        <td className="px-6 py-3.5 text-right" onClick={e => e.stopPropagation()}>
                           <motion.button
-                            whileTap={{ scale: 0.96 }}
-                            className="px-3 py-2 text-xs font-bold rounded-xl bg-blue-50 text-primary hover:bg-blue-100 transition-colors dark:bg-blue-900/30"
+                            whileTap={{ scale: 0.94 }}
+                            className="neu-btn px-3.5 py-1.5 text-xs font-black rounded-xl text-primary hover:text-primary-focus transition-all"
                             onClick={() => setSelectedProvider(p)}
                           >
                             Review
@@ -662,7 +742,7 @@ const AdminProviders = () => {
             </table>
           </div>
 
-          <div className="p-4 border-t border-slate-100 dark:border-slate-700">
+          <div className="p-4 border-t border-white/60 dark:border-white/5">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
@@ -670,214 +750,321 @@ const AdminProviders = () => {
             />
           </div>
         </motion.div>
+
+        {/* Floating Dynamic Island Bulk Action Dock Teleported to document.body */}
+        {typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {selectedIds.size > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 70, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 70, scale: 0.92 }}
+                transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                className="fixed bottom-20 lg:bottom-8 inset-x-0 z-[9999] flex justify-center px-3 sm:px-4 pointer-events-none"
+                style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+              >
+                <div className="neu-flat px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/90 dark:border-white/10 shadow-2xl bg-[#ebf1f8]/95 dark:bg-[#172236]/95 backdrop-blur-2xl flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 pointer-events-auto max-w-[94vw]">
+                  {/* Count Badge & Select All Toggle */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 pr-2.5 sm:pr-3.5 border-r border-slate-300 dark:border-slate-700 shrink-0">
+                    <span className="w-6 h-6 rounded-full bg-primary text-white font-display font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                      {selectedIds.size}
+                    </span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100 hidden sm:inline">
+                      Selected
+                    </span>
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      onClick={toggleSelectAll}
+                      className="neu-btn px-2.5 py-1 rounded-full text-3xs font-extrabold text-primary flex items-center gap-1 hover:text-primary-focus transition-all ml-1"
+                      title={selectedIds.size === filteredProviders.length ? "Deselect All Providers" : "Select All Filtered Providers"}
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>{selectedIds.size === filteredProviders.length ? 'Deselect All' : 'Select All'}</span>
+                    </motion.button>
+                  </div>
+
+                  {/* Bulk Actions */}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      onClick={handleBulkApprove}
+                      disabled={bulkLoading}
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 transition-all shrink-0"
+                      title="Approve All Selected"
+                    >
+                      <Check className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden xs:inline">Approve</span>
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      onClick={handleBulkBan}
+                      disabled={bulkLoading}
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 transition-all shrink-0"
+                      title="Ban All Selected"
+                    >
+                      <Ban className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden xs:inline">Ban</span>
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      onClick={handleBulkDelete}
+                      disabled={bulkLoading}
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 transition-all shrink-0"
+                      title="Delete All Selected"
+                    >
+                      <X className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden xs:inline">Delete</span>
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      onClick={() => setSelectedIds(new Set())}
+                      className="neu-btn p-1.5 sm:p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all shrink-0 ml-0.5"
+                      title="Clear Selection"
+                    >
+                      <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
       </div>
 
-      {/* Provider Detail Modal */}
-      <AnimatePresence>
-        {selectedProvider && (
-          <motion.div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedProvider(null)}
-          >
+      {/* Neumorphic Provider Detail Modal Teleported to document.body */}
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {selectedProvider && (
             <motion.div
-              className="bg-white rounded-[2rem] shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto dark:bg-slate-800"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={e => e.stopPropagation()}
+              className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 sm:backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-4 md:p-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setSelectedProvider(null)}
             >
-              {/* Header */}
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white rounded-t-[2rem] z-10 dark:border-slate-700 dark:bg-slate-800">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Provider Details</h2>
-                <button onClick={() => setSelectedProvider(null)} className="p-2.5 hover:bg-slate-100 rounded-xl transition-colors dark:hover:bg-slate-700">
-                  <X className="w-5 h-5 text-slate-400 dark:text-slate-500" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {/* Avatar + Name */}
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center text-2xl font-bold text-primary dark:bg-blue-900/30 overflow-hidden shrink-0">
-                    {selectedProvider.avatar_url ? (
-                      <img src={selectedProvider.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      selectedProvider.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                    )}
-                  </div>
+              <motion.div
+                className="neu-flat rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl bg-[#ebf1f8] dark:bg-[#172236] transform-gpu will-change-transform"
+                initial={{ scale: 0.96, opacity: 0, y: 10 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.96, opacity: 0, y: 10 }}
+                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-[#ebf1f8] dark:bg-[#172236] z-10">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{selectedProvider.name}</h3>
-                    <p className="text-primary text-sm font-semibold">{selectedProvider.bio || 'No bio provided'}</p>
-                    {(() => {
-                      const style = getStatusStyle(selectedProvider.status);
-                      return (
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-2xs font-semibold uppercase tracking-widest mt-1 ${style.bg}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                          {selectedProvider.status}
-                        </span>
-                      );
-                    })()}
+                    <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Provider Verification</h2>
+                    <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Credentials & Status</p>
                   </div>
+                  <span className="neu-flat-sm px-3 py-1 rounded-xl text-3xs font-extrabold text-primary uppercase tracking-wider">
+                    {selectedProvider.status}
+                  </span>
                 </div>
 
-                {/* Contact Info */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
-                    <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>{selectedProvider.email}</span>
+                <div className="p-5 sm:p-6 space-y-6 overflow-y-auto flex-1">
+                  {/* Avatar + Name */}
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl neu-inset flex items-center justify-center text-xl font-black text-sky-500 overflow-hidden shrink-0 shadow-inner">
+                      {selectedProvider.avatar_url ? (
+                        <img src={selectedProvider.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        selectedProvider.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-display font-black text-slate-900 dark:text-white">{selectedProvider.name}</h3>
+                      <p className="text-primary text-xs font-semibold">{selectedProvider.bio || 'General Healthcare Provider'}</p>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider mt-1.5 ${
+                        selectedProvider.status === 'Approved' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' :
+                        selectedProvider.status === 'Pending Approval' ? 'neu-flat-sm text-amber-600 dark:text-amber-400' :
+                        selectedProvider.status === 'Banned' ? 'neu-flat-sm text-rose-600 dark:text-rose-400' :
+                        'neu-flat-sm text-slate-500'
+                      }`}>
+                        {selectedProvider.status}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
-                    <Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>{selectedProvider.phone || 'Not provided'}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
-                    <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>{selectedProvider.location}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
-                    <BookOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    <span>₱{selectedProvider.price_per_service} per service</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-slate-600 text-sm dark:text-slate-300">
-                    <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span>{Number(selectedProvider.rating).toFixed(1)} rating</span>
-                  </div>
-                </div>
 
-                {/* Specializations */}
-                <div>
-                  <p className="text-xs text-slate-400 font-bold uppercase mb-2 dark:text-slate-500">Specializations</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProvider.services.length > 0 ? (
-                      selectedProvider.services.map((s, i) => (
-                        <span key={i} className="px-3 py-1.5 bg-blue-50 text-primary rounded-xl text-xs font-bold border border-blue-100 dark:bg-blue-900/30">{s}</span>
-                      ))
-                    ) : (
-                      <p className="text-slate-400 text-sm dark:text-slate-500">No specializations listed.</p>
-                    )}
+                  {/* Contact Info */}
+                  <div className="neu-flat-sm p-4 rounded-2xl space-y-2.5 text-xs">
+                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
+                      <Mail className="w-4 h-4 text-primary shrink-0" />
+                      <span className="truncate">{selectedProvider.email}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
+                      <Phone className="w-4 h-4 text-primary shrink-0" />
+                      <span>{selectedProvider.phone || 'Not provided'}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
+                      <MapPin className="w-4 h-4 text-primary shrink-0" />
+                      <span>{selectedProvider.location}</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
+                      <BookOpen className="w-4 h-4 text-primary shrink-0" />
+                      <span>₱{selectedProvider.price_per_service} per service</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
+                      <Star className="w-4 h-4 text-amber-500 fill-current shrink-0" />
+                      <span>{Number(selectedProvider.rating).toFixed(1)} rating ({selectedProvider.trust_score}% Trust Score)</span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Professional ID Verification */}
-                {(selectedProvider.professional_id_paths?.length > 0 || selectedProvider.professional_id_path) && (
+                  {/* Specializations */}
                   <div>
-                    <p className="text-xs text-slate-400 font-bold uppercase mb-2 dark:text-slate-500">Professional ID</p>
-                    {professionalIdPreviews.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2 mb-3">
-                        {professionalIdPreviews.map((url, i) => (
-                          <div key={i} className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 p-1">
-                            {url.endsWith('.pdf') ? (
-                              <div className="flex items-center gap-2 p-2">
-                                <FileText className="w-5 h-5 text-primary shrink-0" />
-                                <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
-                                <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0">
-                                  <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                    <p className="text-3xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider mb-2">Specializations</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProvider.services.length > 0 ? (
+                        selectedProvider.services.map((s, i) => (
+                          <span key={i} className="px-3 py-1 neu-flat-sm text-primary rounded-xl text-xs font-bold">{s}</span>
+                        ))
+                      ) : (
+                        <p className="text-slate-400 text-xs">No specializations listed.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Professional ID Verification */}
+                  {selectedProvider.professional_id_paths?.length > 0 || selectedProvider.professional_id_path ? (
+                    <div>
+                      <p className="text-3xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider mb-2">Professional ID Documents</p>
+                      {professionalIdPreviews.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          {professionalIdPreviews.map((url, i) => (
+                            <div key={i} className="rounded-2xl overflow-hidden neu-inset p-1.5">
+                              {url.endsWith('.pdf') ? (
+                                <div className="flex items-center gap-2 p-2">
+                                  <FileText className="w-5 h-5 text-primary shrink-0" />
+                                  <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
+                                  <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0 neu-btn p-1 rounded-lg">
+                                    <ExternalLink className="w-3.5 h-3.5 text-primary" />
+                                  </a>
+                                </div>
+                              ) : (
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="block">
+                                  <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-xl" />
                                 </a>
-                              </div>
-                            ) : (
-                              <a href={url} target="_blank" rel="noopener noreferrer" className="block">
-                                <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-lg" />
-                              </a>
-                            )}
-                          </div>
-                        ))}
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400 p-2 mb-3">Loading preview...</p>
+                      )}
+                      {selectedProvider.professional_id_status === 'pending' && (
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => handleVerifyDocument(selectedProvider)}
+                            disabled={docActionLoading}
+                            className="neu-btn flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-emerald-600 dark:text-emerald-400 transition-all disabled:opacity-50"
+                          >
+                            <Check className="w-4 h-4" />
+                            {docActionLoading ? '...' : 'Verify ID'}
+                          </motion.button>
+                          <motion.button
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => handleRejectDocument(selectedProvider)}
+                            disabled={docActionLoading}
+                            className="neu-btn flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-rose-600 dark:text-rose-400 transition-all disabled:opacity-50"
+                          >
+                            <X className="w-4 h-4" />
+                            {docActionLoading ? '...' : 'Reject ID'}
+                          </motion.button>
+                        </div>
+                      )}
+                      {selectedProvider.professional_id_status === 'verified' && (
+                        <div className="flex items-center gap-2 px-3.5 py-2 neu-flat-sm text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold mb-3">
+                          <ShieldCheck className="w-4 h-4 shrink-0" />
+                          Professional ID has been verified.
+                        </div>
+                      )}
+                      {selectedProvider.professional_id_status === 'rejected' && (
+                        <div className="flex items-center gap-2 px-3.5 py-2 neu-flat-sm text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold mb-3">
+                          <X className="w-4 h-4 shrink-0" />
+                          Professional ID was rejected.
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="text-3xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider mb-2">Professional ID Documents</p>
+                      <div className="flex items-center gap-2.5 p-3.5 neu-inset rounded-2xl text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>No professional credentials uploaded yet (<strong className="text-slate-700 dark:text-slate-200">Unverified</strong>).</span>
                       </div>
-                    ) : (
-                      <p className="text-xs text-slate-400 p-2 mb-3">Loading preview...</p>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="space-y-2.5 pt-2 border-t border-white/60 dark:border-white/5">
+                    {selectedProvider.status === 'Pending Approval' && (
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => handleApprove(selectedProvider)}
+                        disabled={actionLoading}
+                        className="w-full neu-btn flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs text-emerald-600 dark:text-emerald-400 transition-all disabled:opacity-50"
+                      >
+                        <Check className="w-4 h-4" />
+                        {actionLoading ? 'Processing...' : 'Approve Provider'}
+                      </motion.button>
                     )}
-                    {selectedProvider.professional_id_status === 'pending' && (
-                      <div className="grid grid-cols-2 gap-2 mb-3">
-                        <motion.button
-                          whileTap={{ scale: 0.96 }}
-                          onClick={() => handleVerifyDocument(selectedProvider)}
-                          disabled={docActionLoading}
-                          className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-200 hover:shadow-xl hover:shadow-green-200 transition-all disabled:opacity-50"
-                        >
-                          <Check className="w-4 h-4" />
-                          {docActionLoading ? '...' : 'Verify ID'}
-                        </motion.button>
-                        <motion.button
-                          whileTap={{ scale: 0.96 }}
-                          onClick={() => handleRejectDocument(selectedProvider)}
-                          disabled={docActionLoading}
-                          className="flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-xs text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 transition-all disabled:opacity-50 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 dark:border-red-900/50"
-                        >
-                          <X className="w-4 h-4" />
-                          {docActionLoading ? '...' : 'Reject ID'}
-                        </motion.button>
-                      </div>
+                    {selectedProvider.status === 'Approved' && (
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        onClick={() => handleReject(selectedProvider)}
+                        disabled={actionLoading}
+                        className="w-full neu-btn flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs text-amber-600 dark:text-amber-400 transition-all disabled:opacity-50"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        {actionLoading ? 'Processing...' : 'Revoke Approval'}
+                      </motion.button>
                     )}
-                    {selectedProvider.professional_id_status === 'verified' && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/50 rounded-xl text-xs font-medium text-green-700 dark:text-green-300 mb-3">
-                        <ShieldCheck className="w-4 h-4 shrink-0" />
-                        Professional ID has been verified.
-                      </div>
-                    )}
-                    {selectedProvider.professional_id_status === 'rejected' && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/50 rounded-xl text-xs font-medium text-red-700 dark:text-red-300 mb-3">
-                        <X className="w-4 h-4 shrink-0" />
-                        Professional ID was rejected.
-                      </div>
-                    )}
+
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => handleBan(selectedProvider)}
+                      disabled={actionLoading}
+                      className={`w-full neu-btn flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs transition-all disabled:opacity-50 ${
+                        selectedProvider.is_banned ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+                      }`}
+                    >
+                      <Ban className="w-4 h-4" />
+                      {actionLoading ? 'Processing...' : selectedProvider.is_banned ? 'Unban Provider' : 'Ban Provider'}
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      onClick={() => handleRemove(selectedProvider)}
+                      disabled={actionLoading}
+                      className="w-full neu-btn flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs text-rose-600 dark:text-rose-400 transition-all disabled:opacity-50"
+                    >
+                      <X className="w-4 h-4" />
+                      {actionLoading ? 'Processing...' : 'Permanently Remove'}
+                    </motion.button>
                   </div>
-                )}
+                </div>
 
-                {/* Action Buttons */}
-                <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-slate-700">
-                  {selectedProvider.status === 'Pending Approval' && (
-                    <motion.button
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => handleApprove(selectedProvider)}
-                      disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-white bg-green-500 hover:bg-green-600 shadow-lg shadow-green-200 hover:shadow-xl hover:shadow-green-200 transition-all disabled:opacity-50"
-                    >
-                      <Check className="w-4 h-4" />
-                      {actionLoading ? 'Processing...' : 'Approve Provider'}
-                    </motion.button>
-                  )}
-                  {selectedProvider.status === 'Approved' && (
-                    <motion.button
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => handleReject(selectedProvider)}
-                      disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 transition-all disabled:opacity-50 dark:bg-yellow-900/30 dark:text-yellow-300 dark:hover:bg-yellow-900/50 dark:border-yellow-900/50"
-                    >
-                      <ShieldCheck className="w-4 h-4" />
-                      {actionLoading ? 'Processing...' : 'Revoke Approval'}
-                    </motion.button>
-                  )}
-
+                {/* Modal Footer - Full Width Close Button */}
+                <div className="p-4 sm:p-5 border-t border-white/60 dark:border-white/5 bg-[#ebf1f8]/60 dark:bg-[#172236]/60">
                   <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => handleBan(selectedProvider)}
-                    disabled={actionLoading}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold transition-all disabled:opacity-50 ${
-                      selectedProvider.is_banned
-                        ? 'text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:hover:bg-green-900/50 dark:border-green-900/50'
-                        : 'text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50 dark:border-red-900/50'
-                    }`}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setSelectedProvider(null)}
+                    className="w-full neu-btn py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 hover:text-primary transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
-                    <Ban className="w-4 h-4" />
-                    {actionLoading ? 'Processing...' : selectedProvider.is_banned ? 'Unban Provider' : 'Ban Provider'}
-                  </motion.button>
-
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => handleRemove(selectedProvider)}
-                    disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-red-600 bg-white hover:bg-red-50 border border-red-200 transition-all disabled:opacity-50 dark:bg-slate-800 dark:text-red-300 dark:hover:bg-red-900/30 dark:border-red-900/50"
-                  >
-                    <X className="w-4 h-4" />
-                    {actionLoading ? 'Processing...' : 'Permanently Remove'}
+                    Close Verification
                   </motion.button>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </DashboardLayout>
   );
 };

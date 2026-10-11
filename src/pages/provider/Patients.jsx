@@ -184,7 +184,6 @@ const ProviderPatients = () => {
                 }`}
                 title="Filter Active consultations"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
                 <span>{stats.active} Active</span>
               </button>
               <button
@@ -197,7 +196,6 @@ const ProviderPatients = () => {
                 }`}
                 title="Filter Completed visits"
               >
-                <span className="w-2 h-2 rounded-full bg-blue-500" />
                 <span>{stats.completed} Completed</span>
               </button>
               {statusFilter !== 'All' && (
