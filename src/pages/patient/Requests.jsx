@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { 
-  Clock, MapPin, MessageSquare, Star, XCircle, FileUp, 
+  Clock, MapPin, MessageSquare, XCircle, FileUp, 
   Search, SlidersHorizontal, Check, Calendar, Activity, 
   ChevronRight, ChevronLeft, ArrowUpDown, Filter, Sparkles, X, ChevronDown,
   AlertCircle, CheckCircle2, ShieldAlert
@@ -32,38 +32,38 @@ const getStatusStyle = (status) => {
     case 'On The Way':
     case 'Arrived':
       return {
-        badge: 'neu-flat-sm text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15 font-black',
+        badge: 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] border border-[#2C7A55]/30 dark:border-[#7DD3A3]/30 bg-[#E1F3EA] dark:bg-[#14301F] font-black',
         icon: Sparkles,
-        dot: 'bg-emerald-500',
+        dot: 'bg-[#2C7A55] dark:bg-[#7DD3A3]',
         ping: true,
       };
     case 'Completed':
       return {
-        badge: 'neu-flat-sm text-blue-600 dark:text-blue-400 border border-blue-500/30 bg-blue-500/10 dark:bg-blue-500/15 font-black',
+        badge: 'neu-flat-sm text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#2F6FB5]/30 dark:border-[#8CBDF0]/30 bg-[#DDEBF8] dark:bg-[#183049] font-black',
         icon: CheckCircle2,
-        dot: 'bg-blue-500',
+        dot: 'bg-[#2F6FB5] dark:bg-[#8CBDF0]',
         ping: false,
       };
     case 'Pending':
       return {
-        badge: 'neu-flat-sm text-amber-600 dark:text-amber-400 border border-amber-500/30 bg-amber-500/10 dark:bg-amber-500/15 font-black',
+        badge: 'neu-flat-sm text-[#9C5A06] dark:text-[#F1BD6B] border border-[#9C5A06]/30 dark:border-[#F1BD6B]/30 bg-[#FFF1D6] dark:bg-[#34260E] font-black',
         icon: Clock,
-        dot: 'bg-amber-500',
+        dot: 'bg-[#9C5A06] dark:bg-[#F1BD6B]',
         ping: false,
       };
     case 'Cancelled':
       return {
-        badge: 'neu-flat-sm text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-700 bg-slate-200/50 dark:bg-slate-800/60 font-bold',
+        badge: 'neu-flat-sm text-[#52657A] dark:text-[#A5B6C8] border border-[#D2E0EE] dark:border-[#2D3F54] bg-[#E9F1F9] dark:bg-[#1F2D3E] font-bold',
         icon: XCircle,
-        dot: 'bg-slate-400',
+        dot: 'bg-[#52657A] dark:bg-[#A5B6C8]',
         ping: false,
       };
     case 'Rejected':
     default:
       return {
-        badge: 'neu-flat-sm text-rose-600 dark:text-rose-400 border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15 font-black',
+        badge: 'neu-flat-sm text-[#BC3030] dark:text-[#F4918B] border border-[#BC3030]/30 dark:border-[#F4918B]/30 bg-[#FCE8E6] dark:bg-[#3C1B1A] font-black',
         icon: AlertCircle,
-        dot: 'bg-rose-500',
+        dot: 'bg-[#BC3030] dark:bg-[#F4918B]',
         ping: false,
       };
   }
@@ -114,15 +114,15 @@ const RequestCard = ({
               )}
               <span>{status}</span>
             </span>
-            <span className="font-display text-sm font-black text-slate-900 dark:text-white tabular-nums sm:hidden">
+            <span className="font-display text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums sm:hidden">
               ₱{Number(price || 0).toLocaleString()}
             </span>
           </div>
         </div>
 
         {/* Middle Meta Details (Clean Flat Style) */}
-        <div className="py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 text-xs bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-slate-600 dark:text-slate-300 font-medium text-2xs sm:text-xs">
+        <div className="py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 text-xs bg-[#E9F1F9] dark:bg-[#1F2D3E] border border-[#D2E0EE] dark:border-[#2D3F54]">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[#52657A] dark:text-[#A5B6C8] font-medium text-2xs sm:text-xs">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>{date}</span>
@@ -133,70 +133,71 @@ const RequestCard = ({
             </span>
           </div>
 
-          <div className="hidden sm:block font-display text-sm font-black text-slate-900 dark:text-white tabular-nums">
+          <div className="hidden sm:block font-display text-sm font-black text-[#2C7A55] dark:text-[#7DD3A3] tabular-nums">
             ₱{Number(price || 0).toLocaleString()}
           </div>
         </div>
       </div>
 
       {/* Action Buttons Flush at Bottom */}
-      <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-0 flex flex-wrap items-center justify-end gap-2">
-        {/* Chat Shortcut - Primary for active on-the-way visits */}
-        {['Accepted', 'On The Way', 'Arrived'].includes(status) && (
-          <Link 
-            to={`/patient/messages?provider=${providerId}`}
-            className="neu-btn-primary flex-1 sm:flex-initial justify-center px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer shadow-sm"
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            <span>Chat Provider</span>
-          </Link>
-        )}
+      <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-0">
+        <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2">
+          {/* Chat Shortcut - Primary for active on-the-way visits (takes full row on mobile when 3 buttons) */}
+          {['Accepted', 'On The Way', 'Arrived'].includes(status) && (
+            <Link 
+              to={`/patient/messages?provider=${providerId}`}
+              className="col-span-2 sm:col-span-1 neu-btn-primary justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform order-1"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Chat Provider</span>
+            </Link>
+          )}
 
-        {/* Pre-Session Info */}
-        {['Accepted', 'Pending'].includes(status) && (
-          <button
-            type="button"
-            onClick={() => !presessionSubmitted && onPreSession({ id, providerId, patientId, providerName: provider })}
-            disabled={presessionSubmitted}
-            className={`flex-1 sm:flex-initial justify-center px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              presessionSubmitted
-                ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400 cursor-default opacity-90'
-                : 'neu-btn text-indigo-600 dark:text-indigo-400'
-            }`}
-          >
-            <FileUp className={`w-3.5 h-3.5 ${presessionSubmitted ? 'text-emerald-500' : 'text-indigo-500'}`} />
-            <span>{presessionSubmitted ? 'Info Submitted' : 'Pre-Session Info'}</span>
-          </button>
-        )}
+          {/* Pre-Session Info */}
+          {['Accepted', 'Pending'].includes(status) && (
+            <button
+              type="button"
+              onClick={() => !presessionSubmitted && onPreSession({ id, providerId, patientId, providerName: provider })}
+              disabled={presessionSubmitted}
+              className={`col-span-1 justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] order-2 ${
+                presessionSubmitted
+                  ? 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] cursor-default opacity-90'
+                  : 'neu-btn text-primary dark:text-[#8CBDF0]'
+              }`}
+            >
+              <FileUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-primary dark:text-[#8CBDF0]'}`} />
+              <span className="truncate">{presessionSubmitted ? 'Submitted' : 'Pre-Session Info'}</span>
+            </button>
+          )}
 
-        {/* Manage Request (Cancel/Reschedule) */}
-        {['Pending', 'Accepted'].includes(status) && (
-          <button
-            type="button"
-            onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date, time })}
-            className="neu-btn flex-1 sm:flex-initial justify-center px-3 sm:px-3.5 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 cursor-pointer"
-          >
-            <XCircle className="w-3.5 h-3.5" />
-            <span>Manage</span>
-          </button>
-        )}
+          {/* Manage Request (Cancel/Reschedule) */}
+          {['Pending', 'Accepted'].includes(status) && (
+            <button
+              type="button"
+              onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date, time })}
+              className="col-span-1 neu-btn justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-[#BC3030] dark:text-[#F4918B] flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform order-3"
+            >
+              <XCircle className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Manage</span>
+            </button>
+          )}
 
-        {/* Rate & Review */}
-        {status === 'Completed' && (
-          <button 
-            type="button"
-            onClick={() => !isRated && onRateProvider({ id, providerId, patientId, providerName: provider })}
-            disabled={isRated}
-            className={`w-full sm:w-auto justify-center px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              isRated 
-                ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400 cursor-default opacity-90' 
-                : 'neu-btn-primary shadow-sm'
-            }`}
-          >
-            <Star className={`w-3.5 h-3.5 ${isRated ? 'fill-current text-emerald-500' : 'fill-current text-amber-300'}`} />
-            <span>{isRated ? 'Reviewed' : 'Rate & Review'}</span>
-          </button>
-        )}
+          {/* Rate & Review */}
+          {status === 'Completed' && (
+            <button 
+              type="button"
+              onClick={() => !isRated && onRateProvider({ id, providerId, patientId, providerName: provider })}
+              disabled={isRated}
+              className={`col-span-2 sm:col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center transition-all cursor-pointer ${
+                isRated 
+                  ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400 cursor-default opacity-90' 
+                  : 'neu-btn-primary shadow-sm'
+              }`}
+            >
+              <span>{isRated ? 'Reviewed' : 'Rate & Review'}</span>
+            </button>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -331,7 +332,7 @@ const PatientRequests = () => {
       <div className="flex-1 flex flex-col justify-between space-y-4 sm:space-y-6 relative w-full max-w-full">
         
         {/* Unified Neumorphic Header Card with Integrated Search & Filter Dropdown */}
-        <section className="neu-flat p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-4 sm:space-y-5">
+        <section className="neu-flat p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-4 sm:space-y-5 relative z-30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
               <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
@@ -430,7 +431,7 @@ const PatientRequests = () => {
             </div>
 
             {/* Dropdown Filter Button beside searchbox */}
-            <div className="relative shrink-0" ref={filterMenuRef}>
+            <div className="relative shrink-0 z-50" ref={filterMenuRef}>
               <button
                 type="button"
                 onClick={() => setShowFilterMenu(prev => !prev)}

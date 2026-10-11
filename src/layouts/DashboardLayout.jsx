@@ -31,21 +31,23 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
     onClick={onClick}
     className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative overflow-hidden ${
       active 
-        ? 'neu-btn-primary text-white font-bold shadow-md' 
-        : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+        ? 'neu-btn-primary font-bold shadow-md' 
+        : 'text-[#52657A] dark:text-[#A5B6C8] hover:text-primary dark:hover:text-[#8CBDF0]'
     }`}
   >
     <span className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0 ${
       active 
-        ? '!bg-white/20 !text-white shadow-inner border border-white/30 backdrop-blur-sm' 
-        : 'neu-flat-sm text-slate-600 dark:text-slate-300 group-hover:text-primary group-hover:scale-105'
+        ? '!bg-white/20 dark:!bg-[#08182A]/15 shadow-inner border border-white/30 dark:border-black/10 backdrop-blur-sm' 
+        : 'neu-flat-sm text-[#52657A] dark:text-[#A5B6C8] group-hover:text-primary dark:group-hover:text-[#8CBDF0] group-hover:scale-105'
     }`}>
-      {React.cloneElement(icon, { className: `w-4 h-4 ${active ? '!text-white' : ''}` })}
+      {React.cloneElement(icon, { className: 'w-4 h-4' })}
     </span>
-    <span className={`font-semibold text-sm flex-1 truncate ${active ? 'text-white font-bold' : ''}`}>{label}</span>
+    <span className={`font-semibold text-sm flex-1 truncate ${active ? 'font-bold' : ''}`}>{label}</span>
     {badge > 0 && (
       <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-3xs font-extrabold px-1.5 shadow-sm ${
-        active ? 'bg-white text-primary' : 'bg-red-500 text-white'
+        active 
+          ? 'bg-white dark:bg-[#08182A] text-primary dark:text-[#8CBDF0]' 
+          : 'bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A]'
       }`}>
         {badge > 9 ? '9+' : badge}
       </span>
@@ -373,7 +375,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex overflow-hidden">
+      <div className="min-h-screen bg-[#F4F8FC] dark:bg-[#0E1620] flex overflow-hidden">
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {isSidebarOpen && (
@@ -501,8 +503,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate group-hover:text-primary transition-colors">{user.name}</p>
-                    <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-primary text-3xs font-black rounded-full uppercase tracking-wider mt-0.5">
+                    <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-sm truncate group-hover:text-primary dark:group-hover:text-[#8CBDF0] transition-colors">{user.name}</p>
+                    <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-primary dark:text-[#8CBDF0] text-3xs font-black rounded-full uppercase tracking-wider mt-0.5">
                       {user.badge}
                     </span>
                   </div>
@@ -516,10 +518,10 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     logout();
                     navigate('/login');
                   }}
-                  className="neu-btn flex items-center gap-3 px-3.5 py-3 rounded-2xl text-slate-600 dark:text-slate-300 hover:text-red-500 dark:hover:text-red-400 transition-all w-full group"
+                  className="neu-btn flex items-center gap-3 px-3.5 py-3 rounded-2xl text-[#52657A] dark:text-[#A5B6C8] hover:text-[#BC3030] dark:hover:text-[#F4918B] transition-all w-full group"
                 >
-                  <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-red-500">
-                    <LogOut className="w-4 h-4 text-slate-500 group-hover:text-red-500 dark:group-hover:text-red-400" />
+                  <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]">
+                    <LogOut className="w-4 h-4 text-[#52657A] dark:text-[#A5B6C8] group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]" />
                   </div>
                   <span className="font-bold text-xs">Logout</span>
                 </button>
@@ -530,8 +532,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
 
         {/* Main Content */}
         <div className={`flex-1 flex flex-col min-w-0 h-screen lg:p-4 ${isDesktopCollapsed ? 'lg:pl-4' : 'lg:pl-4'} transition-all duration-500`}>
-          {/* Upper Panel Header - Raised Neumorphic Banner */}
-          <header className="h-[68px] sm:h-[76px] neu-flat rounded-2xl lg:rounded-[2.25rem] flex items-center justify-between px-4 sm:px-6 lg:px-7 shrink-0 mb-3 sm:mb-4 transition-all">
+          {/* Upper Panel Header - Raised Neumorphic Banner flush with body on mobile */}
+          <header className="h-[72px] sm:h-[78px] lg:h-[76px] neu-flat rounded-none lg:rounded-[2.25rem] flex items-center justify-between px-4 sm:px-6 lg:px-7 shrink-0 mb-0 lg:mb-4 border-b border-white/50 dark:border-white/5 lg:border-0 transition-all">
             <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
               {/* Mobile Heart Logo branding */}
               <div className="lg:hidden neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary shrink-0 shadow-sm">
@@ -565,10 +567,10 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               )}
 
               <div className="min-w-0">
-                <h2 className="text-xs sm:text-base md:text-lg font-display font-black text-slate-900 dark:text-slate-100 truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
+                <h2 className="text-xs sm:text-base md:text-lg font-display font-black text-[#17283B] dark:text-[#E6EEF6] truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
                   Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
                 </h2>
-                <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+                <p className="text-3xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] font-medium truncate">
                   {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
               </div>
@@ -591,7 +593,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
             </div>
           </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-3.5 sm:p-6 lg:p-7 pb-24 sm:pb-28 lg:pb-10 neu-flat lg:rounded-[2.25rem] flex flex-col">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-3.5 sm:p-6 lg:p-7 pb-24 sm:pb-28 lg:pb-10 neu-flat rounded-none lg:rounded-[2.25rem] flex flex-col">
           <div className="w-full max-w-full p-1 flex-1 flex flex-col">
             {children || <Outlet />}
           </div>

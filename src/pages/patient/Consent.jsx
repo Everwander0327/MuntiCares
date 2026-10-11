@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { 
   ShieldCheck, Info, Calendar, ChevronDown, ChevronUp, 
-  History, Eye, Check, X, Clock, Lock, FileText, Activity,
+  History, Eye, Check, X, Clock, MoreHorizontal, FileText, Activity,
   Search, ShieldAlert, Sparkles, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -113,7 +113,7 @@ const ProviderCard = ({
             className="neu-btn px-3.5 py-2 rounded-xl text-2xs sm:text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-700 dark:text-slate-200 hover:text-primary active:scale-[0.98]"
             aria-label="Manage permissions"
           >
-            <Lock className="w-3.5 h-3.5 text-primary" />
+            <MoreHorizontal className="w-3.5 h-3.5 text-primary" />
             <span>Permissions</span>
           </button>
 
@@ -488,7 +488,7 @@ const PatientConsent = () => {
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
-                      <Lock className="w-5 h-5" />
+                      <MoreHorizontal className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Star, Check, HeartHandshake } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Star, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { supabase } from '../lib/supabase';
@@ -31,7 +32,6 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset or manage escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) onClose();
@@ -98,19 +98,8 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           .update({ rating: updatedRating })
           .eq('user_id', request.providerId);
 
-        if (updateError) throw updateError;
-      } else {
-        const { data: allReviews } = await supabase
-          .from('provider_reviews')
-          .select('rating')
-          .eq('provider_id', request.providerId);
-
-        if (allReviews && allReviews.length > 0) {
-          const avg = allReviews.reduce((sum, r) => sum + r.rating, 0) / allReviews.length;
-          await supabase
-            .from('providers')
-            .update({ rating: avg })
-            .eq('user_id', request.providerId);
+        if (updateError) {
+          console.warn('Direct provider rating update failed:', updateError);
         }
       }
     } catch (err) {
@@ -121,11 +110,13 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
     }
   };
 
-  return (
+  if (!request) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-slate-950/70 md:backdrop-blur-sm"
+          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -133,42 +124,41 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           onClick={onClose}
         >
           <motion.div
-            className="w-full sm:w-[480px] max-w-lg neu-flat bg-[#ebf1f8] dark:bg-[#172236] rounded-t-[2.25rem] md:rounded-[2.25rem] p-6 sm:p-7 pb-[max(1.5rem,env(safe-area-inset-bottom))] relative max-h-[92dvh] overflow-y-auto no-scrollbar select-text shadow-2xl border-t md:border border-white/70 dark:border-white/10 transform-gpu will-change-transform"
-            initial={{ opacity: 0, y: 35 }}
+            initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 35 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, y: 50 }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
+            className="neu-flat w-full max-w-lg rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-7 pb-[max(1.5rem,env(safe-area-inset-bottom))] space-y-4 shadow-2xl border-t sm:border border-white/60 dark:border-white/10 max-h-[92dvh] overflow-y-auto no-scrollbar transform-gpu will-change-transform"
           >
-            {/* Mobile drag handle bar */}
-            <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700 md:hidden" aria-hidden="true" />
-            {/* Modal Title */}
-            <div className="text-center space-y-1.5 mb-5 pt-1">
+            {/* Mobile handle indicator */}
+            <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700 sm:hidden" aria-hidden="true" />
+
+            {/* Header (No star icon, Clean Title) */}
+            <div className="text-center space-y-1 pt-0 sm:pt-1 pb-1">
               <h2 className="text-lg sm:text-xl font-display font-black text-slate-900 dark:text-white tracking-tight">
                 Rate Your Care Session
               </h2>
-
               <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
-                How was your healthcare experience with{' '}
-                <span className="font-extrabold text-primary underline decoration-primary/30 underline-offset-2">
+                How was your experience with{' '}
+                <span className="font-extrabold text-primary">
                   {request?.providerName || 'your provider'}
                 </span>
                 ?
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Overall Experience (Fixed stable height & width) */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-1.5 px-1">
-                  <HeartHandshake className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {/* Overall Experience */}
+              <div className="neu-flat-sm p-3 rounded-2xl space-y-1.5">
+                <div className="flex items-center justify-center">
+                  <span className="text-3xs sm:text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200">
                     Overall Experience <span className="text-rose-500">*</span>
                   </span>
                 </div>
 
-                {/* Stars directly on the card — elevated tiles, not sunken */}
-                <div className="flex items-center justify-center gap-2.5 sm:gap-3 py-1">
+                {/* Star Rating Buttons */}
+                <div className="flex items-center justify-center gap-2 sm:gap-2.5 py-0.5">
                   {[1, 2, 3, 4, 5].map((star) => {
                     const active = star <= activeOverall;
                     return (
@@ -178,15 +168,15 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                         onClick={() => setRating('overall', star)}
                         onMouseEnter={() => setHover('overall', star)}
                         onMouseLeave={() => setHover('overall', 0)}
-                        className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
+                        className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
                           active
                             ? 'neu-btn text-amber-500 scale-105'
-                            : 'neu-flat-sm text-slate-300 dark:text-slate-600 hover:text-slate-400 hover:scale-102'
+                            : 'neu-flat-sm text-slate-300 dark:text-slate-600 hover:text-slate-400'
                         }`}
                         aria-label={`${star} star${star > 1 ? 's' : ''}`}
                       >
                         <Star
-                          className={`w-6 h-6 transition-all ${
+                          className={`w-5 h-5 transition-all ${
                             active
                               ? 'fill-amber-400 text-amber-500 drop-shadow-sm'
                               : 'fill-none'
@@ -197,10 +187,9 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                   })}
                 </div>
 
-                {/* Stable fixed-height label row: guarantees modal never resizes or jitters */}
-                <div className="h-6 flex items-center justify-center">
+                <div className="h-5 flex items-center justify-center">
                   {activeOverall > 0 ? (
-                    <span className="text-2xs font-black text-amber-600 dark:text-amber-400 neu-flat-sm px-3 py-1 rounded-full animate-in fade-in duration-200">
+                    <span className="text-3xs font-black text-amber-600 dark:text-amber-400 neu-flat-sm px-2.5 py-0.5 rounded-full">
                       {RATING_LABELS[activeOverall]}
                     </span>
                   ) : (
@@ -212,27 +201,27 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
               </div>
 
               {/* Detailed Categories Breakdown */}
-              <div className="space-y-2 pt-1">
+              <div className="space-y-1.5">
                 <p className="text-3xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-1">
                   Detailed Feedback (Optional)
                 </p>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {CATEGORIES.filter(c => c.key !== 'overall').map((cat) => (
                     <div
                       key={cat.key}
-                      className="neu-flat-sm p-3 rounded-2xl flex items-center justify-between gap-3"
+                      className="neu-flat-sm px-3 py-2 rounded-xl flex items-center justify-between gap-2"
                     >
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate leading-tight">
                           {cat.label}
                         </p>
-                        <p className="text-3xs text-slate-400 dark:text-slate-500 hidden sm:block truncate">
+                        <p className="text-3xs text-slate-400 dark:text-slate-500 hidden sm:block truncate leading-tight">
                           {cat.desc}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-1 shrink-0 px-1 py-1">
+                      <div className="flex items-center gap-0.5 shrink-0">
                         {[1, 2, 3, 4, 5].map((star) => {
                           const active = star <= (hovered[cat.key] || ratings[cat.key]);
                           return (
@@ -246,7 +235,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                               aria-label={`${cat.label} ${star} star`}
                             >
                               <Star
-                                className={`w-4 h-4 transition-colors ${
+                                className={`w-3.5 h-3.5 transition-colors ${
                                   active
                                     ? 'fill-amber-400 text-amber-400'
                                     : 'text-slate-300 dark:text-slate-600 fill-none'
@@ -261,35 +250,35 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                 </div>
               </div>
 
-              {/* Comment / Review Box - sunken (neu-inset) */}
-              <div className="space-y-1.5 pt-1">
+              {/* Comment / Review Box */}
+              <div className="space-y-1">
                 <label className="text-3xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-1">
                   Share More Feedback
                 </label>
-                <div className="neu-inset rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-primary/40 transition-all">
+                <div className="neu-inset rounded-xl p-1.5 focus-within:ring-2 focus-within:ring-primary/40 transition-all">
                   <textarea
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Tell us what you appreciated about the visit, or any points for improvement..."
-                    rows={3}
-                    className="w-full bg-transparent p-3 outline-none border-none text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-none font-medium"
+                    placeholder="Comments or notes (optional)..."
+                    rows={2}
+                    className="w-full bg-transparent px-1.5 py-0.5 outline-none border-none text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 resize-none font-medium"
                   />
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-2.5 pt-0.5">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="neu-btn px-4 py-3 rounded-2xl text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all"
+                  className="neu-btn px-4 py-2.5 sm:py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || ratings.overall === 0}
-                  className={`px-4 py-3 rounded-2xl text-xs font-black flex items-center justify-center gap-2 cursor-pointer transition-all ${
+                  className={`px-4 py-2.5 sm:py-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98] ${
                     ratings.overall === 0
                       ? 'neu-flat-sm text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
                       : 'neu-btn-primary shadow-md'
@@ -299,7 +288,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                     'Submitting...'
                   ) : (
                     <>
-                      <Check className="w-4 h-4 stroke-[3]" />
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
                       <span>Submit Review</span>
                     </>
                   )}
@@ -309,7 +298,8 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

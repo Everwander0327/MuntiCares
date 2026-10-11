@@ -758,8 +758,8 @@ const PatientProfile = () => {
             transition={{ delay: 0.1 }}
           >
             <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-              {/* Neumorphic Tabs Header */}
-              <Tabs.List className="neu-inset p-1.5 rounded-2xl mb-5 flex gap-1.5 overflow-x-auto no-scrollbar">
+              {/* Neumorphic Tabs Header - Compressed 4-column grid fitting all tabs without horizontal scroll */}
+              <Tabs.List className="neu-inset p-1 sm:p-1.5 rounded-2xl mb-4 sm:mb-5 grid grid-cols-4 gap-1 sm:gap-1.5">
                 {[
                   { value: 'overview', icon: User, label: 'Overview' },
                   { value: 'medical', icon: Stethoscope, label: 'Medical' },
@@ -769,14 +769,14 @@ const PatientProfile = () => {
                   <Tabs.Trigger
                     key={tab.value}
                     value={tab.value}
-                    className={`flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex-1 cursor-pointer select-none ${
+                    className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-3 py-2 sm:py-2.5 rounded-xl text-3xs xs:text-2xs sm:text-xs md:text-sm font-bold transition-all truncate cursor-pointer select-none ${
                       activeTab === tab.value
                         ? 'neu-flat text-primary font-black shadow-sm'
                         : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
-                    <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.value ? 'text-primary' : 'text-slate-400'}`} />
-                    <span>{tab.label}</span>
+                    <tab.icon className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 ${activeTab === tab.value ? 'text-primary' : 'text-slate-400'}`} />
+                    <span className="truncate">{tab.label}</span>
                   </Tabs.Trigger>
                 ))}
               </Tabs.List>

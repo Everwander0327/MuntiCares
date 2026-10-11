@@ -319,7 +319,7 @@ const AdminRequests = () => {
       <div className="space-y-6">
         {/* Neumorphic Header & Controls Toolbar */}
         <motion.div
-          className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-3xl flex flex-col gap-4"
+          className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-3xl flex flex-col gap-4 relative z-30"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}

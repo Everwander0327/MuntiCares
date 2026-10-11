@@ -263,7 +263,7 @@ const ProviderRequests = () => {
       <div className="flex-1 flex flex-col justify-between space-y-4 sm:space-y-6 relative w-full max-w-full pb-10">
 
         {/* HEADER SECTION: Unified Neumorphic Card with Stats & Sunken Search */}
-        <section className="neu-flat p-3.5 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-5">
+        <section className="neu-flat p-3.5 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-5 relative z-30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
               <h1 className="font-display font-extrabold tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">

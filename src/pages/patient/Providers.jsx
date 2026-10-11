@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import { Search, Star, MapPin, X, Calendar, FileText, CheckCircle2, Shield, ShieldCheck, SlidersHorizontal, Check, Sun, Sunset, Clock, CalendarDays, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -340,7 +341,7 @@ const PatientProviders = () => {
       <div className="space-y-6 relative pb-6 w-full max-w-full">
 
         {/* Directory Header - Unified Neumorphic Card with Integrated Search & Sort */}
-        <section className="neu-flat p-6 md:p-8 rounded-[2.25rem] space-y-5">
+        <section className="neu-flat p-6 md:p-8 rounded-[2.25rem] space-y-5 relative z-30">
           <div className="min-w-0">
             <h1 className="font-display font-extrabold tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white">
               Find a Healthcare Provider
@@ -379,7 +380,7 @@ const PatientProviders = () => {
             </div>
 
             {/* Sleek Neumorphic Filter/Sort Icon Button with Popup Menu */}
-            <div className="relative shrink-0" ref={sortMenuRef}>
+            <div className="relative shrink-0 z-50" ref={sortMenuRef}>
               <button
                 type="button"
                 onClick={() => setShowSortMenu(prev => !prev)}
@@ -533,7 +534,7 @@ const PatientProviders = () => {
                       <span className="truncate">{p.location || 'Muntinlupa City'}</span>
                     </span>
                     {p.price_per_service > 0 && (
-                      <span className="font-bold tabular-nums text-primary shrink-0 ml-2">
+                      <span className="font-black tabular-nums text-emerald-600 dark:text-emerald-400 shrink-0 ml-2">
                         ₱{Number(p.price_per_service).toLocaleString()}<span className="text-3xs font-normal text-slate-400">/visit</span>
                       </span>
                     )}
@@ -570,61 +571,65 @@ const PatientProviders = () => {
       </div>
 
       {/* Booking Modal */}
-      <AnimatePresence>
-        {selectedProvider && (
-          <motion.div 
-            className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 z-50 flex items-end md:items-center justify-center p-0 md:p-4 md:backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={() => {
-              if (bookingStep === 'form') setSelectedProvider(null);
-            }}
-          >
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {selectedProvider && (
             <motion.div 
-              className="bg-[#ebf1f8] dark:bg-[#172236] rounded-t-[2.5rem] md:rounded-[2.5rem] w-full max-w-lg p-6 sm:p-7 pb-[max(1.5rem,env(safe-area-inset-bottom))] relative max-h-[92dvh] overflow-y-auto transform-gpu will-change-transform shadow-2xl border-t border-white/60 dark:border-white/10 md:border"
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 40 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              onClick={e => e.stopPropagation()}
+              className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.16 }}
+              onClick={() => {
+                if (bookingStep === 'form') setSelectedProvider(null);
+              }}
             >
-              <div className="mx-auto mb-3.5 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700 md:hidden" aria-hidden="true" />
+              <motion.div 
+                className="neu-flat rounded-t-[2.25rem] sm:rounded-[2.25rem] w-full max-w-lg p-5 sm:p-7 pb-[max(1.5rem,env(safe-area-inset-bottom))] relative max-h-[92dvh] overflow-y-auto no-scrollbar transform-gpu will-change-transform shadow-2xl border-t sm:border border-white/60 dark:border-white/10"
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 50 }}
+                transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                onClick={e => e.stopPropagation()}
+              >
+                {/* Mobile drag handle indicator */}
+                <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700 sm:hidden" aria-hidden="true" />
 
-              <div className="mb-5">
-                <h2 className="text-lg sm:text-xl md:text-2xl font-display font-extrabold text-slate-900 dark:text-white">
-                  {bookingStep === 'form' ? 'Book Appointment' : 'Confirm Booking'}
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">with <span className="font-extrabold text-primary">{selectedProvider.full_name}</span></p>
-              </div>
+                <div className="mb-3 text-center">
+                  <h2 className="text-base sm:text-xl md:text-2xl font-display font-extrabold text-slate-900 dark:text-white">
+                    {bookingStep === 'form' ? 'Book Appointment' : 'Confirm Booking'}
+                  </h2>
+                  <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    with <span className="font-extrabold text-primary">{selectedProvider.full_name}</span>
+                  </p>
+                </div>
 
               {/* Step Progress */}
-              <div className="flex items-center gap-2 mb-6 px-1">
-                <div className={`flex items-center gap-2 text-xs font-bold ${bookingStep === 'form' ? 'text-primary' : 'text-emerald-500'}`}>
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-2xs font-black ${
+              <div className="flex items-center gap-2 mb-3.5 px-1">
+                <div className={`flex items-center gap-1.5 text-xs font-bold ${bookingStep === 'form' ? 'text-primary' : 'text-emerald-500'}`}>
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-3xs font-black ${
                     bookingStep === 'confirm' ? 'neu-btn text-emerald-500' : 'neu-btn-primary'
                   }`}>
                     {bookingStep === 'confirm' ? '✓' : '1'}
                   </div>
-                  <span>Details</span>
+                  <span className="text-2xs sm:text-xs">Details</span>
                 </div>
-                <div className={`flex-1 h-1 rounded-full ${bookingStep === 'confirm' ? 'bg-emerald-500/40' : 'bg-slate-200 dark:bg-slate-800'}`} />
-                <div className={`flex items-center gap-2 text-xs font-bold ${bookingStep === 'confirm' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-2xs font-black ${
+                <div className={`flex-1 h-0.5 rounded-full ${bookingStep === 'confirm' ? 'bg-emerald-500/40' : 'bg-slate-200 dark:bg-slate-800'}`} />
+                <div className={`flex items-center gap-1.5 text-xs font-bold ${bookingStep === 'confirm' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-3xs font-black ${
                     bookingStep === 'confirm' ? 'neu-btn-primary' : 'neu-flat-sm text-slate-400 dark:text-slate-500'
                   }`}>
                     2
                   </div>
-                  <span>Confirm</span>
+                  <span className="text-2xs sm:text-xs">Confirm</span>
                 </div>
               </div>
 
               {/* Step 1: Booking Form (Clean, English, Elder-Friendly with Real Custom Menus) */}
               {bookingStep === 'form' && (
-                <form onSubmit={handleSubmit(handleReviewBooking)} className="space-y-4">
+                <form onSubmit={handleSubmit(handleReviewBooking)} className="space-y-2.5">
                   {/* Service Selection - Custom Neumorphic Dropdown */}
-                  <div className="space-y-1.5 relative">
+                  <div className="space-y-1.5 relative z-30">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                       1. Service Type
                     </label>
@@ -636,12 +641,12 @@ const PatientProviders = () => {
                       }}
                       className="w-full neu-flat-sm rounded-xl p-3 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none"
                     >
-                      <div className="min-w-0 pr-2">
-                        <span className="text-sm font-bold text-slate-900 dark:text-white truncate block">
+                      <div className="min-w-0 flex-1 flex items-center justify-between gap-2 pr-2">
+                        <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                           {watchedService || 'Select a service...'}
                         </span>
-                        <span className="text-2xs text-primary font-semibold">
-                          ₱{Number(selectedProvider.price_per_service || 0).toLocaleString()} per visit
+                        <span className="text-2xs font-black text-emerald-600 dark:text-emerald-400 shrink-0 neu-flat-sm px-2 py-0.5 rounded-lg">
+                          ₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}
                         </span>
                       </div>
                       <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${openServiceMenu ? 'rotate-180 text-primary' : ''}`} />
@@ -675,7 +680,7 @@ const PatientProviders = () => {
                               >
                                 <span className="text-xs font-bold">{s}</span>
                                 <div className="flex items-center gap-1.5">
-                                  <span className={`text-xs ${isSelected ? 'text-white' : 'text-primary font-bold'}`}>
+                                  <span className={`text-xs ${isSelected ? 'text-white' : 'text-emerald-600 dark:text-emerald-400 font-black'}`}>
                                     ₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}
                                   </span>
                                   {isSelected && <Check className="w-3.5 h-3.5" />}
@@ -715,7 +720,7 @@ const PatientProviders = () => {
                   </div>
 
                   {/* Time Selection - Custom Dropdown with Clean Available Times */}
-                  <div className="space-y-1.5 relative">
+                  <div className="space-y-1.5 relative z-20">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                       3. Appointment Time
                     </label>
@@ -814,41 +819,48 @@ const PatientProviders = () => {
                   </div>
 
                   {/* Notes / Message */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-extrabold uppercase tracking-wider text-slate-400 ml-1">Message or Instructions (Optional)</label>
-                    <div className="neu-inset p-2.5 rounded-2xl flex items-start border border-slate-300/40 dark:border-white/5 transition-all">
-                      <FileText className="w-4 h-4 text-slate-400 ml-1.5 mt-2 shrink-0" />
+                  <div className="space-y-1">
+                    <label className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 ml-1">Message or Instructions (Optional)</label>
+                    <div className="neu-inset p-2 rounded-xl flex items-start border border-slate-300/40 dark:border-white/5 transition-all">
+                      <FileText className="w-3.5 h-3.5 text-slate-400 ml-1 mt-1.5 shrink-0" />
                       <textarea
                         {...register('notes')}
-                        placeholder="Any specific symptoms, instructions, or gate access notes?"
-                        rows={3}
-                        className="w-full bg-transparent px-2.5 py-1.5 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 outline-none resize-none placeholder:text-slate-400"
+                        placeholder="Specific symptoms or gate notes..."
+                        rows={2}
+                        className="w-full bg-transparent px-2 py-0.5 text-xs font-medium text-slate-800 dark:text-slate-100 outline-none resize-none placeholder:text-slate-400"
                       />
                     </div>
                   </div>
 
                   {/* Consent */}
-                  <div className={`neu-flat-sm p-4 rounded-2xl flex items-start gap-3 transition-colors ${errors.consent ? 'border border-red-300 dark:border-red-900/50' : ''}`}>
+                  <div className={`neu-flat-sm p-2.5 rounded-xl flex items-start gap-2.5 transition-colors ${errors.consent ? 'border border-red-300 dark:border-red-900/50' : ''}`}>
                     <input
                       type="checkbox"
                       id="consent"
                       {...register('consent')}
-                      className="w-4 h-4 rounded text-primary mt-0.5 cursor-pointer"
+                      className="w-4 h-4 rounded text-primary mt-0.5 cursor-pointer shrink-0"
                     />
-                    <label htmlFor="consent" className="text-xs text-slate-600 dark:text-slate-300 leading-snug cursor-pointer select-none">
-                      I consent to sharing my medical profile and home address with <span className="font-bold text-slate-900 dark:text-white">{selectedProvider.full_name}</span> for this home care visit.
+                    <label htmlFor="consent" className="text-3xs sm:text-xs text-slate-600 dark:text-slate-300 leading-snug cursor-pointer select-none">
+                      I consent to sharing my medical profile & address with <span className="font-bold text-slate-900 dark:text-white">{selectedProvider.full_name}</span> for this home care visit.
                     </label>
                   </div>
                   {errors.consent && (
-                    <p className="text-2xs font-semibold text-red-500 ml-1">{errors.consent.message}</p>
+                    <p className="text-3xs font-semibold text-red-500 ml-1">{errors.consent.message}</p>
                   )}
 
-                  <div className="pt-2">
+                  <div className="pt-1 grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProvider(null)}
+                      className="w-full neu-btn py-2.5 sm:py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
+                    >
+                      Cancel
+                    </button>
                     <button
                       type="submit"
-                      className="w-full neu-btn-primary py-3.5 sm:py-4 rounded-2xl text-xs sm:text-sm font-bold shadow-md flex items-center justify-center gap-2 active:scale-[0.98] transition-transform cursor-pointer"
+                      className="w-full neu-btn-primary py-2.5 sm:py-3 rounded-xl text-xs font-bold shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform cursor-pointer"
                     >
-                      <CheckCircle2 className="w-4 h-4" />
+                      <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Review Booking</span>
                     </button>
                   </div>
@@ -862,12 +874,33 @@ const PatientProviders = () => {
                 <div className="space-y-5">
                   <div className="neu-flat-sm p-5 rounded-2xl space-y-4">
                     <div className="flex items-center gap-3 pb-3 border-b border-slate-200/60 dark:border-white/5">
-                      <div className="w-12 h-12 rounded-2xl neu-flat flex items-center justify-center text-primary font-black text-base shrink-0">
-                        {selectedProvider.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                      <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center text-primary font-bold overflow-hidden p-0.5 shrink-0 aspect-square">
+                        {selectedProvider.avatar_url ? (
+                          <img 
+                            src={selectedProvider.avatar_url} 
+                            alt={`${selectedProvider.full_name} profile`} 
+                            className="w-full h-full object-cover rounded-[10px]" 
+                          />
+                        ) : (
+                          <span className="text-xs sm:text-sm font-black">
+                            {selectedProvider.full_name.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase()}
+                          </span>
+                        )}
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-sm sm:text-base text-slate-900 dark:text-white truncate">{selectedProvider.full_name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{selectedProvider.location || 'Muntinlupa City'}</p>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
+                            {selectedProvider.full_name}
+                          </p>
+                          {selectedProvider.professional_id_status === 'verified' && (
+                            <span className="text-primary shrink-0" title="Verified License">
+                              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                          {selectedProvider.specialty || selectedProvider.services?.[0] || 'Healthcare Practitioner'} • {selectedProvider.location || 'Muntinlupa City'}
+                        </p>
                       </div>
                     </div>
 
@@ -878,7 +911,7 @@ const PatientProviders = () => {
                       </div>
                       <div>
                         <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Fee</span>
-                        <p className="font-bold text-primary mt-0.5">₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}</p>
                       </div>
                       <div>
                         <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Date</span>
@@ -936,7 +969,9 @@ const PatientProviders = () => {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    )}
       {/* Provider Details Sheet */}
       <Sheet open={!!viewingProvider} onOpenChange={(open) => { if (!open) setViewingProvider(null); }}>
         <SheetContent 
@@ -1000,7 +1035,7 @@ const PatientProviders = () => {
                     <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span className="truncate">{viewingProvider.location || 'Muntinlupa City'}</span>
                   </p>
-                  <p className="font-bold tabular-nums text-primary shrink-0">
+                  <p className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400 shrink-0">
                     ₱{Number(viewingProvider.price_per_service).toLocaleString()}<span className="text-3xs font-normal text-slate-400">/visit</span>
                   </p>
                 </div>
@@ -1141,7 +1176,7 @@ const PatientProviders = () => {
                     <div className="neu-flat-sm p-4 rounded-2xl space-y-2.5 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 font-medium">Standard Consultation Fee</span>
-                        <span className="font-bold text-primary">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 font-medium">Primary Area</span>
@@ -1181,7 +1216,7 @@ const PatientProviders = () => {
                           className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                         >
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">{s}</span>
-                          <span className="text-xs font-extrabold text-primary shrink-0 ml-2">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
+                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0 ml-2">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
                         </button>
                       ))}
                       {(!viewingProvider.services || viewingProvider.services.length === 0) && (
@@ -1243,7 +1278,7 @@ const PatientProviders = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="neu-flat-sm p-4 rounded-2xl">
                       <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Consultation Fee</p>
-                      <p className="text-lg font-black text-primary mt-1">₱{Number(viewingProvider.price_per_service).toLocaleString()}</p>
+                      <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">₱{Number(viewingProvider.price_per_service).toLocaleString()}</p>
                       <p className="text-3xs text-slate-400 mt-1">Standard per-session visit rate</p>
                     </div>
                     <div className="neu-flat-sm p-4 rounded-2xl">
@@ -1291,7 +1326,7 @@ const PatientProviders = () => {
                           <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">{s}</p>
                           <p className="text-3xs text-slate-400">Available for booking</p>
                         </div>
-                        <span className="text-xs font-black text-primary shrink-0">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
                       </button>
                     ))}
                     {(!viewingProvider.services || viewingProvider.services.length === 0) && (

@@ -299,7 +299,7 @@ const ProviderProfileView = () => {
                 <div className="pt-3.5 border-t border-slate-200/60 dark:border-white/5 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/60 dark:divide-white/5 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-0">
                   <div className="sm:pr-4">
                     <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Consultation Fee</p>
-                    <p className="text-base font-black text-primary mt-1">₱{Number(provider.price_per_service || 0).toLocaleString()}</p>
+                    <p className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-1">₱{Number(provider.price_per_service || 0).toLocaleString()}</p>
                     <p className="text-3xs text-slate-400 mt-0.5">Standard per-session</p>
                   </div>
                   <div className="pt-3 sm:pt-0 sm:px-4">
@@ -358,7 +358,7 @@ const ProviderProfileView = () => {
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">{s}</p>
                       <p className="text-3xs text-slate-400">Available for appointment</p>
                     </div>
-                    <span className="text-xs font-black text-primary shrink-0">₱{Number(provider.price_per_service || 0).toLocaleString()}</span>
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">₱{Number(provider.price_per_service || 0).toLocaleString()}</span>
                   </button>
                 ))}
                 {servicesList.length === 0 && (

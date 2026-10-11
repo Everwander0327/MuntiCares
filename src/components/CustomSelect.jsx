@@ -19,7 +19,7 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option",
   const selectedOption = options.find((opt) => opt.value === value);
 
   return (
-    <div ref={selectRef} className={`relative ${className}`}>
+    <div ref={selectRef} className={`relative z-30 ${className}`}>
       {/* Neumorphic Button Trigger */}
       <button
         type="button"
