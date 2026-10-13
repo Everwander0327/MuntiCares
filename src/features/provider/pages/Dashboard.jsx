@@ -477,6 +477,32 @@ const ProviderDashboard = () => {
                     View all &rarr;
                   </Link>
                 </div>
+
+                {/* Compact Live Status Pill (Style A) */}
+                {activeVisit && (
+                  <Link
+                    to="/provider/schedule"
+                    className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2.5 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-emerald-500/40 transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="relative flex h-2 w-2 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-primary transition-colors">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-extrabold mr-1.5 uppercase tracking-wide text-3xs">
+                          {activeVisit.status}:
+                        </span>
+                        {activeVisit.patient} &bull; {activeVisit.service}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0 text-slate-400 group-hover:text-primary text-3xs font-semibold">
+                      <span className="hidden sm:inline">{activeVisit.time || 'Today'}</span>
+                      <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </Link>
+                )}
+
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl neu-flat-sm select-text">
                     <p className="text-xl sm:text-2xl font-display font-black text-blue-600 dark:text-blue-400 leading-none">
@@ -505,35 +531,6 @@ const ProviderDashboard = () => {
                     </p>
                   </div>
                 </div>
-
-                {/* Next Active Visit Spotlight inside Patient Requests */}
-                {activeVisit && (
-                  <Link
-                    to="/provider/schedule"
-                    className="mt-3.5 neu-inset p-3.5 rounded-2xl flex items-center justify-between gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 hover:border-primary/40 transition-all group cursor-pointer block"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                        <span className="text-3xs font-extrabold uppercase tracking-wider text-primary">
-                          Next Patient Visit
-                        </span>
-                      </div>
-                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors">
-                        {activeVisit.patient} &bull; {activeVisit.service}
-                      </p>
-                      <p className="text-3xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                        {activeVisit.time && `${activeVisit.time} • `}{activeVisit.address}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2.5 py-1 rounded-lg text-3xs font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                        {activeVisit.status}
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </Link>
-                )}
               </div>
 
               {/* Quick Actions List */}
