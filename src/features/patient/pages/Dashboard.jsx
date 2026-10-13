@@ -409,15 +409,15 @@ const PatientDashboard = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
                     {/* Content / Badge & Caption - Balanced nicely just above bottom buttons and dots */}
-                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-between pointer-events-none pb-24 sm:pb-28 md:pb-32">
-                      <div className="flex items-center justify-between">
-                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-3xs sm:text-2xs font-extrabold uppercase tracking-wider bg-[#2F6FB5] text-white backdrop-blur-md shadow-md border border-white/20">
-                          <Sparkles className="w-3.5 h-3.5" />
-                          {slide.tag}
-                        </span>
-                      </div>
+                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-24 sm:pb-28 md:pb-32">
+                      <div className="space-y-2 sm:space-y-2.5 max-w-xl">
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-3xs sm:text-2xs font-extrabold uppercase tracking-wider bg-[#2F6FB5] text-white backdrop-blur-md shadow-md border border-white/20">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {slide.tag}
+                          </span>
+                        </div>
 
-                      <div className="space-y-1.5 sm:space-y-2 max-w-xl">
                         <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
@@ -434,14 +434,17 @@ const PatientDashboard = () => {
             {/* Overlaid Header Chip (If active visit exists) */}
             <div className="relative z-10 p-4 sm:p-6 pointer-events-none">
               {activeVisit && (
-                <div className="neu-inset px-3.5 py-2 rounded-xl flex items-center justify-between gap-2 text-2xs sm:text-xs bg-[#0E1620]/85 backdrop-blur-md text-[#E6EEF6] border border-[#2D3F54] pointer-events-auto max-w-md shadow-md">
-                  <span className="font-bold truncate">
+                <Link
+                  to="/patient/requests"
+                  className="neu-inset px-3.5 py-2 rounded-xl inline-flex items-center justify-between gap-3 text-2xs sm:text-xs bg-[#0E1620]/85 backdrop-blur-md text-[#E6EEF6] border border-[#2D3F54] pointer-events-auto max-w-md shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
+                >
+                  <span className="font-bold truncate group-hover:text-primary-200 transition-colors">
                     {activeVisit.provider} &bull; {activeVisit.service}
                   </span>
-                  <span className="font-black text-[#F2A98E] uppercase tracking-wider shrink-0">
+                  <span className="font-black text-[#F2A98E] uppercase tracking-wider shrink-0 text-3xs px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-500/30">
                     {activeVisit.status}
                   </span>
-                </div>
+                </Link>
               )}
             </div>
 
