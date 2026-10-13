@@ -184,12 +184,20 @@ const PatientDashboard = () => {
       const pending = (fetchedRequests || []).filter(r => r.status === 'Pending').length;
       setStats({ active: accepted + pending, accepted, pending });
 
-      const priorityOrder = ['On The Way', 'Arrived', 'Accepted'];
-      let activeReq = null;
-      for (const status of priorityOrder) {
-        activeReq = (fetchedRequests || []).find(r => r.status === status);
-        if (activeReq) break;
-      }
+      const todayStr = new Date().toISOString().split('T')[0];
+      const activeVisitsList = (fetchedRequests || []).filter(r => 
+        ['On The Way', 'Arrived', 'Accepted'].includes(r.status) &&
+        (!r.date || r.date >= todayStr)
+      );
+
+      let activeReq = activeVisitsList.find(r => r.status === 'On The Way')
+        || activeVisitsList.find(r => r.status === 'Arrived')
+        || [...activeVisitsList.filter(r => r.status === 'Accepted')].sort((a, b) => {
+          const dateComp = (a.date || '').localeCompare(b.date || '');
+          if (dateComp !== 0) return dateComp;
+          return (a.time || '').localeCompare(b.time || '');
+        })[0]
+        || null;
 
       if (activeReq) {
         let timeLabel = '';

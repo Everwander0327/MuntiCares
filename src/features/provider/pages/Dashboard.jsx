@@ -189,13 +189,23 @@ const ProviderDashboard = () => {
         completed: completedCount
       });
 
-      // Find current active visit (priority: 'On The Way' > 'Arrived' > 'Accepted')
-      const priorityOrder = ['On The Way', 'Arrived', 'Accepted'];
-      let ongoing = null;
-      for (const st of priorityOrder) {
-        ongoing = allRequests.find(r => r.status === st);
-        if (ongoing) break;
-      }
+      // Find current active visit (priority: 'On The Way' > 'Arrived' > next upcoming 'Accepted')
+      // Only show visits for today or future dates (past dates are excluded so expired/done visits don't linger)
+      const todayStr = new Date().toISOString().split('T')[0];
+      const activeVisitsList = allRequests.filter(r => 
+        ['On The Way', 'Arrived', 'Accepted'].includes(r.status) &&
+        (!r.date || r.date >= todayStr)
+      );
+
+      let ongoing = activeVisitsList.find(r => r.status === 'On The Way')
+        || activeVisitsList.find(r => r.status === 'Arrived')
+        // For accepted visits, get the earliest upcoming appointment
+        || [...activeVisitsList.filter(r => r.status === 'Accepted')].sort((a, b) => {
+          const dateComp = (a.date || '').localeCompare(b.date || '');
+          if (dateComp !== 0) return dateComp;
+          return (a.time || '').localeCompare(b.time || '');
+        })[0]
+        || null;
 
       if (ongoing) {
         let timeLabel = '';
