@@ -493,8 +493,8 @@ const PatientDashboard = () => {
                   </Link>
                 </div>
 
-                {/* Compact Live Status Pill (Style A) */}
-                {activeVisit && (
+                {/* Compact Live Status Pill (Style A) or Empty State */}
+                {activeVisit ? (
                   <Link
                     to="/patient/requests"
                     className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2.5 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-emerald-500/40 transition-all group cursor-pointer"
@@ -516,6 +516,21 @@ const PatientDashboard = () => {
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </Link>
+                ) : (
+                  <div className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-[#E9F1F9]/60 dark:bg-[#183049]/40 border border-[#D2E0EE]/60 dark:border-white/5 text-[#52657A]">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#A5B6C8] shrink-0" />
+                      <p className="text-3xs sm:text-xs font-semibold text-[#52657A] dark:text-[#A5B6C8] truncate">
+                        No active or upcoming visits scheduled today
+                      </p>
+                    </div>
+                    <Link
+                      to="/patient/providers"
+                      className="text-3xs font-bold text-primary hover:underline shrink-0"
+                    >
+                      Book a visit
+                    </Link>
+                  </div>
                 )}
 
                 <div className="grid grid-cols-3 gap-2.5">
