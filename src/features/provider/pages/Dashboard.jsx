@@ -407,14 +407,7 @@ const ProviderDashboard = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
                     <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-28 sm:pb-32 lg:pb-36">
-                      <div className="space-y-2 sm:space-y-2.5 max-w-xl">
-                        <div>
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-3xs sm:text-2xs font-extrabold uppercase tracking-wider bg-primary/90 text-white backdrop-blur-md shadow-lg border border-white/25">
-                            <Sparkles className="w-3.5 h-3.5" />
-                            {slide.tag}
-                          </span>
-                        </div>
-
+                      <div className="space-y-1.5 sm:space-y-2 max-w-xl">
                         <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
@@ -426,23 +419,6 @@ const ProviderDashboard = () => {
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Overlaid Active Visit Floating Chip */}
-            <div className="relative z-10 p-4 sm:p-6 pointer-events-none">
-              {activeVisit && (
-                <Link
-                  to="/provider/schedule"
-                  className="neu-inset px-3.5 py-2 rounded-xl inline-flex items-center justify-between gap-3 text-2xs sm:text-xs bg-slate-950/80 backdrop-blur-md text-white border border-white/15 pointer-events-auto max-w-md shadow-lg hover:border-primary/50 transition-all cursor-pointer group"
-                >
-                  <span className="font-bold truncate group-hover:text-primary-200 transition-colors">
-                    Next: {activeVisit.patient} &bull; {activeVisit.service}
-                  </span>
-                  <span className="font-black text-primary-300 uppercase tracking-wider shrink-0 text-3xs px-2 py-0.5 rounded-md bg-primary/20 border border-primary/30">
-                    {activeVisit.status}
-                  </span>
-                </Link>
-              )}
             </div>
 
             {/* Bottom Controls: Dots + Action Buttons */}
@@ -494,6 +470,12 @@ const ProviderDashboard = () => {
                   <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     Patient Requests
                   </h4>
+                  <Link
+                    to="/provider/requests"
+                    className="text-3xs font-bold text-primary hover:text-primary-600 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-0.5"
+                  >
+                    View all &rarr;
+                  </Link>
                 </div>
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl neu-flat-sm select-text">
@@ -523,6 +505,35 @@ const ProviderDashboard = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* Next Active Visit Spotlight inside Patient Requests */}
+                {activeVisit && (
+                  <Link
+                    to="/provider/schedule"
+                    className="mt-3.5 neu-inset p-3.5 rounded-2xl flex items-center justify-between gap-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 hover:border-primary/40 transition-all group cursor-pointer block"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                        <span className="text-3xs font-extrabold uppercase tracking-wider text-primary">
+                          Next Patient Visit
+                        </span>
+                      </div>
+                      <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors">
+                        {activeVisit.patient} &bull; {activeVisit.service}
+                      </p>
+                      <p className="text-3xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                        {activeVisit.time && `${activeVisit.time} • `}{activeVisit.address}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="px-2.5 py-1 rounded-lg text-3xs font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                        {activeVisit.status}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </Link>
+                )}
               </div>
 
               {/* Quick Actions List */}
