@@ -217,27 +217,6 @@ const ProviderSchedule = () => {
           </motion.button>
         </motion.div>
 
-        {/* Quick Stats (Neumorphic Cards with Count-up feel) */}
-        <motion.div 
-          className="grid grid-cols-3 gap-2.5 sm:gap-4"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <div className="neu-flat rounded-2xl sm:rounded-[2rem] p-3 sm:p-5 text-center">
-            <p className="text-xl sm:text-3xl font-display font-extrabold text-primary leading-tight">{todayAppts.length}</p>
-            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1 truncate">Today's Visits</p>
-          </div>
-          <div className="neu-flat rounded-2xl sm:rounded-[2rem] p-3 sm:p-5 text-center">
-            <p className="text-xl sm:text-3xl font-display font-extrabold text-amber-500 leading-tight">{activeVisits}</p>
-            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1 truncate">In Progress</p>
-          </div>
-          <div className="neu-flat rounded-2xl sm:rounded-[2rem] p-3 sm:p-5 text-center">
-            <p className="text-xl sm:text-3xl font-display font-extrabold text-emerald-500 leading-tight">{completedToday}</p>
-            <p className="text-3xs sm:text-2xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-1 truncate">Completed</p>
-          </div>
-        </motion.div>
-
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-3.5 sm:gap-6">
           {/* Calendar Panel */}
           <motion.div
