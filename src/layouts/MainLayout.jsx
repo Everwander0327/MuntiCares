@@ -1,7 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
-import ScrollProgress from '../components/ScrollProgress';
+import { Navbar, Footer, ScrollProgress } from '@/shared/navigation';
 
 const MainLayout = () => {
   const location = useLocation();

@@ -2,46 +2,44 @@ import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
-import NeumorphicToast from './components/NeumorphicToast';
-import { unlockAudio } from './lib/audio';
-import { useTheme } from './contexts/ThemeContext';
+import { NeumorphicToast, ErrorBoundary, CookieConsent } from '@/shared/feedback';
+import { unlockAudio } from '@/lib/audio';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // Layouts
-import MainLayout from './layouts/MainLayout';
-import DashboardLayout from './layouts/DashboardLayout';
-import ProtectedRoute from './components/ProtectedRoute';
-import ErrorBoundary from './components/ErrorBoundary';
-import AnimatedPage from './components/AnimatedPage';
-import CookieConsent from './components/CookieConsent';
-import { SkeletonPage } from './components/Skeleton';
+import MainLayout from '@/layouts/MainLayout';
+import DashboardLayout from '@/layouts/DashboardLayout';
+import { ProtectedRoute } from '@/features/auth';
+import { AnimatedPage } from '@/shared/components';
+import { SkeletonPage } from '@/shared/ui';
 
 // Pages (eager — critical path)
-import LandingPage from './pages/LandingPage';
-import AuthPage from './pages/auth/AuthPage';
+import { LandingPage } from '@/features/landing';
+import { AuthPage } from '@/features/auth';
 
 // Dashboard pages (lazy — only loaded after login)
-const PatientDashboard = lazy(() => import('./pages/patient/Dashboard'));
-const PatientProviders = lazy(() => import('./pages/patient/Providers'));
-const PatientConsent = lazy(() => import('./pages/patient/Consent'));
-const PatientRequests = lazy(() => import('./pages/patient/Requests'));
-const PatientProfile = lazy(() => import('./pages/patient/Profile'));
-const PatientMessages = lazy(() => import('./pages/patient/Messages'));
-const ProviderProfileView = lazy(() => import('./pages/patient/ProviderProfileView'));
+const PatientDashboard = lazy(() => import('@/features/patient/pages/Dashboard'));
+const PatientProviders = lazy(() => import('@/features/patient/pages/Providers'));
+const PatientConsent = lazy(() => import('@/features/patient/pages/Consent'));
+const PatientRequests = lazy(() => import('@/features/patient/pages/Requests'));
+const PatientProfile = lazy(() => import('@/features/patient/pages/Profile'));
+const PatientMessages = lazy(() => import('@/features/patient/pages/Messages'));
+const ProviderProfileView = lazy(() => import('@/features/patient/pages/ProviderProfileView'));
 
-const ProviderDashboard = lazy(() => import('./pages/provider/Dashboard'));
-const ProviderRequests = lazy(() => import('./pages/provider/Requests'));
-const ProviderPatients = lazy(() => import('./pages/provider/Patients'));
-const ProviderSchedule = lazy(() => import('./pages/provider/Schedule'));
-const ProviderProfile = lazy(() => import('./pages/provider/Profile'));
-const ProviderMessages = lazy(() => import('./pages/provider/Messages'));
-const PatientProfileView = lazy(() => import('./pages/provider/PatientProfileView'));
+const ProviderDashboard = lazy(() => import('@/features/provider/pages/Dashboard'));
+const ProviderRequests = lazy(() => import('@/features/provider/pages/Requests'));
+const ProviderPatients = lazy(() => import('@/features/provider/pages/Patients'));
+const ProviderSchedule = lazy(() => import('@/features/provider/pages/Schedule'));
+const ProviderProfile = lazy(() => import('@/features/provider/pages/Profile'));
+const ProviderMessages = lazy(() => import('@/features/provider/pages/Messages'));
+const PatientProfileView = lazy(() => import('@/features/provider/pages/PatientProfileView'));
 
-const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
-const AdminPatients = lazy(() => import('./pages/admin/Patients'));
-const AdminProviders = lazy(() => import('./pages/admin/Providers'));
-const AdminRequests = lazy(() => import('./pages/admin/Requests'));
-const AdminProfile = lazy(() => import('./pages/admin/Profile'));
-const AdminAnnouncements = lazy(() => import('./pages/admin/Announcements'));
+const AdminDashboard = lazy(() => import('@/features/admin/pages/Dashboard'));
+const AdminPatients = lazy(() => import('@/features/admin/pages/Patients'));
+const AdminProviders = lazy(() => import('@/features/admin/pages/Providers'));
+const AdminRequests = lazy(() => import('@/features/admin/pages/Requests'));
+const AdminProfile = lazy(() => import('@/features/admin/pages/Profile'));
+const AdminAnnouncements = lazy(() => import('@/features/admin/pages/Announcements'));
 
 function AppContent() {
   const location = useLocation();

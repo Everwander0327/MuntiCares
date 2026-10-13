@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import NotificationBell from '../components/NotificationBell';
-import ThemeToggle from '../components/ThemeToggle';
-import { supabase } from '../lib/supabase';
+import { NotificationBell, MobileNavItem } from '@/shared/navigation';
+import { ThemeToggle } from '@/shared/feedback';
+import { supabase } from '@/lib/supabase';
 import { 
   LayoutDashboard, 
   Search, 
@@ -20,8 +20,7 @@ import {
   Menu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
-import MobileNavItem from '../components/MobileNavItem';
+import { useAuth } from '@/contexts/AuthContext';
 
 const DashboardLayoutContext = createContext(false);
 

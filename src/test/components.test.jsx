@@ -1,9 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import EmptyState from '../components/EmptyState';
-import { SkeletonText, SkeletonPage } from '../components/Skeleton';
-import ErrorBoundary from '../components/ErrorBoundary';
+import { EmptyState, SkeletonText, SkeletonPage } from '@/shared/ui';
+import { ErrorBoundary } from '@/shared/feedback';
 
 describe('EmptyState', () => {
   it('renders title and message', () => {
