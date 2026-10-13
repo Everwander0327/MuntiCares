@@ -462,7 +462,7 @@ const ProviderDashboard = () => {
           </section>
 
           {/* Quick Actions Card with Combined Request Status on Top (lg:col-span-5) */}
-          <div className="lg:col-span-5 neu-flat rounded-2xl sm:rounded-[2.25rem] p-5 sm:p-6 flex flex-col justify-between gap-5">
+          <div className="lg:col-span-5 neu-flat rounded-2xl sm:rounded-[2.25rem] p-5 sm:p-6 flex flex-col justify-start gap-5">
             <div>
               {/* Horizontal Status Strip */}
               <div className="mb-4 pb-4 border-b border-slate-200/60 dark:border-white/5">
@@ -593,19 +593,6 @@ const ProviderDashboard = () => {
                   <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
               </div>
-            </div>
-
-            {/* Recommended Action / Active Link */}
-            <div className="pt-3 border-t border-slate-200/50 dark:border-white/5 space-y-2">
-              <p className="text-3xs font-extrabold uppercase tracking-widest text-slate-400 px-1 mb-1">Provider Shortcuts</p>
-              <Link
-                to="/provider/patients"
-                className="neu-btn p-2.5 rounded-xl flex items-center gap-2.5 text-slate-700 dark:text-slate-200 text-xs font-semibold"
-              >
-                <Users className="w-4 h-4 text-primary shrink-0" />
-                <span className="min-w-0 flex-1 truncate">Patient Records & Charts</span>
-                <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-              </Link>
             </div>
           </div>
 
