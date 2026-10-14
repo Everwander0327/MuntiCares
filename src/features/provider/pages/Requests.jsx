@@ -541,12 +541,29 @@ const ProviderRequests = () => {
         ) : (
           <div className="neu-flat p-8 sm:p-12 rounded-2xl sm:rounded-[2.25rem] text-center">
             <EmptyState
-              icon="inbox"
-              title={searchTerm ? 'No matching requests found' : 'No requests in this category'}
+              icon={searchTerm ? 'search' : 'inbox'}
+              title={
+                searchTerm
+                  ? 'No matching requests found'
+                  : filter === 'Pending'
+                  ? 'All caught up! No pending requests'
+                  : `No ${filter.toLowerCase()} requests`
+              }
               message={
                 searchTerm
-                  ? 'Try refining your search terms or clearing filters.'
-                  : 'New patient appointments and service requests will appear here.'
+                  ? `No bookings matched "${searchTerm}". Try adjusting your keywords.`
+                  : filter === 'Pending'
+                  ? 'You have responded to all incoming visit requests. Active and upcoming visits can be managed in their respective tabs.'
+                  : `New patient appointments and service requests under "${filter}" will appear here.`
+              }
+              action={
+                searchTerm
+                  ? { label: 'Clear Search', onClick: () => setSearchTerm('') }
+                  : filter === 'Pending' && stats.active > 0
+                  ? { label: `View ${stats.active} Active Visits`, onClick: () => setFilter('Active') }
+                  : filter !== 'All'
+                  ? { label: 'View All Bookings', onClick: () => setFilter('All') }
+                  : null
               }
             />
           </div>

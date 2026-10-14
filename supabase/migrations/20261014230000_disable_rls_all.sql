@@ -1,0 +1,34 @@
+ALTER TABLE IF EXISTS public.users DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.requests DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.providers DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.patients DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.messages DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.consent_access DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.medical_histories DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.visit_notes DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.patient_documents DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.provider_reviews DISABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS public.announcements DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.requests;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.consent_access;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.announcements;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END $$;

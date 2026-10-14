@@ -193,10 +193,10 @@ const PatientProfile = () => {
     const file = event.target.files[0];
     if (!file) return;
 
-    // 500KB Limit Check
-    const maxSize = 500 * 1024;
+    // 3MB Limit Check
+    const maxSize = 3 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error("File is too large! Limit is 500KB lang po.");
+      toast.error("File is too large! Maximum limit is 3MB.");
       event.target.value = ''; // Reset input
       return;
     }
@@ -932,7 +932,7 @@ const PatientProfile = () => {
                   <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Medical Documents</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Upload lab results, prescriptions, or imaging (Max 500KB)</p>
+                      <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Upload lab results, prescriptions, or imaging (Max 3MB)</p>
                     </div>
                     <div>
                       <input type="file" id="doc-upload" className="hidden" accept="image/jpeg, image/png, application/pdf"

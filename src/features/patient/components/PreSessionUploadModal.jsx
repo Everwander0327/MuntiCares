@@ -93,19 +93,12 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
         const fileName = `${request.patientId || 'patient'}/${request.id}/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('medical-documents')
+          .from('medical_documents')
           .upload(fileName, file);
 
         if (uploadError) {
           console.warn('Storage upload failed:', uploadError);
-          const { error: altError } = await supabase.storage
-            .from('documents')
-            .upload(fileName, file);
-          
-          if (altError) {
-            console.warn('Alt storage upload also failed:', altError);
-            continue;
-          }
+          continue;
         }
 
         uploadedUrls.push(fileName);

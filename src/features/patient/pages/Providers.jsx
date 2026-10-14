@@ -228,6 +228,11 @@ const PatientProviders = () => {
   }, [providers, searchTerm, sortBy]);
 
   const openBookingModal = (provider, presetService) => {
+    if (requested.includes(provider.id)) {
+      toast('You already have a pending booking with this provider. You can track or manage it in My Requests.', { icon: 'ℹ️' });
+      navigate('/patient/requests');
+      return;
+    }
     setSelectedProvider(provider);
     setBookingStep('form');
     setAvailableSlots([]);

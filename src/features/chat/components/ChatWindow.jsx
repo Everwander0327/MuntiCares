@@ -58,6 +58,35 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
   const channelRef = useRef(null);
   const jitsiApiRef = useRef(null);
   const locallyEndingRef = useRef(false);
+  const lastChimeRef = useRef(0);
+
+  const playNotificationSound = () => {
+    const now = Date.now();
+    if (now - lastChimeRef.current < 600) return;
+    lastChimeRef.current = now;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      const t = ctx.currentTime;
+      osc.frequency.setValueAtTime(587.33, t); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, t + 0.1); // A5
+      gain.gain.setValueAtTime(0.08, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.3);
+    } catch {
+      // Ignore user gesture / audio limitations gracefully
+    }
+  };
 
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
@@ -121,6 +150,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
           if (msg.receiver_id === currentUser.id) {
             msg.is_read = true;
             addReadMsgIds(currentUser.id, [msg.id]);
+            playNotificationSound();
           }
           setMessages(prev => {
             if (prev.find(m => m.id === msg.id)) return prev;
@@ -149,6 +179,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       .on('broadcast', { event: 'new_message' }, (payload) => {
         const msg = payload.payload;
         if (msg.sender_id === otherUser.id && msg.receiver_id === currentUser.id) {
+          playNotificationSound();
           setMessages(prev => {
             if (prev.find(m => m.id === msg.id || m.content === msg.content && Math.abs(new Date(m.created_at) - new Date(msg.created_at)) < 5000)) return prev;
             return [...prev, msg];

@@ -287,8 +287,8 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64 min-h-[256px]">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                 <BarChart data={barChartData} barSize={26}>
                   <defs>
                     {/* Neumorphic 3D Bar Gradient */}
@@ -320,8 +320,8 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64 relative">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64 min-h-[256px] relative">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
                 <PieChart>
                   <defs>
                     <linearGradient id="patientPieGrad" x1="0" y1="0" x2="1" y2="1">
@@ -425,8 +425,8 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="neu-inset rounded-2xl p-3 sm:p-4 h-64 min-h-[256px]">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={220}>
               <AreaChart data={growthChartData}>
                 <defs>
                   {/* Patients Area Gradient */}

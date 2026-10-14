@@ -89,52 +89,11 @@ const Navbar = () => {
               aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMenuOpen}
             >
-              <svg 
-                className="w-5 h-5 text-slate-800 dark:text-slate-100 transition-colors" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                stroke="currentColor" 
-                strokeWidth="2.5" 
-                strokeLinecap="round" 
-                strokeLinejoin="round"
-              >
-                <motion.line
-                  x1="4"
-                  y1={isMenuOpen ? "4" : "6"}
-                  x2="20"
-                  y2={isMenuOpen ? "20" : "6"}
-                  animate={{
-                    x1: 4,
-                    y1: isMenuOpen ? 4 : 6,
-                    x2: 20,
-                    y2: isMenuOpen ? 20 : 6,
-                  }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                />
-                <motion.line
-                  x1="4"
-                  y1="12"
-                  x2="20"
-                  y2="12"
-                  animate={{
-                    opacity: isMenuOpen ? 0 : 1,
-                  }}
-                  transition={{ duration: 0.15 }}
-                />
-                <motion.line
-                  x1="4"
-                  y1={isMenuOpen ? "20" : "18"}
-                  x2="20"
-                  y2={isMenuOpen ? "4" : "18"}
-                  animate={{
-                    x1: 4,
-                    y1: isMenuOpen ? 20 : 18,
-                    x2: 20,
-                    y2: isMenuOpen ? 4 : 18,
-                  }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                />
-              </svg>
+              <div className="w-5 h-5 flex flex-col justify-center items-center gap-1">
+                <span className={`block h-0.5 w-5 bg-current rounded-full transition-transform duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+                <span className={`block h-0.5 w-5 bg-current rounded-full transition-opacity duration-200 ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`} />
+                <span className={`block h-0.5 w-5 bg-current rounded-full transition-transform duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+              </div>
             </button>
           </div>
         </motion.nav>
