@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Phone, PhoneOff } from 'lucide-react';
+import { Phone, PhoneOff, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCalls } from '@/contexts/CallContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,6 +43,7 @@ const IncomingCallOverlay = () => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
           className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-md"
+          data-testid="incoming-call"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -71,14 +72,14 @@ const IncomingCallOverlay = () => {
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-3xs font-extrabold text-primary uppercase tracking-widest mb-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-              Incoming Video Call
+              {incomingCall.callType === 'audio' ? 'Incoming Voice Call' : 'Incoming Video Call'}
             </div>
 
             <h2 className="text-lg font-display font-black text-slate-900 dark:text-white truncate">
               {incomingCall.sender_name || 'Healthcare Provider'}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Teleconsultation request
+              {incomingCall.callType === 'audio' ? 'Voice consultation request' : 'Teleconsultation request'}
             </p>
 
             <div className="flex gap-6 mt-7 justify-center items-center">
@@ -99,7 +100,11 @@ const IncomingCallOverlay = () => {
                 className="flex flex-col items-center gap-1.5 group cursor-pointer"
               >
                 <div className="w-16 h-16 rounded-2xl neu-btn-primary flex items-center justify-center text-white transition-all active:scale-95 shadow-lg shadow-emerald-500/25">
-                  <Phone className="w-7 h-7 stroke-[2.5]" />
+                  {incomingCall.callType === 'audio' ? (
+                    <Phone className="w-7 h-7 stroke-[2.5]" />
+                  ) : (
+                    <Video className="w-7 h-7 stroke-[2.5]" />
+                  )}
                 </div>
                 <span className="text-3xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Accept</span>
               </button>

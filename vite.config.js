@@ -31,7 +31,6 @@ export default defineConfig({
           vendorUi: ['framer-motion', 'lucide-react', 'react-hot-toast'],
           vendorData: ['@supabase/supabase-js', '@hookform/resolvers', 'react-hook-form', 'zod'],
           vendorMedical: ['jspdf'],
-          vendorJitsi: ['@jitsi/react-sdk'],
         },
       }
     }

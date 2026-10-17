@@ -21,8 +21,8 @@ const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
     const channel = supabase.channel(`calls_${user.id}`);
     channel
       .on('broadcast', { event: 'incoming_call' }, (payload) => {
-        const { sender_id, sender_name } = payload.payload;
-        setIncomingCall({ sender_id, sender_name });
+        const { sender_id, sender_name, call_type } = payload.payload;
+        setIncomingCall({ sender_id, sender_name, callType: call_type || 'video' });
       })
       .on('broadcast', { event: 'call_declined' }, () => {
         setCallDeclinedByPeer(true);
@@ -56,8 +56,9 @@ const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
   const acceptCall = useCallback(() => {
     if (!incomingCall || !user) return;
     const role = user.role;
+    const callType = incomingCall.callType || 'video';
     broadcastCallAccepted(incomingCall.sender_id);
-    navigate(`/${role}/messages?partner=${incomingCall.sender_id}&name=${encodeURIComponent(incomingCall.sender_name || '')}&startVideo=1`);
+    navigate(`/${role}/messages?partner=${incomingCall.sender_id}&name=${encodeURIComponent(incomingCall.sender_name || '')}&startCall=${callType}${callType === 'video' ? '&startVideo=1' : ''}`);
     setIncomingCall(null);
   }, [incomingCall, user, navigate, broadcastCallAccepted]);
 
@@ -77,14 +78,14 @@ const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
     setIncomingCall(null);
   }, [incomingCall, user]);
 
-  const startCallBroadcast = useCallback((targetUserId, callerName) => {
+  const startCallBroadcast = useCallback((targetUserId, callerName, callType = 'video') => {
     const channel = supabase.channel(`calls_${targetUserId}`);
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await channel.send({
           type: 'broadcast',
           event: 'incoming_call',
-          payload: { sender_id: user.id, sender_name: callerName }
+          payload: { sender_id: user.id, sender_name: callerName, call_type: callType }
         });
         supabase.removeChannel(channel);
       }

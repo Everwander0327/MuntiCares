@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Send, UserCircle, Loader2, Check, CheckCheck, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, AlertCircle } from 'lucide-react';
+import { Send, UserCircle, Loader2, Check, CheckCheck, Video, Phone, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { JitsiMeeting } from '@jitsi/react-sdk';
 import { useCalls } from '@/contexts/CallContext';
 import { usePresence } from '@/contexts/PresenceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import useWebRTCCall from '../hooks/useWebRTCCall';
 
 const addReadMsgIds = (userId, ids) => {
   if (!ids.length) return;
@@ -39,29 +39,44 @@ const shouldShowTimestamp = (msg, nextMsg) => {
   return diff > 5 * 60 * 1000;
 };
 
-const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
+const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartCall }) => {
   const { user: authUser } = useAuth();
-  const { startCallBroadcast, sendCallEnded, callDeclinedByPeer } = useCalls();
+  const { startCallBroadcast, sendCallEnded, callDeclinedByPeer, callCancelledByPeer } = useCalls();
   const { isUserOnline } = usePresence();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
-  const [callStatus, setCallStatus] = useState('idle'); // idle | connecting | connected | ended
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [callTimer, setCallTimer] = useState(0);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCameraOff, setIsCameraOff] = useState(false);
   const [showDeclinedCall, setShowDeclinedCall] = useState(false);
-  const [jitsiReady, setJitsiReady] = useState(false);
-  const [jitsiError, setJitsiError] = useState(null);
+
+  const {
+    callStatus,
+    callType,
+    pcState,
+    isMuted,
+    isCameraOff,
+    error: webRtcError,
+    localVideoRef,
+    remoteVideoRef,
+    remoteAudioRef,
+    startCall: rtcStartCall,
+    joinCall: rtcJoinCall,
+    endCall: rtcEndCall,
+    resetCall: rtcResetCall,
+    toggleMute,
+    toggleCamera,
+    attachMedia,
+  } = useWebRTCCall({
+    selfId: currentUser?.id,
+    peerId: otherUser?.id,
+  });
 
   const messagesEndRef = useRef(null);
   const scrollRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const channelRef = useRef(null);
-  const jitsiApiRef = useRef(null);
-  const locallyEndingRef = useRef(false);
   const lastChimeRef = useRef(0);
 
   const playNotificationSound = () => {
@@ -195,15 +210,6 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
           setTimeout(scrollToBottom, 50);
         }
       })
-      .on('broadcast', { event: 'call_accepted' }, () => {
-        // Peer accepted the call
-      })
-      .on('broadcast', { event: 'call_ended' }, () => {
-        setCallStatus('ended');
-        setIsMuted(false);
-        setIsCameraOff(false);
-        setJitsiReady(false);
-      })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({ user_id: currentUser.id, online_at: new Date().toISOString() });
@@ -301,116 +307,70 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
     return () => clearInterval(interval);
   }, [callStatus]);
 
-  useEffect(() => {
-    if (autoStartVideo && otherUser?.id && currentUser) {
-      setCallStatus('connecting');
+  const handleStartCall = useCallback(async (type = 'video') => {
+    try {
+      if (type === 'video') {
+        sendMessage("📹 I've started a video consultation. Click the Video icon to join!");
+      } else {
+        sendMessage("📞 I've started a voice consultation. Click the Phone icon to join!");
+      }
+      if (otherUser?.id && currentUser) {
+        startCallBroadcast(otherUser.id, currentUser.name, type);
+      }
+      await rtcStartCall(type);
+    } catch (err) {
+      console.error('Failed to start call:', err);
+      toast.error('Could not access microphone/camera. Please check permissions.');
+      rtcEndCall();
     }
-  }, [autoStartVideo, currentUser, otherUser?.id]);
+  }, [currentUser, otherUser?.id, rtcEndCall, rtcStartCall, sendMessage, startCallBroadcast]);
+
+  const handleEndCall = useCallback((notify = true) => {
+    if (notify && otherUser?.id) {
+      sendCallEnded(otherUser.id);
+    }
+    rtcEndCall();
+  }, [otherUser?.id, rtcEndCall, sendCallEnded]);
+
+  const closeCallOverlay = useCallback(() => {
+    rtcResetCall();
+  }, [rtcResetCall]);
+
+  const autoJoinedRef = useRef(false);
+  useEffect(() => {
+    if (autoJoinedRef.current) return;
+    if (autoStartCall?.active && otherUser?.id && currentUser?.id) {
+      autoJoinedRef.current = true;
+      const type = autoStartCall.type || 'video';
+      rtcJoinCall(type);
+    } else if (autoStartVideo && otherUser?.id && currentUser?.id) {
+      autoJoinedRef.current = true;
+      rtcJoinCall('video');
+    }
+  }, [autoStartCall, autoStartVideo, currentUser?.id, otherUser?.id, rtcJoinCall]);
 
   useEffect(() => {
-    if (callStatus !== 'connecting') {
-      setJitsiError(null);
-      return;
-    }
-    const timer = setTimeout(() => {
-      if (!jitsiReady) {
-        setJitsiError('Timed out waiting for video connection. The meeting server may be unreachable on this network.');
-      }
-    }, 20000);
-    return () => clearTimeout(timer);
-  }, [callStatus, jitsiReady]);
+    attachMedia();
+  }, [attachMedia, callStatus, callType]);
 
   useEffect(() => {
     if (callDeclinedByPeer) {
       setShowDeclinedCall(true);
-      setCallStatus('idle');
-      setIsMuted(false);
-      setIsCameraOff(false);
-      setJitsiReady(false);
+      rtcResetCall();
       setTimeout(() => setShowDeclinedCall(false), 3000);
     }
-  }, [callDeclinedByPeer]);
+  }, [callDeclinedByPeer, rtcResetCall]);
+
+  useEffect(() => {
+    if (callCancelledByPeer && (callStatus === 'connecting' || callStatus === 'connected')) {
+      rtcEndCall(false);
+    }
+  }, [callCancelledByPeer, callStatus, rtcEndCall]);
 
   const formatTime = (seconds) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  };
-
-  const startVideoCall = () => {
-    setCallTimer(0);
-    setIsMuted(false);
-    setIsCameraOff(false);
-    setCallStatus('connecting');
-    sendMessage("📞 I've started a video consultation. Please click the Video icon at the top right to join the call!");
-    if (otherUser?.id && currentUser) {
-      startCallBroadcast(otherUser.id, currentUser.name);
-    }
-  };
-
-  const endVideoCall = () => {
-    if (locallyEndingRef.current) return;
-    locallyEndingRef.current = true;
-    channelRef.current?.send({
-      type: 'broadcast',
-      event: 'call_ended',
-      payload: { sender_id: currentUser.id }
-    });
-    if (otherUser?.id) {
-      sendCallEnded(otherUser.id);
-    }
-    jitsiApiRef.current?.executeCommand('hangup');
-    setCallStatus('ended');
-    setIsMuted(false);
-    setIsCameraOff(false);
-    setJitsiReady(false);
-  };
-
-  const closeVideoOverlay = () => {
-    locallyEndingRef.current = false;
-    setCallStatus('idle');
-    setJitsiReady(false);
-  };
-
-  const toggleMute = () => {
-    const next = !isMuted;
-    setIsMuted(next);
-    jitsiApiRef.current?.executeCommand('toggleAudio');
-  };
-
-  const toggleCamera = () => {
-    const next = !isCameraOff;
-    setIsCameraOff(next);
-    jitsiApiRef.current?.executeCommand('toggleVideo');
-  };
-
-  const handleJitsiReady = (api) => {
-    jitsiApiRef.current = api;
-    setJitsiReady(true);
-    setCallStatus('connected');
-
-    api.addListener('audioMuteStatusChanged', ({ muted }) => {
-      setIsMuted(Boolean(muted));
-    });
-
-    api.addListener('videoMuteStatusChanged', ({ muted }) => {
-      setIsCameraOff(Boolean(muted));
-    });
-
-    api.addListener('participantLeft', () => {
-      if (locallyEndingRef.current) return;
-      if (api.getNumberOfParticipants() <= 1) {
-        channelRef.current?.send({
-          type: 'broadcast',
-          event: 'call_ended',
-          payload: { sender_id: currentUser.id }
-        });
-        setCallStatus('ended');
-        setIsMuted(false);
-        setIsCameraOff(false);
-        setJitsiReady(false);
-      }
-    });
   };
 
   if (loading) {
@@ -420,8 +380,6 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       </div>
     );
   }
-
-  const roomName = `MuntiCaresRoom_${[currentUser.id, otherUser.id].sort().join('')}`.replace(/-/g, '');
 
   const statusIcon = (msg) => {
     if (msg.status === 'error') {
@@ -440,6 +398,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       <AnimatePresence>
         {callStatus !== 'idle' && (
           <motion.div
+            data-testid="call-overlay"
+            data-call-status={callStatus}
+            data-pc-state={pcState}
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
@@ -449,19 +410,16 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
             {/* Connecting Screen */}
             {callStatus === 'connecting' && (
               <div className="flex-1 flex flex-col items-center justify-center px-6">
-                {jitsiError ? (
+                {webRtcError ? (
                   <div className="neu-flat p-8 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
                     <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-rose-500">
                       <PhoneOff className="w-7 h-7" />
                     </div>
-                    <h3 className="text-slate-900 dark:text-white text-lg font-display font-black">Connection Failed</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-2 max-w-xs mx-auto">{jitsiError}</p>
-                    <p className="text-slate-400 dark:text-slate-500 text-3xs mt-2 text-center max-w-xs mx-auto">
-                      Make sure the app is served over HTTPS (required for camera/mic access).
-                    </p>
+                    <h3 className="text-slate-900 dark:text-white text-lg font-display font-black">Connection Notice</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-2 max-w-xs mx-auto">{webRtcError}</p>
                     <button
                       type="button"
-                      onClick={() => { endVideoCall(); closeVideoOverlay(); }}
+                      onClick={closeCallOverlay}
                       className="mt-6 px-6 py-2.5 neu-btn text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer"
                     >
                       Close Window
@@ -494,7 +452,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
 
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-3xs font-extrabold text-primary uppercase tracking-widest mb-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-                      Connecting Teleconsultation
+                      {callType === 'audio' ? 'Connecting Voice Call' : 'Connecting Teleconsultation'}
                     </div>
 
                     <h3 className="text-slate-900 dark:text-white text-lg font-display font-black truncate">
@@ -503,13 +461,13 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                     
                     <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-500 dark:text-slate-400">
                       <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
-                      <span>Securing encrypted video stream...</span>
+                      <span>{callType === 'audio' ? 'Securing encrypted audio line...' : 'Securing direct P2P video stream...'}</span>
                     </div>
 
                     <div className="mt-8 flex justify-center">
                       <button
                         type="button"
-                        onClick={() => { endVideoCall(); closeVideoOverlay(); }}
+                        onClick={() => { handleEndCall(true); closeCallOverlay(); }}
                         className="neu-btn w-14 h-14 rounded-2xl flex items-center justify-center text-rose-500 hover:text-rose-600 transition-all active:scale-90 shadow-md cursor-pointer"
                         title="Cancel Call"
                       >
@@ -521,17 +479,17 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
               </div>
             )}
 
-            {/* Jitsi Teleconsultation Screen */}
+            {/* Connected Call Screen */}
             <div className={`absolute inset-0 flex flex-col ${callStatus === 'connected' ? 'z-0' : 'z-[-1] opacity-0 pointer-events-none'}`}>
               {/* Header Bar */}
               <div className="flex items-center justify-between px-5 py-3.5 bg-[#ebf1f8] dark:bg-[#172236] neu-flat border-b border-white/60 dark:border-white/10 shrink-0 z-10 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-primary">
-                    <Video className="w-4 h-4" />
+                    {callType === 'audio' ? <Phone className="w-4 h-4" /> : <Video className="w-4 h-4" />}
                   </div>
                   <div>
                     <h3 className="font-display font-black text-xs sm:text-sm text-slate-900 dark:text-white leading-tight">
-                      Teleconsultation Session
+                      {callType === 'audio' ? 'Voice Consultation' : 'Teleconsultation Session'}
                     </h3>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -548,7 +506,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                   </span>
                   <button
                     type="button"
-                    onClick={endVideoCall}
+                    onClick={() => handleEndCall(true)}
                     className="neu-btn px-3 py-1.5 rounded-xl text-rose-500 hover:text-rose-600 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
                     title="End Call"
                   >
@@ -558,51 +516,72 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                 </div>
               </div>
 
-              {/* Jitsi Video Embed Container */}
-              <div className="flex-1 w-full bg-slate-950 relative overflow-hidden">
-                {!jitsiReady && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-[#ebf1f8] dark:bg-[#172236] z-10">
-                    <div className="neu-flat p-6 rounded-2xl text-center border border-white/80 dark:border-white/10 shadow-lg">
-                      <Loader2 className="w-7 h-7 text-primary animate-spin mx-auto mb-2.5" />
-                      <p className="text-slate-700 dark:text-slate-200 text-xs font-bold">Initializing video feed...</p>
+              {/* Call Content Area */}
+              <div className="flex-1 w-full bg-slate-950 relative overflow-hidden flex flex-col items-center justify-center">
+                {callType === 'video' ? (
+                  <>
+                    {/* Full Remote Video */}
+                    <video
+                      ref={remoteVideoRef}
+                      data-testid="remote-video"
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-cover bg-slate-950"
+                    />
+
+                    {/* PiP Local Video Preview */}
+                    <div className="absolute bottom-6 right-5 w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden neu-flat shadow-2xl border-2 border-white/60 dark:border-white/10 z-20 bg-slate-900">
+                      {isCameraOff ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-800">
+                          <CameraOff className="w-5 h-5 mb-1" />
+                          <span className="text-3xs font-bold">Cam Off</span>
+                        </div>
+                      ) : (
+                        <video
+                          ref={localVideoRef}
+                          data-testid="local-video"
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover transform -scale-x-100"
+                        />
+                      )}
                     </div>
+                  </>
+                ) : (
+                  /* Audio Call Screen */
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 relative w-full bg-[#ebf1f8] dark:bg-[#172236]">
+                    <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center mb-6">
+                      <motion.div
+                        className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
+                        animate={{ scale: [1, 1.3, 1], opacity: [0.7, 0, 0.7] }}
+                        transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                      <motion.div
+                        className="absolute inset-2 rounded-full border-2 border-primary/40"
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.6, 0, 0.6] }}
+                        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                      />
+                      <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full neu-flat flex items-center justify-center overflow-hidden shadow-2xl p-1.5 border border-white/80 dark:border-white/10">
+                        {otherUser?.photoUrl ? (
+                          <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                        ) : (
+                          <span className="text-3xl font-black text-primary">
+                            {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white truncate max-w-xs text-center">
+                      {otherUser?.name || 'Healthcare Provider'}
+                    </h3>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-3xs font-bold text-emerald-600 dark:text-emerald-400 mt-2 uppercase tracking-widest">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Voice Consultation In Progress
+                    </div>
+                    <audio ref={remoteAudioRef} data-testid="remote-audio" autoPlay playsInline />
                   </div>
                 )}
-                <JitsiMeeting
-                  domain="meet.jit.si"
-                  roomName={roomName}
-                  configOverwrite={{
-                    startWithAudioMuted: false,
-                    startWithVideoMuted: false,
-                    disableModeratorIndicator: true,
-                    enableEmailInStats: false,
-                    prejoinPageEnabled: false,
-                    hideConferenceSubject: true,
-                    hideParticipantsStats: true,
-                    disableFilmstripAutohiding: false,
-                    disableDeepLinking: true,
-                  }}
-                  interfaceConfigOverwrite={{
-                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
-                    SHOW_JITSI_WATERMARK: false,
-                    SHOW_WATERMARK_FOR_GUESTS: false,
-                    SHOW_BRAND_WATERMARK: false,
-                    TOOLBAR_BUTTONS: [],
-                    FILM_STRIP_MAX_HEIGHT: 0,
-                    SHOW_CHROME_EXTENSION_BANNER: false,
-                    SHOW_POWERED_BY: false,
-                    SHOW_PROMOTIONAL_CLOSE_PAGE: false,
-                    MOBILE_APP_PROMO: false,
-                  }}
-                  userInfo={{ displayName: currentUser.name }}
-                  getIFrameRef={(iframeRef) => {
-                    iframeRef.style.height = '100%';
-                    iframeRef.style.width = '100%';
-                    iframeRef.style.border = 'none';
-                    iframeRef.setAttribute('allow', 'camera *; microphone *; display-capture *');
-                  }}
-                  onApiReady={handleJitsiReady}
-                />
               </div>
 
               {/* Bottom Controls Bar */}
@@ -620,22 +599,24 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                   {isMuted ? <MicOff className="w-5 h-5 stroke-[2.5]" /> : <Mic className="w-5 h-5" />}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={toggleCamera}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
-                    isCameraOff 
-                      ? 'neu-pressed text-rose-500 border border-rose-500/30' 
-                      : 'neu-btn text-slate-700 dark:text-slate-200'
-                  }`}
-                  title={isCameraOff ? 'Turn Camera On' : 'Turn Camera Off'}
-                >
-                  {isCameraOff ? <CameraOff className="w-5 h-5 stroke-[2.5]" /> : <Camera className="w-5 h-5" />}
-                </button>
+                {callType === 'video' && (
+                  <button
+                    type="button"
+                    onClick={toggleCamera}
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
+                      isCameraOff 
+                        ? 'neu-pressed text-rose-500 border border-rose-500/30' 
+                        : 'neu-btn text-slate-700 dark:text-slate-200'
+                    }`}
+                    title={isCameraOff ? 'Turn Camera On' : 'Turn Camera Off'}
+                  >
+                    {isCameraOff ? <CameraOff className="w-5 h-5 stroke-[2.5]" /> : <Camera className="w-5 h-5" />}
+                  </button>
+                )}
 
                 <button
                   type="button"
-                  onClick={endVideoCall}
+                  onClick={() => handleEndCall(true)}
                   className="w-14 h-14 rounded-2xl neu-btn text-rose-600 hover:text-rose-700 flex items-center justify-center transition-all active:scale-90 shadow-lg cursor-pointer"
                   title="End Call"
                 >
@@ -658,11 +639,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                     </div>
                   )}
                   <p className="text-slate-500 dark:text-slate-400 text-xs mt-3 text-center max-w-xs mx-auto">
-                    {otherUser?.name || 'The provider'} has left the teleconsultation room.
+                    {otherUser?.name || 'The participant'} has ended the consultation session.
                   </p>
                   <button
                     type="button"
-                    onClick={closeVideoOverlay}
+                    onClick={closeCallOverlay}
                     className="mt-6 px-6 py-2.5 neu-btn text-primary rounded-xl font-extrabold text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
                   >
                     Return to Conversation
@@ -741,15 +722,29 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
             </p>
           </div>
         </Link>
-        <motion.button
-          onClick={startVideoCall}
-          className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-primary flex items-center justify-center hover:text-primary-700 transition-all shrink-0 cursor-pointer"
-          title="Start Teleconsultation"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Video className="w-5 h-5 fill-current" />
-        </motion.button>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <motion.button
+            type="button"
+            onClick={() => handleStartCall('audio')}
+            className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-emerald-600 dark:text-emerald-400 flex items-center justify-center hover:text-emerald-700 transition-all shrink-0 cursor-pointer shadow-sm"
+            title="Start Voice Consultation"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Phone className="w-4.5 h-4.5 stroke-[2.2]" />
+          </motion.button>
+
+          <motion.button
+            type="button"
+            onClick={() => handleStartCall('video')}
+            className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-primary flex items-center justify-center hover:text-primary-700 transition-all shrink-0 cursor-pointer shadow-sm"
+            title="Start Teleconsultation (Video)"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Video className="w-5 h-5 fill-current" />
+          </motion.button>
+        </div>
       </div>
 
       {/* Messages Area */}

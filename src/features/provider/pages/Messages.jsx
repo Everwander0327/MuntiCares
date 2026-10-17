@@ -33,6 +33,7 @@ const ProviderMessages = () => {
   );
   const [searchTerm, setSearchTerm] = useState('');
   const [autoStartVideo, setAutoStartVideo] = useState(false);
+  const [autoStartCall, setAutoStartCall] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -109,7 +110,13 @@ const ProviderMessages = () => {
         });
 
       setView('chat');
-      if (params.get('startVideo') === '1') {
+      const startCallParam = params.get('startCall');
+      const startVideoParam = params.get('startVideo');
+      if (startCallParam) {
+        setAutoStartCall({ active: true, type: startCallParam });
+        if (startCallParam === 'video') setAutoStartVideo(true);
+      } else if (startVideoParam === '1') {
+        setAutoStartCall({ active: true, type: 'video' });
         setAutoStartVideo(true);
       }
       window.history.replaceState({}, '', location.pathname);
@@ -131,12 +138,14 @@ const ProviderMessages = () => {
     setSelectedPartner(partner);
     setView('chat');
     setAutoStartVideo(false);
+    setAutoStartCall(null);
   };
 
   const handleBack = () => {
     setView('list');
     setSelectedPartner(null);
     setAutoStartVideo(false);
+    setAutoStartCall(null);
   };
 
   return (
@@ -204,6 +213,7 @@ const ProviderMessages = () => {
                 otherUser={selectedPartner}
                 onBack={handleBack}
                 autoStartVideo={autoStartVideo}
+                autoStartCall={autoStartCall}
               />
             </motion.div>
           )}
