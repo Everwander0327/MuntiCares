@@ -101,22 +101,36 @@ async function getMedia(type) {
     err.code = 'INSECURE_CONTEXT';
     throw err;
   }
+  if (type === 'audio') {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    return { stream, type: 'audio' };
+  }
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: type === 'video' });
-    return { stream, type };
-  } catch (err) {
-    if (type === 'video') {
-      // Camera unavailable/blocked -> degrade to a voice call.
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+    });
+    return { stream, type: 'video' };
+  } catch (err1) {
+    console.warn('[webrtc] user-facing camera failed, retrying generic video...', err1);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      });
+      return { stream, type: 'video' };
+    } catch (err2) {
+      console.warn('[webrtc] camera unavailable, degrading to voice...', err2);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       return { stream, type: 'audio', degraded: true };
     }
-    throw err;
   }
 }
 
 export default function useWebRTCCall({ selfId, peerId }) {
   const [callStatus, setCallStatusState] = useState('idle'); // idle | connecting | connected | ended
   const [callType, setCallType] = useState('video');
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [pcState, setPcState] = useState('new');
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOff, setIsCameraOff] = useState(false);
@@ -173,9 +187,22 @@ export default function useWebRTCCall({ selfId, peerId }) {
   const attachMedia = useCallback(() => {
     const attach = (el, stream, muted) => {
       if (!el) return;
-      if (el.srcObject !== stream) el.srcObject = stream || null;
       el.muted = !!muted;
-      if (stream) el.play?.().catch(() => {});
+      el.defaultMuted = !!muted;
+      el.playsInline = true;
+      try {
+        el.setAttribute('playsinline', '');
+        el.setAttribute('webkit-playsinline', '');
+      } catch {}
+      if (el.srcObject !== stream) el.srcObject = stream || null;
+      if (stream) {
+        const p = el.play?.();
+        if (p && typeof p.catch === 'function') {
+          p.catch((err) => {
+            console.warn('[webrtc] play prevented/blocked:', err?.name);
+          });
+        }
+      }
     };
     attach(localVideoRef.current, localStreamRef.current, true);
     attach(remoteVideoRef.current, remoteStreamRef.current, false);
@@ -187,6 +214,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     remoteStreamRef.current = null;
+    setHasRemoteVideo(false);
     if (pcRef.current) {
       const pc = pcRef.current;
       pc.onicecandidate = null;
@@ -272,6 +300,12 @@ export default function useWebRTCCall({ selfId, peerId }) {
       }
       const liveStream = new MediaStream(stream.getTracks());
       remoteStreamRef.current = liveStream;
+      if (e.track.kind === 'video') {
+        setHasRemoteVideo(true);
+        e.track.onmute = () => setHasRemoteVideo(false);
+        e.track.onunmute = () => setHasRemoteVideo(true);
+        e.track.onended = () => setHasRemoteVideo(false);
+      }
       attachMedia();
     };
 
@@ -488,7 +522,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setRoleBoth('caller');
     setError(null);
     setIsMuted(false);
-    setIsCameraOff(false);
+    setIsCameraOff(type === 'audio');
     setCallType(type);
     setCallStatus('connecting');
 
@@ -510,6 +544,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
     localStreamRef.current = media.stream;
     setCallType(media.type);
+    setIsCameraOff(media.type === 'audio');
     attachMedia();
 
     const pc = createPeerConnection(callId);
@@ -537,7 +572,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setRoleBoth('callee');
     setError(null);
     setIsMuted(false);
-    setIsCameraOff(false);
+    setIsCameraOff(type === 'audio');
     setCallType(type === 'audio' ? 'audio' : 'video');
     setCallStatus('connecting');
 
@@ -572,17 +607,73 @@ export default function useWebRTCCall({ selfId, peerId }) {
     });
   }, []);
 
-  const toggleCamera = useCallback(() => {
-    setIsCameraOff((prev) => {
-      const next = !prev;
-      localStreamRef.current?.getVideoTracks().forEach((t) => { t.enabled = !next; });
-      return next;
-    });
-  }, []);
+  const toggleCamera = useCallback(async () => {
+    console.log('[webrtc] toggleCamera called, current isCameraOff:', isCameraOff);
+    const existingTracks = localStreamRef.current?.getVideoTracks() || [];
+    if (existingTracks.length > 0) {
+      const nextOff = !isCameraOff;
+      existingTracks.forEach((t) => { t.enabled = !nextOff; });
+      setIsCameraOff(nextOff);
+      if (!nextOff) {
+        setCallType('video');
+      }
+      setTimeout(attachMedia, 50);
+      return;
+    }
+
+    // Call started as audio or has no video track yet -> acquire camera on demand!
+    try {
+      console.log('[webrtc] acquiring camera track for toggleCamera...');
+      let vStream = null;
+      try {
+        vStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+      } catch (err1) {
+        console.warn('[webrtc] front-facing camera failed, retrying generic video...', err1);
+        vStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+      const newTrack = vStream?.getVideoTracks()?.[0];
+      if (!newTrack) return;
+
+      if (!localStreamRef.current) {
+        localStreamRef.current = new MediaStream();
+      }
+      localStreamRef.current.addTrack(newTrack);
+
+      const pc = pcRef.current;
+      if (pc) {
+        const senders = pc.getSenders();
+        const videoSender = senders.find((s) => s.track?.kind === 'video' || s.dtlsTransport);
+        if (videoSender && typeof videoSender.replaceTrack === 'function') {
+          console.log('[webrtc] replaceTrack on existing video sender');
+          await videoSender.replaceTrack(newTrack);
+        } else {
+          console.log('[webrtc] addTrack new video track to pc');
+          pc.addTrack(newTrack, localStreamRef.current);
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          send({
+            type: 'offer',
+            callId: callIdRef.current,
+            callType: 'video',
+            sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
+          });
+        }
+      }
+
+      setIsCameraOff(false);
+      setCallType('video');
+      setTimeout(attachMedia, 50);
+    } catch (err) {
+      console.error('[webrtc] failed to turn camera on', err);
+    }
+  }, [attachMedia, isCameraOff, send]);
 
   return {
     callStatus,
     callType,
+    hasRemoteVideo,
     pcState,
     role,
     isMuted,

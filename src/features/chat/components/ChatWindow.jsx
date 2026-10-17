@@ -54,6 +54,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   const {
     callStatus,
     callType,
+    hasRemoteVideo,
     pcState,
     isMuted,
     isCameraOff,
@@ -426,7 +427,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     </button>
                   </div>
                 ) : (
-                  <div className="neu-flat p-8 sm:p-10 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
+                  <div className="neu-flat p-8 sm:p-10 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl relative overflow-hidden">
                     {/* Radar Pulse Avatar */}
                     <div className="relative w-28 h-28 mx-auto mb-5">
                       <motion.div
@@ -518,39 +519,22 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
               {/* Call Content Area */}
               <div className="flex-1 w-full bg-slate-950 relative overflow-hidden flex flex-col items-center justify-center">
-                {callType === 'video' ? (
-                  <>
-                    {/* Full Remote Video */}
-                    <video
-                      ref={remoteVideoRef}
-                      data-testid="remote-video"
-                      autoPlay
-                      playsInline
-                      className="w-full h-full object-cover bg-slate-950"
-                    />
+                {/* Full Remote Video (visible when remote video track is active) */}
+                <video
+                  ref={remoteVideoRef}
+                  data-testid="remote-video"
+                  autoPlay
+                  playsInline
+                  className={`w-full h-full object-cover bg-slate-950 transition-opacity duration-300 ${
+                    callType === 'video' && hasRemoteVideo
+                      ? 'opacity-100 z-10'
+                      : 'opacity-0 z-0 absolute inset-0 pointer-events-none'
+                  }`}
+                />
 
-                    {/* PiP Local Video Preview */}
-                    <div className="absolute bottom-6 right-5 w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden neu-flat shadow-2xl border-2 border-white/60 dark:border-white/10 z-20 bg-slate-900">
-                      {isCameraOff ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-800">
-                          <CameraOff className="w-5 h-5 mb-1" />
-                          <span className="text-3xs font-bold">Cam Off</span>
-                        </div>
-                      ) : (
-                        <video
-                          ref={localVideoRef}
-                          data-testid="local-video"
-                          autoPlay
-                          playsInline
-                          muted
-                          className="w-full h-full object-cover transform -scale-x-100"
-                        />
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  /* Audio Call Screen */
-                  <div className="flex-1 flex flex-col items-center justify-center px-6 relative w-full bg-[#ebf1f8] dark:bg-[#172236]">
+                {/* Audio Screen / Remote Camera Off Placeholder */}
+                {(!hasRemoteVideo || callType === 'audio') && (
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 relative w-full bg-[#ebf1f8] dark:bg-[#172236] z-[5]">
                     <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center mb-6">
                       <motion.div
                         className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
@@ -577,11 +561,34 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     </h3>
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-3xs font-bold text-emerald-600 dark:text-emerald-400 mt-2 uppercase tracking-widest">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      Voice Consultation In Progress
+                      {callType === 'audio' ? 'Voice Consultation In Progress' : 'Remote camera is off'}
                     </div>
-                    <audio ref={remoteAudioRef} data-testid="remote-audio" autoPlay playsInline />
                   </div>
                 )}
+
+                {/* Remote Audio Track: Always mounted */}
+                <audio ref={remoteAudioRef} data-testid="remote-audio" autoPlay playsInline />
+
+                {/* PiP Local Video Preview */}
+                <div className={`absolute bottom-6 right-5 w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden neu-flat shadow-2xl border-2 border-white/60 dark:border-white/10 z-20 bg-slate-900 ${
+                  isCameraOff && callType === 'audio' ? 'hidden' : 'block'
+                }`}>
+                  {isCameraOff ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-800">
+                      <CameraOff className="w-5 h-5 mb-1" />
+                      <span className="text-3xs font-bold">Cam Off</span>
+                    </div>
+                  ) : (
+                    <video
+                      ref={localVideoRef}
+                      data-testid="local-video"
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover transform -scale-x-100"
+                    />
+                  )}
+                </div>
               </div>
 
               {/* Bottom Controls Bar */}
@@ -599,20 +606,18 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   {isMuted ? <MicOff className="w-5 h-5 stroke-[2.5]" /> : <Mic className="w-5 h-5" />}
                 </button>
 
-                {callType === 'video' && (
-                  <button
-                    type="button"
-                    onClick={toggleCamera}
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
-                      isCameraOff 
-                        ? 'neu-pressed text-rose-500 border border-rose-500/30' 
-                        : 'neu-btn text-slate-700 dark:text-slate-200'
-                    }`}
-                    title={isCameraOff ? 'Turn Camera On' : 'Turn Camera Off'}
-                  >
-                    {isCameraOff ? <CameraOff className="w-5 h-5 stroke-[2.5]" /> : <Camera className="w-5 h-5" />}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={toggleCamera}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
+                    isCameraOff 
+                      ? 'neu-pressed text-rose-500 border border-rose-500/30' 
+                      : 'neu-btn text-slate-700 dark:text-slate-200'
+                  }`}
+                  title={isCameraOff ? 'Turn Camera On' : 'Turn Camera Off'}
+                >
+                  {isCameraOff ? <CameraOff className="w-5 h-5 stroke-[2.5]" /> : <Camera className="w-5 h-5" />}
+                </button>
 
                 <button
                   type="button"
@@ -804,18 +809,30 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                             : 'neu-flat rounded-2xl rounded-bl-sm text-slate-800 dark:text-slate-100 font-medium'
                         }`}>
                           <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.content}</p>
-                          {msg.content?.startsWith('📞') && (
+                          {(msg.content?.startsWith('📹') || msg.content?.startsWith('📞')) && (
                             <button
                               type="button"
-                              onClick={() => setCallStatus('connecting')}
+                              onClick={() => {
+                                const type = msg.content.startsWith('📹') ? 'video' : 'audio';
+                                rtcJoinCall(type);
+                              }}
                               className={`mt-2.5 w-full px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                                 isMe
                                   ? 'bg-white/20 hover:bg-white/30 text-white'
                                   : 'neu-btn text-primary'
                               }`}
                             >
-                              <Video className="w-3.5 h-3.5" />
-                              <span>Join Video Call</span>
+                              {msg.content?.startsWith('📹') ? (
+                                <>
+                                  <Video className="w-3.5 h-3.5" />
+                                  <span>Join Video Call</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Phone className="w-3.5 h-3.5" />
+                                  <span>Join Voice Call</span>
+                                </>
+                              )}
                             </button>
                           )}
                         </div>
