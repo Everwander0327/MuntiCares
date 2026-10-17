@@ -82,6 +82,15 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const hasVitals = Object.values(vitals).some(v => v && v.trim() !== '');
+    const hasSymptoms = symptomNotes.trim() !== '';
+    const hasFiles = files.length > 0;
+
+    if (!hasVitals && !hasSymptoms && !hasFiles) {
+      toast.error('Please enter vitals, symptom notes, or attach a file before submitting.');
+      return;
+    }
+
     setUploading(true);
 
     try {
@@ -102,11 +111,21 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
         }
 
         uploadedUrls.push(fileName);
+
+        if (request.patientId) {
+          await supabase
+            .from('patient_documents')
+            .insert([{
+              patient_id: request.patientId,
+              document_title: `[Pre-Session] ${file.name}`,
+              file_path: fileName
+            }]);
+        }
       }
 
       // 2. Append pre-session data to the request notes
       const notesSummary = [
-        symptomNotes ? `[Pre-session Symptoms] ${symptomNotes}` : '',
+        symptomNotes.trim() ? `[Pre-session Symptoms] ${symptomNotes.trim()}` : '',
         vitals.bp ? `BP: ${vitals.bp}` : '',
         vitals.temp ? `Temp: ${vitals.temp}°C` : '',
         vitals.hr ? `HR: ${vitals.hr} bpm` : '',
@@ -135,6 +154,9 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
       submitted[request.id] = true;
       localStorage.setItem('presession_submitted', JSON.stringify(submitted));
 
+      setFiles([]);
+      setSymptomNotes('');
+      setVitals({ bp: '', temp: '', hr: '', weight: '' });
       onClose();
     } catch (err) {
       console.error('Error submitting pre-session data:', err);

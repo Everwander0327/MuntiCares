@@ -31,6 +31,7 @@ const useCountUp = (end, duration = 2000, startOnView = true) => {
     if (!hasStarted) return;
 
     let startTime;
+    let frameId;
     const numericEnd = typeof end === 'string' ? parseFloat(end.replace(/[^0-9.]/g, '')) : end;
     
     const animate = (timestamp) => {
@@ -40,13 +41,14 @@ const useCountUp = (end, duration = 2000, startOnView = true) => {
       setCount(Math.floor(easeOut * numericEnd));
       
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        frameId = requestAnimationFrame(animate);
       } else {
         setCount(numericEnd);
       }
     };
 
-    requestAnimationFrame(animate);
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
   }, [hasStarted, end, duration]);
 
   return { count, ref };

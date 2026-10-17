@@ -100,10 +100,31 @@ const AdminDashboard = () => {
           .eq('is_profile_complete', true)
           .eq('is_approved', false);
 
+        // Fetch requests for bar chart
+        const { data: requests } = await supabase
+          .from('requests')
+          .select('created_at, patient:patient_id(full_name), service, status')
+          .order('created_at', { ascending: false });
+
+        const filteredRequests = (requests || []).filter(req => {
+          const ts = new Date(req.created_at).getTime();
+          if (startDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            if (ts < start.getTime()) return false;
+          }
+          if (endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            if (ts > end.getTime()) return false;
+          }
+          return true;
+        });
+
         setStats({
           totalPatients: patientCount || 0,
           totalProviders: providerCount || 0,
-          totalRequests: requestCount || 0,
+          totalRequests: (startDate || endDate) ? filteredRequests.length : (requestCount || 0),
           pendingApprovals: pendingApprovalCount || 0
         });
 
@@ -111,12 +132,6 @@ const AdminDashboard = () => {
           { name: 'Patients', value: patientCount || 0, color: '#1E6FBF' },
           { name: 'Providers', value: providerCount || 0, color: '#38bdf8' },
         ]);
-
-        // Fetch requests for bar chart
-        const { data: requests } = await supabase
-          .from('requests')
-          .select('created_at, patient:patient_id(full_name), service, status')
-          .order('created_at', { ascending: false });
 
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthlyCounts = {};
@@ -127,7 +142,7 @@ const AdminDashboard = () => {
           monthlyCounts[`${monthNames[d2.getMonth()]} ${d2.getFullYear()}`] = 0;
         }
 
-        (requests || []).forEach(req => {
+        filteredRequests.forEach(req => {
           const rd = new Date(req.created_at);
           const key = `${monthNames[rd.getMonth()]} ${rd.getFullYear()}`;
           if (monthlyCounts[key] !== undefined) {
@@ -142,7 +157,7 @@ const AdminDashboard = () => {
         setBarChartData(chartData);
 
         // Recent activity
-        const activity = (requests || []).slice(0, 5).map(req => ({
+        const activity = filteredRequests.slice(0, 5).map(req => ({
           user: req.patient?.full_name || 'Unknown',
           action: `Requested ${req.service}`,
           date: new Date(req.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
@@ -198,7 +213,7 @@ const AdminDashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [startDate, endDate]);
 
   if (loading) {
     return (

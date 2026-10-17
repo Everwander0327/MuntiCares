@@ -55,6 +55,8 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
         const bookedTimes = (existingBookings || []).map(b => b.time);
 
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const currentHour = new Date().getHours();
         const slots = [];
         for (let hour = WORKING_HOURS_START; hour < WORKING_HOURS_END; hour++) {
           const time = `${String(hour).padStart(2, '0')}:00`;
@@ -66,7 +68,8 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
             const bookingTime = bh + bm / 60;
             return bookingTime >= slotStart && bookingTime < slotEnd;
           });
-          slots.push({ time, available: !isBooked });
+          const isPast = newDate === todayStr && hour <= currentHour;
+          slots.push({ time, available: !isBooked && !isPast });
         }
 
         setAvailableSlots(slots);
@@ -81,18 +84,20 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
     fetchAvailableSlots();
   }, [mode, newDate, request?.id, request?.providerId]);
 
+  const resetAndClose = () => {
+    setMode('choose');
+    setCancelReason('');
+    setSelectedReason('');
+    setNewDate('');
+    setNewTime('');
+    setAvailableSlots([]);
+    onClose();
+  };
+
   const handleCancel = async () => {
     setSubmitting(true);
     const reason = cancelReason || selectedReason || 'No reason provided';
 
-    // Optimistic: close modal and notify immediately
-    const actionComplete = onActionComplete;
-    const close = onClose;
-    close();
-    toast.success('Request has been cancelled.');
-    if (actionComplete) actionComplete();
-
-    // Background: update DB
     try {
       const { error } = await supabase
         .from('requests')
@@ -100,9 +105,15 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         .eq('id', request.id);
 
       if (error) throw error;
+
+      toast.success('Request has been cancelled.');
+      onActionComplete?.();
+      resetAndClose();
     } catch (err) {
       console.error('Error cancelling request:', err);
       toast.error('Failed to update server. The request may still be active.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -115,14 +126,6 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
     setSubmitting(true);
 
-    // Optimistic: close and notify immediately
-    const actionComplete = onActionComplete;
-    const close = onClose;
-    close();
-    toast.success('Appointment rescheduled successfully!');
-    if (actionComplete) actionComplete();
-
-    // Background: check conflicts + update DB
     try {
       const { data: conflict } = await supabase
         .from('requests')
@@ -152,21 +155,16 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         .eq('id', request.id);
 
       if (error) throw error;
+
+      toast.success('Appointment rescheduled successfully!');
+      onActionComplete?.();
+      resetAndClose();
     } catch (err) {
       console.error('Error rescheduling request:', err);
       toast.error('Reschedule failed on the server. The original schedule remains.');
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const resetAndClose = () => {
-    setMode('choose');
-    setCancelReason('');
-    setNewDate('');
-    setNewTime('');
-    setAvailableSlots([]);
-    onClose();
   };
 
   if (!request) return null;
@@ -308,7 +306,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                 <input
                   type="date"
                   required
-                  min={new Date().toISOString().split('T')[0]}
+                  min={new Date().toLocaleDateString('en-CA')}
                   value={newDate}
                   onChange={e => {
                     setNewDate(e.target.value);

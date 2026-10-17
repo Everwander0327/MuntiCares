@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { ChevronLeft, ChevronRight, MapPin, Clock, Navigation, Home, CheckCircle2, Loader2, User, CalendarDays, Stethoscope } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,18 +49,22 @@ const ProviderSchedule = () => {
       try {
         const { data, error } = await supabase
           .from('requests')
-          .select('id, patient_id, service, date, time, status, price, notes, patient:patient_id(full_name)')
+          .select('id, patient_id, service, date, time, status, price, notes, patient:patient_id(full_name, avatar_url)')
           .eq('provider_id', user.id)
           .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed']);
 
         if (error) throw error;
 
         // Fetch addresses from patients table separately
-        const patientIds = (data || []).map(r => r.patient_id);
-        const { data: patientProfiles } = await supabase
-          .from('patients')
-          .select('user_id, address')
-          .in('user_id', patientIds);
+        const patientIds = (data || []).map(r => r.patient_id).filter(Boolean);
+        let patientProfiles = [];
+        if (patientIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('patients')
+            .select('user_id, address')
+            .in('user_id', patientIds);
+          patientProfiles = profiles || [];
+        }
 
         const formatted = (data || []).map(r => {
           const profile = patientProfiles?.find(p => p.user_id === r.patient_id);
@@ -72,6 +77,7 @@ const ProviderSchedule = () => {
             id: r.id,
             patientId: r.patient_id,
             patient: r.patient?.full_name || 'Unknown',
+            avatarUrl: r.patient?.avatar_url || '',
             service: r.service,
             date: r.date,
             time: r.time,
@@ -124,11 +130,23 @@ const ProviderSchedule = () => {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
-  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+  const prevMonth = () => {
+    const newDate = new Date(year, month - 1, 1);
+    setCurrentDate(newDate);
+    setSelectedDate(newDate);
+    setApptsPage(1);
+  };
+  const nextMonth = () => {
+    const newDate = new Date(year, month + 1, 1);
+    setCurrentDate(newDate);
+    setSelectedDate(newDate);
+    setApptsPage(1);
+  };
 
   const isSameDay = (d1Str, d2) => {
-    const d1 = new Date(d1Str + 'T00:00:00');
+    if (!d1Str || !d2) return false;
+    const cleanStr = String(d1Str).split('T')[0];
+    const d1 = new Date(cleanStr + 'T00:00:00');
     return d1.getDate() === d2.getDate() && d1.getMonth() === d2.getMonth() && d1.getFullYear() === d2.getFullYear();
   };
 
@@ -138,7 +156,14 @@ const ProviderSchedule = () => {
   };
 
   const selectedDayLabel = selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const selectedAppts = appointments.filter(a => isSameDay(a.date, selectedDate)).sort((a, b) => a.time.localeCompare(b.time));
+  const selectedAppts = appointments.filter(a => isSameDay(a.date, selectedDate)).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const maxPage = Math.max(1, Math.ceil(selectedAppts.length / APPTS_PER_PAGE));
+
+  useEffect(() => {
+    if (apptsPage > maxPage) {
+      setApptsPage(maxPage);
+    }
+  }, [apptsPage, maxPage]);
 
   const isToday = (day) => {
     const today = new Date();
@@ -163,9 +188,14 @@ const ProviderSchedule = () => {
     try {
       const appt = appointments.find(a => a.id === appointmentId);
 
+      const payload = { status: newStatus };
+      const nowIso = new Date().toISOString();
+      if (newStatus === 'On The Way') payload.route_started_at = nowIso;
+      if (newStatus === 'Arrived') payload.arrived_at = nowIso;
+
       const { error } = await supabase
         .from('requests')
-        .update({ status: newStatus })
+        .update(payload)
         .eq('id', appointmentId);
 
       if (error) throw error;
@@ -415,15 +445,22 @@ const ProviderSchedule = () => {
                         <div className="p-3.5 sm:p-5">
                           {/* Top row */}
                           <div className="flex items-start justify-between gap-2.5 mb-3">
-                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                              <div className="neu-flat-sm w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary font-black text-xs sm:text-sm shrink-0">
-                                {appt.patient.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                            <Link
+                              to={`/provider/patients/${appt.patientId}/profile`}
+                              className="flex items-center gap-2.5 sm:gap-3 min-w-0 group"
+                            >
+                              <div className="neu-flat-sm w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-primary font-black text-xs sm:text-sm shrink-0 p-0.5">
+                                {appt.avatarUrl ? (
+                                  <img src={appt.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
+                                ) : (
+                                  appt.patient.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                                )}
                               </div>
                               <div className="min-w-0">
-                                <h4 className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm md:text-base truncate">{appt.patient}</h4>
+                                <h4 className="font-display font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors text-xs sm:text-sm md:text-base truncate">{appt.patient}</h4>
                                 <p className="text-3xs sm:text-xs text-primary font-bold">{appt.service}</p>
                               </div>
-                            </div>
+                            </Link>
                             <span className={`text-3xs font-extrabold px-2.5 py-1 rounded-lg sm:rounded-xl uppercase tracking-wider shrink-0 ${STATUS_BADGE[appt.status] || 'neu-btn text-slate-500'}`}>
                               {appt.status}
                             </span>
@@ -480,7 +517,7 @@ const ProviderSchedule = () => {
 
                           {/* Action Buttons */}
                           <div className="flex gap-2">
-                            {statusAction ? (
+                            {statusAction && (
                               <motion.button
                                 whileTap={{ scale: 0.97 }}
                                 disabled={isUpdating}
@@ -490,16 +527,15 @@ const ProviderSchedule = () => {
                                 {isUpdating ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : statusAction.icon}
                                 <span>{statusAction.label}</span>
                               </motion.button>
-                            ) : (
-                              <motion.button
-                                whileTap={{ scale: 0.96 }}
-                                onClick={() => setModalPatient({ id: appt.patientId, name: appt.patient })}
-                                className="neu-btn flex-1 flex items-center justify-center gap-1.5 sm:gap-2 font-bold py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm text-slate-700 dark:text-slate-200 cursor-pointer"
-                              >
-                                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
-                                <span>View Patient Record</span>
-                              </motion.button>
                             )}
+                            <motion.button
+                              whileTap={{ scale: 0.96 }}
+                              onClick={() => setModalPatient({ id: appt.patientId, name: appt.patient })}
+                              className="neu-btn flex-1 flex items-center justify-center gap-1.5 sm:gap-2 font-bold py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm text-slate-700 dark:text-slate-200 cursor-pointer"
+                            >
+                              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                              <span>{statusAction ? 'Patient Record' : 'View Patient Record'}</span>
+                            </motion.button>
                           </div>
                         </div>
                       </motion.div>

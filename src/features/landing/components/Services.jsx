@@ -51,7 +51,7 @@ const ServiceCard = ({ service }) => (
     whileTap={{ scale: 0.98 }}
   >
     <Link
-      to="/patient/providers"
+      to={`/patient/providers?service=${encodeURIComponent(service.title)}`}
       className="group block h-full text-left transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl md:rounded-[2.25rem]"
       aria-label={`View providers offering ${service.title}`}
     >

@@ -68,7 +68,8 @@ const NotificationBell = () => {
   const [panelPos, setPanelPos] = useState({ top: 0, right: 16 });
   const panelRef = useRef(null);
   const buttonRef = useRef(null);
-  const prevNotifsRef = useRef([]);
+  const prevNotifsRef = useRef({ userId: null, initialized: false, items: [] });
+  const isFetchingRef = useRef(false);
   const isUpdatingPosRef = useRef(false);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -229,6 +230,49 @@ const NotificationBell = () => {
             });
             break;
         }
+      } else if (role === 'admin') {
+        switch (req.status) {
+          case 'Pending':
+            notifs.push({
+              id: `${req.id}-admin-pending`,
+              type: 'new_request',
+              title: 'Pending Platform Request',
+              message: `${patientName} requested ${req.service} from ${providerName}.`,
+              time: timestamp,
+              link: '/admin/requests'
+            });
+            break;
+          case 'Completed':
+            notifs.push({
+              id: `${req.id}-admin-completed`,
+              type: 'status_completed',
+              title: 'Service Completed',
+              message: `${providerName} completed ${req.service} for ${patientName}.`,
+              time: timestamp,
+              link: '/admin/requests'
+            });
+            break;
+          case 'Cancelled':
+            notifs.push({
+              id: `${req.id}-admin-cancelled`,
+              type: 'request_cancelled',
+              title: 'Request Cancelled',
+              message: `${patientName}'s ${req.service} booking was cancelled.`,
+              time: timestamp,
+              link: '/admin/requests'
+            });
+            break;
+          default:
+            notifs.push({
+              id: `${req.id}-admin-${req.status?.toLowerCase()}`,
+              type: 'new_request',
+              title: `Request ${req.status}`,
+              message: `${patientName} — ${req.service} (${providerName})`,
+              time: timestamp,
+              link: '/admin/requests'
+            });
+            break;
+        }
       }
     });
 
@@ -245,18 +289,23 @@ const NotificationBell = () => {
   };
 
   const fetchNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user?.id || isFetchingRef.current) return;
+    isFetchingRef.current = true;
 
     try {
-      const isPatient = user.role === 'patient';
-      const filterCol = isPatient ? 'patient_id' : 'provider_id';
-
-      const { data, error } = await supabase
+      let reqQuery = supabase
         .from('requests')
         .select('id, status, service, created_at, patient:patient_id(full_name), provider:provider_id(full_name)')
-        .eq(filterCol, user.id)
         .order('created_at', { ascending: false })
         .limit(30);
+
+      if (user.role !== 'admin') {
+        const isPatient = user.role === 'patient';
+        const filterCol = isPatient ? 'patient_id' : 'provider_id';
+        reqQuery = reqQuery.eq(filterCol, user.id);
+      }
+
+      const { data, error } = await reqQuery;
 
       if (error) throw error;
 
@@ -265,7 +314,7 @@ const NotificationBell = () => {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: msgData } = await supabase
         .from('messages')
-        .select('id, content, created_at, sender:sender_id(full_name)')
+        .select('id, sender_id, content, created_at, sender:sender_id(full_name)')
         .eq('receiver_id', user.id)
         .gte('created_at', oneDayAgo)
         .order('created_at', { ascending: false });
@@ -290,77 +339,81 @@ const NotificationBell = () => {
         });
       }
 
+      notifs.sort((a, b) => new Date(b.time) - new Date(a.time));
+
       const dismissed = JSON.parse(localStorage.getItem(`dismissed_notifs_${user.id}`) || '[]');
       const activeNotifs = notifs.filter(n => !dismissed.includes(n.id));
 
-      if (prevNotifsRef.current.length > 0) {
-        const newlyAdded = activeNotifs.filter(n => !prevNotifsRef.current.some(pn => pn.id === n.id));
+      const seenToastKey = `seen_toast_notifs_${user.id}`;
+      const seenToastIds = new Set(JSON.parse(localStorage.getItem(seenToastKey) || '[]'));
+      const readKey = `read_notifs_${user.id}`;
+      const readIds = new Set(JSON.parse(localStorage.getItem(readKey) || '[]'));
+
+      const isAlreadyInitialized =
+        prevNotifsRef.current.userId === user.id && prevNotifsRef.current.initialized;
+
+      if (isAlreadyInitialized) {
+        // Only toast notifications that arrived AFTER login and have never been toasted before
+        const newlyAdded = activeNotifs.filter(
+          n => !seenToastIds.has(n.id) && !prevNotifsRef.current.items.some(pn => pn.id === n.id)
+        );
         newlyAdded.forEach(notif => {
-          playChime();
-          let icon = '🔔';
-          if (notif.type === 'request_accepted') icon = '✅';
-          else if (notif.type === 'status_on_the_way') icon = '🚗';
-          else if (notif.type === 'status_arrived') icon = '🏠';
-          else if (notif.type === 'status_completed') icon = '⭐';
-          else if (notif.type === 'request_rejected') icon = '❌';
-          else if (notif.type === 'new_request') icon = '📋';
-          else if (notif.type === 'request_cancelled') icon = '🚫';
-          else if (notif.type === 'new_message') icon = '💬';
-
-          toast(
-            <div>
-              <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">{notif.title}</p>
-              <p className="text-slate-500 dark:text-slate-400 text-nano font-normal mt-0.5">{notif.message}</p>
-            </div>,
-            {
-              icon,
-              style: {
-                borderRadius: '1rem',
-                background: '#fff',
-                color: '#1e293b',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.12)',
-                border: '1px solid #f1f5f9',
-                padding: '10px 14px'
-              },
-              duration: 4000
-            }
-          );
-
+          seenToastIds.add(notif.id);
+          toast(`${notif.title}: ${notif.message}`, { id: `bell-${notif.id}` });
           fireBrowserNotification(notif.title, notif.message);
         });
+      } else {
+        // Initial load on login: mark all pre-existing notifications as already seen so past
+        // notifications NEVER pop up on login, and mark older (>24h) notifications as read.
+        const oneDayAgoMs = Date.now() - 24 * 60 * 60 * 1000;
+        let readUpdated = false;
+        activeNotifs.forEach(n => {
+          seenToastIds.add(n.id);
+          const t = new Date(n.time).getTime();
+          if (!Number.isNaN(t) && t < oneDayAgoMs && !readIds.has(n.id)) {
+            readIds.add(n.id);
+            readUpdated = true;
+          }
+        });
+        if (readUpdated) {
+          localStorage.setItem(readKey, JSON.stringify(Array.from(readIds).slice(-300)));
+        }
       }
-      
-      prevNotifsRef.current = activeNotifs;
+
+      activeNotifs.forEach(n => seenToastIds.add(n.id));
+      localStorage.setItem(seenToastKey, JSON.stringify(Array.from(seenToastIds).slice(-300)));
+
+      prevNotifsRef.current = { userId: user.id, initialized: true, items: activeNotifs };
       setNotifications(activeNotifs);
 
-      const readIds = JSON.parse(localStorage.getItem(`read_notifs_${user.id}`) || '[]');
-      const unread = activeNotifs.filter(n => !readIds.includes(n.id)).length;
+      const unread = activeNotifs.filter(n => !readIds.has(n.id)).length;
       setUnreadCount(unread);
     } catch (err) {
       console.error('Error fetching notifications:', err);
+    } finally {
+      isFetchingRef.current = false;
     }
-  }, [user]);
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     fetchNotifications();
 
-    if (!user) return;
+    if (!user?.id) return;
 
     const pollInterval = setInterval(() => {
       fetchNotifications();
     }, 1500);
 
     const filterCol = user.role === 'patient' ? 'patient_id' : 'provider_id';
+    const reqChangeConfig = user.role === 'admin'
+      ? { event: '*', schema: 'public', table: 'requests' }
+      : { event: '*', schema: 'public', table: 'requests', filter: `${filterCol}=eq.${user.id}` };
+
     const channel = supabase
       .channel('notification-bell-changes')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'requests',
-          filter: `${filterCol}=eq.${user.id}`
-        },
+        reqChangeConfig,
         () => {
           fetchNotifications();
         }
@@ -389,6 +442,17 @@ const NotificationBell = () => {
       supabase.removeChannel(msgChannel);
     };
   }, [user, fetchNotifications]);
+
+  const markAllAsRead = (e) => {
+    if (e) e.stopPropagation();
+    if (!user) return;
+    const allIds = notifications.map(n => n.id);
+    const existingRead = JSON.parse(localStorage.getItem(`read_notifs_${user.id}`) || '[]');
+    const nextRead = Array.from(new Set([...existingRead, ...allIds]));
+    localStorage.setItem(`read_notifs_${user.id}`, JSON.stringify(nextRead));
+    setUnreadCount(0);
+    toast.success('All notifications marked as read');
+  };
 
   const clearAllNotifications = (e) => {
     if (e) e.stopPropagation();
@@ -487,6 +551,16 @@ const NotificationBell = () => {
                 <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100">Notifications</h3>
               </div>
               <div className="flex items-center gap-1.5">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={markAllAsRead}
+                    className="neu-btn px-2.5 py-1 rounded-xl text-3xs font-extrabold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary cursor-pointer active:scale-95"
+                    title="Mark all notifications as read"
+                  >
+                    Mark all read
+                  </button>
+                )}
                 {notifications.length > 0 && (
                   <button
                     type="button"

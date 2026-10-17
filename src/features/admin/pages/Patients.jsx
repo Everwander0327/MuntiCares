@@ -187,6 +187,8 @@ const AdminPatients = () => {
         .update({ is_banned: false })
         .in('id', [...selectedIds]);
       if (error) throw error;
+      toast.success(`${selectedIds.size} patient(s) unbanned.`);
+      setSelectedIds(new Set());
       await fetchPatients();
     } catch (err) {
       toast.error('Failed to unban patients.');
@@ -236,6 +238,10 @@ const AdminPatients = () => {
   };
 
   const handleExport = () => {
+    if (!filteredPatients.length) {
+      toast.error('No patients to export.');
+      return;
+    }
     const fields = [
       { key: 'name', label: 'Full Name' },
       { key: 'email', label: 'Email' },
@@ -825,7 +831,10 @@ const AdminPatients = () => {
                             <div className="min-w-0 flex-1">
                               <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">{req.service}</p>
                               <p className="text-3xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
-                                {req.provider?.full_name || 'Provider'} • {new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                {req.provider?.full_name || 'Provider'} • {(() => {
+                                  const d = new Date(req.date || req.created_at);
+                                  return !isNaN(d) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
+                                })()}
                               </p>
                             </div>
                             <span className={`ml-3 inline-flex items-center px-2 py-0.5 rounded-lg text-3xs font-black uppercase tracking-wider shrink-0 ${

@@ -84,9 +84,12 @@ export const stopRingtone = () => {
  */
 export const playToastSound = (type = 'success') => {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
 
+    const ctx = audioCtx;
     const now = ctx.currentTime;
 
     if (type === 'error') {

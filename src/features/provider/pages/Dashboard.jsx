@@ -191,7 +191,7 @@ const ProviderDashboard = () => {
 
       // Find current active visit (priority: 'On The Way' > 'Arrived' > next upcoming 'Accepted')
       // Only show visits for today or future dates (past dates are excluded so expired/done visits don't linger)
-      const todayStr = new Date().toISOString().split('T')[0];
+      const todayStr = new Date().toLocaleDateString('en-CA');
       const activeVisitsList = allRequests.filter(r => 
         ['On The Way', 'Arrived', 'Accepted'].includes(r.status) &&
         (!r.date || r.date >= todayStr)
@@ -245,6 +245,7 @@ const ProviderDashboard = () => {
       // Recent requests formatted (store all up to 20 for in-card pagination)
       setRecentRequests(allRequests.slice(0, 20).map(r => ({
         id: r.id,
+        patientId: r.patient_id,
         patient: r.patient?.full_name || 'Unknown Patient',
         patientAvatarUrl: r.patient?.avatar_url || '',
         service: r.service,
@@ -334,13 +335,18 @@ const ProviderDashboard = () => {
   const handleAdvanceVisit = async (visitId, nextStatus) => {
     setUpdatingVisitId(visitId);
     try {
+      const payload = { status: nextStatus };
+      const nowIso = new Date().toISOString();
+      if (nextStatus === 'On The Way') payload.route_started_at = nowIso;
+      if (nextStatus === 'Arrived') payload.arrived_at = nowIso;
+
       const { error } = await supabase
         .from('requests')
-        .update({ status: nextStatus })
+        .update(payload)
         .eq('id', visitId);
 
       if (error) throw error;
-      toast.success(`Visit updated to "${nextStatus}"!`);
+      toast.success(`Visit updated to "${nextStatus === 'On The Way' ? 'On Route' : nextStatus}"!`);
       fetchDashboardData();
     } catch (err) {
       console.error(err);
@@ -361,7 +367,7 @@ const ProviderDashboard = () => {
   }
 
   const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
-  const STEP_LABELS = ['Confirmed', 'En Route', 'Arrived', 'Done'];
+  const STEP_LABELS = ['Confirmed', 'On Route', 'Arrived', 'Done'];
   const STEP_ICONS = [
     <CheckCircle2 key="confirmed" className="w-4 h-4" />,
     <Navigation key="enroute" className="w-4 h-4" />,
@@ -373,7 +379,7 @@ const ProviderDashboard = () => {
 
   const STATUS_MESSAGES = {
     Accepted: 'You confirmed this visit. Head to the patient address at the scheduled appointment time.',
-    'On The Way': 'You are currently en route to the patient location. Patient has been notified.',
+    'On The Way': 'You are currently on route to the patient location. Patient has been notified.',
     Arrived: 'You are on-site at the patient home. Conduct care and logging.',
     Completed: 'Home care visit is fully rendered and logged in the city records.',
   };
@@ -670,7 +676,10 @@ const ProviderDashboard = () => {
                   key={req.id}
                   className="neu-flat-sm p-3 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 hover:translate-x-0.5 transition-all"
                 >
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                  <Link
+                    to={`/provider/patients/${req.patientId}/profile`}
+                    className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 group"
+                  >
                     <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex items-center justify-center text-xs font-black text-primary shrink-0 p-0.5">
                       {req.patientAvatarUrl ? (
                         <img src={req.patientAvatarUrl} alt="" className="w-full h-full object-cover rounded-lg" />
@@ -679,7 +688,7 @@ const ProviderDashboard = () => {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 truncate">
+                      <p className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors truncate">
                         {req.patient}
                       </p>
                       <div className="flex items-center gap-1.5 sm:gap-2 text-3xs sm:text-xs text-slate-500 dark:text-slate-400">
@@ -688,7 +697,7 @@ const ProviderDashboard = () => {
                         <span className="shrink-0">{req.date}</span>
                       </div>
                     </div>
-                  </div>
+                  </Link>
 
                   <div className="flex items-center justify-between sm:justify-end gap-2 self-stretch sm:self-center pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200/40 dark:border-white/5">
                     {/* Clean Neumorphic Status Badges (No Dots) */}

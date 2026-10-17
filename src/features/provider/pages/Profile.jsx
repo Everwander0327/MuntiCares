@@ -560,7 +560,7 @@ const ProviderProfile = () => {
                             className="neu-btn px-4 sm:px-5 py-2 rounded-xl font-bold text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
                           >
                             <Save className="w-3.5 h-3.5" />
-                            {saving ? 'Save' : 'Save'}
+                            {saving ? 'Saving...' : 'Save'}
                           </motion.button>
                         </div>
                       )}

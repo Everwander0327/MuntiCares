@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, Activity, FileText, ClipboardList, Send, Loader2, ExternalLink, 
@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 
 const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
   const { user } = useAuth();
+  const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('history');
   const [loading, setLoading] = useState(true);
   const [consentBlocked, setConsentBlocked] = useState(false);
@@ -54,7 +55,11 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
         return;
       }
 
-      setGrantedPermissions(data.permissions || { medical_history: true, documents: true, visit_notes: true });
+      const perms = data.permissions || { medical_history: true, documents: true, visit_notes: true };
+      setGrantedPermissions(perms);
+      if (perms.medical_history === false) {
+        setActiveTab(perms.documents !== false ? 'documents' : 'notes');
+      }
       fetchPatientData();
       logDataAccess();
     } catch (err) {
@@ -88,8 +93,21 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
         setConsentBlocked(true);
         setGrantedPermissions(null);
       } else {
+        const perms = data.permissions || { medical_history: true, documents: true, visit_notes: true };
         setConsentBlocked(false);
-        setGrantedPermissions(data.permissions || { medical_history: true, documents: true, visit_notes: true });
+        setGrantedPermissions(perms);
+        setActiveTab(curr => {
+          const tabPerms = {
+            history: perms.medical_history !== false,
+            documents: perms.documents !== false,
+            notes: perms.visit_notes !== false,
+          };
+          if (!tabPerms[curr]) {
+            const fallback = ['history', 'documents', 'notes'].find(t => tabPerms[t]);
+            return fallback || curr;
+          }
+          return curr;
+        });
       }
     };
 
@@ -225,6 +243,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
       
       toast.success("Progress note added!");
       setNewNote({ bp: '', temp: '', hr: '', rr: '', spo2: '', pain: '', services: [], text: '', file: null });
+      if (fileInputRef.current) fileInputRef.current.value = '';
       fetchPatientData(); // refresh
     } catch (error) {
       console.error('Error saving note:', error);
@@ -246,7 +265,10 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
       if (error) throw error;
       
       toast.success("Note deleted.");
-      setNotes(notes.filter(n => n.id !== noteId));
+      const updated = notes.filter(n => n.id !== noteId);
+      setNotes(updated);
+      const maxPage = Math.max(1, Math.ceil(updated.length / NOTES_PER_PAGE));
+      setNotesPage(curr => Math.min(curr, maxPage));
     } catch (err) {
       console.error(err);
       toast.error("Failed to delete note.");
@@ -318,7 +340,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
           <button
             type="button"
             onClick={onClose}
-            className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:white transition-all cursor-pointer shrink-0"
+            className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer shrink-0"
             title="Close modal"
           >
             <X className="w-4 h-4" />
@@ -544,7 +566,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                 <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">
                                   Vital Signs
                                 </p>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                                   <div>
                                     <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">BP (mmHg)</label>
                                     <input
@@ -576,12 +598,34 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                     />
                                   </div>
                                   <div>
+                                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">Respiratory Rate (bpm)</label>
+                                    <input
+                                      type="number"
+                                      placeholder="18"
+                                      value={newNote.rr}
+                                      onChange={(e) => setNewNote({ ...newNote, rr: e.target.value })}
+                                      className="w-full neu-inset rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 bg-transparent outline-none border border-slate-200/50 dark:border-white/5"
+                                    />
+                                  </div>
+                                  <div>
                                     <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">SpO2 (%)</label>
                                     <input
                                       type="number"
                                       placeholder="98"
                                       value={newNote.spo2}
                                       onChange={(e) => setNewNote({ ...newNote, spo2: e.target.value })}
+                                      className="w-full neu-inset rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 bg-transparent outline-none border border-slate-200/50 dark:border-white/5"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">Pain Scale (0-10)</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="10"
+                                      placeholder="0"
+                                      value={newNote.pain}
+                                      onChange={(e) => setNewNote({ ...newNote, pain: e.target.value })}
                                       className="w-full neu-inset rounded-xl px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 bg-transparent outline-none border border-slate-200/50 dark:border-white/5"
                                     />
                                   </div>
@@ -633,6 +677,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                 {/* Attachment Button */}
                                 <div className="flex-1 min-w-0">
                                   <input
+                                    ref={fileInputRef}
                                     type="file"
                                     id="provider-note-attachment"
                                     className="hidden"
@@ -641,21 +686,37 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                       const file = e.target.files[0];
                                       if (file && file.size > 2 * 1024 * 1024) {
                                         toast.error('File exceeds max size (2MB).');
-                                        e.target.value = '';
+                                        if (fileInputRef.current) fileInputRef.current.value = '';
+                                        else e.target.value = '';
                                       } else {
                                         setNewNote({ ...newNote, file });
                                       }
                                     }}
                                   />
-                                  <label
-                                    htmlFor="provider-note-attachment"
-                                    className="neu-btn px-3 py-2 rounded-xl text-3xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5 cursor-pointer transition-all truncate"
-                                  >
-                                    <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
-                                    <span className="truncate">
-                                      {newNote.file ? newNote.file.name : 'Attach Image/File (Max 2MB)'}
-                                    </span>
-                                  </label>
+                                  <div className="flex items-center gap-1.5">
+                                    <label
+                                      htmlFor="provider-note-attachment"
+                                      className="neu-btn px-3 py-2 rounded-xl text-3xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5 cursor-pointer transition-all truncate flex-1 min-w-0"
+                                    >
+                                      <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
+                                      <span className="truncate">
+                                        {newNote.file ? newNote.file.name : 'Attach Image/File (Max 2MB)'}
+                                      </span>
+                                    </label>
+                                    {newNote.file && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setNewNote(n => ({ ...n, file: null }));
+                                          if (fileInputRef.current) fileInputRef.current.value = '';
+                                        }}
+                                        className="neu-btn p-2 rounded-xl text-slate-400 hover:text-rose-500 cursor-pointer shrink-0"
+                                        title="Remove attachment"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
 
                                 {/* Submit Button */}
@@ -770,7 +831,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                       </div>
 
                                       {/* Vitals Badges */}
-                                      {(note.vitals_bp || note.vitals_temp || note.vitals_hr || note.vitals_spo2) && (
+                                      {(note.vitals_bp || note.vitals_temp || note.vitals_hr || note.vitals_spo2 || note.vitals_rr || note.pain_scale != null) && (
                                         <div className="flex flex-wrap gap-1.5 text-3xs font-extrabold">
                                           {note.vitals_bp && (
                                             <span className="neu-flat-sm px-2 py-0.5 rounded-md text-emerald-600 dark:text-emerald-400">
@@ -787,9 +848,19 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                               HR: {note.vitals_hr} bpm
                                             </span>
                                           )}
+                                          {note.vitals_rr && (
+                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-teal-600 dark:text-teal-400">
+                                              RR: {note.vitals_rr} bpm
+                                            </span>
+                                          )}
                                           {note.vitals_spo2 && (
                                             <span className="neu-flat-sm px-2 py-0.5 rounded-md text-blue-600 dark:text-blue-400">
                                               SpO2: {note.vitals_spo2}%
+                                            </span>
+                                          )}
+                                          {note.pain_scale != null && (
+                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-purple-600 dark:text-purple-400">
+                                              Pain: {note.pain_scale}/10
                                             </span>
                                           )}
                                         </div>

@@ -8,14 +8,15 @@ const CallContext = createContext(null);
 export const useCalls = () => useContext(CallContext);
 
 export const CallProvider = ({ children }) => {
-  const { user } = useAuth();
+  const auth = useAuth();
+  const user = auth?.user;
   const navigate = useNavigate();
   const [incomingCall, setIncomingCall] = useState(null);
   const [callDeclinedByPeer, setCallDeclinedByPeer] = useState(false);
 const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
     const channel = supabase.channel(`calls_${user.id}`);
     channel
@@ -35,14 +36,14 @@ const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user?.id]);
 
   const broadcastCallAccepted = useCallback((targetUserId) => {
     if (!targetUserId) return;
     const channel = supabase.channel(`calls_${targetUserId}`);
-    channel.subscribe((status) => {
+    channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        channel.send({
+        await channel.send({
           type: 'broadcast',
           event: 'call_accepted',
           payload: { sender_id: user.id }
@@ -63,9 +64,9 @@ const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
   const rejectCall = useCallback(() => {
     if (!incomingCall || !user) return;
     const channel = supabase.channel(`calls_${incomingCall.sender_id}`);
-    channel.subscribe((status) => {
+    channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        channel.send({
+        await channel.send({
           type: 'broadcast',
           event: 'call_declined',
           payload: { sender_id: user.id }
@@ -78,9 +79,9 @@ const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
 
   const startCallBroadcast = useCallback((targetUserId, callerName) => {
     const channel = supabase.channel(`calls_${targetUserId}`);
-    channel.subscribe((status) => {
+    channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        channel.send({
+        await channel.send({
           type: 'broadcast',
           event: 'incoming_call',
           payload: { sender_id: user.id, sender_name: callerName }
@@ -92,9 +93,9 @@ const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
 
   const sendCallEnded = useCallback((targetUserId) => {
     const channel = supabase.channel(`calls_${targetUserId}`);
-    channel.subscribe((status) => {
+    channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        channel.send({
+        await channel.send({
           type: 'broadcast',
           event: 'call_ended',
           payload: { sender_id: user.id }

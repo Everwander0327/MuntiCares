@@ -4,7 +4,7 @@ import {
   Clock, MapPin, MessageSquare, XCircle, FileUp, 
   Search, SlidersHorizontal, Check, Calendar, Activity, 
   ChevronRight, ChevronLeft, ArrowUpDown, Filter, Sparkles, X, ChevronDown,
-  AlertCircle, CheckCircle2, ShieldAlert
+  AlertCircle, CheckCircle2, ShieldAlert, Navigation
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +15,7 @@ import ReviewModal from '../components/ReviewModal';
 import CancelRescheduleModal from '../components/CancelRescheduleModal';
 import PreSessionUploadModal from '../components/PreSessionUploadModal';
 import { EmptyState, SkeletonPage } from '@/shared/ui';
+import { LiveVisitTrackerModal } from '@/features/tracking/components';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.04 } },
@@ -69,9 +70,9 @@ const getStatusStyle = (status) => {
 };
 
 const RequestCard = ({ 
-  id, providerId, patientId, provider, service, date, time, 
-  status, price, location, onRateProvider, isRated, 
-  onManageRequest, onPreSession, presessionSubmitted 
+  id, providerId, patientId, provider, providerAvatarUrl, service, date, time, 
+  status, price, location, originalNotes, onRateProvider, isRated, 
+  onManageRequest, onPreSession, presessionSubmitted, onTrack
 }) => {
   const statusTheme = getStatusStyle(status);
 
@@ -85,15 +86,44 @@ const RequestCard = ({
         {/* Top Header: Provider Avatar & Info + Status Badge & Mobile Price */}
         <div className="flex items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
-            <div className="relative shrink-0">
-              <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black text-sm sm:text-base overflow-hidden aspect-square">
-                {provider.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+            {providerId ? (
+              <Link
+                to={`/patient/providers/${providerId}/profile`}
+                title="View Provider Profile"
+                className="relative shrink-0 group"
+              >
+                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black text-sm sm:text-base overflow-hidden aspect-square ring-2 ring-transparent group-hover:ring-primary/40 transition-all">
+                  {providerAvatarUrl ? (
+                    <img src={providerAvatarUrl} alt={provider} className="w-full h-full object-cover" />
+                  ) : (
+                    provider.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                  )}
+                </div>
+              </Link>
+            ) : (
+              <div className="relative shrink-0">
+                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black text-sm sm:text-base overflow-hidden aspect-square">
+                  {providerAvatarUrl ? (
+                    <img src={providerAvatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    provider.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                  )}
+                </div>
               </div>
-            </div>
+            )}
             <div className="min-w-0">
-              <h3 className="font-display font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate">
-                {provider}
-              </h3>
+              {providerId ? (
+                <Link
+                  to={`/patient/providers/${providerId}/profile`}
+                  className="font-display font-extrabold text-slate-900 dark:text-white hover:text-primary dark:hover:text-[#8CBDF0] transition-colors text-sm sm:text-base truncate block"
+                >
+                  {provider}
+                </Link>
+              ) : (
+                <h3 className="font-display font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate">
+                  {provider}
+                </h3>
+              )}
               <p className="text-xs font-semibold text-primary truncate mt-0.5">
                 {service}
               </p>
@@ -126,6 +156,17 @@ const RequestCard = ({
               <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>{date}</span>
             </span>
+            {time && (
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span>
+                  {new Date(`2000-01-01T${time.slice(0, 5)}:00`).toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </span>
+              </span>
+            )}
             <span className="flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="truncate max-w-[130px] sm:max-w-none">{location || 'Muntinlupa City'}</span>
@@ -141,15 +182,31 @@ const RequestCard = ({
       {/* Action Buttons Flush at Bottom */}
       <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-0">
         <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2">
-          {/* Chat Shortcut - Primary for active on-the-way visits (takes full row on mobile when 3 buttons) */}
+          {/* Chat Shortcut */}
           {['Accepted', 'On The Way', 'Arrived'].includes(status) && (
             <Link 
               to={`/patient/messages?provider=${providerId}`}
-              className="col-span-2 sm:col-span-1 neu-btn-primary justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform order-1"
+              className={`${['On The Way', 'Arrived'].includes(status) ? 'col-span-1' : 'col-span-2'} sm:col-span-1 neu-btn-primary justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform order-1`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Chat Provider</span>
+              <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Chat Provider</span>
             </Link>
+          )}
+
+          {/* Live GPS Tracker */}
+          {['On The Way', 'Arrived'].includes(status) && (
+            <button
+              type="button"
+              onClick={() => onTrack({ id, providerId, patientId, provider, providerAvatarUrl, service })}
+              className="col-span-1 sm:col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-primary dark:text-[#8CBDF0] border-emerald-500/30 dark:border-emerald-400/30 flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform order-1"
+            >
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <Navigation className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Track Live</span>
+            </button>
           )}
 
           {/* Pre-Session Info */}
@@ -173,7 +230,7 @@ const RequestCard = ({
           {['Pending', 'Accepted'].includes(status) && (
             <button
               type="button"
-              onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date, time })}
+              onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date, time, originalNotes })}
               className="col-span-1 neu-btn justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-[#BC3030] dark:text-[#F4918B] flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform order-3"
             >
               <XCircle className="w-3.5 h-3.5 shrink-0" />
@@ -210,6 +267,7 @@ const PatientRequests = () => {
   const [selectedReviewReq, setSelectedReviewReq] = useState(null);
   const [selectedManageReq, setSelectedManageReq] = useState(null);
   const [selectedPreSessionReq, setSelectedPreSessionReq] = useState(null);
+  const [trackingReq, setTrackingReq] = useState(null);
   const [ratedRequests, setRatedRequests] = useState({});
   const [presessionSubmitted, setPresessionSubmitted] = useState({});
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -251,7 +309,7 @@ const PatientRequests = () => {
   }, [user]);
 
   // Use the shared hook for fetching and realtime
-  const { requests: fetchedRequests, loading: requestsLoading } = usePatientRequests(user?.id || null);
+  const { requests: fetchedRequests, loading: requestsLoading, refetch } = usePatientRequests(user?.id || null);
 
   useEffect(() => {
     if (!requestsLoading) {
@@ -262,11 +320,13 @@ const PatientRequests = () => {
     }
   }, [fetchedRequests, requestsLoading]);
 
-  const filters = ['All', 'Accepted', 'Pending', 'Completed', 'Cancelled', 'Rejected'];
+  const filters = ['All', 'Active', 'Accepted', 'Pending', 'Completed', 'Cancelled', 'Rejected'];
 
   const filteredRequests = useMemo(() => {
     return requests.filter(r => {
-      const matchesFilter = filter === 'All' || r.status === filter;
+      const matchesFilter =
+        filter === 'All' ||
+        (filter === 'Active' ? ['Accepted', 'On The Way', 'Arrived'].includes(r.status) : r.status === filter);
       const term = searchTerm.toLowerCase().trim();
       const matchesSearch = !term || 
         r.provider?.toLowerCase().includes(term) ||
@@ -360,13 +420,13 @@ const PatientRequests = () => {
 
               <button
                 type="button"
-                onClick={() => setFilter(filter === 'Accepted' ? 'All' : 'Accepted')}
+                onClick={() => setFilter(filter === 'Active' ? 'All' : 'Active')}
                 className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  filter === 'Accepted'
+                  filter === 'Active'
                     ? 'neu-pressed text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 bg-emerald-500/15'
                     : 'neu-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-700'
                 }`}
-                title="Filter Active / Accepted requests"
+                title="Filter Active / On Route requests"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -508,17 +568,20 @@ const PatientRequests = () => {
                 providerId={req.providerId}
                 patientId={user?.id}
                 provider={req.provider}
+                providerAvatarUrl={req.providerAvatarUrl}
                 service={req.service}
                 date={req.date}
                 time={req.time}
                 status={req.status}
                 price={req.price}
                 location={req.location}
+                originalNotes={req.originalNotes}
                 isRated={!!ratedRequests[req.id]}
                 presessionSubmitted={!!presessionSubmitted[req.id]}
                 onRateProvider={setSelectedReviewReq}
                 onManageRequest={setSelectedManageReq}
                 onPreSession={setSelectedPreSessionReq}
+                onTrack={setTrackingReq}
               />
             ))
           ) : (
@@ -606,9 +669,7 @@ const PatientRequests = () => {
         isOpen={!!selectedManageReq}
         onClose={() => setSelectedManageReq(null)}
         request={selectedManageReq}
-        onActionComplete={() => {
-          // Trigger hook re-sync if needed
-        }}
+        onActionComplete={refetch}
       />
 
       {/* Pre-Session Upload Modal */}
@@ -620,6 +681,13 @@ const PatientRequests = () => {
           setSelectedPreSessionReq(null);
         }}
         request={selectedPreSessionReq}
+      />
+
+      {/* Live GPS Tracker */}
+      <LiveVisitTrackerModal
+        isOpen={!!trackingReq}
+        onClose={() => setTrackingReq(null)}
+        request={trackingReq}
       />
     </DashboardLayout>
   );

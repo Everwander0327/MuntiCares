@@ -135,6 +135,7 @@ const ProviderRequests = () => {
   };
 
   useEffect(() => {
+    if (!user) return;
     fetchAll();
 
     const channel = supabase
@@ -145,7 +146,7 @@ const ProviderRequests = () => {
           event: '*',
           schema: 'public',
           table: 'requests',
-          filter: `provider_id=eq.${user?.id}`,
+          filter: `provider_id=eq.${user.id}`,
         },
         () => fetchAll()
       )
@@ -186,13 +187,18 @@ const ProviderRequests = () => {
   const handleAdvanceVisit = async (visitId, nextStatus) => {
     setUpdatingVisitId(visitId);
     try {
+      const payload = { status: nextStatus };
+      const nowIso = new Date().toISOString();
+      if (nextStatus === 'On The Way') payload.route_started_at = nowIso;
+      if (nextStatus === 'Arrived') payload.arrived_at = nowIso;
+
       const { error } = await supabase
         .from('requests')
-        .update({ status: nextStatus })
+        .update(payload)
         .eq('id', visitId);
 
       if (error) throw error;
-      toast.success(`Visit updated to "${nextStatus}"!`);
+      toast.success(`Visit updated to "${nextStatus === 'On The Way' ? 'On Route' : nextStatus}"!`);
       fetchAll();
     } catch (err) {
       console.error('Error advancing visit:', err);
@@ -317,6 +323,20 @@ const ProviderRequests = () => {
                 <span>{stats.completed} Completed</span>
               </button>
 
+              <button
+                type="button"
+                onClick={() => setFilter(filter === 'History' ? 'All' : 'History')}
+                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                  filter === 'History'
+                    ? 'neu-pressed text-slate-600 dark:text-slate-300 border border-slate-500/40 bg-slate-500/15'
+                    : 'neu-btn text-slate-600 dark:text-slate-300 hover:text-slate-800'
+                }`}
+                title="Filter History (Rejected, Cancelled, Completed)"
+              >
+                <Filter className="w-3 h-3 text-slate-500 shrink-0" />
+                <span>{stats.history} History</span>
+              </button>
+
               {filter !== 'All' && (
                 <button
                   type="button"
@@ -416,7 +436,10 @@ const ProviderRequests = () => {
                 >
                   {/* Top Bar: Patient Avatar + Name + Chat Button & Status Badge */}
                   <div className="flex items-start justify-between gap-2.5 sm:gap-3">
-                    <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                    <Link
+                      to={`/provider/patients/${req.patientId}/profile`}
+                      className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 group"
+                    >
                       <div className="neu-flat-sm w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-primary font-black text-xs sm:text-base shrink-0 p-0.5">
                         {req.avatarUrl ? (
                           <img src={req.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
@@ -425,14 +448,14 @@ const ProviderRequests = () => {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-display font-extrabold text-slate-900 dark:text-white text-xs sm:text-base truncate">
+                        <h3 className="font-display font-extrabold text-slate-900 dark:text-white group-hover:text-primary transition-colors text-xs sm:text-base truncate">
                           {req.patient}
                         </h3>
                         <p className="text-3xs sm:text-xs font-semibold text-primary truncate mt-0.5">
                           {req.service}
                         </p>
                       </div>
-                    </div>
+                    </Link>
 
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                       {/* Chat with Patient Button beside the status chip */}

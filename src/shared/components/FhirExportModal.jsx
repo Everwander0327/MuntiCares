@@ -15,17 +15,26 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     return JSON.stringify(bundle, null, 2);
   }, [open, bundle]);
 
-  // Lock background scroll when open
+  // Lock background scroll and handle Escape key when open
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && open) {
+        onClose();
+        setUploadResult(null);
+        setCopied(false);
+      }
+    };
     if (open) {
       document.body.classList.add('modal-open');
+      window.addEventListener('keydown', handleKeyDown);
     } else {
       document.body.classList.remove('modal-open');
     }
     return () => {
       document.body.classList.remove('modal-open');
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [open, onClose]);
 
   const handleCopy = async () => {
     try {
@@ -79,6 +88,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   const handleClose = () => {
     onClose();
     setUploadResult(null);
+    setCopied(false);
   };
 
   if (typeof document === 'undefined') return null;

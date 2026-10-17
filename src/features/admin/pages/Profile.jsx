@@ -33,7 +33,7 @@ const QuickStat = ({ label, value, icon, colorClass }) => {
 const AdminProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const navigate = useNavigate();
   
   const [profile, setProfile] = useState({
@@ -124,6 +124,7 @@ const AdminProfile = () => {
 
       if (error) throw error;
       setProfile(prev => ({ ...prev, full_name: editName.trim() }));
+      updateUser?.({ full_name: editName.trim() });
       toast.success('Admin name updated successfully!');
     } catch (err) {
       console.error('Error updating name:', err);

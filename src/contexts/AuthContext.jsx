@@ -81,22 +81,46 @@ export const AuthProvider = ({ children }) => {
   const [authInitialized, setAuthInitialized] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('munticares_user');
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch {
-        localStorage.removeItem('munticares_user');
+    const initAuth = async () => {
+      const stored = localStorage.getItem('munticares_user');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed?.expires_at && Date.now() > parsed.expires_at) {
+            localStorage.removeItem('munticares_user');
+            setUser(null);
+          } else {
+            setUser(parsed);
+            if (parsed?.id) {
+              const { data } = await supabase
+                .from('users')
+                .select('id, is_banned, role')
+                .eq('id', parsed.id)
+                .maybeSingle();
+
+              if (!data || data.is_banned) {
+                localStorage.removeItem('munticares_user');
+                setUser(null);
+              }
+            }
+          }
+        } catch {
+          localStorage.removeItem('munticares_user');
+          setUser(null);
+        }
       }
-    }
-    setAuthInitialized(true);
+      setAuthInitialized(true);
+    };
+
+    initAuth();
   }, []);
 
   const login = useCallback(async ({ email, password }) => {
+    const normalizedEmail = email.trim().toLowerCase();
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .maybeSingle();
 
     if (error) throw new Error('Database error');
@@ -122,6 +146,7 @@ export const AuthProvider = ({ children }) => {
       full_name: data.full_name,
       is_banned: data.is_banned,
       avatar_url: data.avatar_url || '',
+      expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
     };
 
     localStorage.setItem('munticares_user', JSON.stringify(userData));
@@ -129,47 +154,55 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const setPassword = useCallback(async ({ email, password }) => {
+    const normalizedEmail = email.trim().toLowerCase();
     const hash = await hashPassword(password);
     const { error } = await supabase
       .from('users')
       .update({ password: hash })
-      .eq('email', email);
+      .eq('email', normalizedEmail);
 
     if (error) throw new Error('Failed to set password');
   }, []);
 
   const register = useCallback(async ({ email, password, fullName, role }) => {
+    const normalizedEmail = email.trim().toLowerCase();
     const { data: existing } = await supabase
       .from('users')
       .select('id')
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .maybeSingle();
 
-    const hash = await hashPassword(password);
-
     if (existing) {
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ full_name: fullName, role, password: hash })
-        .eq('id', existing.id);
-      if (updateError) throw new Error(updateError.message);
-    } else {
-      const newId = generateUUID();
-      const { error: insertError } = await supabase.from('users').insert({
-        id: newId,
-        email,
-        full_name: fullName,
-        role,
-        password: hash,
-        is_banned: false,
-      });
-      if (insertError) throw new Error(insertError.message);
-
-      if (role === 'provider') {
-        const { error: provError } = await supabase.from('providers').insert([{ user_id: newId }]);
-        if (provError) throw new Error(provError.message);
-      }
+      throw new Error('An account with this email address already exists. Please sign in instead.');
     }
+
+    const hash = await hashPassword(password);
+    const newId = generateUUID();
+    const { error: insertError } = await supabase.from('users').insert({
+      id: newId,
+      email: normalizedEmail,
+      full_name: fullName,
+      role,
+      password: hash,
+      is_banned: false,
+    });
+    if (insertError) throw new Error(insertError.message);
+
+    if (role === 'provider') {
+      const { error: provError } = await supabase.from('providers').insert([{ user_id: newId }]);
+      if (provError) throw new Error(provError.message);
+    }
+
+    const userData = {
+      id: newId,
+      email: normalizedEmail,
+      role,
+      full_name: fullName,
+      is_banned: false,
+      avatar_url: '',
+      expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
+    };
+    return userData;
   }, []);
 
   const logout = useCallback(() => {
@@ -195,13 +228,13 @@ export const AuthProvider = ({ children }) => {
         try {
           setUser(JSON.parse(stored));
         } catch {}
+      } else {
+        setUser(null);
       }
     };
     window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('munticares-user-updated', handleStorageChange);
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('munticares-user-updated', handleStorageChange);
     };
   }, []);
 

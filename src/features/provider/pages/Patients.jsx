@@ -52,19 +52,28 @@ const ProviderPatients = () => {
 
         if (error) throw error;
 
-        const formatted = (data || []).map(r => ({
-          requestId: r.id,
-          patientId: r.patient_id,
-          name: r.patient?.full_name || 'Unknown Patient',
-          avatarUrl: r.patient?.avatar_url || '',
-          service: r.service,
-          date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          rawDate: r.date,
-          time: r.time || '',
-          notes: r.notes || '',
-          status: r.status === 'Completed' ? 'Completed' : 'Active',
-          rawStatus: r.status
-        }));
+        const formatted = (data || []).map(r => {
+          let timeLabel = '';
+          try {
+            if (r.time) {
+              timeLabel = new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            }
+          } catch { timeLabel = r.time || ''; }
+
+          return {
+            requestId: r.id,
+            patientId: r.patient_id,
+            name: r.patient?.full_name || 'Unknown Patient',
+            avatarUrl: r.patient?.avatar_url || '',
+            service: r.service,
+            date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            rawDate: r.date,
+            time: timeLabel,
+            notes: r.notes || '',
+            status: r.status === 'Completed' ? 'Completed' : 'Active',
+            rawStatus: r.status
+          };
+        });
 
         setPatients(formatted);
       } catch (err) {
@@ -328,7 +337,7 @@ const ProviderPatients = () => {
                               : 'text-blue-600 dark:text-blue-400 border border-blue-500/20'
                           }`}
                         >
-                          {p.status}
+                          {p.rawStatus}
                         </span>
                       </div>
                     </div>
@@ -347,10 +356,10 @@ const ProviderPatients = () => {
                       )}
                     </div>
 
-                    {/* Doctor's Note (Sunken Inset Well with Fallback) */}
+                    {/* Patient Booking Note (Sunken Inset Well with Fallback) */}
                     <div className="neu-inset p-2.5 sm:p-3 rounded-xl border border-slate-200/40 dark:border-white/5 space-y-1">
                       <p className="text-3xs font-extrabold uppercase tracking-wider text-primary">
-                        Doctor's Note
+                        Patient Booking Note
                       </p>
                       {p.notes && p.notes.trim() ? (
                         <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic line-clamp-3">
@@ -358,7 +367,7 @@ const ProviderPatients = () => {
                         </p>
                       ) : (
                         <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-                          No clinical notes recorded for this patient yet.
+                          No additional booking notes provided by patient.
                         </p>
                       )}
                     </div>
@@ -390,7 +399,7 @@ const ProviderPatients = () => {
                       </div>
 
                       {/* Complete Visit Button if Active */}
-                      {p.rawStatus === 'Accepted' && (
+                      {p.status === 'Active' && (
                         <button
                           type="button"
                           disabled={updatingId === p.requestId}

@@ -13,7 +13,7 @@ export const PresenceProvider = ({ children }) => {
   const reconnectTimeoutRef = useRef(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user?.id) {
       setOnlineUsers(new Set());
       return;
     }
@@ -22,6 +22,10 @@ export const PresenceProvider = ({ children }) => {
 
     const setupPresence = () => {
       if (cancelled) return;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
 
       const channel = supabase.channel('global-presence', {
         config: { presence: { key: user.id }, broadcast: { self: true } }
@@ -76,7 +80,7 @@ export const PresenceProvider = ({ children }) => {
         channelRef.current = null;
       }
     };
-  }, [user]);
+  }, [user?.id]);
 
   const isUserOnline = useCallback((userId) => onlineUsers.has(userId), [onlineUsers]);
 

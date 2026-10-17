@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   Search, Download, ArrowUpDown, X, Calendar, Clock, 
@@ -74,6 +75,7 @@ const AdminRequests = () => {
           notes: r.notes || '',
           date: r.date ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
           time: timeLabel,
+          scheduledTimestamp: r.date ? new Date(`${r.date}T${r.time || '00:00'}`).getTime() : 0,
           timestamp: r.created_at ? new Date(r.created_at).getTime() : 0,
           created_at: r.created_at,
         };
@@ -92,6 +94,10 @@ const AdminRequests = () => {
   }, [fetchRequests]);
 
   const handleExport = () => {
+    if (filteredRequests.length === 0) {
+      toast.error('No requests to export.');
+      return;
+    }
     const fields = [
       { key: 'id', label: 'Request ID' },
       { key: 'patient', label: 'Patient' },
@@ -102,6 +108,8 @@ const AdminRequests = () => {
       { key: 'status', label: 'Status' },
       { key: 'date', label: 'Scheduled Date' },
       { key: 'time', label: 'Scheduled Time' },
+      { key: 'notes', label: 'Notes' },
+      { key: 'created_at', label: 'Created At' },
     ];
     const exportable = formatDataForExport(filteredRequests, fields);
     exportToCSV(exportable, 'platform_requests_export');
@@ -189,6 +197,9 @@ const AdminRequests = () => {
 
       if (error) throw error;
       toast.success(`${selectedIds.size} request(s) updated to ${newStatus}.`);
+      if (selectedRequest && selectedIds.has(selectedRequest.id)) {
+        setSelectedRequest(prev => prev ? ({ ...prev, status: newStatus }) : null);
+      }
       setSelectedIds(new Set());
       await fetchRequests();
     } catch (err) {
@@ -211,6 +222,9 @@ const AdminRequests = () => {
 
       if (error) throw error;
       toast.success(`${selectedIds.size} request(s) deleted.`);
+      if (selectedRequest && selectedIds.has(selectedRequest.id)) {
+        setSelectedRequest(null);
+      }
       setSelectedIds(new Set());
       await fetchRequests();
     } catch (err) {
@@ -228,7 +242,10 @@ const AdminRequests = () => {
       r.patient.toLowerCase().includes(q) ||
       r.provider.toLowerCase().includes(q) ||
       r.service.toLowerCase().includes(q) ||
-      r.id.toLowerCase().includes(q);
+      r.id.toLowerCase().includes(q) ||
+      r.patientEmail.toLowerCase().includes(q) ||
+      r.providerEmail.toLowerCase().includes(q) ||
+      r.notes.toLowerCase().includes(q);
 
     const matchesFilter = filter === 'All' || r.status.toLowerCase() === filter.toLowerCase();
 
@@ -252,6 +269,7 @@ const AdminRequests = () => {
 
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedIds(new Set());
   }, [searchTerm, filter, startDate, endDate, sortKey]);
 
   // Neumorphic Status Badge
@@ -361,6 +379,8 @@ const AdminRequests = () => {
                     { value: 'All', label: 'All Status' },
                     { value: 'Pending', label: 'Pending' },
                     { value: 'Accepted', label: 'Accepted' },
+                    { value: 'On The Way', label: 'On The Way' },
+                    { value: 'Arrived', label: 'Arrived' },
                     { value: 'Completed', label: 'Completed' },
                     { value: 'Cancelled', label: 'Cancelled' },
                     { value: 'Rejected', label: 'Rejected' },
@@ -518,7 +538,7 @@ const AdminRequests = () => {
                   <SortableHeader label="Provider" sortKey="provider" />
                   <SortableHeader label="Service" sortKey="service" />
                   <SortableHeader label="Status" sortKey="status" />
-                  <SortableHeader label="Scheduled Date" sortKey="timestamp" />
+                  <SortableHeader label="Scheduled Date" sortKey="scheduledTimestamp" />
                   <th className="px-6 py-4 font-black text-right">Actions</th>
                 </tr>
               </thead>
@@ -785,10 +805,17 @@ const AdminRequests = () => {
                   {/* Patient & Provider Dual Cards */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     {/* Patient Card */}
-                    <div className="neu-flat-sm p-3.5 rounded-2xl space-y-2">
-                      <div className="flex items-center gap-1.5 text-3xs font-black uppercase tracking-wider text-slate-400">
-                        <User className="w-3.5 h-3.5 text-primary" />
-                        <span>Resident Patient</span>
+                    <Link
+                      to="/admin/patients"
+                      onClick={() => setSelectedRequest(null)}
+                      className="neu-flat-sm p-3.5 rounded-2xl space-y-2 block hover:ring-1 hover:ring-primary/40 transition-all"
+                    >
+                      <div className="flex items-center justify-between text-3xs font-black uppercase tracking-wider text-slate-400">
+                        <div className="flex items-center gap-1.5">
+                          <User className="w-3.5 h-3.5 text-primary" />
+                          <span>Resident Patient</span>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-primary" />
                       </div>
                       <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-xs font-black text-primary overflow-hidden shrink-0">
@@ -803,13 +830,20 @@ const AdminRequests = () => {
                           <p className="text-3xs text-slate-400 truncate">{selectedRequest.patientEmail || 'No email'}</p>
                         </div>
                       </div>
-                    </div>
+                    </Link>
 
                     {/* Provider Card */}
-                    <div className="neu-flat-sm p-3.5 rounded-2xl space-y-2">
-                      <div className="flex items-center gap-1.5 text-3xs font-black uppercase tracking-wider text-slate-400">
-                        <Stethoscope className="w-3.5 h-3.5 text-primary" />
-                        <span>Healthcare Provider</span>
+                    <Link
+                      to="/admin/providers"
+                      onClick={() => setSelectedRequest(null)}
+                      className="neu-flat-sm p-3.5 rounded-2xl space-y-2 block hover:ring-1 hover:ring-primary/40 transition-all"
+                    >
+                      <div className="flex items-center justify-between text-3xs font-black uppercase tracking-wider text-slate-400">
+                        <div className="flex items-center gap-1.5">
+                          <Stethoscope className="w-3.5 h-3.5 text-primary" />
+                          <span>Healthcare Provider</span>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-primary" />
                       </div>
                       <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-xs font-black text-primary overflow-hidden shrink-0">
@@ -824,7 +858,7 @@ const AdminRequests = () => {
                           <p className="text-3xs text-slate-400 truncate">{selectedRequest.providerEmail || 'No email'}</p>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </div>
 
                   {/* Schedule & Timing Info */}

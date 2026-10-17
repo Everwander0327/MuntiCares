@@ -6,9 +6,9 @@ import { Link } from 'react-router-dom';
 import useCountUp from '@/hooks/useCountUp';
 import usePatientRequests from '@/hooks/usePatientRequests';
 import { SkeletonPage } from '@/shared/ui';
+import { LiveVisitTrackerModal } from '@/features/tracking/components';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import toast from 'react-hot-toast';
 
 const muntiHighlights = [
   {
@@ -77,6 +77,7 @@ const PatientDashboard = () => {
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState({ active: 0, accepted: 0, pending: 0 });
   const [activeVisit, setActiveVisit] = useState(null);
+  const [trackingReq, setTrackingReq] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
@@ -86,7 +87,6 @@ const PatientDashboard = () => {
   const pullDistRef = React.useRef(0);
   const isPulling = React.useRef(false);
   const mainRef = React.useRef(null);
-  const prevStatusesRef = useRef({});
   const { user } = useAuth();
 
   const carouselTrackRef = useRef(null);
@@ -157,7 +157,7 @@ const PatientDashboard = () => {
   }, [currentSlide]);
 
   // Use shared hook for requests + realtime
-  const { requests: fetchedRequests, loading: requestsLoading } = usePatientRequests(user?.id || null);
+  const { requests: fetchedRequests, loading: requestsLoading, refetch } = usePatientRequests(user?.id || null);
 
   useEffect(() => {
     let channel;
@@ -169,6 +169,8 @@ const PatientDashboard = () => {
         let timeStr = '';
         try { if (req.time) timeStr = new Date(`2000-01-01T${req.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { timeStr = req.time || ''; }
         return {
+          id: req.id,
+          providerId: req.providerId,
           provider: req.provider || 'Unknown',
           providerAvatarUrl: req.providerAvatarUrl || '',
           service: req.service,
@@ -184,10 +186,11 @@ const PatientDashboard = () => {
       const pending = (fetchedRequests || []).filter(r => r.status === 'Pending').length;
       setStats({ active: accepted + pending, accepted, pending });
 
-      const todayStr = new Date().toISOString().split('T')[0];
-      const activeVisitsList = (fetchedRequests || []).filter(r => 
-        ['On The Way', 'Arrived', 'Accepted'].includes(r.status) &&
-        (!r.date || r.date >= todayStr)
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const activeVisitsList = (fetchedRequests || []).filter(r =>
+        ['On The Way', 'Arrived'].includes(r.status) ||
+        (r.status === 'Accepted' && (!r.date || r.date >= todayStr))
       );
 
       let activeReq = activeVisitsList.find(r => r.status === 'On The Way')
@@ -203,6 +206,8 @@ const PatientDashboard = () => {
         let timeLabel = '';
         try { if (activeReq.time) timeLabel = new Date(`2000-01-01T${activeReq.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { timeLabel = activeReq.time || ''; }
         setActiveVisit({
+          id: activeReq.id,
+          patientId: activeReq.patientId || user?.id,
           providerId: activeReq.providerId,
           provider: activeReq.provider || 'Unknown',
           providerAvatarUrl: activeReq.providerAvatarUrl || '',
@@ -214,24 +219,6 @@ const PatientDashboard = () => {
       } else {
         setActiveVisit(null);
       }
-
-      (fetchedRequests || []).forEach(req => {
-        const prev = prevStatusesRef.current[req.id];
-        if (prev && prev !== req.status) {
-          const providerName = req.provider || 'A provider';
-          const msgMap = {
-            'Accepted': `${providerName} accepted your request!`,
-            'Cancelled': `${providerName} cancelled your request.`,
-            'Rejected': `${providerName} declined your request.`,
-            'On The Way': `${providerName} is on the way!`,
-            'Arrived': `${providerName} has arrived!`,
-            'Completed': `Your session with ${providerName} is complete.`,
-          };
-          const msg = msgMap[req.status];
-          if (msg) toast(msg, { icon: '🔄', duration: 4000 });
-        }
-        prevStatusesRef.current[req.id] = req.status;
-      });
 
       setLoading(false);
       } else {
@@ -336,7 +323,11 @@ const PatientDashboard = () => {
       setPullDistance(0);
       pullDistRef.current = 0;
       isPulling.current = false;
-      window.location.reload();
+      try {
+        await refetch();
+      } finally {
+        setRefreshing(false);
+      }
     } else {
       setPullDistance(0);
       pullDistRef.current = 0;
@@ -497,6 +488,19 @@ const PatientDashboard = () => {
                 {activeVisit ? (
                   <Link
                     to="/patient/requests"
+                    onClick={(e) => {
+                      if (['On The Way', 'Arrived'].includes(activeVisit.status)) {
+                        e.preventDefault();
+                        setTrackingReq({
+                          id: activeVisit.id,
+                          providerId: activeVisit.providerId,
+                          patientId: activeVisit.patientId || user?.id,
+                          provider: activeVisit.provider,
+                          providerAvatarUrl: activeVisit.providerAvatarUrl,
+                          service: activeVisit.service,
+                        });
+                      }
+                    }}
                     className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2.5 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-emerald-500/40 transition-all group cursor-pointer"
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -512,7 +516,9 @@ const PatientDashboard = () => {
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0 text-slate-400 group-hover:text-primary text-3xs font-semibold">
-                      <span className="hidden sm:inline">{activeVisit.time || 'Today'}</span>
+                      <span className="hidden sm:inline">
+                        {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track Live' : (activeVisit.time || 'Today')}
+                      </span>
                       <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </Link>
@@ -675,7 +681,7 @@ const PatientDashboard = () => {
           <div className="w-full neu-flat rounded-[2.25rem] p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between">
             {activeVisit ? (() => {
               const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
-              const STEP_LABELS = ['Confirmed', 'En Route', 'Arrived', 'Done'];
+              const STEP_LABELS = ['Confirmed', 'On Route', 'Arrived', 'Done'];
               const STEP_ICONS = [
                 <CheckCircle2 key="confirmed" className="w-4 h-4" />,
                 <Navigation key="enroute" className="w-4 h-4" />,
@@ -691,19 +697,64 @@ const PatientDashboard = () => {
                 Completed: 'Your home visit is completed. You can view session summary or medical notes anytime.',
               };
 
+              const providerInitials = (activeVisit.provider || 'PR')
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase();
+
               return (
                 <div className="space-y-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                      <div className="neu-flat-sm inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-3xs font-extrabold uppercase tracking-wider text-[#52657A] dark:text-[#A5B6C8] mb-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#2C7A55] dark:bg-[#7DD3A3] animate-ping" />
-                        Active Home Care Visit
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <Link
+                        to={activeVisit.providerId ? `/patient/providers/${activeVisit.providerId}/profile` : '#'}
+                        title="View Provider Profile"
+                        className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black text-sm overflow-hidden shrink-0 hover:scale-105 transition-transform"
+                      >
+                        {activeVisit.providerAvatarUrl ? (
+                          <img src={activeVisit.providerAvatarUrl} alt={activeVisit.provider} className="w-full h-full object-cover" />
+                        ) : (
+                          providerInitials
+                        )}
+                      </Link>
+                      <div className="min-w-0">
+                        <div className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-[#52657A] dark:text-[#A5B6C8] mb-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#2C7A55] dark:bg-[#7DD3A3] animate-ping" />
+                          Active Home Care Visit
+                        </div>
+                        <Link
+                          to={activeVisit.providerId ? `/patient/providers/${activeVisit.providerId}/profile` : '#'}
+                          className="text-lg sm:text-xl font-display font-extrabold text-[#17283B] dark:text-[#E6EEF6] hover:text-primary dark:hover:text-[#8CBDF0] transition-colors truncate block"
+                        >
+                          {activeVisit.provider}
+                        </Link>
                       </div>
-                      <h3 className="text-lg sm:text-xl font-display font-extrabold text-[#17283B] dark:text-[#E6EEF6]">
-                        {activeVisit.provider}
-                      </h3>
                     </div>
-                    <div className="flex items-center gap-2.5 self-start sm:self-auto">
+                    <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+                      {['On The Way', 'Arrived'].includes(activeVisit.status) && (
+                        <button
+                          type="button"
+                          onClick={() => setTrackingReq({
+                            id: activeVisit.id,
+                            providerId: activeVisit.providerId,
+                            patientId: activeVisit.patientId || user?.id,
+                            provider: activeVisit.provider,
+                            providerAvatarUrl: activeVisit.providerAvatarUrl,
+                            service: activeVisit.service,
+                          })}
+                          className="neu-btn px-3.5 py-2.5 rounded-2xl text-xs font-bold text-primary dark:text-[#8CBDF0] transition-all flex items-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
+                          title="Open Live GPS Tracker"
+                        >
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                          </span>
+                          <Navigation className="w-3.5 h-3.5" />
+                          <span>Track Live</span>
+                        </button>
+                      )}
                       <Link 
                         to={`/patient/messages?provider=${activeVisit.providerId}`}
                         className="neu-btn p-3 rounded-2xl text-primary transition-all flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0.5"
@@ -768,9 +819,28 @@ const PatientDashboard = () => {
                   </div>
 
                   {/* Status Banner */}
-                  <div className="neu-flat-sm p-4 rounded-2xl flex items-center gap-3.5 text-sm font-medium text-[#17283B] dark:text-[#E6EEF6]">
-                    <div className="w-3 h-3 rounded-full bg-primary shrink-0 animate-ping" />
-                    <p className="leading-relaxed text-xs sm:text-sm">{STATUS_MESSAGES[activeVisit.status]}</p>
+                  <div className="neu-flat-sm p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm font-medium text-[#17283B] dark:text-[#E6EEF6]">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-3 h-3 rounded-full bg-primary shrink-0 animate-ping" />
+                      <p className="leading-relaxed text-xs sm:text-sm">{STATUS_MESSAGES[activeVisit.status]}</p>
+                    </div>
+                    {['On The Way', 'Arrived'].includes(activeVisit.status) && (
+                      <button
+                        type="button"
+                        onClick={() => setTrackingReq({
+                          id: activeVisit.id,
+                          providerId: activeVisit.providerId,
+                          patientId: activeVisit.patientId || user?.id,
+                          provider: activeVisit.provider,
+                          providerAvatarUrl: activeVisit.providerAvatarUrl,
+                          service: activeVisit.service,
+                        })}
+                        className="neu-btn-primary shrink-0 px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-transform"
+                      >
+                        <Navigation className="w-3.5 h-3.5" />
+                        <span>Open Live Map</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -828,9 +898,10 @@ const PatientDashboard = () => {
           {requests.length > 0 ? (
             <div className="space-y-2 sm:space-y-2.5">
               {requests.slice(0, 5).map((req, idx) => (
-                <div
-                  key={idx}
-                  className="neu-flat-sm p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2.5 select-text"
+                <Link
+                  key={req.id || idx}
+                  to="/patient/requests"
+                  className="neu-flat-sm p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2.5 select-text hover:border-primary/30 transition-all group"
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                     <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden flex items-center justify-center text-primary text-2xs sm:text-xs font-black shrink-0 p-0.5">
@@ -841,7 +912,7 @@ const PatientDashboard = () => {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-xs sm:text-sm text-[#17283B] dark:text-[#E6EEF6] truncate">
+                      <p className="font-bold text-xs sm:text-sm text-[#17283B] dark:text-[#E6EEF6] group-hover:text-primary transition-colors truncate">
                         {req.provider}
                       </p>
                       <p className="text-3xs sm:text-2xs text-[#52657A] dark:text-[#A5B6C8] truncate mt-0.5">
@@ -852,7 +923,7 @@ const PatientDashboard = () => {
 
                   <div className="flex items-center gap-2 shrink-0">
                     <span className={`neu-flat-sm text-3xs font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                      ['Accepted', 'Completed'].includes(req.status)
+                      ['Accepted', 'On The Way', 'Arrived', 'Completed'].includes(req.status)
                         ? 'text-[#2C7A55] dark:text-[#7DD3A3] border border-[#2C7A55]/30 dark:border-[#7DD3A3]/30 bg-[#E1F3EA] dark:bg-[#14301F]'
                         : req.status === 'Pending'
                         ? 'text-[#9C5A06] dark:text-[#F1BD6B] border border-[#9C5A06]/30 dark:border-[#F1BD6B]/30 bg-[#FFF1D6] dark:bg-[#34260E]'
@@ -863,7 +934,7 @@ const PatientDashboard = () => {
                       {req.status}
                     </span>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -885,6 +956,13 @@ const PatientDashboard = () => {
           )}
         </section>
       </div>
+
+      {/* Live GPS Tracker Modal */}
+      <LiveVisitTrackerModal
+        isOpen={!!trackingReq}
+        onClose={() => setTrackingReq(null)}
+        request={trackingReq}
+      />
     </DashboardLayout>
   );
 };

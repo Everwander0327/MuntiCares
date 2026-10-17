@@ -70,10 +70,12 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
           return;
         }
 
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { data: msgData } = await supabase
           .from('messages')
           .select('id, sender_id, receiver_id, content, created_at')
           .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .gte('created_at', yesterday)
           .order('created_at', { ascending: false })
           .limit(100);
 
@@ -111,17 +113,35 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('messages')
-        .select('id, sender_id')
-        .eq('receiver_id', user.id)
-        .gte('created_at', yesterday);
+        .select('id, sender_id, receiver_id, content, created_at')
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .gte('created_at', yesterday)
+        .order('created_at', { ascending: false });
 
       if (!data) return;
       const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
       const counts = {};
+      const lastMsgMap = {};
       data.forEach(msg => {
-        if (!readIds.has(msg.id)) counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
+        const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
+        if (!lastMsgMap[partnerId]) lastMsgMap[partnerId] = msg;
+        if (msg.receiver_id === user.id && !readIds.has(msg.id)) {
+          counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
+        }
       });
-      setConversations(prev => prev.map(c => ({ ...c, unreadCount: counts[c.id] || 0 })));
+      setConversations(prev =>
+        prev
+          .map(c => ({
+            ...c,
+            unreadCount: counts[c.id] || 0,
+            lastMessage: lastMsgMap[c.id] || null,
+          }))
+          .sort((a, b) => {
+            const ta = a.lastMessage?.created_at || '';
+            const tb = b.lastMessage?.created_at || '';
+            return tb.localeCompare(ta);
+          })
+      );
     };
 
     const channel = supabase

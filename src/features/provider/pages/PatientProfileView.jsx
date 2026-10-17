@@ -1,15 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Mail, Phone, MapPin, Calendar, HeartPulse, Activity, FileText, Clock, MessageCircle, ArrowLeft, Lock, Shield, AlertCircle, Stethoscope, FolderOpen, User, FileCode, Loader2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Calendar, HeartPulse, Activity, FileText, Clock, MessageCircle, ArrowLeft, Lock, Shield, AlertCircle, Stethoscope, FolderOpen, User, FileCode, Loader2, ExternalLink, Paperclip } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { supabase } from '@/lib/supabase';
+import { getSignedUrl } from '@/lib/supabaseHelpers';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { FhirExportModal } from '@/shared/components';
 import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
+import PatientRecordModal from '../components/PatientRecordModal';
 
 const PatientProfileView = () => {
   const { id } = useParams();
@@ -25,78 +27,98 @@ const PatientProfileView = () => {
   const [fhirOpen, setFhirOpen] = useState(false);
   const [fhirBundle, setFhirBundle] = useState(null);
   const [fhirLoading, setFhirLoading] = useState(false);
+  const [chartOpen, setChartOpen] = useState(false);
+
+  const handleOpenFile = async (filePath) => {
+    try {
+      const url = await getSignedUrl(filePath, 3600);
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        toast.error('Unable to open document.');
+      }
+    } catch (err) {
+      console.error('Error opening file:', err);
+      toast.error('Unable to open document.');
+    }
+  };
+
+  const fetchData = useCallback(async () => {
+    if (!authUser || !id) return;
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('full_name, email, created_at, avatar_url')
+        .eq('id', id)
+        .single();
+      if (userError) throw userError;
+
+      const { data: patData } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('user_id', id)
+        .maybeSingle();
+
+      setPatient({
+        full_name: userData.full_name,
+        email: userData.email,
+        created_at: userData.created_at,
+        avatar_url: userData.avatar_url || '',
+        phone: patData?.phone || '',
+        address: patData?.address || '',
+        emergency_contact: patData?.emergency_contact || '',
+      });
+
+      const { data: consentData } = await supabase
+        .from('consent_access')
+        .select('*')
+        .eq('patient_id', id)
+        .eq('provider_id', authUser.id)
+        .maybeSingle();
+      setConsent(consentData);
+
+      const canAccess = consentData?.is_enabled;
+      const perms = consentData?.permissions || {};
+
+      if (canAccess && perms.medical_history) {
+        const { data: mh } = await supabase
+          .from('medical_histories')
+          .select('allergies, chronic_conditions, past_surgeries')
+          .eq('patient_id', id)
+          .maybeSingle();
+        setMedicalHistory(mh || null);
+      } else {
+        setMedicalHistory(null);
+      }
+
+      if (canAccess && perms.documents) {
+        const { data: docs } = await supabase
+          .from('patient_documents')
+          .select('*')
+          .eq('patient_id', id)
+          .order('uploaded_at', { ascending: false });
+        setDocuments(docs || []);
+      } else {
+        setDocuments([]);
+      }
+
+      const { data: notes } = await supabase
+        .from('visit_notes')
+        .select('*')
+        .eq('patient_id', id)
+        .eq('provider_id', authUser.id)
+        .order('created_at', { ascending: false });
+      if (notes) setVisitNotes(notes);
+    } catch (err) {
+      console.error('Error fetching patient profile:', err);
+      navigate('/provider/patients');
+    } finally {
+      setLoading(false);
+    }
+  }, [id, authUser, navigate]);
 
   useEffect(() => {
     if (!authUser || !id) return;
-
-    const fetchData = async () => {
-      try {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('full_name, email, created_at, avatar_url')
-          .eq('id', id)
-          .single();
-        if (userError) throw userError;
-
-        const { data: patData } = await supabase
-          .from('patients')
-          .select('*')
-          .eq('user_id', id)
-          .maybeSingle();
-
-        setPatient({
-          full_name: userData.full_name,
-          email: userData.email,
-          created_at: userData.created_at,
-          avatar_url: userData.avatar_url || '',
-          phone: patData?.phone || '',
-          address: patData?.address || '',
-          emergency_contact: patData?.emergency_contact || '',
-        });
-
-        const { data: consentData } = await supabase
-          .from('consent_access')
-          .select('*')
-          .eq('patient_id', id)
-          .eq('provider_id', authUser.id)
-          .maybeSingle();
-        setConsent(consentData);
-
-        const canAccess = consentData?.is_enabled;
-        const perms = consentData?.permissions || {};
-
-        if (canAccess && perms.medical_history) {
-          const { data: mh } = await supabase
-            .from('medical_histories')
-            .select('allergies, chronic_conditions, past_surgeries')
-            .eq('patient_id', id)
-            .maybeSingle();
-          if (mh) setMedicalHistory(mh);
-        }
-
-        if (canAccess && perms.documents) {
-          const { data: docs } = await supabase
-            .from('patient_documents')
-            .select('*')
-            .eq('patient_id', id)
-            .order('uploaded_at', { ascending: false });
-          if (docs) setDocuments(docs);
-        }
-
-        const { data: notes } = await supabase
-          .from('visit_notes')
-          .select('*')
-          .eq('patient_id', id)
-          .eq('provider_id', authUser.id)
-          .order('created_at', { ascending: false });
-        if (notes) setVisitNotes(notes);
-      } catch (err) {
-        console.error('Error fetching patient profile:', err);
-        navigate('/provider/patients');
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
 
     const subscription = supabase
@@ -105,9 +127,12 @@ const PatientProfileView = () => {
         event: '*',
         schema: 'public',
         table: 'consent_access',
-        filter: `patient_id=eq.${id} AND provider_id=eq.${authUser.id}`,
+        filter: `patient_id=eq.${id}`,
       }, (payload) => {
-        if (payload.new) setConsent(payload.new);
+        if (payload.new?.provider_id === authUser.id) {
+          setConsent(payload.new);
+          fetchData();
+        }
       })
       .subscribe();
 
@@ -125,7 +150,7 @@ const PatientProfileView = () => {
       supabase.removeChannel(subscription);
       clearInterval(pollInterval);
     };
-  }, [id, authUser, navigate]);
+  }, [id, authUser, fetchData]);
 
   if (loading) {
     return <DashboardLayout role="provider"><SkeletonPage /></DashboardLayout>;
@@ -302,6 +327,15 @@ const PatientProfileView = () => {
                   <div className="space-y-2">
                     <motion.button
                       whileTap={{ scale: 0.96 }}
+                      onClick={() => setChartOpen(true)}
+                      className="neu-btn-primary w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-white text-xs transition-all cursor-pointer shadow-sm"
+                    >
+                      <Stethoscope className="w-4 h-4" />
+                      <span>Open Clinical Chart & Log Note</span>
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
                       onClick={() => navigate(`/provider/messages?user=${id}`)}
                       className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-emerald-700 dark:text-emerald-300 text-xs transition-all cursor-pointer"
                     >
@@ -418,7 +452,7 @@ const PatientProfileView = () => {
                       <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold mt-0.5">Clinical baseline, allergies, and chronic conditions</p>
                     </div>
                     <div className="p-4 sm:p-6 md:p-8">
-                      {!consent?.is_enabled ? (
+                      {!consent?.is_enabled || !consent?.permissions?.medical_history ? (
                         <div className="text-center py-10 neu-inset rounded-2xl p-6">
                           <div className="w-14 h-14 neu-btn rounded-full flex items-center justify-center mx-auto mb-3 text-amber-500">
                             <Lock className="w-6 h-6" />
@@ -496,6 +530,16 @@ const PatientProfileView = () => {
                                 <p className="font-extrabold text-slate-800 dark:text-slate-100 text-xs truncate">{doc.document_title}</p>
                                 <p className="text-2xs text-slate-400 dark:text-slate-500 mt-0.5">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                               </div>
+                              {doc.file_path && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenFile(doc.file_path)}
+                                  title="Open Document"
+                                  className="neu-btn p-2 rounded-xl text-teal-600 dark:text-teal-400 hover:text-teal-700 transition-all cursor-pointer shrink-0"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -573,6 +617,20 @@ const PatientProfileView = () => {
                                   <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">{note.notes}</p>
                                 </div>
                               )}
+
+                              {note.attachment_url && (
+                                <div>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenFile(note.attachment_url)}
+                                    className="neu-btn px-3 py-1.5 rounded-xl text-2xs font-bold text-emerald-700 dark:text-emerald-300 inline-flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Paperclip className="w-3.5 h-3.5" />
+                                    <span>View Attachment</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -586,6 +644,13 @@ const PatientProfileView = () => {
         </div>
       </div>
     </DashboardLayout>
+
+      <PatientRecordModal
+        isOpen={chartOpen}
+        onClose={() => { setChartOpen(false); fetchData(); }}
+        patientId={id}
+        patientName={patient.full_name}
+      />
 
       <FhirExportModal
         open={fhirOpen}

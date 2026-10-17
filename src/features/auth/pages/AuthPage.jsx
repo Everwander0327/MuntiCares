@@ -85,12 +85,13 @@ const AuthPage = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const redirectTarget = searchParams.get('redirect') || location.state?.from?.pathname;
+  const roleParam = searchParams.get('role');
 
   const { user, login, register, setPassword } = useAuth();
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState(location.pathname === '/register' ? 'register' : 'login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [role, setRole] = useState('patient');
+  const [role, setRole] = useState(roleParam === 'provider' ? 'provider' : 'patient');
   const [shake, setShake] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -102,6 +103,14 @@ const AuthPage = () => {
   const registerForm = useForm({ resolver: zodResolver(registerSchema) });
   const setPasswordForm = useForm({ resolver: zodResolver(loginSchema) });
   const watchPassword = registerForm.watch('password', '');
+
+  useEffect(() => {
+    setMode(location.pathname === '/register' ? 'register' : 'login');
+    const nextRole = new URLSearchParams(location.search).get('role');
+    if (nextRole === 'provider' || nextRole === 'patient') {
+      setRole(nextRole);
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (user) {
@@ -117,7 +126,13 @@ const AuthPage = () => {
   }, [user, navigate, redirectTarget]);
 
   useEffect(() => {
-    const timer = setTimeout(() => loginForm.setFocus('email'), 400);
+    const timer = setTimeout(() => {
+      if (mode === 'login') {
+        loginForm.setFocus('email');
+      } else if (mode === 'register') {
+        registerForm.setFocus('fullName');
+      }
+    }, 400);
     return () => clearTimeout(timer);
   }, [mode]);
 
@@ -288,7 +303,7 @@ const AuthPage = () => {
               <FormCheckbox label="Remember me" labelClassName="text-slate-900 dark:text-slate-100" {...loginForm.register('remember')} />
               <button
                 type="button"
-                onClick={() => toast.info('Password reset coming soon')}
+                onClick={() => toast('Password reset coming soon')}
                 className="text-xs text-primary font-bold hover:underline transition-all cursor-pointer"
               >
                 Forgot Password?

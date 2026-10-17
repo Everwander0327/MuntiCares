@@ -38,7 +38,7 @@ const CookieConsent = () => {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-2xl"
+          className="fixed bottom-0 left-0 right-0 z-[100] bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 shadow-2xl"
         >
           <div className="container mx-auto px-6 py-4 flex flex-col sm:flex-row items-center gap-4 justify-between">
             <p className="text-sm text-slate-600 dark:text-slate-300 text-center sm:text-left">
@@ -52,7 +52,7 @@ const CookieConsent = () => {
                 Accept
               </button>
               <button
-                onClick={() => setVisible(false)}
+                onClick={accept}
                 className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                 aria-label="Dismiss"
               >

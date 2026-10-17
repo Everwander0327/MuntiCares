@@ -23,6 +23,10 @@ const ProtectedRoute = ({ allowedRole }) => {
     return <Navigate to={`/login?redirect=${encodeURIComponent(target)}`} state={{ from: location }} replace />;
   }
 
+  if (user?.is_banned) {
+    return <Navigate to="/login" state={{ error: 'Your account has been suspended. Please contact support.' }} replace />;
+  }
+
   // Support allowedRole as string or array
   const allowed = Array.isArray(allowedRole) ? allowedRole : [allowedRole];
   if (allowed[0] && !allowed.includes(user.role)) {

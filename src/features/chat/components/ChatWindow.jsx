@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Send, UserCircle, Loader2, Check, CheckCheck, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, PhoneOff } from 'lucide-react';
+import { Send, UserCircle, Loader2, Check, CheckCheck, Video, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { JitsiMeeting } from '@jitsi/react-sdk';
 import { useCalls } from '@/contexts/CallContext';
 import { usePresence } from '@/contexts/PresenceContext';
+import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const addReadMsgIds = (userId, ids) => {
   if (!ids.length) return;
@@ -37,6 +40,7 @@ const shouldShowTimestamp = (msg, nextMsg) => {
 };
 
 const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
+  const { user: authUser } = useAuth();
   const { startCallBroadcast, sendCallEnded, callDeclinedByPeer } = useCalls();
   const { isUserOnline } = usePresence();
   const [messages, setMessages] = useState([]);
@@ -46,8 +50,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
   const [callStatus, setCallStatus] = useState('idle'); // idle | connecting | connected | ended
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [callTimer, setCallTimer] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
-  const [isCameraOff, setIsCameraOff] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOff, setIsCameraOff] = useState(false);
   const [showDeclinedCall, setShowDeclinedCall] = useState(false);
   const [jitsiReady, setJitsiReady] = useState(false);
   const [jitsiError, setJitsiError] = useState(null);
@@ -95,8 +99,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+    if (!isScrolledUp) scrollToBottom();
+  }, [messages.length, isTyping]);
 
   useEffect(() => {
     if (!currentUser?.id || !otherUser?.id) return;
@@ -104,16 +108,15 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
     const fetchMessages = async () => {
       setLoading(true);
 
-      try {
-        await supabase
-          .from('messages')
-          .delete()
-          .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-      } catch (err) {
-        console.warn('Chat cleanup error:', err);
-      }
-
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      supabase
+        .from('messages')
+        .delete()
+        .lt('created_at', yesterday)
+        .then(({ error }) => {
+          if (error) console.warn('Chat cleanup error:', error);
+        });
+
       const { data } = await supabase
         .from('messages')
         .select('*')
@@ -126,6 +129,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
         const unreadIds = data.filter(m => m.receiver_id === currentUser.id && !m.is_read).map(m => m.id);
         if (unreadIds.length > 0) {
           addReadMsgIds(currentUser.id, unreadIds);
+          supabase.from('messages').update({ is_read: true }).in('id', unreadIds).then();
         }
       }
       setLoading(false);
@@ -150,6 +154,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
           if (msg.receiver_id === currentUser.id) {
             msg.is_read = true;
             addReadMsgIds(currentUser.id, [msg.id]);
+            supabase.from('messages').update({ is_read: true }).eq('id', msg.id).then();
             playNotificationSound();
           }
           setMessages(prev => {
@@ -179,6 +184,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       .on('broadcast', { event: 'new_message' }, (payload) => {
         const msg = payload.payload;
         if (msg.sender_id === otherUser.id && msg.receiver_id === currentUser.id) {
+          msg.is_read = true;
+          addReadMsgIds(currentUser.id, [msg.id]);
+          supabase.from('messages').update({ is_read: true }).eq('id', msg.id).then();
           playNotificationSound();
           setMessages(prev => {
             if (prev.find(m => m.id === msg.id || m.content === msg.content && Math.abs(new Date(m.created_at) - new Date(msg.created_at)) < 5000)) return prev;
@@ -192,8 +200,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
       })
       .on('broadcast', { event: 'call_ended' }, () => {
         setCallStatus('ended');
-        setIsMuted(true);
-        setIsCameraOff(true);
+        setIsMuted(false);
+        setIsCameraOff(false);
         setJitsiReady(false);
       })
       .subscribe(async (status) => {
@@ -247,21 +255,33 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
 
     if (channelRef.current) {
       channelRef.current.send({ type: 'broadcast', event: 'typing', payload: { sender_id: currentUser.id, receiver_id: otherUser.id, isTyping: false } });
-      channelRef.current.send({ type: 'broadcast', event: 'new_message', payload: { ...tempMsg, status: undefined } });
     }
 
     setMessages(prev => [...prev, { ...tempMsg, status: 'sending' }]);
     setTimeout(scrollToBottom, 100);
 
-    const { data } = await supabase.from('messages').insert([{
-      sender_id: currentUser.id,
-      receiver_id: otherUser.id,
-      content: text,
-      is_read: false,
-    }]).select();
+    try {
+      const { data, error } = await supabase.from('messages').insert([{
+        sender_id: currentUser.id,
+        receiver_id: otherUser.id,
+        content: text,
+        is_read: false,
+      }]).select();
 
-    if (data?.[0]) {
-      setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...data[0], status: 'sent' } : m));
+      if (error) throw error;
+
+      if (data?.[0]) {
+        setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...data[0], status: 'sent' } : m));
+        channelRef.current?.send({
+          type: 'broadcast',
+          event: 'new_message',
+          payload: data[0],
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...m, status: 'error' } : m));
+      toast.error('Failed to send message.');
     }
   };
 
@@ -304,8 +324,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
     if (callDeclinedByPeer) {
       setShowDeclinedCall(true);
       setCallStatus('idle');
-      setIsMuted(true);
-      setIsCameraOff(true);
+      setIsMuted(false);
+      setIsCameraOff(false);
       setJitsiReady(false);
       setTimeout(() => setShowDeclinedCall(false), 3000);
     }
@@ -319,6 +339,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
 
   const startVideoCall = () => {
     setCallTimer(0);
+    setIsMuted(false);
+    setIsCameraOff(false);
     setCallStatus('connecting');
     sendMessage("📞 I've started a video consultation. Please click the Video icon at the top right to join the call!");
     if (otherUser?.id && currentUser) {
@@ -339,8 +361,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
     }
     jitsiApiRef.current?.executeCommand('hangup');
     setCallStatus('ended');
-    setIsMuted(true);
-    setIsCameraOff(true);
+    setIsMuted(false);
+    setIsCameraOff(false);
     setJitsiReady(false);
   };
 
@@ -367,6 +389,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
     setJitsiReady(true);
     setCallStatus('connected');
 
+    api.addListener('audioMuteStatusChanged', ({ muted }) => {
+      setIsMuted(Boolean(muted));
+    });
+
+    api.addListener('videoMuteStatusChanged', ({ muted }) => {
+      setIsCameraOff(Boolean(muted));
+    });
+
     api.addListener('participantLeft', () => {
       if (locallyEndingRef.current) return;
       if (api.getNumberOfParticipants() <= 1) {
@@ -376,8 +406,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
           payload: { sender_id: currentUser.id }
         });
         setCallStatus('ended');
-        setIsMuted(true);
-        setIsCameraOff(true);
+        setIsMuted(false);
+        setIsCameraOff(false);
         setJitsiReady(false);
       }
     });
@@ -394,6 +424,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
   const roomName = `MuntiCaresRoom_${[currentUser.id, otherUser.id].sort().join('')}`.replace(/-/g, '');
 
   const statusIcon = (msg) => {
+    if (msg.status === 'error') {
+      return <AlertCircle className="w-3 h-3 text-rose-500" title="Failed to send" />;
+    }
     if (typeof msg.id === 'string' && msg.id.startsWith('temp-')) {
       return <Clock className="w-3 h-3 text-slate-400" />;
     }
@@ -539,9 +572,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                   domain="meet.jit.si"
                   roomName={roomName}
                   configOverwrite={{
-                    startWithAudioMuted: true,
-                    startWithVideoMuted: true,
-                    disableInitialGUM: true,
+                    startWithAudioMuted: false,
+                    startWithVideoMuted: false,
                     disableModeratorIndicator: true,
                     enableEmailInStats: false,
                     prejoinPageEnabled: false,
@@ -675,31 +707,40 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
             <ArrowLeft className="w-4 h-4" />
           </button>
         )}
-        <div className="relative shrink-0">
-          <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden p-0.5 flex items-center justify-center">
-            {otherUser.photoUrl ? (
-              <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
-            ) : (
-              <UserCircle className="w-6 h-6 text-primary" />
-            )}
+        <Link
+          to={
+            (currentUser?.role || authUser?.role) === 'provider'
+              ? `/provider/patients/${otherUser.id}/profile`
+              : `/patient/providers/${otherUser.id}/profile`
+          }
+          className="flex items-center gap-3 flex-1 min-w-0 group cursor-pointer"
+        >
+          <div className="relative shrink-0">
+            <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden p-0.5 flex items-center justify-center">
+              {otherUser.photoUrl ? (
+                <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+              ) : (
+                <UserCircle className="w-6 h-6 text-primary" />
+              )}
+            </div>
+            <div 
+              className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#172236] transition-colors duration-300 ${
+                isUserOnline(otherUser.id) ? 'bg-emerald-500' : 'bg-slate-400'
+              }`} 
+              title={isUserOnline(otherUser.id) ? 'Online' : 'Offline'}
+            />
           </div>
-          <div 
-            className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#172236] transition-colors duration-300 ${
-              isUserOnline(otherUser.id) ? 'bg-emerald-500' : 'bg-slate-400'
-            }`} 
-            title={isUserOnline(otherUser.id) ? 'Online' : 'Offline'}
-          />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 leading-tight truncate">
-            {otherUser.name}
-          </h3>
-          <p className={`text-3xs sm:text-xs font-bold transition-colors duration-300 ${
-            isUserOnline(otherUser.id) ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'
-          }`}>
-            {isUserOnline(otherUser.id) ? 'Active now' : 'Offline'}
-          </p>
-        </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors leading-tight truncate">
+              {otherUser.name}
+            </h3>
+            <p className={`text-3xs sm:text-xs font-bold transition-colors duration-300 ${
+              isUserOnline(otherUser.id) ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'
+            }`}>
+              {isUserOnline(otherUser.id) ? 'Active now' : 'Offline'}
+            </p>
+          </div>
+        </Link>
         <motion.button
           onClick={startVideoCall}
           className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-primary flex items-center justify-center hover:text-primary-700 transition-all shrink-0 cursor-pointer"
@@ -768,6 +809,20 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo }) => {
                             : 'neu-flat rounded-2xl rounded-bl-sm text-slate-800 dark:text-slate-100 font-medium'
                         }`}>
                           <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.content}</p>
+                          {msg.content?.startsWith('📞') && (
+                            <button
+                              type="button"
+                              onClick={() => setCallStatus('connecting')}
+                              className={`mt-2.5 w-full px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+                                isMe
+                                  ? 'bg-white/20 hover:bg-white/30 text-white'
+                                  : 'neu-btn text-primary'
+                              }`}
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              <span>Join Video Call</span>
+                            </button>
+                          )}
                         </div>
                         {showTime && (
                           <div className="flex items-center gap-1.5 mt-1.5 px-1">

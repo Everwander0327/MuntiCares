@@ -10,13 +10,15 @@ const useSort = (data, defaultKey = '', defaultDir = 'asc') => {
       let aVal = a[sortKey];
       let bVal = b[sortKey];
 
-      if (typeof aVal === 'string') {
-        aVal = aVal.toLowerCase();
-        bVal = (bVal || '').toLowerCase();
-      }
-
+      if (aVal == null && bVal == null) return 0;
       if (aVal == null) return 1;
       if (bVal == null) return -1;
+
+      if (Array.isArray(aVal)) aVal = aVal.join(', ');
+      if (Array.isArray(bVal)) bVal = bVal.join(', ');
+
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
 
       if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;

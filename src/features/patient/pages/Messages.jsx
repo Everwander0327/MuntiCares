@@ -5,8 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { MessageCircle, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChatWindow, ConversationList, IncomingCallOverlay } from '@/features/chat';
-import { CallProvider } from '@/contexts/CallContext';
+import { ChatWindow, ConversationList } from '@/features/chat';
 import { useLocation } from 'react-router-dom';
 import useMediaQuery from '@/hooks/useMediaQuery';
 
@@ -22,46 +21,91 @@ const PatientMessages = () => {
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [view, setView] = useState('list');
   const [selectedPartner, setSelectedPartner] = useState(null);
-  const [currentUserData, setCurrentUserData] = useState(null);
+  const [currentUserData, setCurrentUserData] = useState(() =>
+    user
+      ? {
+          id: user.id,
+          name: user.full_name || 'Patient',
+          email: user.email,
+          avatar_url: user.avatar_url || '',
+        }
+      : null
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [autoStartVideo, setAutoStartVideo] = useState(false);
 
   useEffect(() => {
     if (!user) return;
+    setCurrentUserData((prev) =>
+      prev?.id === user.id
+        ? prev
+        : {
+            id: user.id,
+            name: user.full_name || 'Patient',
+            email: user.email,
+            avatar_url: user.avatar_url || '',
+          }
+    );
     supabase
       .from('users')
       .select('full_name, email, avatar_url')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
-        setCurrentUserData({
-          id: user.id,
-          name: data?.full_name || 'Patient',
-          email: data?.email,
-          avatar_url: data?.avatar_url || '',
+        if (!data) return;
+        setCurrentUserData((prev) => {
+          const next = {
+            id: user.id,
+            name: data.full_name || user.full_name || 'Patient',
+            email: data.email || user.email,
+            avatar_url: data.avatar_url || user.avatar_url || '',
+          };
+          if (
+            prev &&
+            prev.id === next.id &&
+            prev.name === next.name &&
+            prev.email === next.email &&
+            prev.avatar_url === next.avatar_url
+          ) {
+            return prev;
+          }
+          return next;
         });
       });
   }, [user]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const targetId = params.get('provider') || params.get('partner');
+    const targetId = params.get('provider') || params.get('partner') || params.get('user');
     if (targetId && currentUserData) {
       const partnerName = params.get('name') || undefined;
+      const initialName = partnerName || 'Provider';
+      setSelectedPartner({
+        id: targetId,
+        name: initialName,
+        photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(initialName)}&background=F3E8FF&color=9333EA`,
+      });
       supabase
         .from('users')
         .select('full_name, avatar_url')
         .eq('id', targetId)
         .single()
         .then(({ data: partData }) => {
+          const resolvedName = partData?.full_name || partnerName || 'Provider';
           setSelectedPartner({
             id: targetId,
-            name: partData?.full_name || partnerName || 'Provider',
-            photoUrl: partData?.avatar_url || '',
+            name: resolvedName,
+            photoUrl:
+              partData?.avatar_url ||
+              `https://ui-avatars.com/api/?name=${encodeURIComponent(resolvedName)}&background=F3E8FF&color=9333EA`,
           });
         })
         .catch(() => {
-          setSelectedPartner({ id: targetId, name: partnerName });
+          setSelectedPartner({
+            id: targetId,
+            name: initialName,
+            photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(initialName)}&background=F3E8FF&color=9333EA`,
+          });
         });
 
       setView('chat');
@@ -96,8 +140,7 @@ const PatientMessages = () => {
   };
 
   return (
-    <CallProvider>
-      <IncomingCallOverlay />
+    <>
       <DashboardLayout role="patient">
         {view === 'list' ? (
           <div className="flex-1 flex flex-col space-y-4 sm:space-y-6 relative w-full max-w-full">
@@ -173,7 +216,7 @@ const PatientMessages = () => {
         </AnimatePresence>,
         document.body
       )}
-    </CallProvider>
+    </>
   );
 };
 

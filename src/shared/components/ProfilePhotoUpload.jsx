@@ -47,9 +47,11 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
     if (stored) {
       try {
         const userObj = JSON.parse(stored);
-        userObj.avatar_url = avatarUrl;
-        localStorage.setItem('munticares_user', JSON.stringify(userObj));
-        window.dispatchEvent(new Event('munticares-user-updated'));
+        if (userObj.id === userId) {
+          userObj.avatar_url = avatarUrl;
+          localStorage.setItem('munticares_user', JSON.stringify(userObj));
+          window.dispatchEvent(new Event('munticares-user-updated'));
+        }
       } catch {}
     }
     onUpdate?.(avatarUrl);
@@ -85,6 +87,7 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
 
     if (file.size > 2 * 1024 * 1024) {
       toast.error('File too large. Max 2MB.');
+      if (inputRef.current) inputRef.current.value = '';
       return;
     }
 
@@ -116,6 +119,7 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
         throw updateError;
       }
 
+      setPreview(avatarUrl);
       syncUserAvatar(avatarUrl);
       toast.success('Custom photo uploaded!');
       setModalOpen(false);
@@ -124,6 +128,8 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
       toast.error('Failed to upload photo.');
       setPreview(null);
     } finally {
+      URL.revokeObjectURL(objectUrl);
+      if (inputRef.current) inputRef.current.value = '';
       setUploading(false);
     }
   };
@@ -181,18 +187,22 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
       {/* Neumorphic 3D Avatar Selection Modal */}
       {modalOpen && typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
-          <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in">
+          <div
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in"
+            onClick={() => !uploading && setModalOpen(false)}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.92, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.92, y: 15 }}
+              onClick={(e) => e.stopPropagation()}
               className="neu-flat w-full max-w-xl rounded-3xl p-5 sm:p-6 relative overflow-hidden shadow-2xl border border-white/60 dark:border-white/10"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200/50 dark:border-white/5">
                 <div className="flex items-center gap-2.5">
                   <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-primary">
-                    {isProvider ? <Stethoscope className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-primary" />}
+                    {isProvider ? <Stethoscope className="w-4 h-4 text-primary" /> : isAdmin ? <Shield className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-primary" />}
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">

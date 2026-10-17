@@ -258,20 +258,49 @@ const AdminProviders = () => {
 
   const handleBulkApprove = async () => {
     if (!selectedIds.size) return;
-    if (!window.confirm(`Approve ${selectedIds.size} provider(s)?`)) return;
+    const selected = providers.filter(p => selectedIds.has(p.id) && !p.is_banned);
+    if (!selected.length) {
+      toast.error('Cannot approve banned providers. Unban them first.');
+      return;
+    }
+    if (!window.confirm(`Approve ${selected.length} provider(s)?`)) return;
     setBulkLoading(true);
     try {
-      const selected = providers.filter(p => selectedIds.has(p.id));
       const { error } = await supabase
         .from('providers')
         .update({ is_approved: true })
         .in('user_id', selected.map(p => p.userId));
       if (error) throw error;
-      toast.success(`${selectedIds.size} provider(s) approved.`);
+      toast.success(`${selected.length} provider(s) approved.`);
       setSelectedIds(new Set());
       await fetchProviders();
     } catch (err) {
       toast.error('Failed to approve providers.');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkUnban = async () => {
+    if (!selectedIds.size) return;
+    const selected = providers.filter(p => selectedIds.has(p.id) && p.is_banned);
+    if (!selected.length) {
+      toast.error('No banned providers selected.');
+      return;
+    }
+    if (!window.confirm(`Unban ${selected.length} provider(s)?`)) return;
+    setBulkLoading(true);
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ is_banned: false })
+        .in('id', selected.map(p => p.userId));
+      if (error) throw error;
+      toast.success(`${selected.length} provider(s) unbanned.`);
+      setSelectedIds(new Set());
+      await fetchProviders();
+    } catch (err) {
+      toast.error('Failed to unban providers.');
     } finally {
       setBulkLoading(false);
     }
@@ -288,6 +317,10 @@ const AdminProviders = () => {
         .update({ is_banned: true })
         .in('id', selected.map(p => p.userId));
       if (error) throw error;
+      await supabase
+        .from('providers')
+        .update({ is_approved: false })
+        .in('user_id', selected.map(p => p.userId));
       toast.success(`${selectedIds.size} provider(s) banned.`);
       setSelectedIds(new Set());
       await fetchProviders();
@@ -320,6 +353,10 @@ const AdminProviders = () => {
   };
 
   const handleExport = () => {
+    if (!filteredProviders.length) {
+      toast.error('No providers to export.');
+      return;
+    }
     const fields = [
       { key: 'name', label: 'Full Name' },
       { key: 'email', label: 'Email' },
@@ -346,7 +383,8 @@ const AdminProviders = () => {
   // Filters
   const filteredProviders = sorted.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.email.toLowerCase().includes(searchTerm.toLowerCase());
+                          p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          p.services.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesFilter = filter === 'All' || p.status === filter;
     let matchesDate = true;
     if (startDate) {
@@ -794,6 +832,17 @@ const AdminProviders = () => {
 
                     <motion.button
                       whileTap={{ scale: 0.92 }}
+                      onClick={handleBulkUnban}
+                      disabled={bulkLoading}
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 transition-all shrink-0"
+                      title="Unban All Selected"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                      <span className="hidden xs:inline">Unban</span>
+                    </motion.button>
+
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
                       onClick={handleBulkBan}
                       disabled={bulkLoading}
                       className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 transition-all shrink-0"
@@ -925,7 +974,7 @@ const AdminProviders = () => {
                   </div>
 
                   {/* Professional ID Verification */}
-                  {selectedProvider.professional_id_paths?.length > 0 || selectedProvider.professional_id_path ? (
+                  {(selectedProvider.professional_id_paths?.length > 0 || selectedProvider.professional_id_path || selectedProvider.professional_id_status === 'verified' || selectedProvider.professional_id_status === 'rejected') ? (
                     <div>
                       <p className="text-3xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider mb-2">Professional ID Documents</p>
                       {professionalIdPreviews.length > 0 ? (
@@ -948,9 +997,9 @@ const AdminProviders = () => {
                             </div>
                           ))}
                         </div>
-                      ) : (
+                      ) : (selectedProvider.professional_id_paths?.length > 0 || selectedProvider.professional_id_path) ? (
                         <p className="text-xs text-slate-400 p-2 mb-3">Loading preview...</p>
-                      )}
+                      ) : null}
                       {selectedProvider.professional_id_status === 'pending' && (
                         <div className="grid grid-cols-2 gap-2 mb-3">
                           <motion.button

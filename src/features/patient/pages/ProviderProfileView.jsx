@@ -59,9 +59,9 @@ const ProviderProfileView = () => {
           .order('created_at', { ascending: false });
         if (revData) setReviews(revData);
 
-        const { count: completed } = await supabase
+        const { data: compRows } = await supabase
           .from('requests')
-          .select('id', { count: 'exact', head: true })
+          .select('patient_id')
           .eq('provider_id', id)
           .eq('status', 'Completed');
 
@@ -71,16 +71,13 @@ const ProviderProfileView = () => {
           .eq('provider_id', id)
           .eq('status', 'Cancelled');
 
-        const { count: uniquePats } = await supabase
-          .from('requests')
-          .select('patient_id', { count: 'exact', head: true })
-          .eq('provider_id', id)
-          .eq('status', 'Completed');
+        const completed = compRows?.length || 0;
+        const uniquePats = new Set((compRows || []).map(r => r.patient_id).filter(Boolean)).size;
 
         setStats({
-          completed_requests: completed || 0,
+          completed_requests: completed,
           cancelled_requests: cancelled || 0,
-          unique_patients: uniquePats || 0,
+          unique_patients: uniquePats,
           review_count: revData?.length || 0,
         });
       } catch (err) {
@@ -251,7 +248,7 @@ const ProviderProfileView = () => {
                   </motion.button>
                   <motion.button
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate(`/patient/messages?user=${id}`)}
+                    onClick={() => navigate(`/patient/messages?provider=${id}&name=${encodeURIComponent(provider.full_name || '')}`)}
                     className="w-full py-2.5 rounded-2xl neu-btn font-bold text-xs text-primary flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <MessageCircle className="w-4 h-4" />

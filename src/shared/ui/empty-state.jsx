@@ -49,6 +49,12 @@ const illustrations = {
       <path d="M60 30l6 18h19l-15 11 6 18-16-11-16 11 6-18-15-11h19z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" className="text-slate-200 dark:text-slate-700" />
     </svg>
   ),
+  bell: (
+    <svg viewBox="0 0 120 120" fill="none" className="w-full h-full">
+      <path d="M60 22a6 6 0 00-6 6v4c-14 3-22 15-22 30v14l-6 8v4h68v-4l-6-8V62c0-15-8-27-22-30v-4a6 6 0 00-6-6z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" className="text-slate-200 dark:text-slate-700" />
+      <path d="M50 88a10 10 0 0020 0" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="text-slate-300 dark:text-slate-600" />
+    </svg>
+  ),
 };
 
 const EmptyState = ({ icon = 'search', title, message, action, variant = 'default' }) => {

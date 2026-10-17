@@ -207,11 +207,14 @@ const DashboardShell = ({ children, role = 'patient' }) => {
 
   const fetchCounts = useCallback(async () => {
     if (!authUser) return;
-    const pendingRes = await supabase
+    let pendingQuery = supabase
       .from('requests')
       .select('id', { count: 'exact', head: true })
-      .eq(authUser.role === 'patient' ? 'patient_id' : 'provider_id', authUser.id)
       .eq('status', 'Pending');
+    if (authUser.role !== 'admin') {
+      pendingQuery = pendingQuery.eq(authUser.role === 'patient' ? 'patient_id' : 'provider_id', authUser.id);
+    }
+    const pendingRes = await pendingQuery;
     if (!pendingRes.error) setPendingCount(pendingRes.count || 0);
 
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -231,11 +234,16 @@ const DashboardShell = ({ children, role = 'patient' }) => {
     fetchCounts();
     deleteOldMessages();
 
+    if (!authUser) return;
+
     if (!channelRef.current) {
       channelRef.current = supabase.channel(`layout-counts-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
     }
+    const reqFilter = authUser.role === 'admin'
+      ? { event: '*', schema: 'public', table: 'requests' }
+      : { event: '*', schema: 'public', table: 'requests', filter: `${authUser.role === 'patient' ? 'patient_id' : 'provider_id'}=eq.${authUser.id}` };
     channelRef.current
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'requests', filter: `${authUser.role === 'patient' ? 'patient_id' : 'provider_id'}=eq.${authUser.id}` }, () => fetchCounts())
+      .on('postgres_changes', reqFilter, () => fetchCounts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${authUser.id}` }, () => fetchCounts())
       .subscribe();
 
@@ -468,6 +476,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                   } else if (currentRole === 'provider') {
                     if (link.label === 'Incoming Requests') badge = pendingCount;
                     if (link.label === 'Messages') badge = unreadMsgCount;
+                  } else if (currentRole === 'admin') {
+                    if (link.label === 'Requests') badge = pendingCount;
                   }
                   return (
                     <SidebarItem 
@@ -475,7 +485,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                       icon={link.icon}
                       label={link.label}
                       to={link.to}
-                      active={location.pathname === link.to}
+                      active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
                       onClick={() => setIsSidebarOpen(false)}
                       badge={badge}
                     />
@@ -535,9 +545,14 @@ const DashboardShell = ({ children, role = 'patient' }) => {
           <header className="h-[72px] sm:h-[78px] lg:h-[76px] neu-flat rounded-none lg:rounded-[2.25rem] flex items-center justify-between px-4 sm:px-6 lg:px-7 shrink-0 mb-0 lg:mb-4 border-b border-white/50 dark:border-white/5 lg:border-0 transition-all">
             <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
               {/* Mobile Heart Logo branding */}
-              <div className="lg:hidden neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary shrink-0 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setIsSidebarOpen(true)}
+                aria-label="Open navigation menu"
+                className="lg:hidden lg:pointer-events-none neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
+              >
                 <Heart className="w-4 h-4 text-primary fill-primary" />
-              </div>
+              </button>
 
               {/* When collapsed on desktop: The heart badge physically flies here from the sidebar while spinning! */}
               {isDesktopCollapsed && (
@@ -620,6 +635,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                   } else if (currentRole === 'provider') {
                     if (link.label === 'Incoming Requests') badge = pendingCount;
                     if (link.label === 'Messages') badge = unreadMsgCount;
+                  } else if (currentRole === 'admin') {
+                    if (link.label === 'Requests') badge = pendingCount;
                   }
                   return (
                     <MobileNavItem 

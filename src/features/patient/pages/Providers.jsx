@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,7 +20,7 @@ const SLOT_DURATION_MINUTES = 60;
 
 const bookingSchema = z.object({
   service: z.string().min(1, 'Please select a service.'),
-  date: z.string().min(1, 'Please select a date.'),
+  date: z.string().min(1, 'Please select a date.').refine(d => d >= new Date().toLocaleDateString('en-CA'), 'Appointment date cannot be in the past.'),
   time: z.string().min(1, 'Please select a time slot.'),
   notes: z.string().optional(),
   consent: z.literal(true, { errorMap: () => ({ message: 'You must consent to proceed.' }) }),
@@ -71,6 +71,7 @@ const PatientProviders = () => {
   }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (user) {
@@ -171,20 +172,26 @@ const PatientProviders = () => {
           .eq('date', watchedDate)
           .in('status', ['Accepted', 'On The Way', 'Arrived']);
 
-        const bookedTimes = (existingBookings || []).map(b => b.time);
+        const bookedTimes = (existingBookings || []).map(b => b.time).filter(Boolean);
 
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const currentHour = new Date().getHours();
         const slots = [];
         for (let hour = WORKING_HOURS_START; hour < WORKING_HOURS_END; hour++) {
           const time = `${String(hour).padStart(2, '0')}:00`;
           const isBooked = bookedTimes.some(bt => {
-            const bh = parseInt(bt.split(':')[0]);
-            const bm = parseInt(bt.split(':')[1]);
+            if (!bt || typeof bt !== 'string') return false;
+            const parts = bt.split(':');
+            if (parts.length < 2) return false;
+            const bh = parseInt(parts[0], 10);
+            const bm = parseInt(parts[1], 10);
             const slotStart = hour;
             const slotEnd = hour + SLOT_DURATION_MINUTES / 60;
             const bookingTime = bh + bm / 60;
             return bookingTime >= slotStart && bookingTime < slotEnd;
           });
-          slots.push({ time, available: !isBooked });
+          const isPast = watchedDate < todayStr || (watchedDate === todayStr && hour <= currentHour);
+          slots.push({ time, available: !isBooked && !isPast });
         }
 
         setAvailableSlots(slots);
@@ -210,9 +217,13 @@ const PatientProviders = () => {
   }, [selectedProvider, viewingProvider]);
 
   const sortedProviders = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
     const filtered = providers.filter(p => {
-      const matchesSearch = !searchTerm || p.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (p.services || []).some(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesSearch = !q ||
+        p.full_name.toLowerCase().includes(q) ||
+        (p.services || []).some(s => s.toLowerCase().includes(q)) ||
+        p.location?.toLowerCase().includes(q) ||
+        p.bio?.toLowerCase().includes(q);
       return matchesSearch;
     });
     return filtered.sort((a, b) => {
@@ -238,12 +249,31 @@ const PatientProviders = () => {
     setAvailableSlots([]);
     reset({
       service: presetService || provider.services?.[0] || 'General Care',
-      date: new Date().toISOString().split('T')[0],
+      date: new Date().toLocaleDateString('en-CA'),
       time: '',
       notes: '',
       consent: false,
     });
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const bookId = params.get('book');
+    const serviceParam = params.get('service') || undefined;
+    if (!bookId && serviceParam) {
+      setSearchTerm(serviceParam);
+      window.history.replaceState({}, '', location.pathname);
+      return;
+    }
+    if (loading || providers.length === 0) return;
+    if (bookId) {
+      const target = providers.find(p => String(p.id) === String(bookId));
+      if (target) {
+        openBookingModal(target, serviceParam);
+      }
+      window.history.replaceState({}, '', location.pathname);
+    }
+  }, [loading, providers, location.search, location.pathname]);
 
   const handleReviewBooking = () => {
     if (!user || !selectedProvider) return;
@@ -271,16 +301,20 @@ const PatientProviders = () => {
         return;
       }
 
+      const startHour = values.time.split(':')[0];
       const { data: conflict } = await supabase
         .from('requests')
-        .select('id')
+        .select('id, time')
         .eq('provider_id', selectedProvider.id)
         .eq('date', values.date)
-        .in('status', ['Accepted', 'On The Way', 'Arrived'])
-        .gte('time', values.time + ':00')
-        .lt('time', `${String(parseInt(values.time.split(':')[0]) + 1).padStart(2, '0')}:00`);
+        .in('status', ['Accepted', 'On The Way', 'Arrived']);
 
-      if (conflict && conflict.length > 0) {
+      const hasConflict = (conflict || []).some(c => {
+        if (!c.time) return false;
+        return parseInt(c.time.split(':')[0], 10) === parseInt(startHour, 10);
+      });
+
+      if (hasConflict) {
         toast.error('This time slot has just been taken. Please choose another.');
         setBookingLoading(false);
         setBookingStep('form');
@@ -307,13 +341,17 @@ const PatientProviders = () => {
       if (reqError) throw reqError;
 
       // 3. Enable Data Sharing (Consent)
-      await supabase
+      const { error: consentErr } = await supabase
         .from('consent_access')
         .upsert([{
           patient_id: user.id,
           provider_id: providerId,
           is_enabled: true,
         }], { onConflict: 'patient_id,provider_id' });
+
+      if (consentErr) {
+        console.warn('Could not grant consent access:', consentErr);
+      }
 
       setRequested([...requested, providerId]);
       setSelectedProvider(null);
@@ -709,7 +747,7 @@ const PatientProviders = () => {
                       <input
                         id="booking-date"
                         type="date"
-                        min={new Date().toISOString().split('T')[0]}
+                        min={new Date().toLocaleDateString('en-CA')}
                         {...register('date', { onChange: () => { setValue('time', ''); setOpenTimeMenu(false); } })}
                         className={`w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white outline-none cursor-pointer ${
                           errors.date ? 'text-red-500' : ''
@@ -1038,7 +1076,7 @@ const PatientProviders = () => {
                     <span className="truncate">{viewingProvider.location || 'Muntinlupa City'}</span>
                   </p>
                   <p className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400 shrink-0">
-                    ₱{Number(viewingProvider.price_per_service).toLocaleString()}<span className="text-3xs font-normal text-slate-400">/visit</span>
+                    ₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}<span className="text-3xs font-normal text-slate-400">/visit</span>
                   </p>
                 </div>
               </div>
@@ -1106,7 +1144,7 @@ const PatientProviders = () => {
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>{requested.includes(viewingProvider.id) ? 'Request Sent' : `Book Appointment — ₱${Number(viewingProvider.price_per_service).toLocaleString()}`}</span>
+                  <span>{requested.includes(viewingProvider.id) ? 'Request Sent' : `Book Appointment — ₱${Number(viewingProvider.price_per_service || 0).toLocaleString()}`}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -1178,7 +1216,7 @@ const PatientProviders = () => {
                     <div className="neu-flat-sm p-4 rounded-2xl space-y-2.5 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 font-medium">Standard Consultation Fee</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-slate-400 font-medium">Primary Area</span>
@@ -1218,7 +1256,7 @@ const PatientProviders = () => {
                           className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                         >
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">{s}</span>
-                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0 ml-2">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
+                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0 ml-2">₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}</span>
                         </button>
                       ))}
                       {(!viewingProvider.services || viewingProvider.services.length === 0) && (
@@ -1280,7 +1318,7 @@ const PatientProviders = () => {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="neu-flat-sm p-4 rounded-2xl">
                       <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Consultation Fee</p>
-                      <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">₱{Number(viewingProvider.price_per_service).toLocaleString()}</p>
+                      <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}</p>
                       <p className="text-3xs text-slate-400 mt-1">Standard per-session visit rate</p>
                     </div>
                     <div className="neu-flat-sm p-4 rounded-2xl">
@@ -1328,7 +1366,7 @@ const PatientProviders = () => {
                           <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">{s}</p>
                           <p className="text-3xs text-slate-400">Available for booking</p>
                         </div>
-                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">₱{Number(viewingProvider.price_per_service).toLocaleString()}</span>
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}</span>
                       </button>
                     ))}
                     {(!viewingProvider.services || viewingProvider.services.length === 0) && (
@@ -1394,7 +1432,7 @@ const PatientProviders = () => {
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>{requested.includes(viewingProvider.id) ? 'Request Sent' : `Book Appointment — ₱${Number(viewingProvider.price_per_service).toLocaleString()}`}</span>
+                  <span>{requested.includes(viewingProvider.id) ? 'Request Sent' : `Book Appointment — ₱${Number(viewingProvider.price_per_service || 0).toLocaleString()}`}</span>
                 </button>
                 <button
                   onClick={() => {

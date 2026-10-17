@@ -83,7 +83,7 @@ const Coverage = () => (
           className="text-center text-slate-500 dark:text-slate-400 text-base pt-6"
           variants={staggerItem}
         >
-          <span className="font-display font-semibold text-primary text-2xl">10</span> barangays covered and expanding
+          <span className="font-display font-semibold text-primary text-2xl">{barangays.length}</span> barangays covered and expanding
         </motion.p>
       </motion.div>
     </div>

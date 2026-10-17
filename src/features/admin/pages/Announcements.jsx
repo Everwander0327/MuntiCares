@@ -33,7 +33,7 @@ const AdminAnnouncements = () => {
           .order('created_at', { ascending: false })
           .limit(50);
 
-        if (error && error.code === '42P01') {
+        if (error && (error.code === '42P01' || error.code === 'PGRST205')) {
           setTableMissing(true);
           return;
         }
@@ -66,6 +66,11 @@ const AdminAnnouncements = () => {
         }])
         .select();
 
+      if (error && (error.code === '42P01' || error.code === 'PGRST205')) {
+        setTableMissing(true);
+        toast.error('Announcements table is not initialized.');
+        return;
+      }
       if (error) throw error;
 
       if (data) {
@@ -99,7 +104,7 @@ const AdminAnnouncements = () => {
   const filteredHistory = announcements.filter(a => {
     const q = historySearch.toLowerCase();
     const matchesSearch = a.title?.toLowerCase().includes(q) || a.message?.toLowerCase().includes(q);
-    const matchesTarget = historyFilter === 'all' || a.target_audience === historyFilter;
+    const matchesTarget = historyFilter === 'all' || (a.target_audience || 'all').toLowerCase() === historyFilter.toLowerCase();
     return matchesSearch && matchesTarget;
   });
 
@@ -242,7 +247,7 @@ const AdminAnnouncements = () => {
               <motion.button
                 whileTap={{ scale: 0.98 }}
                 onClick={handleSend}
-                disabled={sending || !title.trim() || !message.trim()}
+                disabled={sending || tableMissing || !title.trim() || !message.trim()}
                 className="w-full neu-btn-primary flex items-center justify-center gap-2 py-3.5 rounded-2xl font-black text-xs sm:text-sm text-white shadow-lg transition-all disabled:opacity-40"
               >
                 <Send className="w-4 h-4" />

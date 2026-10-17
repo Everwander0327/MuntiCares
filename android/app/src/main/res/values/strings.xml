@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">MuntiCares</string>
+    <string name="title_activity_main">MuntiCares</string>
+    <string name="package_name">com.munticares.app</string>
+    <string name="custom_url_scheme">com.munticares.app</string>
+</resources>

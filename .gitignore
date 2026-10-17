@@ -30,3 +30,4 @@ supabase_schema.sql
 .agents
 .vercel
 .env*
+test-results/

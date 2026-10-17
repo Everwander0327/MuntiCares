@@ -32,9 +32,20 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const resetForm = () => {
+    setRatings({ overall: 0, service: 0, communication: 0, punctuality: 0 });
+    setHovered({ overall: 0, service: 0, communication: 0, punctuality: 0 });
+    setComment('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) onClose();
+      if (e.key === 'Escape' && isOpen) handleClose();
     };
     if (isOpen) {
       document.body.classList.add('modal-open');
@@ -62,8 +73,10 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
 
     setSubmitting(true);
 
+    const currentRatingVal = ratings.overall;
+    const cleanComment = comment.trim() || null;
     const submittedCb = onReviewSubmitted;
-    onClose();
+    handleClose();
     toast.success('Thank you! Your review has been submitted.');
     confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
     if (submittedCb) submittedCb(request.id);
@@ -78,12 +91,24 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           patient_id: request.patientId || null,
           provider_id: request.providerId,
           request_id: request.id,
-          rating: ratings.overall,
-          review_text: `[Service: ${ratings.service || 0}/5 | Comm: ${ratings.communication || 0}/5 | Punctual: ${ratings.punctuality || 0}/5] ${comment}`
+          rating: currentRatingVal,
+          review_text: cleanComment
         }]);
 
       if (reviewError) {
         console.warn('provider_reviews insert failed, falling back to direct provider rating update...', reviewError);
+      }
+
+      const { data: allReviews } = await supabase
+        .from('provider_reviews')
+        .select('rating')
+        .eq('provider_id', request.providerId);
+
+      let updatedRating = currentRatingVal;
+      if (allReviews && allReviews.length > 0) {
+        const sum = allReviews.reduce((acc, r) => acc + Number(r.rating || 0), 0);
+        updatedRating = Number((sum / allReviews.length).toFixed(2));
+      } else {
         const { data: providerData } = await supabase
           .from('providers')
           .select('rating')
@@ -91,16 +116,16 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           .single();
 
         const currentRating = providerData?.rating || 0;
-        const updatedRating = currentRating === 0 ? ratings.overall : ((currentRating * 4) + ratings.overall) / 5;
+        updatedRating = currentRating === 0 ? currentRatingVal : ((currentRating * 4) + currentRatingVal) / 5;
+      }
 
-        const { error: updateError } = await supabase
-          .from('providers')
-          .update({ rating: updatedRating })
-          .eq('user_id', request.providerId);
+      const { error: updateError } = await supabase
+        .from('providers')
+        .update({ rating: updatedRating })
+        .eq('user_id', request.providerId);
 
-        if (updateError) {
-          console.warn('Direct provider rating update failed:', updateError);
-        }
+      if (updateError) {
+        console.warn('Direct provider rating update failed:', updateError);
       }
     } catch (err) {
       console.error('Error submitting review:', err);
@@ -121,7 +146,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.16 }}
-          onClick={onClose}
+          onClick={handleClose}
         >
           <motion.div
             initial={{ opacity: 0, y: 50 }}
@@ -270,7 +295,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
               <div className="grid grid-cols-2 gap-2.5 pt-0.5">
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="neu-btn px-4 py-2.5 sm:py-3 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
                 >
                   Cancel

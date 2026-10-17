@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   ShieldCheck, Info, Calendar, ChevronDown, ChevronUp, 
@@ -50,7 +52,9 @@ const staggerItem = {
 
 /* Neumorphic Provider Access Card */
 const ProviderCard = ({ 
+  providerId,
   providerName, 
+  providerAvatarUrl,
   service, 
   lastAccess, 
   isEnabled, 
@@ -70,15 +74,25 @@ const ProviderCard = ({
       <div className="p-3.5 sm:p-5 md:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           {/* Tactile Provider Avatar */}
-          <div className="neu-flat-sm w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-primary font-black text-xs sm:text-sm shrink-0 select-none aspect-square">
-            {providerName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-          </div>
+          <Link
+            to={`/patient/providers/${providerId}/profile`}
+            className="neu-flat-sm w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-primary font-black text-xs sm:text-sm shrink-0 select-none aspect-square overflow-hidden hover:scale-105 transition-transform"
+          >
+            {providerAvatarUrl ? (
+              <img src={providerAvatarUrl} alt={providerName} className="w-full h-full object-cover" />
+            ) : (
+              providerName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
+            )}
+          </Link>
           
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-              <h4 className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base md:text-lg truncate">
+              <Link
+                to={`/patient/providers/${providerId}/profile`}
+                className="font-extrabold text-slate-900 dark:text-white hover:text-primary dark:hover:text-primary-400 transition-colors text-sm sm:text-base md:text-lg truncate"
+              >
                 {providerName}
-              </h4>
+              </Link>
               <span className={`neu-flat-sm px-2.5 py-0.5 rounded-lg text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
                 isEnabled 
                   ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15' 
@@ -194,7 +208,7 @@ const PatientConsent = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('consent_access')
-        .select('*, provider:provider_id(full_name)')
+        .select('*, provider:provider_id(full_name, avatar_url)')
         .eq('patient_id', user.id);
 
       if (error) throw error;
@@ -220,6 +234,7 @@ const PatientConsent = () => {
           id: c.id,
           providerId: c.provider_id,
           providerName: c.provider?.full_name || 'Care Specialist',
+          providerAvatarUrl: c.provider?.avatar_url || '',
           service: (provInfo?.services && provInfo.services.length > 0) ? provInfo.services[0] : 'General Care',
           lastAccess: c.last_access ? new Date(c.last_access).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never',
           lastAccessRaw: c.last_access,
@@ -427,7 +442,9 @@ const PatientConsent = () => {
               {filteredConsents.map((c) => (
                 <ProviderCard
                   key={c.id}
+                  providerId={c.providerId}
                   providerName={c.providerName}
+                  providerAvatarUrl={c.providerAvatarUrl}
                   service={c.service}
                   lastAccess={c.lastAccess}
                   isEnabled={c.isEnabled}
@@ -466,291 +483,297 @@ const PatientConsent = () => {
         </div>
 
         {/* Modal: Granular Permissions Sheet (Zero page resizing!) */}
-        <AnimatePresence>
-          {selectedPermProvider && (
-            <motion.div
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 md:backdrop-blur-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.16 }}
-              onClick={() => setSelectedPermProvider(null)}
-            >
+        {typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {selectedPermProvider && (
               <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 30 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                onClick={(e) => e.stopPropagation()}
-                className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-lg rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 space-y-4 shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 md:backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.16 }}
+                onClick={() => setSelectedPermProvider(null)}
               >
-                {/* Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
-                      <MoreHorizontal className="w-5 h-5" />
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 30 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-lg rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 space-y-4 shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                >
+                  {/* Header */}
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                        <MoreHorizontal className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
+                          {selectedPermProvider.providerName}
+                        </h3>
+                        <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                          Configure data sharing categories
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
-                        {selectedPermProvider.providerName}
-                      </h3>
-                      <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 truncate">
-                        Configure data sharing categories
-                      </p>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPermProvider(null)}
+                      className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95"
+                    >
+                      <X className="w-4 h-4 stroke-[2.5]" />
+                    </button>
                   </div>
+
+                  {/* Status notice */}
+                  {!selectedPermProvider.isEnabled && (
+                    <div className="neu-inset p-3 rounded-xl flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+                      <ShieldAlert className="w-4 h-4 shrink-0" />
+                      <span>Master toggle is OFF. Turn ON master access to enable sharing.</span>
+                    </div>
+                  )}
+
+                  {/* Categories */}
+                  <div className="space-y-2.5">
+                    {PERMISSION_CONFIG.map(({ key, label, desc, icon: Icon }) => {
+                      const isChecked = !!selectedPermProvider.permissions[key];
+                      const isEnabled = selectedPermProvider.isEnabled;
+                      return (
+                        <div
+                          key={key}
+                          onClick={() => isEnabled && handlePermChange(selectedPermProvider.providerId, selectedPermProvider.providerName, key)}
+                          className={`p-3.5 rounded-2xl transition-all select-none flex items-center justify-between gap-3 ${
+                            isEnabled
+                              ? isChecked
+                                ? 'neu-inset border border-primary/20 cursor-pointer'
+                                : 'neu-flat-sm cursor-pointer hover:border-slate-300 dark:hover:border-slate-700'
+                              : 'neu-flat-sm opacity-50 cursor-not-allowed'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                              isChecked && isEnabled 
+                                ? 'neu-btn-primary text-white' 
+                                : 'neu-flat-sm text-slate-500 dark:text-slate-400'
+                            }`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 block truncate">
+                                {label}
+                              </span>
+                              <span className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 block truncate font-medium">
+                                {desc}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                            isChecked && isEnabled
+                              ? 'neu-btn-primary text-white'
+                              : 'neu-inset text-transparent'
+                          }`}>
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Footer action */}
                   <button
                     type="button"
                     onClick={() => setSelectedPermProvider(null)}
-                    className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95"
+                    className="w-full neu-btn-primary py-2.5 rounded-xl font-bold text-xs sm:text-sm cursor-pointer shadow-sm active:scale-[0.98]"
                   >
-                    <X className="w-4 h-4 stroke-[2.5]" />
+                    Done
                   </button>
-                </div>
-
-                {/* Status notice */}
-                {!selectedPermProvider.isEnabled && (
-                  <div className="neu-inset p-3 rounded-xl flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-semibold">
-                    <ShieldAlert className="w-4 h-4 shrink-0" />
-                    <span>Master toggle is OFF. Turn ON master access to enable sharing.</span>
-                  </div>
-                )}
-
-                {/* Categories */}
-                <div className="space-y-2.5">
-                  {PERMISSION_CONFIG.map(({ key, label, desc, icon: Icon }) => {
-                    const isChecked = !!selectedPermProvider.permissions[key];
-                    const isEnabled = selectedPermProvider.isEnabled;
-                    return (
-                      <div
-                        key={key}
-                        onClick={() => isEnabled && handlePermChange(selectedPermProvider.providerId, selectedPermProvider.providerName, key)}
-                        className={`p-3.5 rounded-2xl transition-all select-none flex items-center justify-between gap-3 ${
-                          isEnabled
-                            ? isChecked
-                              ? 'neu-inset border border-primary/20 cursor-pointer'
-                              : 'neu-flat-sm cursor-pointer hover:border-slate-300 dark:hover:border-slate-700'
-                            : 'neu-flat-sm opacity-50 cursor-not-allowed'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                            isChecked && isEnabled 
-                              ? 'neu-btn-primary text-white' 
-                              : 'neu-flat-sm text-slate-500 dark:text-slate-400'
-                          }`}>
-                            <Icon className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 block truncate">
-                              {label}
-                            </span>
-                            <span className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 block truncate font-medium">
-                              {desc}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
-                          isChecked && isEnabled
-                            ? 'neu-btn-primary text-white'
-                            : 'neu-inset text-transparent'
-                        }`}>
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Footer action */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedPermProvider(null)}
-                  className="w-full neu-btn-primary py-2.5 rounded-xl font-bold text-xs sm:text-sm cursor-pointer shadow-sm active:scale-[0.98]"
-                >
-                  Done
-                </button>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
         {/* Modal: Audit Trail - Lightweight 60fps Sheet with zero jitter */}
-        <AnimatePresence>
-          {showAuditModal && (
-            <motion.div 
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 md:backdrop-blur-sm"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.16 }}
-              onClick={() => setShowAuditModal(false)}
-            >
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 30 }}
-                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                onClick={(e) => e.stopPropagation()}
-                className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-4 sm:p-6 md:p-7 space-y-3.5 h-[80vh] sm:h-[560px] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+        {typeof document !== 'undefined' && createPortal(
+          <AnimatePresence>
+            {showAuditModal && (
+              <motion.div 
+                className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 md:backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.16 }}
+                onClick={() => setShowAuditModal(false)}
               >
-                {/* Modal Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5 shrink-0">
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                    <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
-                      <History className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="font-extrabold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
-                        Audit Trail
-                      </h3>
-                      <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 truncate">
-                        Inspection records and permission history
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowAuditModal(false)}
-                    className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95 shrink-0"
-                  >
-                    <X className="w-4 h-4 stroke-[2.5]" />
-                  </button>
-                </div>
-
-                {/* Subtabs inside Modal */}
-                <div className="neu-inset p-1 rounded-xl flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setAuditTab('history')}
-                    className={`flex-1 py-2 rounded-lg text-2xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      auditTab === 'history'
-                        ? 'neu-btn-primary shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400'
-                    }`}
-                  >
-                    <History className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">Permission Changes ({consentHistory.length})</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuditTab('access')}
-                    className={`flex-1 py-2 rounded-lg text-2xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                      auditTab === 'access'
-                        ? 'neu-btn-primary shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400'
-                    }`}
-                  >
-                    <Eye className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">File Views ({accessLogs.length})</span>
-                  </button>
-                </div>
-
-                {/* Modal Body Content - Fixed Height, Pure CSS Smooth Scroll */}
-                <div className="flex-1 overflow-y-auto space-y-2 pr-1 overscroll-contain no-scrollbar">
-                  {auditTab === 'history' ? (
-                    consentHistory.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
-                        <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-xs sm:text-sm font-bold">No permission changes logged yet</p>
-                        <p className="text-3xs text-slate-400 mt-0.5">Toggle a provider's access to see audit entries here.</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 30 }}
+                  transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-4 sm:p-6 md:p-7 space-y-3.5 h-[80vh] sm:h-[560px] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                >
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5 shrink-0">
+                    <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                      <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                        <History className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
-                    ) : (
-                      consentHistory.map((entry, idx) => (
-                        <div key={idx} className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-2.5">
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                              entry.action === 'Granted'
-                                ? 'neu-btn-primary text-white'
-                                : entry.action === 'Revoked'
-                                ? 'neu-flat-sm text-rose-500'
-                                : 'neu-flat-sm text-amber-500'
-                            }`}>
-                              {entry.action === 'Granted' ? <Check className="w-3 h-3 stroke-[3]" /> : entry.action === 'Revoked' ? <X className="w-3 h-3 stroke-[3]" /> : <Clock className="w-3 h-3" />}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="font-bold text-slate-900 dark:text-white text-xs truncate">
-                                  {entry.providerName}
-                                </span>
-                                <span className={`px-1.5 py-0.5 rounded text-3xs font-extrabold uppercase ${getActionBadge(entry.action)}`}>
-                                  {entry.action}
-                                </span>
-                              </div>
-                              <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                                {entry.details}
-                              </p>
-                            </div>
-                          </div>
-                          <span className="text-3xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
-                            {formatTimestamp(entry.timestamp)}
-                          </span>
-                        </div>
-                      ))
-                    )
-                  ) : (
-                    accessLogs.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
-                        <Eye className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                        <p className="text-xs sm:text-sm font-bold">No recorded provider file views</p>
-                        <p className="text-3xs text-slate-400 mt-0.5">When doctors view your medical profile, logs will appear here.</p>
+                      <div className="min-w-0">
+                        <h3 className="font-extrabold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
+                          Audit Trail
+                        </h3>
+                        <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                          Inspection records and permission history
+                        </p>
                       </div>
-                    ) : (
-                      accessLogs.map((c) => (
-                        <div key={c.id} className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-2.5">
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <div className="neu-flat-sm w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-primary shrink-0">
-                              <Eye className="w-3 h-3" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <h5 className="font-bold text-slate-900 dark:text-white text-xs truncate">
-                                {c.providerName}
-                              </h5>
-                              <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                                Inspected: {Object.entries(PERMISSION_LABELS)
-                                  .filter(([k]) => c.permissions?.[k])
-                                  .map(([, v]) => v)
-                                  .join(', ') || 'records'}
-                              </p>
-                            </div>
-                          </div>
-                          <span className="text-3xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
-                            {new Date(c.lastAccessRaw).toLocaleDateString('en-US', {
-                              month: 'short', 
-                              day: 'numeric', 
-                              hour: '2-digit', 
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                      ))
-                    )
-                  )}
-                </div>
+                    </div>
 
-                {/* Modal Footer */}
-                <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-white/5 text-3xs text-slate-400 shrink-0">
-                  <span className="truncate">Stored locally</span>
-                  {consentHistory.length > 0 && auditTab === 'history' && (
                     <button
                       type="button"
-                      onClick={() => {
-                        localStorage.removeItem(getHistoryKey());
-                        setConsentHistory([]);
-                        toast.success('Audit history cleared');
-                      }}
-                      className="text-rose-500 hover:underline font-bold cursor-pointer shrink-0"
+                      onClick={() => setShowAuditModal(false)}
+                      className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95 shrink-0"
                     >
-                      Clear log
+                      <X className="w-4 h-4 stroke-[2.5]" />
                     </button>
-                  )}
-                </div>
+                  </div>
+
+                  {/* Subtabs inside Modal */}
+                  <div className="neu-inset p-1 rounded-xl flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setAuditTab('history')}
+                      className={`flex-1 py-2 rounded-lg text-2xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        auditTab === 'history'
+                          ? 'neu-btn-primary shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      <History className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">Permission Changes ({consentHistory.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuditTab('access')}
+                      className={`flex-1 py-2 rounded-lg text-2xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        auditTab === 'access'
+                          ? 'neu-btn-primary shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400'
+                      }`}
+                    >
+                      <Eye className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">File Views ({accessLogs.length})</span>
+                    </button>
+                  </div>
+
+                  {/* Modal Body Content - Fixed Height, Pure CSS Smooth Scroll */}
+                  <div className="flex-1 overflow-y-auto space-y-2 pr-1 overscroll-contain no-scrollbar">
+                    {auditTab === 'history' ? (
+                      consentHistory.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
+                          <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                          <p className="text-xs sm:text-sm font-bold">No permission changes logged yet</p>
+                          <p className="text-3xs text-slate-400 mt-0.5">Toggle a provider's access to see audit entries here.</p>
+                        </div>
+                      ) : (
+                        consentHistory.map((entry, idx) => (
+                          <div key={idx} className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-2.5">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                                entry.action === 'Granted'
+                                  ? 'neu-btn-primary text-white'
+                                  : entry.action === 'Revoked'
+                                  ? 'neu-flat-sm text-rose-500'
+                                  : 'neu-flat-sm text-amber-500'
+                              }`}>
+                                {entry.action === 'Granted' ? <Check className="w-3 h-3 stroke-[3]" /> : entry.action === 'Revoked' ? <X className="w-3 h-3 stroke-[3]" /> : <Clock className="w-3 h-3" />}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                                    {entry.providerName}
+                                  </span>
+                                  <span className={`px-1.5 py-0.5 rounded text-3xs font-extrabold uppercase ${getActionBadge(entry.action)}`}>
+                                    {entry.action}
+                                  </span>
+                                </div>
+                                <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                  {entry.details}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-3xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
+                              {formatTimestamp(entry.timestamp)}
+                            </span>
+                          </div>
+                        ))
+                      )
+                    ) : (
+                      accessLogs.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
+                          <Eye className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                          <p className="text-xs sm:text-sm font-bold">No recorded provider file views</p>
+                          <p className="text-3xs text-slate-400 mt-0.5">When doctors view your medical profile, logs will appear here.</p>
+                        </div>
+                      ) : (
+                        accessLogs.map((c) => (
+                          <div key={c.id} className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-2.5">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div className="neu-flat-sm w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-primary shrink-0">
+                                <Eye className="w-3 h-3" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h5 className="font-bold text-slate-900 dark:text-white text-xs truncate">
+                                  {c.providerName}
+                                </h5>
+                                <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                  Inspected: {Object.entries(PERMISSION_LABELS)
+                                    .filter(([k]) => c.permissions?.[k])
+                                    .map(([, v]) => v)
+                                    .join(', ') || 'records'}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-3xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
+                              {new Date(c.lastAccessRaw).toLocaleDateString('en-US', {
+                                month: 'short', 
+                                day: 'numeric', 
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        ))
+                      )
+                    )}
+                  </div>
+
+                  {/* Modal Footer */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-white/5 text-3xs text-slate-400 shrink-0">
+                    <span className="truncate">Stored locally</span>
+                    {consentHistory.length > 0 && auditTab === 'history' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          localStorage.removeItem(getHistoryKey());
+                          setConsentHistory([]);
+                          toast.success('Audit history cleared');
+                        }}
+                        className="text-rose-500 hover:underline font-bold cursor-pointer shrink-0"
+                      >
+                        Clear log
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
       </div>
     </DashboardLayout>

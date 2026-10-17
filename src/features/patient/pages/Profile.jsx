@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Activity, LogOut, Save, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download, User, Stethoscope, FolderOpen, Clock, FileCode } from 'lucide-react';
+import { Activity, LogOut, Save, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download, User, Stethoscope, FolderOpen, Clock, FileCode, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +12,7 @@ import { getSignedUrl } from '@/lib/supabaseHelpers';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { ProfilePhotoUpload, FhirExportModal } from '@/shared/components';
 import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
+import { LocationPicker } from '@/features/tracking/components';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -26,7 +27,9 @@ const PatientProfile = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
+  const initialAddressRef = useRef('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [homeCoords, setHomeCoords] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [profile, setProfile] = useState({
     full_name: '',
@@ -64,6 +67,10 @@ const PatientProfile = () => {
           throw patError;
         }
 
+        if (patData?.latitude != null && patData?.longitude != null) {
+          setHomeCoords({ lat: patData.latitude, lng: patData.longitude });
+        }
+        initialAddressRef.current = patData?.address || '';
         setProfile({
           full_name: userData.full_name,
           email: userData.email,
@@ -135,18 +142,33 @@ const PatientProfile = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      const isComplete = Boolean(profile.phone?.trim() && profile.address?.trim() && profile.emergency_contact?.trim());
+      const initialAddress = initialAddressRef.current;
+      const addressChanged = Boolean(initialAddress && initialAddress.trim() !== (profile.address || '').trim());
+
+      const patientPayload = {
+        user_id: user.id,
+        phone: profile.phone,
+        address: profile.address,
+        medical_notes: profile.medical_notes,
+        emergency_contact: profile.emergency_contact,
+        is_profile_complete: isComplete,
+      };
+
+      if (addressChanged) {
+        patientPayload.latitude = null;
+        patientPayload.longitude = null;
+        patientPayload.geocoded_at = null;
+        setHomeCoords(null);
+      }
+
       const { error } = await supabase
         .from('patients')
-        .upsert({
-          user_id: user.id,
-          phone: profile.phone,
-          address: profile.address,
-          medical_notes: profile.medical_notes,
-          emergency_contact: profile.emergency_contact,
-          is_profile_complete: true
-        }, { onConflict: 'user_id' });
+        .upsert(patientPayload, { onConflict: 'user_id' });
 
       if (error) throw error;
+
+      initialAddressRef.current = profile.address || '';
 
       const { data: existingMH } = await supabase
         .from('medical_histories')
@@ -174,8 +196,13 @@ const PatientProfile = () => {
         if (mhError) throw mhError;
       }
 
-      setProfile(prev => ({ ...prev, is_profile_complete: true }));
-      toast.success('Profile updated successfully!');
+      setProfile(prev => ({ ...prev, is_profile_complete: isComplete }));
+
+      if (activeTab === 'medical' && !isComplete) {
+        toast('Medical history saved, but contact information is incomplete. Please complete your contact details in Personal Information.', { icon: 'ℹ️' });
+      } else {
+        toast.success('Profile updated successfully!');
+      }
     } catch (err) {
       console.error('Error saving profile:', err);
       toast.error('Failed to save profile.');
@@ -573,7 +600,8 @@ const PatientProfile = () => {
         doc.text('This document is auto-generated and not a substitute for official medical records.', pageWidth - 14, 290, { align: 'right' });
       }
 
-      doc.save(`MuntiCares_MedicalSummary_${profile.full_name.replace(/\s+/g, '_')}.pdf`);
+      const safeName = (profile.full_name || 'Patient').trim().replace(/\s+/g, '_');
+      doc.save(`MuntiCares_MedicalSummary_${safeName}.pdf`);
       toast.success('Medical Summary downloaded!');
     } catch (err) {
       console.error('PDF generation error:', err);
@@ -821,6 +849,19 @@ const PatientProfile = () => {
                       </div>
 
                       <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">
+                          Pin Your Home on the Map {homeCoords ? <span className="text-emerald-600 dark:text-emerald-400">· Saved</span> : <span className="text-amber-600 dark:text-amber-400">· Recommended</span>}
+                        </label>
+                        <p className="text-3xs text-slate-500 ml-1">Used for accurate live tracking and ETA when your provider is on the way.</p>
+                        <LocationPicker
+                          userId={user?.id}
+                          address={profile.address}
+                          initial={homeCoords}
+                          onSaved={setHomeCoords}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5 md:col-span-2">
                         <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">General Medical Notes</label>
                         <textarea name="medical_notes" value={profile.medical_notes}
                           onChange={e => setProfile({...profile, medical_notes: e.target.value})}
@@ -971,18 +1012,46 @@ const PatientProfile = () => {
                               <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
                             <div className="flex-1 min-w-0 pr-2">
-                              <p className="font-bold text-slate-800 dark:text-slate-100 text-xs sm:text-sm truncate">{doc.document_title}</p>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const url = await getSignedUrl(doc.file_path, 3600);
+                                  if (url) window.open(url, '_blank');
+                                  else toast.error('Could not open document.');
+                                }}
+                                className="font-bold text-slate-800 dark:text-slate-100 hover:text-primary text-xs sm:text-sm truncate block text-left w-full cursor-pointer transition-colors"
+                                title="Open Document"
+                              >
+                                {doc.document_title}
+                              </button>
                               <p className="text-3xs text-slate-400 dark:text-slate-500 mt-0.5">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                             </div>
                             <motion.button whileTap={{ scale: 0.9 }} type="button"
-                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors shrink-0"
+                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary transition-colors shrink-0 cursor-pointer"
+                              title="Open Document"
+                              onClick={async () => {
+                                const url = await getSignedUrl(doc.file_path, 3600);
+                                if (url) window.open(url, '_blank');
+                                else toast.error('Could not open document.');
+                              }}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </motion.button>
+                            <motion.button whileTap={{ scale: 0.9 }} type="button"
+                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors shrink-0 cursor-pointer"
                               title="Delete Document"
                               onClick={async () => {
                                 if(window.confirm('Delete this document?')) {
-                                  await supabase.storage.from('medical_documents').remove([doc.file_path]);
-                                  await supabase.from('patient_documents').delete().eq('id', doc.id);
-                                  setDocuments(documents.filter(d => d.id !== doc.id));
-                                  toast.success('Document deleted!');
+                                  try {
+                                    await supabase.storage.from('medical_documents').remove([doc.file_path]);
+                                    const { error } = await supabase.from('patient_documents').delete().eq('id', doc.id);
+                                    if (error) throw error;
+                                    setDocuments(documents.filter(d => d.id !== doc.id));
+                                    toast.success('Document deleted!');
+                                  } catch (err) {
+                                    console.error('Error deleting document:', err);
+                                    toast.error('Failed to delete document.');
+                                  }
                                 }
                               }}
                             >

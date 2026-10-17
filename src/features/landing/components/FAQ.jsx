@@ -11,7 +11,7 @@ const faqs = [
   },
   {
     q: 'What areas of Muntinlupa do you serve?',
-    a: 'We currently serve all 10 barangays of Muntinlupa City: Alabang, Ayala Alabang, Bayanan, Buli, Cupang, Poblacion, Putatan, Sto. Niño, Sucat, and Tunasan. We are actively expanding to nearby cities.',
+    a: 'We currently serve all 9 barangays of Muntinlupa City: Alabang, Ayala Alabang, Bayanan, Buli, Cupang, Poblacion, Putatan, Sucat, and Tunasan. We are actively expanding to nearby cities.',
   },
   {
     q: 'How are service fees handled?',

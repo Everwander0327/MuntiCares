@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, House, MagnifyingGlass, Info, SignIn, ArrowUpRight } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/shared/feedback';
+import { useAuth } from '@/contexts/AuthContext';
 
 const mobileLinks = [
   { to: '/', label: 'Home', icon: <House size={18} weight="light" /> },
@@ -15,6 +16,7 @@ const FLUID = [0.32, 0.72, 0, 1];
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isActive = (path) => location.pathname === path;
@@ -69,13 +71,24 @@ const Navbar = () => {
             </div>
             <div className="flex items-center gap-3">
               <ThemeToggle className="!w-10 !h-10 !rounded-2xl" />
-              <Link to="/login" className="neu-btn font-bold text-xs sm:text-sm text-primary px-4 py-2 rounded-xl transition-all">Login</Link>
-              <Link to="/register" className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
-                Get Started
-                <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
-                  <ArrowUpRight size={14} weight="bold" className="text-white" />
-                </span>
-              </Link>
+              {user ? (
+                <Link to={`/${user.role}/dashboard`} className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
+                  Dashboard
+                  <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                    <ArrowUpRight size={14} weight="bold" className="text-white" />
+                  </span>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/login" className="neu-btn font-bold text-xs sm:text-sm text-primary px-4 py-2 rounded-xl transition-all">Login</Link>
+                  <Link to="/register" className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
+                    Get Started
+                    <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
+                      <ArrowUpRight size={14} weight="bold" className="text-white" />
+                    </span>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -139,22 +152,35 @@ const Navbar = () => {
               ))}
 
               <div className="neu-flat rounded-3xl p-3.5 mt-3 flex flex-col gap-2.5">
-                <Link
-                  to="/login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="neu-btn flex items-center justify-center gap-2.5 py-3 rounded-2xl font-bold text-sm text-primary transition-all cursor-pointer"
-                >
-                  <SignIn size={18} weight="bold" />
-                  Login to Account
-                </Link>
-                <Link
-                  to="/register"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-2xl text-white font-bold text-sm shadow-md cursor-pointer"
-                >
-                  Get Started
-                  <ArrowUpRight size={16} weight="bold" />
-                </Link>
+                {user ? (
+                  <Link
+                    to={`/${user.role}/dashboard`}
+                    onClick={() => setIsMenuOpen(false)}
+                    className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-2xl text-white font-bold text-sm shadow-md cursor-pointer"
+                  >
+                    Dashboard
+                    <ArrowUpRight size={16} weight="bold" />
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="neu-btn flex items-center justify-center gap-2.5 py-3 rounded-2xl font-bold text-sm text-primary transition-all cursor-pointer"
+                    >
+                      <SignIn size={18} weight="bold" />
+                      Login to Account
+                    </Link>
+                    <Link
+                      to="/register"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-2xl text-white font-bold text-sm shadow-md cursor-pointer"
+                    >
+                      Get Started
+                      <ArrowUpRight size={16} weight="bold" />
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

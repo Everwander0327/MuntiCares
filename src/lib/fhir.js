@@ -32,9 +32,9 @@ export function buildPatientResource(userData, patientData) {
   };
 }
 
-function buildObservationCode(system, code, display) {
+function buildObservationCode(code, display, system = 'http://loinc.org') {
   return {
-    coding: [{ system: `${SYSTEM_BASE}/loinc`, code, display }],
+    coding: [{ system, code, display }],
     text: display,
   };
 }
@@ -62,15 +62,15 @@ export function buildVitalSignObservations(visitNotes, patientId) {
         ...base,
         resourceType: 'Observation',
         id: `${note.id}-bp`,
-        code: buildObservationCode('85354-9', '85354-9', 'Blood pressure panel'),
+        code: buildObservationCode('85354-9', 'Blood pressure panel'),
         category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] }],
         component: [
           {
-            code: buildObservationCode('8480-6', '8480-6', 'Systolic blood pressure'),
+            code: buildObservationCode('8480-6', 'Systolic blood pressure'),
             valueQuantity: { value: parseFloat(systolic) || 0, unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
           },
           {
-            code: buildObservationCode('8462-4', '8462-4', 'Diastolic blood pressure'),
+            code: buildObservationCode('8462-4', 'Diastolic blood pressure'),
             valueQuantity: { value: parseFloat(diastolic) || 0, unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
           },
         ],
@@ -82,7 +82,7 @@ export function buildVitalSignObservations(visitNotes, patientId) {
         ...base,
         resourceType: 'Observation',
         id: `${note.id}-temp`,
-        code: buildObservationCode('8310-5', '8310-5', 'Body temperature'),
+        code: buildObservationCode('8310-5', 'Body temperature'),
         category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] }],
         valueQuantity: { value: parseFloat(note.vitals_temp) || 0, unit: '°C', system: 'http://unitsofmeasure.org', code: 'Cel' },
       });
@@ -93,7 +93,7 @@ export function buildVitalSignObservations(visitNotes, patientId) {
         ...base,
         resourceType: 'Observation',
         id: `${note.id}-hr`,
-        code: buildObservationCode('8867-4', '8867-4', 'Heart rate'),
+        code: buildObservationCode('8867-4', 'Heart rate'),
         category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] }],
         valueQuantity: { value: parseFloat(note.vitals_hr) || 0, unit: 'bpm', system: 'http://unitsofmeasure.org', code: '/min' },
       });
@@ -104,18 +104,18 @@ export function buildVitalSignObservations(visitNotes, patientId) {
         ...base,
         resourceType: 'Observation',
         id: `${note.id}-spo2`,
-        code: buildObservationCode('59408-5', '59408-5', 'Oxygen saturation in Arterial blood'),
+        code: buildObservationCode('59408-5', 'Oxygen saturation in Arterial blood'),
         category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] }],
         valueQuantity: { value: parseFloat(note.vitals_spo2) || 0, unit: '%', system: 'http://unitsofmeasure.org', code: '%' },
       });
     }
 
-    if (note.pain_scale != null) {
+    if (note.pain_scale != null && note.pain_scale !== '') {
       observations.push({
         ...base,
         resourceType: 'Observation',
         id: `${note.id}-pain`,
-        code: buildObservationCode('38221-8', '38221-8', 'Pain severity'),
+        code: buildObservationCode('38221-8', 'Pain severity'),
         category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'survey' }] }],
         valueQuantity: { value: parseInt(note.pain_scale) || 0, unit: '{score}', system: 'http://unitsofmeasure.org', code: '{score}' },
       });
@@ -202,7 +202,7 @@ export function buildBundle(resources) {
     type: 'transaction',
     timestamp: now,
     entry: resources.map((r) => ({
-      fullUrl: `urn:uuid:${r.resourceType}-${r.id}`,
+      fullUrl: `${SYSTEM_BASE}/${r.resourceType}/${r.id}`,
       resource: r,
       request: {
         method: 'PUT',
