@@ -112,11 +112,12 @@ const PatientMessages = () => {
       setView('chat');
       const startCallParam = params.get('startCall');
       const startVideoParam = params.get('startVideo');
+      const tsParam = params.get('ts');
       if (startCallParam) {
-        setAutoStartCall({ active: true, type: startCallParam });
+        setAutoStartCall({ active: true, type: startCallParam, ts: tsParam || Date.now() });
         if (startCallParam === 'video') setAutoStartVideo(true);
       } else if (startVideoParam === '1') {
-        setAutoStartCall({ active: true, type: 'video' });
+        setAutoStartCall({ active: true, type: 'video', ts: tsParam || Date.now() });
         setAutoStartVideo(true);
       }
       window.history.replaceState({}, '', location.pathname);

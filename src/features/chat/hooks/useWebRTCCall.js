@@ -194,7 +194,11 @@ export default function useWebRTCCall({ selfId, peerId }) {
         el.setAttribute('playsinline', '');
         el.setAttribute('webkit-playsinline', '');
       } catch {}
-      if (el.srcObject !== stream) el.srcObject = stream || null;
+      if (el.srcObject !== stream) {
+        el.srcObject = stream || null;
+      } else if (stream && el.srcObject) {
+        el.srcObject = stream;
+      }
       if (stream) {
         const p = el.play?.();
         if (p && typeof p.catch === 'function') {
@@ -302,8 +306,6 @@ export default function useWebRTCCall({ selfId, peerId }) {
       remoteStreamRef.current = liveStream;
       if (e.track.kind === 'video') {
         setHasRemoteVideo(true);
-        e.track.onmute = () => setHasRemoteVideo(false);
-        e.track.onunmute = () => setHasRemoteVideo(true);
         e.track.onended = () => setHasRemoteVideo(false);
       }
       attachMedia();
@@ -319,6 +321,8 @@ export default function useWebRTCCall({ selfId, peerId }) {
         setCallStatus('connected');
         if (remoteStreamRef.current) {
           remoteStreamRef.current = new MediaStream(remoteStreamRef.current.getTracks());
+          const hasVideo = remoteStreamRef.current.getVideoTracks().some(t => t.readyState === 'live');
+          if (hasVideo) setHasRemoteVideo(true);
         }
         attachMedia();
       } else if (state === 'disconnected' || state === 'closed') {
@@ -366,6 +370,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
         localStreamRef.current = media.stream;
         media.stream.getTracks().forEach((track) => pc.addTrack(track, media.stream));
         setCallType(media.type);
+        setIsCameraOff(media.type === 'audio');
         attachMedia();
       }
 
@@ -416,6 +421,25 @@ export default function useWebRTCCall({ selfId, peerId }) {
       }
       case 'offer': {
         console.log('[webrtc] RX offer, role:', roleRef.current, 'hasPc:', !!pcRef.current);
+        if (pcRef.current && statusRef.current === 'connected' && msg.callId === callIdRef.current) {
+          console.log('[webrtc] handling renegotiation offer mid-call');
+          try {
+            await pcRef.current.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            const answer = await pcRef.current.createAnswer();
+            await pcRef.current.setLocalDescription(answer);
+            send({
+              type: 'answer',
+              callId: msg.callId,
+              sdp: { type: pcRef.current.localDescription.type, sdp: pcRef.current.localDescription.sdp },
+            });
+            if (msg.callType === 'video') {
+              setCallType('video');
+            }
+          } catch (err) {
+            console.warn('[webrtc] renegotiation error:', err);
+          }
+          return;
+        }
         if (roleRef.current === 'caller') return; // we are calling; ignore peer offers (glare)
         if (answeredCallIdRef.current === msg.callId) return; // duplicate re-send
         if (roleRef.current === 'callee' && !pcRef.current) {
@@ -429,14 +453,25 @@ export default function useWebRTCCall({ selfId, peerId }) {
       case 'answer': {
         const pc = pcRef.current;
         console.log('[webrtc] RX answer, role:', roleRef.current, 'sigState:', pc?.signalingState, 'callId match:', msg.callId === callIdRef.current);
-        if (roleRef.current !== 'caller' || !pc || msg.callId !== callIdRef.current) return;
+        if (!pc || msg.callId !== callIdRef.current) return;
         if (pc.signalingState !== 'have-local-offer') return; // already applied
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-          console.log('[webrtc] caller applied answer successfully');
+          console.log('[webrtc] applied answer successfully');
           await flushCandidates(msg.callId);
         } catch (err) {
           console.error('[webrtc] failed to apply answer', err);
+        }
+        break;
+      }
+      case 'camera_toggle': {
+        if (msg.callId === callIdRef.current) {
+          if (msg.hasVideo) {
+            setHasRemoteVideo(true);
+            setCallType('video');
+          } else {
+            setHasRemoteVideo(false);
+          }
         }
         break;
       }
@@ -617,6 +652,9 @@ export default function useWebRTCCall({ selfId, peerId }) {
       if (!nextOff) {
         setCallType('video');
       }
+      if (callIdRef.current) {
+        send({ type: 'camera_toggle', callId: callIdRef.current, hasVideo: !nextOff });
+      }
       setTimeout(attachMedia, 50);
       return;
     }
@@ -640,6 +678,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
         localStreamRef.current = new MediaStream();
       }
       localStreamRef.current.addTrack(newTrack);
+      localStreamRef.current = new MediaStream(localStreamRef.current.getTracks());
 
       const pc = pcRef.current;
       if (pc) {
@@ -664,6 +703,9 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
       setIsCameraOff(false);
       setCallType('video');
+      if (callIdRef.current) {
+        send({ type: 'camera_toggle', callId: callIdRef.current, hasVideo: true });
+      }
       setTimeout(attachMedia, 50);
     } catch (err) {
       console.error('[webrtc] failed to turn camera on', err);

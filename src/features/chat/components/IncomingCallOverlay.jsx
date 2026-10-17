@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Phone, PhoneOff, Video } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCalls } from '@/contexts/CallContext';
@@ -34,7 +35,7 @@ const IncomingCallOverlay = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  return (
+  const content = (
     <AnimatePresence>
       {incomingCall && (
         <motion.div
@@ -42,7 +43,7 @@ const IncomingCallOverlay = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-md"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-md"
           data-testid="incoming-call"
         >
           <motion.div
@@ -119,7 +120,7 @@ const IncomingCallOverlay = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25 }}
-          className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 backdrop-blur-md"
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 backdrop-blur-md"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -140,6 +141,8 @@ const IncomingCallOverlay = () => {
       )}
     </AnimatePresence>
   );
+
+  return typeof document !== 'undefined' ? createPortal(content, document.body) : null;
 };
 
 export default IncomingCallOverlay;

@@ -58,7 +58,7 @@ const [callCancelledByPeer, setCallCancelledByPeer] = useState(false);
     const role = user.role;
     const callType = incomingCall.callType || 'video';
     broadcastCallAccepted(incomingCall.sender_id);
-    navigate(`/${role}/messages?partner=${incomingCall.sender_id}&name=${encodeURIComponent(incomingCall.sender_name || '')}&startCall=${callType}${callType === 'video' ? '&startVideo=1' : ''}`);
+    navigate(`/${role}/messages?partner=${incomingCall.sender_id}&name=${encodeURIComponent(incomingCall.sender_name || '')}&startCall=${callType}&ts=${Date.now()}${callType === 'video' ? '&startVideo=1' : ''}`);
     setIncomingCall(null);
   }, [incomingCall, user, navigate, broadcastCallAccepted]);
 

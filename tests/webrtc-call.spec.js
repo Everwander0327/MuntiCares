@@ -117,10 +117,8 @@ async function runCall(browser, callType) {
       await expect.poll(async () => (await readCallState(patient)).videoWidth, { timeout: 15000 }).toBeGreaterThan(0);
       await expect.poll(async () => (await readCallState(provider)).videoWidth, { timeout: 15000 }).toBeGreaterThan(0);
     }
-    const pState = await readCallState(patient);
-    const vState = await readCallState(provider);
-    expect(pState.liveTracks).toContain('audio');
-    expect(vState.liveTracks).toContain('audio');
+    await expect.poll(async () => (await readCallState(patient)).liveTracks, { timeout: 15000 }).toContain('audio');
+    await expect.poll(async () => (await readCallState(provider)).liveTracks, { timeout: 15000 }).toContain('audio');
 
     // Loop detection: stay connected for a while and make sure nothing re-rings.
     await patient.waitForTimeout(6000);

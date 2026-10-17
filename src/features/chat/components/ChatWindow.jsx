@@ -337,18 +337,26 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     rtcResetCall();
   }, [rtcResetCall]);
 
-  const autoJoinedRef = useRef(false);
+  const lastJoinedCallRef = useRef(null);
   useEffect(() => {
-    if (autoJoinedRef.current) return;
     if (autoStartCall?.active && otherUser?.id && currentUser?.id) {
-      autoJoinedRef.current = true;
+      const callKey = `${autoStartCall.type}_${autoStartCall.ts || 'default'}`;
+      if (lastJoinedCallRef.current === callKey) return;
+      lastJoinedCallRef.current = callKey;
       const type = autoStartCall.type || 'video';
       rtcJoinCall(type);
     } else if (autoStartVideo && otherUser?.id && currentUser?.id) {
-      autoJoinedRef.current = true;
+      if (lastJoinedCallRef.current === 'video_legacy') return;
+      lastJoinedCallRef.current = 'video_legacy';
       rtcJoinCall('video');
     }
   }, [autoStartCall, autoStartVideo, currentUser?.id, otherUser?.id, rtcJoinCall]);
+
+  useEffect(() => {
+    if (callStatus === 'idle') {
+      lastJoinedCallRef.current = null;
+    }
+  }, [callStatus]);
 
   useEffect(() => {
     attachMedia();
@@ -573,21 +581,20 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 <div className={`absolute bottom-6 right-5 w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden neu-flat shadow-2xl border-2 border-white/60 dark:border-white/10 z-20 bg-slate-900 ${
                   isCameraOff && callType === 'audio' ? 'hidden' : 'block'
                 }`}>
-                  {isCameraOff ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-800">
+                  {isCameraOff && (
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-slate-400 bg-slate-800">
                       <CameraOff className="w-5 h-5 mb-1" />
                       <span className="text-3xs font-bold">Cam Off</span>
                     </div>
-                  ) : (
-                    <video
-                      ref={localVideoRef}
-                      data-testid="local-video"
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover transform -scale-x-100"
-                    />
                   )}
+                  <video
+                    ref={localVideoRef}
+                    data-testid="local-video"
+                    autoPlay
+                    playsInline
+                    muted
+                    className={`w-full h-full object-cover transform -scale-x-100 ${isCameraOff ? 'opacity-0' : 'opacity-100'}`}
+                  />
                 </div>
               </div>
 
