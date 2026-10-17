@@ -65,8 +65,7 @@ const readCallState = (page) =>
     const overlay = document.querySelector('[data-testid="call-overlay"]');
     const remoteVideo = document.querySelector('[data-testid="remote-video"]');
     const remoteAudio = document.querySelector('[data-testid="remote-audio"]');
-    const media = remoteVideo || remoteAudio;
-    const stream = media?.srcObject;
+    const stream = remoteVideo?.srcObject || remoteAudio?.srcObject;
     return {
       status: overlay?.getAttribute('data-call-status') || null,
       pcState: overlay?.getAttribute('data-pc-state') || null,
