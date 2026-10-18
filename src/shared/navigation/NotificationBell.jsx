@@ -314,14 +314,18 @@ const NotificationBell = () => {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: msgData } = await supabase
         .from('messages')
-        .select('id, sender_id, content, created_at, sender:sender_id(full_name)')
+        .select('id, sender_id, content, created_at, is_read, sender:sender_id(full_name)')
         .eq('receiver_id', user.id)
+        .eq('is_read', false)
         .gte('created_at', oneDayAgo)
         .order('created_at', { ascending: false });
 
       if (msgData) {
-        const readMsgIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
-        const unreadMsgs = msgData.filter(m => !readMsgIds.has(m.id));
+        let readMsgIds = new Set();
+        try {
+          readMsgIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
+        } catch {}
+        const unreadMsgs = msgData.filter(m => !m.is_read && !readMsgIds.has(m.id));
         const seenSenders = new Set();
         unreadMsgs.forEach(msg => {
           const senderName = msg.sender?.full_name || 'Someone';
@@ -425,7 +429,7 @@ const NotificationBell = () => {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'messages',
           filter: `receiver_id=eq.${user.id}`
@@ -436,8 +440,12 @@ const NotificationBell = () => {
       )
       .subscribe();
 
+    const onMessagesRead = () => fetchNotifications();
+    window.addEventListener('messages-read', onMessagesRead);
+
     return () => {
       clearInterval(pollInterval);
+      window.removeEventListener('messages-read', onMessagesRead);
       supabase.removeChannel(channel);
       supabase.removeChannel(msgChannel);
     };

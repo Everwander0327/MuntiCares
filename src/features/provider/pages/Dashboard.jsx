@@ -296,14 +296,35 @@ const ProviderDashboard = () => {
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('messages')
-        .select('id')
+        .select('id, is_read')
         .eq('receiver_id', user.id)
+        .eq('is_read', false)
         .gte('created_at', yesterday);
-      const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
-      const count = (data || []).filter(m => !readIds.has(m.id)).length;
+      let readIds = new Set();
+      try {
+        readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
+      } catch {}
+      const count = (data || []).filter(m => !m.is_read && !readIds.has(m.id)).length;
       setUnreadCount(count);
     };
     fetchUnread();
+
+    const channel = supabase
+      .channel(`provider-dashboard-unread-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` },
+        () => fetchUnread()
+      )
+      .subscribe();
+
+    const onMessagesRead = () => fetchUnread();
+    window.addEventListener('messages-read', onMessagesRead);
+
+    return () => {
+      window.removeEventListener('messages-read', onMessagesRead);
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   // Quick Action on Request (Accept / Reject)

@@ -220,12 +220,16 @@ const DashboardShell = ({ children, role = 'patient' }) => {
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: msgData, error: msgError } = await supabase
       .from('messages')
-      .select('id')
+      .select('id, is_read')
       .eq('receiver_id', authUser.id)
+      .eq('is_read', false)
       .gte('created_at', yesterday);
     if (!msgError) {
-      const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${authUser.id}`) || '[]'));
-      const unreadCount = (msgData || []).filter(m => !readIds.has(m.id)).length;
+      let readIds = new Set();
+      try {
+        readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${authUser.id}`) || '[]'));
+      } catch {}
+      const unreadCount = (msgData || []).filter(m => !m.is_read && !readIds.has(m.id)).length;
       setUnreadMsgCount(unreadCount);
     }
   }, [authUser]);

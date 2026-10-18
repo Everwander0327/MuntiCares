@@ -147,9 +147,12 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
       if (data) {
         setMessages(data);
+        const receivedIds = data.filter(m => m.receiver_id === currentUser.id).map(m => m.id);
+        if (receivedIds.length > 0) {
+          addReadMsgIds(currentUser.id, receivedIds);
+        }
         const unreadIds = data.filter(m => m.receiver_id === currentUser.id && !m.is_read).map(m => m.id);
         if (unreadIds.length > 0) {
-          addReadMsgIds(currentUser.id, unreadIds);
           supabase.from('messages').update({ is_read: true }).in('id', unreadIds).then();
         }
       }

@@ -113,19 +113,22 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('messages')
-        .select('id, sender_id, receiver_id, content, created_at')
+        .select('id, sender_id, receiver_id, content, created_at, is_read')
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .gte('created_at', yesterday)
         .order('created_at', { ascending: false });
 
       if (!data) return;
-      const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
+      let readIds = new Set();
+      try {
+        readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
+      } catch {}
       const counts = {};
       const lastMsgMap = {};
       data.forEach(msg => {
         const partnerId = msg.sender_id === user.id ? msg.receiver_id : msg.sender_id;
         if (!lastMsgMap[partnerId]) lastMsgMap[partnerId] = msg;
-        if (msg.receiver_id === user.id && !readIds.has(msg.id)) {
+        if (msg.receiver_id === user.id && !msg.is_read && !readIds.has(msg.id)) {
           counts[msg.sender_id] = (counts[msg.sender_id] || 0) + 1;
         }
       });
@@ -221,7 +224,10 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25, delay: Math.min(i, 8) * 0.03 }}
-            onClick={() => onSelect(conv)}
+            onClick={() => {
+              setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
+              onSelect(conv);
+            }}
             className={`neu-flat p-4 sm:p-5 rounded-2xl sm:rounded-[2rem] flex items-center justify-between gap-3.5 sm:gap-4 transition-all cursor-pointer transform-gpu will-change-transform ${
               hasUnread 
                 ? 'border border-primary/30 ring-1 ring-primary/20' 

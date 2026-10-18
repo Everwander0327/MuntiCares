@@ -244,13 +244,17 @@ const PatientDashboard = () => {
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await supabase
         .from('messages')
-        .select('id')
+        .select('id, is_read')
         .eq('receiver_id', user.id)
+        .eq('is_read', false)
         .gte('created_at', yesterday);
 
       if (!error) {
-        const readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
-        const unreadCount = (data || []).filter(m => !readIds.has(m.id)).length;
+        let readIds = new Set();
+        try {
+          readIds = new Set(JSON.parse(localStorage.getItem(`read_msgs_${user.id}`) || '[]'));
+        } catch {}
+        const unreadCount = (data || []).filter(m => !m.is_read && !readIds.has(m.id)).length;
         setUnreadCount(unreadCount);
       }
     };
