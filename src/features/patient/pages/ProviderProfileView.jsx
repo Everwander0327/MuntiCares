@@ -9,6 +9,7 @@ import {
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
+import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
 
 const getTrustLevel = (score) => {
@@ -432,29 +433,7 @@ const ProviderProfileView = () => {
               <div className="space-y-2.5">
                 {reviews.length > 0 ? (
                   reviews.map((rev) => (
-                    <div key={rev.id} className="neu-inset p-3.5 rounded-2xl space-y-1.5 border border-slate-200/50 dark:border-white/5">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                          {rev.patient?.full_name || 'Verified Patient'}
-                        </span>
-                        <div className="flex text-amber-500">
-                          {Array.from({ length: 5 }, (_, idx) => (
-                            <Star
-                              key={idx}
-                              className={`w-3 h-3 ${idx < rev.rating ? 'fill-current' : 'text-slate-300 dark:text-slate-600'}`}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                      {rev.review_text && (
-                        <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                          “{rev.review_text}”
-                        </p>
-                      )}
-                      <p className="text-3xs text-slate-400">
-                        {new Date(rev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
-                    </div>
+                    <ReviewCard key={rev.id} review={rev} variant="bordered" />
                   ))
                 ) : (
                   <div className="neu-inset p-6 rounded-2xl text-center border border-slate-200/50 dark:border-white/5">

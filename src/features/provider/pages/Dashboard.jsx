@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import useCountUp from '@/hooks/useCountUp';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
+import { ReviewCard } from '@/shared/components';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 
@@ -840,57 +841,7 @@ const ProviderDashboard = () => {
                 {reviews
                   .slice((reviewsPage - 1) * REVIEWS_PER_PAGE, reviewsPage * REVIEWS_PER_PAGE)
                   .map((review) => (
-                  <div key={review.id} className="neu-flat-sm p-3.5 sm:p-4 rounded-xl sm:rounded-2xl space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-8 h-8 rounded-xl neu-flat-sm overflow-hidden flex items-center justify-center text-xs font-black text-primary shrink-0 p-0.5">
-                          {review.patient?.avatar_url ? (
-                            <img src={review.patient.avatar_url} alt="" className="w-full h-full object-cover rounded-lg" />
-                          ) : (
-                            (review.patient?.full_name || 'A')[0]
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-200 truncate block">
-                            {review.patient?.full_name || 'Anonymous Patient'}
-                          </span>
-                          <span className="text-3xs text-slate-400 block sm:hidden">
-                            {new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <div className="flex items-center gap-0.5">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
-                                star <= review.rating 
-                                  ? 'text-amber-400 fill-amber-400' 
-                                  : 'text-slate-300 dark:text-slate-600'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-3xs font-extrabold text-amber-600 dark:text-amber-400 ml-0.5">
-                          {review.rating}.0
-                        </span>
-                      </div>
-                    </div>
-                    {review.review_text && (
-                      <div className="neu-inset p-3 rounded-xl">
-                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
-                          "{review.review_text}"
-                        </p>
-                      </div>
-                    )}
-                    <div className="hidden sm:flex items-center justify-between text-3xs text-slate-400 pt-0.5">
-                      <span>Verified Appointment</span>
-                      <span>
-                        {new Date(review.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </span>
-                    </div>
-                  </div>
+                  <ReviewCard key={review.id} review={review} />
                 ))}
               </div>
             ) : (

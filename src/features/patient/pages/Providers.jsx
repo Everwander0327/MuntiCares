@@ -12,6 +12,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { CustomSelect, SkeletonPage, EmptyState, Sheet, SheetContent, SheetTitle, SheetDescription } from '@/shared/ui';
+import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
 
 const WORKING_HOURS_START = 9;
@@ -1285,17 +1286,7 @@ const PatientProviders = () => {
                     <div className="space-y-2.5">
                       {providerReviews.length > 0 ? (
                         providerReviews.slice(0, 3).map((rev, i) => (
-                          <div key={i} className="neu-flat-sm p-3.5 rounded-2xl">
-                            <div className="flex justify-between items-center mb-1">
-                              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{rev.patient?.full_name || 'Verified Patient'}</p>
-                              <div className="flex text-amber-500">
-                                {[...Array(rev.rating || 5)].map((_, idx) => (
-                                  <Star key={idx} className="w-3 h-3 fill-current" />
-                                ))}
-                              </div>
-                            </div>
-                            <p className="text-xs text-slate-600 dark:text-slate-300">“{rev.review_text || 'Very accommodating and professional healthcare care!'}”</p>
-                          </div>
+                          <ReviewCard key={i} review={rev} />
                         ))
                       ) : (
                         <div className="neu-flat-sm p-6 rounded-2xl text-center">
@@ -1397,17 +1388,7 @@ const PatientProviders = () => {
                   <div className="space-y-2.5">
                     {providerReviews.length > 0 ? (
                       providerReviews.slice(0, 4).map((rev, i) => (
-                        <div key={i} className="neu-inset p-3.5 rounded-2xl border border-slate-200/50 dark:border-white/5">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{rev.patient?.full_name || 'Verified Patient'}</span>
-                            <div className="flex text-amber-500">
-                              {[...Array(rev.rating || 5)].map((_, idx) => (
-                                <Star key={idx} className="w-3 h-3 fill-current" />
-                              ))}
-                            </div>
-                          </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-300">“{rev.review_text || 'Very accommodating and professional healthcare care!'}”</p>
-                        </div>
+                        <ReviewCard key={i} review={rev} variant="bordered" />
                       ))
                     ) : (
                       <div className="neu-inset p-5 rounded-2xl text-center border border-slate-200/50 dark:border-white/5">
