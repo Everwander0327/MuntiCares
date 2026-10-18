@@ -182,12 +182,15 @@ const PatientDashboard = () => {
 
       setRequests(formattedRequests);
 
-      const accepted = (fetchedRequests || []).filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const accepted = (fetchedRequests || []).filter(r => 
+        ['On The Way', 'Arrived'].includes(r.status) || 
+        (r.status === 'Accepted' && (!r.date || r.date >= todayStr))
+      ).length;
       const pending = (fetchedRequests || []).filter(r => r.status === 'Pending').length;
       setStats({ active: accepted + pending, accepted, pending });
 
-      const now = new Date();
-      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
       const activeVisitsList = (fetchedRequests || []).filter(r =>
         ['On The Way', 'Arrived'].includes(r.status) ||
         (r.status === 'Accepted' && (!r.date || r.date >= todayStr))

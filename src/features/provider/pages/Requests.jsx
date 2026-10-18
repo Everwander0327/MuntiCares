@@ -122,6 +122,7 @@ const ProviderRequests = () => {
           time: timeLabel,
           notes: r.notes || '',
           status: r.status,
+          rawDate: r.date,
           location: addressMap[r.patient_id] || 'Muntinlupa City',
         };
       });
@@ -209,20 +210,26 @@ const ProviderRequests = () => {
   };
 
   // Stats calculation
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  const isReqActive = useCallback((r) => (
+    ['On The Way', 'Arrived'].includes(r.status) ||
+    (r.status === 'Accepted' && (!r.rawDate || r.rawDate >= todayStr))
+  ), [todayStr]);
+
   const stats = useMemo(() => {
     const pending = requests.filter(r => r.status === 'Pending').length;
-    const active = requests.filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
+    const active = requests.filter(isReqActive).length;
     const completed = requests.filter(r => r.status === 'Completed').length;
     const history = requests.filter(r => ['Rejected', 'Cancelled'].includes(r.status)).length;
     return { pending, active, completed, history, total: requests.length };
-  }, [requests]);
+  }, [requests, isReqActive]);
 
   // Filter & Search Logic
   const filteredRequests = useMemo(() => {
     return requests.filter(r => {
       let matchesFilter = true;
       if (filter === 'Pending') matchesFilter = r.status === 'Pending';
-      else if (filter === 'Active') matchesFilter = ['Accepted', 'On The Way', 'Arrived'].includes(r.status);
+      else if (filter === 'Active') matchesFilter = isReqActive(r);
       else if (filter === 'Completed') matchesFilter = r.status === 'Completed';
       else if (filter === 'History') matchesFilter = ['Rejected', 'Cancelled', 'Completed'].includes(r.status);
 

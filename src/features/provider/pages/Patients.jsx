@@ -70,7 +70,7 @@ const ProviderPatients = () => {
             rawDate: r.date,
             time: timeLabel,
             notes: r.notes || '',
-            status: r.status === 'Completed' ? 'Completed' : 'Active',
+            status: (['On The Way', 'Arrived'].includes(r.status) || (r.status === 'Accepted' && (!r.date || r.date >= new Date().toLocaleDateString('en-CA')))) ? 'Active' : 'Completed',
             rawStatus: r.status
           };
         });

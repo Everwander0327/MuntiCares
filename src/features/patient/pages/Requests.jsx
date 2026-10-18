@@ -322,11 +322,17 @@ const PatientRequests = () => {
 
   const filters = ['All', 'Active', 'Accepted', 'Pending', 'Completed', 'Cancelled', 'Rejected'];
 
+  const todayStr = new Date().toLocaleDateString('en-CA');
+  const isReqActive = useCallback((r) => (
+    ['On The Way', 'Arrived'].includes(r.status) ||
+    (r.status === 'Accepted' && (!r.date || r.date >= todayStr))
+  ), [todayStr]);
+
   const filteredRequests = useMemo(() => {
     return requests.filter(r => {
       const matchesFilter =
         filter === 'All' ||
-        (filter === 'Active' ? ['Accepted', 'On The Way', 'Arrived'].includes(r.status) : r.status === filter);
+        (filter === 'Active' ? isReqActive(r) : r.status === filter);
       const term = searchTerm.toLowerCase().trim();
       const matchesSearch = !term || 
         r.provider?.toLowerCase().includes(term) ||
@@ -334,7 +340,7 @@ const PatientRequests = () => {
         r.location?.toLowerCase().includes(term);
       return matchesFilter && matchesSearch;
     });
-  }, [requests, filter, searchTerm]);
+  }, [requests, filter, searchTerm, isReqActive]);
 
   // Reset to first page when filtering or searching
   useEffect(() => {
@@ -377,10 +383,10 @@ const PatientRequests = () => {
   // Quick Counter Stats
   const stats = useMemo(() => {
     const pending = requests.filter(r => r.status === 'Pending').length;
-    const active = requests.filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
+    const active = requests.filter(isReqActive).length;
     const completed = requests.filter(r => r.status === 'Completed').length;
     return { pending, active, completed, total: requests.length };
-  }, [requests]);
+  }, [requests, isReqActive]);
 
   if (loading) {
     return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;

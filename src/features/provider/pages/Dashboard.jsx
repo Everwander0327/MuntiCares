@@ -179,8 +179,12 @@ const ProviderDashboard = () => {
       const allRequests = data || [];
 
       // Calculate stats
+      const todayStr = new Date().toLocaleDateString('en-CA');
       const pendingCount = allRequests.filter(r => r.status === 'Pending').length;
-      const activeCount = allRequests.filter(r => ['Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
+      const activeCount = allRequests.filter(r => 
+        ['On The Way', 'Arrived'].includes(r.status) ||
+        (r.status === 'Accepted' && (!r.date || r.date >= todayStr))
+      ).length;
       const completedCount = allRequests.filter(r => r.status === 'Completed').length;
 
       setStats({
@@ -191,7 +195,6 @@ const ProviderDashboard = () => {
 
       // Find current active visit (priority: 'On The Way' > 'Arrived' > next upcoming 'Accepted')
       // Only show visits for today or future dates (past dates are excluded so expired/done visits don't linger)
-      const todayStr = new Date().toLocaleDateString('en-CA');
       const activeVisitsList = allRequests.filter(r => 
         ['On The Way', 'Arrived', 'Accepted'].includes(r.status) &&
         (!r.date || r.date >= todayStr)
