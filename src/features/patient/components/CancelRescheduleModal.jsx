@@ -53,7 +53,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
           .eq('date', newDate)
           .in('status', ['Accepted', 'On The Way', 'Arrived']);
 
-        const bookedTimes = (existingBookings || []).map(b => b.time);
+        const bookedTimes = (existingBookings || []).map(b => b.time).filter(Boolean);
 
         const todayStr = new Date().toLocaleDateString('en-CA');
         const currentHour = new Date().getHours();
@@ -61,8 +61,11 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         for (let hour = WORKING_HOURS_START; hour < WORKING_HOURS_END; hour++) {
           const time = `${String(hour).padStart(2, '0')}:00`;
           const isBooked = bookedTimes.some(bt => {
-            const bh = parseInt(bt.split(':')[0]);
-            const bm = parseInt(bt.split(':')[1]);
+            if (!bt || typeof bt !== 'string') return false;
+            const parts = bt.split(':');
+            if (parts.length < 2) return false;
+            const bh = parseInt(parts[0], 10);
+            const bm = parseInt(parts[1], 10);
             const slotStart = hour;
             const slotEnd = hour + SLOT_DURATION_MINUTES / 60;
             const bookingTime = bh + bm / 60;

@@ -78,7 +78,9 @@ const PatientProfileView = () => {
       setConsent(consentData);
 
       const canAccess = consentData?.is_enabled;
-      const perms = consentData?.permissions || {};
+      const perms = consentData?.permissions && Object.keys(consentData.permissions).length > 0
+        ? consentData.permissions
+        : { medical_history: true, documents: true, visit_notes: true };
 
       if (canAccess && perms.medical_history) {
         const { data: mh } = await supabase

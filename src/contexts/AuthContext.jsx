@@ -1,9 +1,37 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-const AuthContext = createContext();
+const defaultAuthValue = {
+  user: null,
+  authInitialized: true,
+  login: async () => {},
+  register: async () => {},
+  setPassword: async () => {},
+  logout: () => {},
+  updateUser: () => {},
+};
 
-export const useAuth = () => useContext(AuthContext);
+const safeStorage = {
+  getItem: (k) => {
+    try {
+      return typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem(k) : null;
+    } catch { return null; }
+  },
+  setItem: (k, v) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem(k, v);
+    } catch {}
+  },
+  removeItem: (k) => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) window.localStorage.removeItem(k);
+    } catch {}
+  },
+};
+
+const AuthContext = createContext(defaultAuthValue);
+
+export const useAuth = () => useContext(AuthContext) || defaultAuthValue;
 
 function hex(buffer) {
   return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
@@ -82,12 +110,12 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const stored = localStorage.getItem('munticares_user');
+      const stored = safeStorage.getItem('munticares_user');
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
           if (parsed?.expires_at && Date.now() > parsed.expires_at) {
-            localStorage.removeItem('munticares_user');
+            safeStorage.removeItem('munticares_user');
             setUser(null);
           } else {
             setUser(parsed);
@@ -99,13 +127,13 @@ export const AuthProvider = ({ children }) => {
                 .maybeSingle();
 
               if (!data || data.is_banned) {
-                localStorage.removeItem('munticares_user');
+                safeStorage.removeItem('munticares_user');
                 setUser(null);
               }
             }
           }
         } catch {
-          localStorage.removeItem('munticares_user');
+          safeStorage.removeItem('munticares_user');
           setUser(null);
         }
       }
@@ -149,7 +177,7 @@ export const AuthProvider = ({ children }) => {
       expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
     };
 
-    localStorage.setItem('munticares_user', JSON.stringify(userData));
+    safeStorage.setItem('munticares_user', JSON.stringify(userData));
     setUser(userData);
   }, []);
 
@@ -206,7 +234,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('munticares_user');
+    safeStorage.removeItem('munticares_user');
     setUser(null);
   }, []);
 
@@ -214,16 +242,18 @@ export const AuthProvider = ({ children }) => {
     setUser(prev => {
       if (!prev) return prev;
       const updated = { ...prev, ...updates };
-      localStorage.setItem('munticares_user', JSON.stringify(updated));
+      safeStorage.setItem('munticares_user', JSON.stringify(updated));
       return updated;
     });
     // Trigger custom event so any listener updates immediately
-    window.dispatchEvent(new Event('munticares-user-updated'));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('munticares-user-updated'));
+    }
   }, []);
 
   useEffect(() => {
     const handleStorageChange = () => {
-      const stored = localStorage.getItem('munticares_user');
+      const stored = safeStorage.getItem('munticares_user');
       if (stored) {
         try {
           setUser(JSON.parse(stored));
@@ -232,10 +262,12 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorageChange);
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+      };
+    }
   }, []);
 
   return (

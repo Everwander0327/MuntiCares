@@ -347,6 +347,7 @@ const PatientProviders = () => {
           patient_id: user.id,
           provider_id: providerId,
           is_enabled: true,
+          permissions: { medical_history: true, documents: true, visit_notes: true },
         }], { onConflict: 'patient_id,provider_id' });
 
       if (consentErr) {

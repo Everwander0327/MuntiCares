@@ -365,7 +365,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
   useEffect(() => {
     attachMedia();
-  }, [attachMedia, callStatus, callType]);
+  }, [attachMedia, callStatus, callType, hasRemoteVideo]);
 
   useEffect(() => {
     if (callDeclinedByPeer) {
@@ -386,14 +386,6 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     const s = seconds % 60;
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
-
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
 
   const statusIcon = (msg) => {
     if (msg.status === 'error') {
@@ -824,7 +816,12 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         className="flex-1 overflow-y-auto bg-slate-50/40 dark:bg-slate-900/40"
       >
         <div className="px-4 md:px-6 py-4">
-          {messages.length === 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-24 text-slate-400">
+              <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+              <p className="text-xs font-semibold">Loading messages...</p>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="text-center text-slate-400 dark:text-slate-500 mt-16">
               <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">
                 <span>👋</span>

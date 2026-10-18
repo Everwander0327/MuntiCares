@@ -174,7 +174,7 @@ const PatientDashboard = () => {
           provider: req.provider || 'Unknown',
           providerAvatarUrl: req.providerAvatarUrl || '',
           service: req.service,
-          date: new Date(req.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          date: req.date ? new Date(req.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
           time: timeStr,
           status: req.status,
         };
@@ -212,7 +212,7 @@ const PatientDashboard = () => {
           provider: activeReq.provider || 'Unknown',
           providerAvatarUrl: activeReq.providerAvatarUrl || '',
           service: activeReq.service,
-          date: new Date(activeReq.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+          date: activeReq.date ? new Date(activeReq.date.replace(/-/g, '/')).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Today',
           time: timeLabel,
           status: activeReq.status,
         });

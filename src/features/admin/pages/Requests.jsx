@@ -73,7 +73,7 @@ const AdminRequests = () => {
           service: r.service || 'General Healthcare',
           status: r.status || 'Pending',
           notes: r.notes || '',
-          date: r.date ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
+          date: r.date ? new Date(r.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
           time: timeLabel,
           scheduledTimestamp: r.date ? new Date(`${r.date}T${r.time || '00:00'}`).getTime() : 0,
           timestamp: r.created_at ? new Date(r.created_at).getTime() : 0,

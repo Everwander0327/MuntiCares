@@ -96,7 +96,7 @@ const RequestCard = ({
                   {providerAvatarUrl ? (
                     <img src={providerAvatarUrl} alt={provider} className="w-full h-full object-cover" />
                   ) : (
-                    provider.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                    (provider || 'Unknown').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
                   )}
                 </div>
               </Link>
@@ -106,7 +106,7 @@ const RequestCard = ({
                   {providerAvatarUrl ? (
                     <img src={providerAvatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    provider.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                    (provider || 'Unknown').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
                   )}
                 </div>
               </div>

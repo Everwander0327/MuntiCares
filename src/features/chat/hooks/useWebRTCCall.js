@@ -231,11 +231,13 @@ export default function useWebRTCCall({ selfId, peerId }) {
       if (el.srcObject !== stream) {
         el.srcObject = stream || null;
       }
-      if (stream) {
+      if (stream && stream.getTracks().length > 0) {
         const p = el.play?.();
         if (p && typeof p.catch === 'function') {
           p.catch((err) => {
-            console.warn('[webrtc] play prevented/blocked:', err?.name);
+            if (err?.name !== 'AbortError') {
+              console.warn('[webrtc] play prevented/blocked:', err?.name);
+            }
           });
         }
       }
@@ -322,11 +324,10 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
     pc.ontrack = (e) => {
       console.log('[webrtc] ontrack event received, track kind:', e.track.kind);
-      let stream = remoteStreamRef.current;
-      if (!stream) {
-        stream = new MediaStream();
-        remoteStreamRef.current = stream;
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream();
       }
+      const stream = remoteStreamRef.current;
       if (e.streams?.[0]) {
         e.streams[0].getTracks().forEach((track) => {
           if (!stream.getTracks().some((t) => t.id === track.id)) {
@@ -337,8 +338,6 @@ export default function useWebRTCCall({ selfId, peerId }) {
       if (e.track && !stream.getTracks().some((t) => t.id === e.track.id)) {
         stream.addTrack(e.track);
       }
-      const liveStream = new MediaStream(stream.getTracks());
-      remoteStreamRef.current = liveStream;
       if (e.track.kind === 'video') {
         setHasRemoteVideo(true);
         e.track.onended = () => setHasRemoteVideo(false);
@@ -355,7 +354,6 @@ export default function useWebRTCCall({ selfId, peerId }) {
         setError(null);
         setCallStatus('connected');
         if (remoteStreamRef.current) {
-          remoteStreamRef.current = new MediaStream(remoteStreamRef.current.getTracks());
           const hasVideo = remoteStreamRef.current.getVideoTracks().some(t => t.readyState === 'live');
           if (hasVideo) setHasRemoteVideo(true);
         }

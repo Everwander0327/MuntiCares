@@ -3,6 +3,9 @@ import { render, screen } from '@testing-library/react';
 import App from '../App';
 import { ThemeProvider } from '../contexts/ThemeContext';
 
+import { AuthProvider } from '../contexts/AuthContext';
+import { PresenceProvider } from '../contexts/PresenceContext';
+
 vi.mock('../lib/supabase', () => {
   const chainHandler = {
     get(_, prop) {
@@ -18,6 +21,7 @@ vi.mock('../lib/supabase', () => {
       from: vi.fn(() => chain),
       channel: vi.fn(() => ({
         on: vi.fn(() => ({ subscribe: vi.fn() })),
+        subscribe: vi.fn(),
         unsubscribe: vi.fn(),
       })),
       removeChannel: vi.fn(),
@@ -29,9 +33,13 @@ vi.mock('../lib/supabase', () => {
 describe('App', () => {
   it('renders without crashing', () => {
     render(
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <PresenceProvider>
+            <App />
+          </PresenceProvider>
+        </ThemeProvider>
+      </AuthProvider>
     );
     expect(screen.getAllByText(/MuntiCares/i).length).toBeGreaterThan(0);
   });
