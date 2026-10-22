@@ -527,8 +527,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               {/* Logout with padding so shadow doesn't clip */}
               <div className="p-1 pt-0">
                 <button 
-                  onClick={() => {
-                    logout();
+                  onClick={async () => {
+                    await logout();
                     navigate('/login');
                   }}
                   className="neu-btn flex items-center gap-3 px-3.5 py-3 rounded-2xl text-[#52657A] dark:text-[#A5B6C8] hover:text-[#BC3030] dark:hover:text-[#F4918B] transition-all w-full group"

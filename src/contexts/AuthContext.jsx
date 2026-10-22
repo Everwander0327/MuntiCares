@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 
 const defaultAuthValue = {
   user: null,
-  authInitialized: true,
+  authInitialized: false,
   login: async () => {},
   register: async () => {},
   setPassword: async () => {},
@@ -11,262 +11,177 @@ const defaultAuthValue = {
   updateUser: () => {},
 };
 
-const safeStorage = {
-  getItem: (k) => {
-    try {
-      return typeof window !== 'undefined' && window.localStorage ? window.localStorage.getItem(k) : null;
-    } catch { return null; }
-  },
-  setItem: (k, v) => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem(k, v);
-    } catch {}
-  },
-  removeItem: (k) => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) window.localStorage.removeItem(k);
-    } catch {}
-  },
-};
-
 const AuthContext = createContext(defaultAuthValue);
 
 export const useAuth = () => useContext(AuthContext) || defaultAuthValue;
-
-function hex(buffer) {
-  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Pure-JS SHA-256 fallback. crypto.subtle is only available in secure contexts
-// (HTTPS or localhost), so it is undefined when accessing the dev server via LAN IP.
-function sha256Fallback(bytes) {
-  const K = new Uint32Array([
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
-  ]);
-  const H = new Uint32Array([
-    0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
-  ]);
-  const len = bytes.length;
-  const padded = new Uint8Array(((len + 9 + 63) >> 6) << 6);
-  padded.set(bytes);
-  padded[len] = 0x80;
-  const view = new DataView(padded.buffer);
-  view.setUint32(padded.length - 8, Math.floor(len / 0x20000000));
-  view.setUint32(padded.length - 4, (len << 3) >>> 0);
-  const W = new Uint32Array(64);
-  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
-  for (let off = 0; off < padded.length; off += 64) {
-    for (let i = 0; i < 16; i++) W[i] = view.getUint32(off + i * 4);
-    for (let i = 16; i < 64; i++) {
-      const s0 = rotr(W[i - 15], 7) ^ rotr(W[i - 15], 18) ^ (W[i - 15] >>> 3);
-      const s1 = rotr(W[i - 2], 17) ^ rotr(W[i - 2], 19) ^ (W[i - 2] >>> 10);
-      W[i] = (W[i - 16] + s0 + W[i - 7] + s1) >>> 0;
-    }
-    let [a, b, c, d, e, f, g, h] = H;
-    for (let i = 0; i < 64; i++) {
-      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
-      const ch = (e & f) ^ (~e & g);
-      const t1 = (h + S1 + ch + K[i] + W[i]) >>> 0;
-      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
-      const maj = (a & b) ^ (a & c) ^ (b & c);
-      const t2 = (S0 + maj) >>> 0;
-      h = g; g = f; f = e; e = (d + t1) >>> 0;
-      d = c; c = b; b = a; a = (t1 + t2) >>> 0;
-    }
-    H[0] += a; H[1] += b; H[2] += c; H[3] += d;
-    H[4] += e; H[5] += f; H[6] += g; H[7] += h;
-  }
-  return Array.from(H).map(n => n.toString(16).padStart(8, '0')).join('');
-}
-
-async function hashPassword(password) {
-  const data = new TextEncoder().encode(password);
-  if (globalThis.crypto?.subtle?.digest) {
-    return hex(await crypto.subtle.digest('SHA-256', data));
-  }
-  return sha256Fallback(data);
-}
-
-// crypto.randomUUID is also secure-context only; getRandomValues is not.
-function generateUUID() {
-  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
-  const b = crypto.getRandomValues(new Uint8Array(16));
-  b[6] = (b[6] & 0x0f) | 0x40;
-  b[8] = (b[8] & 0x3f) | 0x80;
-  const h = hex(b);
-  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
-}
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [authInitialized, setAuthInitialized] = useState(false);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const stored = safeStorage.getItem('munticares_user');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (parsed?.expires_at && Date.now() > parsed.expires_at) {
-            safeStorage.removeItem('munticares_user');
-            setUser(null);
-          } else {
-            setUser(parsed);
-            if (parsed?.id) {
-              const { data } = await supabase
-                .from('users')
-                .select('id, is_banned, role')
-                .eq('id', parsed.id)
-                .maybeSingle();
+  const fetchUserProfile = useCallback(async (authUser) => {
+    if (!authUser?.id) return null;
+    try {
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('id, email, full_name, role, avatar_url, is_banned')
+        .eq('id', authUser.id)
+        .maybeSingle();
 
-              if (!data || data.is_banned) {
-                safeStorage.removeItem('munticares_user');
-                setUser(null);
-              }
-            }
-          }
-        } catch {
-          safeStorage.removeItem('munticares_user');
-          setUser(null);
-        }
+      if (error) {
+        console.warn('[auth] Failed to fetch user profile:', error.message);
       }
-      setAuthInitialized(true);
-    };
 
-    initAuth();
+      if (profile?.is_banned) {
+        await supabase?.auth?.signOut?.();
+        return null;
+      }
+
+      return {
+        id: authUser.id,
+        email: authUser.email,
+        role: profile?.role || authUser.user_metadata?.role || 'patient',
+        full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
+        avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || '',
+        is_banned: profile?.is_banned || false,
+      };
+    } catch (e) {
+      console.warn('[auth] Exception fetching profile:', e);
+      return {
+        id: authUser.id,
+        email: authUser.email,
+        role: authUser.user_metadata?.role || 'patient',
+        full_name: authUser.user_metadata?.full_name || '',
+        avatar_url: authUser.user_metadata?.avatar_url || '',
+        is_banned: false,
+      };
+    }
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Use onAuthStateChange as the single source of truth for session lifecycle.
+    // Defer any database queries with setTimeout(..., 0) to avoid Supabase GoTrue lock deadlocks.
+    let subscription = null;
+    if (supabase?.auth?.onAuthStateChange) {
+      const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+        if (!isMounted) return;
+
+        if (session?.user) {
+          // Provide instant local metadata so ProtectedRoute doesn't block
+          const quickUser = {
+            id: session.user.id,
+            email: session.user.email,
+            role: session.user.user_metadata?.role || 'patient',
+            full_name: session.user.user_metadata?.full_name || '',
+            avatar_url: session.user.user_metadata?.avatar_url || '',
+            is_banned: false,
+          };
+          setUser((prev) => prev || quickUser);
+          setAuthInitialized(true);
+
+          setTimeout(async () => {
+            if (!isMounted) return;
+            const profile = await fetchUserProfile(session.user);
+            if (isMounted && profile) {
+              setUser(profile);
+            }
+          }, 0);
+        } else {
+          setUser(null);
+          setAuthInitialized(true);
+        }
+      });
+      subscription = authListener?.subscription;
+    } else {
+      setAuthInitialized(true);
+    }
+
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe?.();
+    };
+  }, [fetchUserProfile]);
 
   const login = useCallback(async ({ email, password }) => {
+    if (!supabase?.auth?.signInWithPassword) {
+      throw new Error('Supabase Auth is not available');
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
 
-    if (error) throw new Error('Database error');
-    if (!data) throw new Error('Account not found');
-
-    if (!data.password) {
-      throw new Error('SET_PASSWORD');
+    if (error) {
+      if (error.message.includes('Invalid login credentials')) {
+        throw new Error('Invalid email or password');
+      }
+      throw new Error(error.message);
     }
 
-    const hash = await hashPassword(password);
-    if (hash !== data.password) {
-      throw new Error('Invalid email or password');
-    }
-
-    if (data.is_banned) {
+    const profile = await fetchUserProfile(data.user);
+    if (!profile) {
       throw new Error('Account is banned');
     }
-
-    const userData = {
-      id: data.id,
-      email: data.email,
-      role: data.role,
-      full_name: data.full_name,
-      is_banned: data.is_banned,
-      avatar_url: data.avatar_url || '',
-      expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    };
-
-    safeStorage.setItem('munticares_user', JSON.stringify(userData));
-    setUser(userData);
-  }, []);
-
-  const setPassword = useCallback(async ({ email, password }) => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const hash = await hashPassword(password);
-    const { error } = await supabase
-      .from('users')
-      .update({ password: hash })
-      .eq('email', normalizedEmail);
-
-    if (error) throw new Error('Failed to set password');
-  }, []);
+    setUser(profile);
+    return profile;
+  }, [fetchUserProfile]);
 
   const register = useCallback(async ({ email, password, fullName, role }) => {
+    if (!supabase?.auth?.signUp) {
+      throw new Error('Supabase Auth is not available');
+    }
+
     const normalizedEmail = email.trim().toLowerCase();
-    const { data: existing } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', normalizedEmail)
-      .maybeSingle();
-
-    if (existing) {
-      throw new Error('An account with this email address already exists. Please sign in instead.');
-    }
-
-    const hash = await hashPassword(password);
-    const newId = generateUUID();
-    const { error: insertError } = await supabase.from('users').insert({
-      id: newId,
+    const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
-      full_name: fullName,
-      role,
-      password: hash,
-      is_banned: false,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role: role || 'patient',
+        },
+      },
     });
-    if (insertError) throw new Error(insertError.message);
 
-    if (role === 'provider') {
-      const { error: provError } = await supabase.from('providers').insert([{ user_id: newId }]);
-      if (provError) throw new Error(provError.message);
+    if (error) {
+      if (error.message.includes('already registered')) {
+        throw new Error('An account with this email address already exists. Please sign in instead.');
+      }
+      throw new Error(error.message);
     }
 
-    const userData = {
-      id: newId,
-      email: normalizedEmail,
-      role,
-      full_name: fullName,
-      is_banned: false,
-      avatar_url: '',
-      expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    };
-    return userData;
+    return data.user;
   }, []);
 
-  const logout = useCallback(() => {
-    safeStorage.removeItem('munticares_user');
+  const setPassword = useCallback(async ({ password }) => {
+    if (!supabase?.auth?.updateUser) {
+      throw new Error('Supabase Auth is not available');
+    }
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw new Error(error.message);
+  }, []);
+
+  const logout = useCallback(async () => {
     setUser(null);
+    try {
+      await supabase?.auth?.signOut?.();
+    } catch (err) {
+      console.warn('[auth] Error signing out:', err);
+    }
   }, []);
 
   const updateUser = useCallback((updates) => {
     setUser(prev => {
       if (!prev) return prev;
       const updated = { ...prev, ...updates };
-      safeStorage.setItem('munticares_user', JSON.stringify(updated));
       return updated;
     });
-    // Trigger custom event so any listener updates immediately
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('munticares-user-updated'));
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const stored = safeStorage.getItem('munticares_user');
-      if (stored) {
-        try {
-          setUser(JSON.parse(stored));
-        } catch {}
-      } else {
-        setUser(null);
-      }
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('storage', handleStorageChange);
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-      };
     }
   }, []);
 
@@ -276,4 +191,3 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
