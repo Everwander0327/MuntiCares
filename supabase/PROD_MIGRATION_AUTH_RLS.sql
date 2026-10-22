@@ -1,9 +1,14 @@
 -- ========================================================
--- MuntiCares MASTER PRODUCTION MIGRATION
+-- MuntiCares MASTER PRODUCTION MIGRATION (V2 - Nullable Password Fix)
 -- Target Project: zsqowrouxuxjjmosbvxt (Beta Test / Production)
 -- Purpose: Complete Supabase Auth Bridge + Original Password Restoration + Row Level Security (RLS)
 -- Execution: Copy & Paste into Supabase SQL Editor and click "Run"
 -- ========================================================
+
+-- 0. SCHEMA COMPATIBILITY: Allow nulls/default on legacy password column in public.users
+-- (Passwords are now exclusively managed with bcrypt in auth.users by Supabase Auth)
+ALTER TABLE public.users ALTER COLUMN password DROP NOT NULL;
+ALTER TABLE public.users ALTER COLUMN password SET DEFAULT '';
 
 -- 1. HELPER FUNCTION: Check if authenticated user is Admin (SECURITY DEFINER prevents RLS recursion)
 CREATE OR REPLACE FUNCTION public.is_admin()
@@ -16,43 +21,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
--- 2. TRIGGER: Auto-provision public.users + patient/provider record on future Supabase Auth signups
-CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
-RETURNS trigger AS $$
-DECLARE
-  assigned_role text;
-  assigned_name text;
-BEGIN
-  assigned_role := COALESCE(new.raw_user_meta_data->>'role', 'patient');
-  assigned_name := COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1));
-
-  INSERT INTO public.users (id, email, full_name, role, is_banned, created_at)
-  VALUES (new.id, new.email, assigned_name, assigned_role, false, now())
-  ON CONFLICT (id) DO UPDATE SET
-    email = EXCLUDED.email,
-    full_name = COALESCE(EXCLUDED.full_name, public.users.full_name),
-    role = COALESCE(EXCLUDED.role, public.users.role);
-
-  IF assigned_role = 'provider' THEN
-    INSERT INTO public.providers (user_id)
-    VALUES (new.id)
-    ON CONFLICT (user_id) DO NOTHING;
-  ELSE
-    INSERT INTO public.patients (user_id)
-    VALUES (new.id)
-    ON CONFLICT (user_id) DO NOTHING;
-  END IF;
-
-  RETURN new;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
-
--- 3. BRIDGE: Populate auth.users with the 18 existing users + EXACT recovered passwords
+-- 2. BRIDGE: Populate auth.users with the 18 existing users + EXACT recovered passwords
 INSERT INTO auth.users (
   instance_id,
   id,
@@ -101,7 +70,7 @@ ON CONFLICT (id) DO UPDATE SET
   encrypted_password = EXCLUDED.encrypted_password,
   email_confirmed_at = now();
 
--- 4. BRIDGE IDENTITIES: Ensure auth.identities has matching records so login succeeds
+-- 3. BRIDGE IDENTITIES: Ensure auth.identities has matching records so login succeeds
 INSERT INTO auth.identities (
   id,
   user_id,
@@ -123,6 +92,42 @@ SELECT
   now()
 FROM public.users u
 ON CONFLICT DO NOTHING;
+
+-- 4. TRIGGER: Auto-provision public.users + patient/provider record on future new signups
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS trigger AS $$
+DECLARE
+  assigned_role text;
+  assigned_name text;
+BEGIN
+  assigned_role := COALESCE(new.raw_user_meta_data->>'role', 'patient');
+  assigned_name := COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1));
+
+  INSERT INTO public.users (id, email, full_name, role, password, is_banned, created_at)
+  VALUES (new.id, new.email, assigned_name, assigned_role, '', false, now())
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = COALESCE(EXCLUDED.full_name, public.users.full_name),
+    role = COALESCE(EXCLUDED.role, public.users.role);
+
+  IF assigned_role = 'provider' THEN
+    INSERT INTO public.providers (user_id)
+    VALUES (new.id)
+    ON CONFLICT (user_id) DO NOTHING;
+  ELSE
+    INSERT INTO public.patients (user_id)
+    VALUES (new.id)
+    ON CONFLICT (user_id) DO NOTHING;
+  END IF;
+
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 
 -- ========================================================
 -- 5. ENABLE ROW LEVEL SECURITY (RLS) ACROSS ALL TABLES
@@ -387,4 +392,3 @@ CREATE POLICY "transactions_insert_update" ON public.transactions
   FOR ALL TO authenticated
   USING (patient_id = auth.uid() OR provider_id = auth.uid() OR public.is_admin())
   WITH CHECK (patient_id = auth.uid() OR provider_id = auth.uid() OR public.is_admin());
-
