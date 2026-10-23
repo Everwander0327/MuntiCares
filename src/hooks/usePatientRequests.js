@@ -82,6 +82,10 @@ export default function usePatientRequests(patientId) {
         originalNotes: req.notes || '',
         destLat: req.dest_lat ?? null,
         destLng: req.dest_lng ?? null,
+        destAddress: req.dest_address ?? null,
+        destSource: req.dest_source ?? null,
+        destVersion: req.dest_version ?? 0,
+        destUpdatedAt: req.dest_updated_at ?? null,
         routeStartedAt: req.route_started_at ?? null,
         arrivedAt: req.arrived_at ?? null,
       }));
@@ -146,6 +150,10 @@ export default function usePatientRequests(patientId) {
                   originalNotes: newRow.notes ?? r.originalNotes ?? '',
                   destLat: newRow.dest_lat !== undefined ? newRow.dest_lat : r.destLat,
                   destLng: newRow.dest_lng !== undefined ? newRow.dest_lng : r.destLng,
+                  destAddress: newRow.dest_address !== undefined ? newRow.dest_address : r.destAddress,
+                  destSource: newRow.dest_source !== undefined ? newRow.dest_source : r.destSource,
+                  destVersion: newRow.dest_version !== undefined ? newRow.dest_version : r.destVersion,
+                  destUpdatedAt: newRow.dest_updated_at !== undefined ? newRow.dest_updated_at : r.destUpdatedAt,
                   routeStartedAt: newRow.route_started_at !== undefined ? newRow.route_started_at : r.routeStartedAt,
                   arrivedAt: newRow.arrived_at !== undefined ? newRow.arrived_at : r.arrivedAt,
                 } : r);

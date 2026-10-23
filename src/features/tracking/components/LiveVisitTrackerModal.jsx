@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Navigation, Clock, Route, Wifi, WifiOff, MessageSquare, Loader2, MapPin, Home, CheckCircle2, UserRound } from 'lucide-react';
+import { X, Navigation, Clock, Route, Wifi, WifiOff, MessageSquare, Loader2, MapPin, CheckCircle2, UserRound, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
 import TrackingMap from './TrackingMap';
+import VisitDestinationModal from './VisitDestinationModal';
 import useRouteEta from '../hooks/useRouteEta';
-import { subscribeToProvider } from '../services/trackingService';
+import { subscribeToProvider, updateTrackingDestination } from '../services/trackingService';
 import { ensurePatientCoords } from '../services/geocoding';
 import { formatDistance, formatDuration } from '../services/geo';
 
 const STALE_AFTER_S = 45;
+const SESSION_STALE_AFTER_S = 90;
 
 /**
  * Patient-facing live tracker.
@@ -20,12 +23,19 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
   const [provider, setProvider] = useState(null);
   const [destination, setDestination] = useState(null);
   const [status, setStatus] = useState(null);
+  const [session, setSession] = useState(null);
+  const [connectionError, setConnectionError] = useState(null);
+  const [destinationModalOpen, setDestinationModalOpen] = useState(false);
   const [follow, setFollow] = useState(false);
   const [now, setNow] = useState(Date.now());
   const [initialDist, setInitialDist] = useState(null);
   const [providerMeta, setProviderMeta] = useState(null);
 
-  const { route, distance, duration } = useRouteEta(provider, destination);
+  const { route, distance, duration } = useRouteEta(
+    provider,
+    destination,
+    destination?.version || 0
+  );
 
   // Track initial distance to compute a smooth visual progress bar
   useEffect(() => {
@@ -37,6 +47,10 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
       setInitialDist(distance);
     }
   }, [isOpen, distance, initialDist]);
+
+  useEffect(() => {
+    setInitialDist(null);
+  }, [destination?.version]);
 
   // Close on Escape key for desktop UX
   useEffect(() => {
@@ -52,10 +66,12 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
     let alive = true;
     setProvider(null);
     setProviderMeta(null);
+    setSession(null);
+    setConnectionError(null);
 
     supabase
       .from('requests')
-      .select('status, dest_lat, dest_lng, provider_id, provider:provider_id(full_name, avatar_url)')
+      .select('status, dest_lat, dest_lng, dest_address, dest_source, dest_version, provider_id, provider:provider_id(full_name, avatar_url)')
       .eq('id', request.id)
       .maybeSingle()
       .then(async ({ data }) => {
@@ -68,29 +84,51 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
             avatarUrl: data.provider?.avatar_url,
           });
         }
-        if (data?.dest_lat != null) setDestination({ lat: data.dest_lat, lng: data.dest_lng });
-        else if (request.patientId) {
+        if (data?.dest_lat != null) {
+          setDestination({
+            lat: data.dest_lat,
+            lng: data.dest_lng,
+            address: data.dest_address || null,
+            source: data.dest_source || null,
+            version: data.dest_version || 0,
+          });
+        } else if (request.patientId) {
           const c = await ensurePatientCoords(request.patientId);
-          if (alive && c) setDestination(c);
+          if (alive && c) setDestination({ ...c, address: null, version: 0 });
         }
       });
 
     const unsub = subscribeToProvider(request.id, {
-      onLocation: (fix) => alive && setProvider(fix),
-      onStopped: () => {},
+      onLocation: (fix) => {
+        if (!alive) return;
+        setConnectionError(null);
+        setProvider(fix);
+      },
+      onSession: (next) => alive && setSession(next),
+      onStopped: (ended) => {
+        if (!alive) return;
+        setSession((prev) => ({ ...(prev || {}), ...ended, status: 'ended' }));
+      },
+      onRequest: (row) => {
+        if (!alive) return;
+        setStatus(row.status);
+        if (row.dest_lat != null) {
+          setDestination({
+            lat: row.dest_lat,
+            lng: row.dest_lng,
+            address: row.dest_address || null,
+            source: row.dest_source || null,
+            version: row.dest_version || 0,
+          });
+        }
+      },
+      onError: (err) => {
+        if (alive) setConnectionError(err?.message || 'Live updates are reconnecting…');
+      },
     });
 
-    const statusCh = supabase
-      .channel(`tracker-status-${request.id}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'requests', filter: `id=eq.${request.id}` },
-        ({ new: row }) => {
-          setStatus(row.status);
-          if (row.dest_lat != null) setDestination({ lat: row.dest_lat, lng: row.dest_lng });
-        })
-      .subscribe();
-
-    return () => { alive = false; unsub(); supabase.removeChannel(statusCh); };
-  }, [isOpen, request?.id]);
+    return () => { alive = false; unsub(); };
+  }, [isOpen, request?.id, request?.patientId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -99,9 +137,26 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
   }, [isOpen]);
 
   const ageS = provider?.timestamp ? Math.max(0, Math.round((now - provider.timestamp) / 1000)) : null;
-  const live = ageS != null && ageS < STALE_AFTER_S;
+  const sessionAgeS = session?.lastSeenAt ? Math.max(0, Math.round((now - session.lastSeenAt) / 1000)) : null;
+  const sessionLive = session?.status === 'active'
+    && (sessionAgeS == null || sessionAgeS < SESSION_STALE_AFTER_S);
+  const fixFresh = ageS != null && ageS < STALE_AFTER_S;
+  const live = Boolean(provider) && fixFresh && (sessionLive || !session);
+  const stationary = Boolean(provider) && !fixFresh && sessionLive;
   const arrived = status === 'Arrived' || status === 'Completed';
   const eta = duration != null ? new Date(Date.now() + duration * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null;
+
+  const liveLabel = arrived
+    ? 'Arrived'
+    : live
+      ? 'Live GPS'
+      : stationary
+        ? 'Provider stationary'
+        : session && session.status !== 'active'
+          ? 'Tracking paused'
+          : provider
+            ? 'Signal lost'
+            : 'Waiting for GPS';
 
   const progressPct = arrived
     ? 100
@@ -122,8 +177,23 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
     .slice(0, 2)
     .toUpperCase();
 
-  return createPortal(
-    <AnimatePresence>
+  const saveDestination = async (next) => {
+    if (!request?.id) return;
+    const updated = await updateTrackingDestination(request.id, {
+      ...next,
+      source: 'manual',
+    });
+    if (!updated) throw new Error('The visit destination could not be saved.');
+    setDestination(updated);
+    toast.success('Visit location updated.');
+  };
+
+  const canEditDestination = !arrived && !['Completed', 'Cancelled', 'Rejected'].includes(status);
+
+  return (
+    <>
+      {createPortal(
+        <AnimatePresence>
       {isOpen && (
         <motion.div
           className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center bg-slate-950/60 backdrop-blur-sm p-0 sm:p-4 md:p-6"
@@ -158,14 +228,16 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                     </span>
+                  ) : stationary ? (
+                    <Wifi className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                   ) : (
                     <WifiOff className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                   )}
                   <span className="text-2xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-100">
-                    {arrived ? 'Arrived' : live ? 'Live GPS' : provider ? 'Signal lost' : 'Waiting for GPS'}
+                    {liveLabel}
                   </span>
                   {provider?.accuracy != null && !arrived && (
-                    <span className="hidden xs:inline text-3xs font-bold text-slate-400 dark:text-slate-400 border-l border-slate-200 dark:border-slate-700 pl-2 tabular-nums">
+                    <span className={`hidden xs:inline text-3xs font-bold border-l border-slate-200 dark:border-slate-700 pl-2 tabular-nums ${provider.degraded ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-400'}`}>
                       ±{Math.round(provider.accuracy)}m
                     </span>
                   )}
@@ -212,7 +284,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                         )}
                       </div>
                       <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#EEF3F8] dark:border-[#132233] ${
-                        arrived || live ? 'bg-emerald-500' : 'bg-amber-400'
+                        arrived || live || stationary ? 'bg-emerald-500' : 'bg-amber-400'
                       }`} />
                     </Link>
                   ) : (
@@ -225,7 +297,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                         )}
                       </div>
                       <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#EEF3F8] dark:border-[#132233] ${
-                        arrived || live ? 'bg-emerald-500' : 'bg-amber-400'
+                        arrived || live || stationary ? 'bg-emerald-500' : 'bg-amber-400'
                       }`} />
                     </div>
                   )}
@@ -280,17 +352,17 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                 </div>
               </div>
 
-              {/* Journey Progress Bar (Provider -> Patient Home) */}
+              {/* Journey Progress Bar (Provider -> Visit Destination) */}
               <div className="neu-inset rounded-2xl px-3.5 py-2.5 space-y-1.5">
                 <div className="flex items-center justify-between text-3xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   <span className="flex items-center gap-1 text-primary dark:text-[#8CBDF0]">
                     <Navigation className="w-3 h-3" /> On Route
                   </span>
                   <span className="tabular-nums text-slate-600 dark:text-slate-300">
-                    {arrived ? 'On-Site at Your Home' : eta ? `Est. Arrival ${eta}` : 'Calculating route…'}
+                    {arrived ? 'On-Site at Visit Location' : eta ? `Est. Arrival ${eta}` : 'Calculating route…'}
                   </span>
                   <span className={`flex items-center gap-1 ${arrived ? 'text-emerald-600 dark:text-emerald-400' : ''}`}>
-                    <Home className="w-3 h-3" /> Home
+                    <MapPin className="w-3 h-3" /> Visit
                   </span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden">
@@ -302,6 +374,20 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                     }`}
                     style={{ width: `${progressPct}%` }}
                   />
+                </div>
+                <div className="flex items-center justify-between gap-2 pt-0.5">
+                  <p className="text-3xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    {destination?.address || (destination ? 'Pinned visit location' : 'Visit location not confirmed')}
+                  </p>
+                  {canEditDestination && (
+                    <button
+                      type="button"
+                      onClick={() => setDestinationModalOpen(true)}
+                      className="text-3xs font-extrabold text-primary dark:text-[#8CBDF0] hover:underline shrink-0 cursor-pointer"
+                    >
+                      {destination ? 'Change' : 'Set location'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -321,30 +407,64 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                   sub={!arrived && distance != null ? 'Door-to-door' : ''}
                 />
                 <Stat
-                  icon={live ? Wifi : WifiOff}
+                  icon={live || sessionLive ? Wifi : WifiOff}
                   label="Updated"
                   value={ageS == null ? '—' : ageS < 5 ? 'now' : `${ageS}s ago`}
-                  sub={live ? 'Real-time sync' : provider ? 'Reconnecting…' : 'Waiting…'}
+                  sub={sessionLive
+                    ? (live ? 'Real-time sync' : 'Stationary · session live')
+                    : session
+                      ? 'Tracking paused'
+                      : provider
+                        ? 'Reconnecting…'
+                        : 'Waiting…'}
                 />
               </div>
 
-              {!destination && (
+              {!destination && canEditDestination && (
                 <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-2xs text-amber-700 dark:text-amber-300 font-semibold">
                   <span className="flex items-center gap-1.5 min-w-0">
                     <MapPin className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-                    <span className="truncate">Pin your home in Profile for exact road ETA.</span>
+                    <span className="truncate">Set the visit location for an exact road ETA.</span>
                   </span>
-                  <Link to="/patient/profile" onClick={onClose} className="text-3xs font-extrabold underline shrink-0">
-                    Pin Now
-                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setDestinationModalOpen(true)}
+                    className="text-3xs font-extrabold underline shrink-0 cursor-pointer"
+                  >
+                    Set
+                  </button>
                 </div>
+              )}
+
+              {!arrived && session && session.status !== 'active' && (
+                <div className="flex items-start gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-2xs text-amber-700 dark:text-amber-300 font-semibold">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-500" />
+                  <span>Live sharing is paused. The provider&apos;s app will resume it automatically when connected.</span>
+                </div>
+              )}
+
+              {connectionError && !arrived && (
+                <p className="text-3xs font-semibold text-rose-500 dark:text-rose-400 px-1">
+                  {connectionError}
+                </p>
               )}
             </div>
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>,
-    document.body
+        </AnimatePresence>,
+        document.body
+      )}
+      <VisitDestinationModal
+        isOpen={destinationModalOpen}
+        onClose={() => setDestinationModalOpen(false)}
+        initial={destination}
+        title="Update visit location"
+        description="This updates the destination for this visit only. Your provider's ETA will refresh automatically."
+        confirmLabel="Update visit location"
+        onConfirm={saveDestination}
+      />
+    </>
   );
 }
 

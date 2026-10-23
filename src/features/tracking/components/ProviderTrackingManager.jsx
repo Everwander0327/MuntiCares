@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navigation, Home, Loader2, ChevronDown, ChevronUp, AlertTriangle, MapPinned, Minimize2, Maximize2, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { TRACKING_STATUS, prepareRoute, startPublishing } from '../services/trackingService';
+import { TRACKING_STATUS, prepareTrackingDestination, startPublishing } from '../services/trackingService';
 import { isNative } from '../services/locationSource';
 import useRouteEta from '../hooks/useRouteEta';
 import { formatDistance, formatDuration } from '../services/geo';
@@ -25,7 +25,7 @@ export default function ProviderTrackingManager() {
     if (!isProvider) return;
     const { data } = await supabase
       .from('requests')
-      .select('id, patient_id, dest_lat, dest_lng, route_started_at, service, patient:patient_id(full_name, avatar_url)')
+      .select('id, patient_id, dest_lat, dest_lng, dest_address, dest_source, dest_version, route_started_at, service, patient:patient_id(full_name, avatar_url)')
       .eq('provider_id', user.id)
       .eq('status', TRACKING_STATUS)
       .order('route_started_at', { ascending: false, nullsFirst: false })
@@ -48,7 +48,6 @@ export default function ProviderTrackingManager() {
     <ActiveRoute
       key={active.id}
       visit={active}
-      providerId={user.id}
       providerName={user?.full_name || user?.user_metadata?.full_name}
       providerAvatar={user?.avatar_url || user?.user_metadata?.avatar_url}
       onArrived={load}
@@ -56,53 +55,100 @@ export default function ProviderTrackingManager() {
   );
 }
 
-function ActiveRoute({ visit, providerId, providerName, providerAvatar, onArrived }) {
+function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   const [fix, setFix] = useState(null);
   const [destination, setDestination] = useState(
-    visit.dest_lat != null ? { lat: visit.dest_lat, lng: visit.dest_lng } : null
+    visit.dest_lat != null
+      ? {
+          lat: visit.dest_lat,
+          lng: visit.dest_lng,
+          address: visit.dest_address || null,
+          source: visit.dest_source || null,
+          version: visit.dest_version || 0,
+        }
+      : null
   );
-  const [error, setError] = useState(null);
+  const [gpsError, setGpsError] = useState(null);
+  const [syncError, setSyncError] = useState(null);
+  const destinationRef = useRef(destination);
+  destinationRef.current = destination;
   const [near, setNear] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [minimized, setMinimized] = useState(false);
   const [arriving, setArriving] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const session = useRef(null);
-  const { route, distance, duration } = useRouteEta(fix, destination);
+  const error = gpsError || syncError;
+  const { route, distance, duration } = useRouteEta(
+    fix,
+    destination,
+    destination?.version || 0
+  );
+
+  useEffect(() => {
+    if (visit.dest_lat == null || visit.dest_lng == null) return;
+    const next = {
+      lat: visit.dest_lat,
+      lng: visit.dest_lng,
+      address: visit.dest_address || null,
+      source: visit.dest_source || null,
+      version: visit.dest_version || 0,
+    };
+    setDestination((prev) => (
+      prev?.lat === next.lat && prev?.lng === next.lng && prev?.version === next.version
+        ? prev
+        : next
+    ));
+    session.current?.setDestination(next);
+  }, [visit.dest_lat, visit.dest_lng, visit.dest_address, visit.dest_source, visit.dest_version]);
 
   useEffect(() => {
     let cancelled = false;
-    setError(null);
+    setGpsError(null);
+    setSyncError(null);
     (async () => {
-      let dest = destination;
-      if (!dest || !visit.route_started_at) {
-        dest = (await prepareRoute(visit.id, visit.patient_id)) || dest;
-        if (!cancelled && dest) setDestination(dest);
+      try {
+        let dest = destinationRef.current;
+        if (!dest) {
+          dest = await prepareTrackingDestination(visit.id);
+          if (!cancelled && dest) setDestination(dest);
+        }
+        if (cancelled) return;
+        session.current = await startPublishing({
+          requestId: visit.id,
+          destination: dest,
+          onFix: (f) => {
+            setFix(f);
+            if (!f.degraded) setGpsError(null);
+          },
+          onGpsError: (e) => setGpsError(e.message),
+          onError: (e) => setSyncError(e.message),
+          onSession: (s) => {
+            setSyncError(null);
+            if (s.destination) {
+              setDestination((prev) => {
+                if (prev?.lat === s.destination.lat && prev?.version === s.destination.version) return prev;
+                return s.destination;
+              });
+            }
+          },
+          onNearDestination: () => {
+            setNear(true);
+            setMinimized(false);
+            toast.success("You're near the patient's address. Tap \"Arrived\" when you're there.", { duration: 6000 });
+          },
+        });
+        if (cancelled) session.current?.stop();
+      } catch (err) {
+        if (!cancelled) setSyncError(err?.message || 'Unable to start live tracking.');
       }
-      if (cancelled) return;
-      session.current = await startPublishing({
-        requestId: visit.id,
-        providerId,
-        destination: dest,
-        onFix: (f) => {
-          setError(null);
-          setFix(f);
-        },
-        onError: (e) => { setError(e.message); },
-        onNearDestination: () => {
-          setNear(true);
-          setMinimized(false);
-          toast.success("You're near the patient's address. Tap \"Arrived\" when you're there.", { duration: 6000 });
-        },
-      });
-      if (cancelled) session.current?.stop();
     })();
 
     if (navigator.permissions?.query) {
       navigator.permissions.query({ name: 'geolocation' }).then((status) => {
         status.onchange = () => {
           if (status.state === 'granted') {
-            setError(null);
+            setGpsError(null);
             setRetryKey((k) => k + 1);
           }
         };
@@ -112,8 +158,34 @@ function ActiveRoute({ visit, providerId, providerName, providerAvatar, onArrive
     return () => { cancelled = true; session.current?.stop(); session.current = null; };
   }, [visit.id, retryKey]);
 
+  useEffect(() => {
+    const ch = supabase
+      .channel(`provider-route-${visit.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'requests', filter: `id=eq.${visit.id}` },
+        (payload) => {
+          if (payload?.new && payload.new.status !== TRACKING_STATUS) {
+            session.current?.stop(`status_${payload.new.status.toLowerCase()}`);
+            onArrived?.();
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [visit.id, onArrived]);
+
   const markArrived = async () => {
+    if (!fix || fix.degraded) {
+      toast.error('Waiting for a precise GPS fix before marking arrived.');
+      return;
+    }
     setArriving(true);
+    try {
+      await session.current?.stop('arrived');
+    } catch { /* ignore */ }
     const { error: err } = await supabase
       .from('requests')
       .update({ status: 'Arrived', arrived_at: new Date().toISOString() })
@@ -129,6 +201,14 @@ function ActiveRoute({ visit, providerId, providerName, providerAvatar, onArrive
   const navUrl = destination
     ? `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&travelmode=driving`
     : null;
+
+  const statusLabel = error
+    ? 'Location issue'
+    : fix?.degraded
+      ? 'Coarse GPS · Recovering…'
+      : fix
+        ? 'On Route · Live GPS'
+        : 'Acquiring GPS…';
 
   const patientName = visit.patient?.full_name || 'Patient';
   const patientAvatar = visit.patient?.avatar_url || null;
@@ -159,7 +239,7 @@ function ActiveRoute({ visit, providerId, providerName, providerAvatar, onArrive
           <Navigation className="w-4 h-4 text-primary shrink-0" />
           <div className="text-left">
             <p className="text-3xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 leading-none">
-              {error ? 'Location issue' : fix ? 'On Route · Live GPS' : 'Acquiring GPS…'}
+              {statusLabel}
             </p>
             <p className="text-2xs font-bold text-slate-800 dark:text-white tabular-nums leading-tight mt-0.5">
               {formatDuration(duration)} · {formatDistance(distance)}
@@ -218,7 +298,13 @@ function ActiveRoute({ visit, providerId, providerName, providerAvatar, onArrive
                 </Link>
                 <div className="min-w-0 flex-1">
                   <p className="text-3xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    {error ? 'Location issue' : fix ? 'On Route · Sharing live location' : 'Acquiring GPS…'}
+                    {error
+                      ? 'Location issue'
+                      : fix?.degraded
+                        ? 'Coarse GPS · Recovering…'
+                        : fix
+                          ? 'On Route · Sharing live location'
+                          : 'Acquiring GPS…'}
                   </p>
                   <Link
                     to={visit.patient_id ? `/provider/patients/${visit.patient_id}/profile` : '#'}
@@ -277,6 +363,16 @@ function ActiveRoute({ visit, providerId, providerName, providerAvatar, onArrive
                   </div>
                 </div>
               )}
+              {!error && (fix?.degraded || !destination) && (
+                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 flex items-start gap-1.5 text-2xs font-semibold leading-relaxed">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-500" />
+                  <span className="flex-1">
+                    {fix?.degraded
+                      ? `GPS accuracy is ±${Math.round(fix.rawAccuracy || fix.accuracy || 0)}m. Arrival will unlock after a precise fix.`
+                      : 'The patient has not confirmed a visit destination yet. Navigation and arrival distance are unavailable.'}
+                  </span>
+                </div>
+              )}
               {!isNative() && !error && (
                 <p className="text-3xs text-slate-400 dark:text-slate-400 font-medium leading-snug">
                   Keep this screen open while traveling. Use the MuntiCares app for background tracking.
@@ -295,12 +391,13 @@ function ActiveRoute({ visit, providerId, providerName, providerAvatar, onArrive
                 <button
                   type="button"
                   onClick={markArrived}
-                  disabled={arriving}
-                  className={`px-3 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-sm ${
+                  disabled={arriving || !fix || fix.degraded}
+                  className={`px-3 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed ${
                     near ? 'bg-emerald-600 hover:bg-emerald-700 animate-pulse' : 'bg-amber-500 hover:bg-amber-600'
                   }`}
                 >
-                  {arriving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Home className="w-3.5 h-3.5" />} Arrived
+                  {arriving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Home className="w-3.5 h-3.5" />}
+                  {fix?.degraded ? 'Waiting GPS' : 'Arrived'}
                 </button>
               </div>
             </div>

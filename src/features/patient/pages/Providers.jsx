@@ -14,6 +14,8 @@ import { z } from 'zod';
 import { CustomSelect, SkeletonPage, EmptyState, Sheet, SheetContent, SheetTitle, SheetDescription } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
+import { VisitDestinationModal } from '@/features/tracking/components';
+import { ensurePatientCoords } from '@/features/tracking/services/geocoding';
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
@@ -53,6 +55,9 @@ const PatientProviders = () => {
   const [bookingStep, setBookingStep] = useState('form');
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [patientHome, setPatientHome] = useState(null);
+  const [visitDestination, setVisitDestination] = useState(null);
+  const [destinationModalOpen, setDestinationModalOpen] = useState(false);
   const watchedDate = watch('date');
   const watchedService = watch('service');
   const watchedTime = watch('time');
@@ -73,6 +78,51 @@ const PatientProviders = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPatientHome(null);
+      setVisitDestination(null);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const { data } = await supabase
+        .from('patients')
+        .select('address, latitude, longitude')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!active) return;
+
+      const address = data?.address || '';
+      setPatientHome({
+        address,
+        lat: data?.latitude ?? null,
+        lng: data?.longitude ?? null,
+      });
+
+      if (data?.latitude != null && data?.longitude != null) {
+        setVisitDestination((prev) => prev || {
+          lat: data.latitude,
+          lng: data.longitude,
+          address,
+          source: 'patient_home',
+          version: 0,
+        });
+      } else if (address) {
+        const coords = await ensurePatientCoords(user.id);
+        if (!active || !coords) return;
+        setPatientHome((prev) => ({ ...(prev || {}), ...coords, address }));
+        setVisitDestination((prev) => prev || {
+          ...coords,
+          address,
+          source: 'patient_home',
+          version: 0,
+        });
+      }
+    })();
+    return () => { active = false; };
+  }, [user?.id]);
 
   useEffect(() => {
     if (user) {
@@ -248,6 +298,17 @@ const PatientProviders = () => {
     setSelectedProvider(provider);
     setBookingStep('form');
     setAvailableSlots([]);
+    if (user?.id && !visitDestination) {
+      ensurePatientCoords(user.id).then((coords) => {
+        if (!coords) return;
+        setVisitDestination((prev) => prev || {
+          ...coords,
+          address: patientHome?.address || '',
+          source: 'patient_home',
+          version: 0,
+        });
+      });
+    }
     reset({
       service: presetService || provider.services?.[0] || 'General Care',
       date: new Date().toLocaleDateString('en-CA'),
@@ -322,6 +383,25 @@ const PatientProviders = () => {
         return;
       }
 
+      let destination = visitDestination;
+      if (!destination) {
+        const coords = await ensurePatientCoords(user.id);
+        if (coords) {
+          destination = {
+            ...coords,
+            address: patientHome?.address || '',
+            source: 'patient_home',
+            version: 0,
+          };
+        }
+      }
+      if (!destination) {
+        toast.error('Please confirm the visit location before booking.');
+        setBookingLoading(false);
+        setBookingStep('form');
+        return;
+      }
+
       // 1. Capture provider info before it gets cleared
       const providerId = selectedProvider.id;
 
@@ -336,7 +416,13 @@ const PatientProviders = () => {
           time: values.time + ':00',
           status: 'Pending',
           price: String(selectedProvider.price_per_service || 0),
-          notes: values.notes
+          notes: values.notes,
+          dest_lat: destination.lat,
+          dest_lng: destination.lng,
+          dest_address: destination.address || null,
+          dest_source: 'booking',
+          dest_version: 1,
+          dest_updated_at: new Date().toISOString(),
         }]);
 
       if (reqError) throw reqError;
@@ -357,6 +443,17 @@ const PatientProviders = () => {
 
       setRequested([...requested, providerId]);
       setSelectedProvider(null);
+      setVisitDestination(
+        patientHome?.lat != null
+          ? {
+              lat: patientHome.lat,
+              lng: patientHome.lng,
+              address: patientHome.address || '',
+              source: 'patient_home',
+              version: 0,
+            }
+          : null
+      );
       toast.success('Booking request sent!');
       confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
     } catch (err) {
@@ -860,6 +957,35 @@ const PatientProviders = () => {
                     )}
                   </div>
 
+                  {/* Visit Location */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      4. Visit Location
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setDestinationModalOpen(true)}
+                      className="w-full neu-flat-sm rounded-xl p-3 flex items-center gap-3 text-left transition-all cursor-pointer outline-none select-none"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-[#8CBDF0] shrink-0">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {visitDestination?.address || patientHome?.address || 'Confirm the visit location'}
+                        </p>
+                        <p className="text-3xs text-slate-500 dark:text-slate-400 font-semibold truncate mt-0.5">
+                          {visitDestination
+                            ? `${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)} · For this visit only`
+                            : 'The provider will navigate to this exact pin'}
+                        </p>
+                      </div>
+                      <span className="text-2xs font-extrabold text-primary dark:text-[#8CBDF0] shrink-0">
+                        Change
+                      </span>
+                    </button>
+                  </div>
+
                   {/* Notes / Message */}
                   <div className="space-y-1">
                     <label className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 ml-1">Message or Instructions (Optional)</label>
@@ -966,6 +1092,17 @@ const PatientProviders = () => {
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
                           {new Date(`2000-01-01T${vals.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                         </p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Visit Location</span>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 leading-snug">
+                          {visitDestination?.address || 'Not confirmed'}
+                        </p>
+                        {visitDestination && (
+                          <p className="text-3xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
+                            {visitDestination.lat.toFixed(5)}, {visitDestination.lng.toFixed(5)}
+                          </p>
+                        )}
                       </div>
                     </div>
 
@@ -1431,6 +1568,19 @@ const PatientProviders = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      <VisitDestinationModal
+        isOpen={destinationModalOpen}
+        onClose={() => setDestinationModalOpen(false)}
+        initial={visitDestination}
+        homeAddress={patientHome?.address || ''}
+        title="Confirm visit location"
+        description="This pin is shared with your provider for this visit only. It does not change your saved home address."
+        confirmLabel="Use this visit location"
+        onConfirm={(dest) => {
+          setVisitDestination({ ...dest, source: 'booking', version: 1 });
+        }}
+      />
 
     </DashboardLayout>
   );

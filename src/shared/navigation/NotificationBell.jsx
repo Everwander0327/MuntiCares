@@ -538,7 +538,7 @@ const NotificationBell = () => {
         <AnimatePresence>
         {isOpen && (
           <motion.div
-            ref={panelRef}
+            key="notification-dropdown-panel"
             className="fixed neu-flat rounded-3xl overflow-hidden transform-gpu will-change-transform shadow-2xl"
             style={{ 
               top: panelPos.top, 
@@ -553,6 +553,7 @@ const NotificationBell = () => {
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
           >
+            <div ref={panelRef} className="w-full h-full flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-slate-200/60 dark:border-white/5 bg-transparent">
               <div>
@@ -653,7 +654,7 @@ const NotificationBell = () => {
                 </AnimatePresence>
               ) : (
                 <motion.div 
-                  className="neu-inset p-8 rounded-2xl text-center"
+                  key="empty-notifs" className="neu-inset p-8 rounded-2xl text-center"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.2 }}
@@ -676,6 +677,7 @@ const NotificationBell = () => {
                 )}
               </div>
             )}
+          </div>
           </motion.div>
         )}
         </AnimatePresence>,

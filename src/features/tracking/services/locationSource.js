@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { ensureNotificationPermission } from './trackingNotifications';
 
 /**
  * Unified location source.
@@ -19,6 +20,7 @@ export async function startLocationWatch(onFix, onError) {
 }
 
 async function startNative(onFix, onError) {
+  await ensureNotificationPermission();
   const id = await BackgroundGeolocation.addWatcher(
     {
       backgroundTitle: 'MuntiCares – On the way',

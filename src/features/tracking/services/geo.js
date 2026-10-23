@@ -23,22 +23,65 @@ export function bearing(a, b) {
   return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-/** Shortest distance (m) from point p to a polyline [[lat,lng],...]. Approximate, fine for city scale. */
-export function distanceToPolyline(p, line) {
-  if (!line || line.length < 2) return Infinity;
-  let min = Infinity;
+/**
+ * Projects point p onto a polyline [[lat,lng],...].
+ * Returns { lat, lng, along, remaining, total, offRoute } in meters, or null.
+ * "along" is the distance from the start of the line to the projection.
+ */
+export function projectOnRoute(p, line) {
+  if (!p || !Array.isArray(line) || line.length < 2) return null;
+
+  const lengths = [];
+  let total = 0;
+  for (let i = 0; i < line.length - 1; i++) {
+    const len = haversine(
+      { lat: line[i][0], lng: line[i][1] },
+      { lat: line[i + 1][0], lng: line[i + 1][1] }
+    );
+    lengths.push(len);
+    total += len;
+  }
+  if (!(total > 0)) return null;
+
   const kx = Math.cos(toRad(p.lat)) * 111320;
   const ky = 110540;
+  let best = null;
+  let before = 0;
+
   for (let i = 0; i < line.length - 1; i++) {
-    const ax = (line[i][1] - p.lng) * kx, ay = (line[i][0] - p.lat) * ky;
-    const bx = (line[i + 1][1] - p.lng) * kx, by = (line[i + 1][0] - p.lat) * ky;
-    const dx = bx - ax, dy = by - ay;
+    const ax = (line[i][1] - p.lng) * kx;
+    const ay = (line[i][0] - p.lat) * ky;
+    const bx = (line[i + 1][1] - p.lng) * kx;
+    const by = (line[i + 1][0] - p.lat) * ky;
+    const dx = bx - ax;
+    const dy = by - ay;
     const len2 = dx * dx + dy * dy;
     const t = len2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
-    const cx = ax + t * dx, cy = ay + t * dy;
-    min = Math.min(min, Math.hypot(cx, cy));
+    const cx = ax + t * dx;
+    const cy = ay + t * dy;
+    const offRoute = Math.hypot(cx, cy);
+    const along = before + t * lengths[i];
+
+    if (!best || offRoute < best.offRoute) {
+      best = {
+        lat: line[i][0] + t * (line[i + 1][0] - line[i][0]),
+        lng: line[i][1] + t * (line[i + 1][1] - line[i][1]),
+        along,
+        remaining: Math.max(0, total - along),
+        total,
+        offRoute,
+      };
+    }
+    before += lengths[i];
   }
-  return min;
+
+  return best;
+}
+
+/** Shortest distance (m) from point p to a polyline [[lat,lng],...]. Approximate, fine for city scale. */
+export function distanceToPolyline(p, line) {
+  const projection = projectOnRoute(p, line);
+  return projection ? projection.offRoute : Infinity;
 }
 
 export function formatDistance(m) {

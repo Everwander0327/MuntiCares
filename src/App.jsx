@@ -16,6 +16,7 @@ import { ProtectedRoute } from '@/features/auth';
 import { AnimatedPage } from '@/shared/components';
 import { SkeletonPage } from '@/shared/ui';
 const ProviderTrackingManager = lazy(() => import('@/features/tracking/components/ProviderTrackingManager'));
+const PatientTrackingMonitor = lazy(() => import('@/features/tracking/components/PatientTrackingMonitor'));
 
 // Pages (eager — critical path)
 import { LandingPage } from '@/features/landing';
@@ -115,6 +116,7 @@ function AppContent() {
         </Routes>
       </AnimatePresence>
       {user?.role === 'provider' && <Suspense fallback={null}><ProviderTrackingManager /></Suspense>}
+      {user?.role === 'patient' && <Suspense fallback={null}><PatientTrackingMonitor /></Suspense>}
       <Toaster
         position="top-center"
         gutter={8}

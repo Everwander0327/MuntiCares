@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -41,10 +41,20 @@ function Recenter({ pos }) {
 }
 
 /**
- * Lets a patient pin their exact home location (most accurate option).
+ * Lets a patient pin an exact location (home or a specific visit).
  * props: userId, address, initial {lat,lng}|null, onSaved(coords)
+ * Optional: onSave(pos) to override persistence, saveLabel, locateLabel, emptyHint
  */
-export default function LocationPicker({ userId, address, initial, onSaved }) {
+export default function LocationPicker({
+  userId,
+  address,
+  initial,
+  onSaved,
+  onSave,
+  saveLabel = 'Save pin',
+  locateLabel = "I'm at home now",
+  emptyHint = 'Tap the map to pin your home',
+}) {
   const { dark } = useTheme();
   const [pos, setPos] = useState(initial || null);
   const [busy, setBusy] = useState(null); // 'geo' | 'gps' | 'save'
@@ -96,9 +106,13 @@ export default function LocationPicker({ userId, address, initial, onSaved }) {
     if (!pos) return;
     setBusy('save');
     try {
-      await savePatientCoords(userId, pos);
-      toast.success('Home location saved!');
-      onSaved?.(pos);
+      if (onSave) {
+        await onSave(pos);
+      } else {
+        await savePatientCoords(userId, pos);
+        toast.success('Home location saved!');
+        onSaved?.(pos);
+      }
     } catch {
       toast.error('Failed to save location.');
     } finally { setBusy(null); }
@@ -152,7 +166,7 @@ export default function LocationPicker({ userId, address, initial, onSaved }) {
         {!pos && (
           <div className="absolute inset-0 z-[500] flex items-center justify-center pointer-events-none p-4">
             <span className="px-3.5 py-2 rounded-xl bg-white/92 dark:bg-slate-900/92 backdrop-blur-md text-2xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 shadow-lg border border-white/60 dark:border-white/10">
-              <MapPin className="w-3.5 h-3.5 text-primary" /> Tap the map to pin your home
+              <MapPin className="w-3.5 h-3.5 text-primary" /> {emptyHint}
             </span>
           </div>
         )}
@@ -176,7 +190,7 @@ export default function LocationPicker({ userId, address, initial, onSaved }) {
           className="col-span-1 neu-btn px-3 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-primary dark:text-[#8CBDF0] flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer"
         >
           {busy === 'gps' ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <LocateFixed className="w-3.5 h-3.5 shrink-0" />}
-          <span className="truncate">I&apos;m at home now</span>
+          <span className="truncate">{locateLabel}</span>
         </button>
         <button
           type="button"
@@ -185,7 +199,7 @@ export default function LocationPicker({ userId, address, initial, onSaved }) {
           className="col-span-2 sm:col-span-1 sm:ml-auto neu-btn-primary px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer shadow-sm"
         >
           {busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <Check className="w-3.5 h-3.5 shrink-0" />}
-          <span>Save pin</span>
+          <span>{saveLabel}</span>
         </button>
       </div>
 

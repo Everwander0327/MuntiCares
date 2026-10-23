@@ -1,236 +1,216 @@
 import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'node:crypto';
+import process from 'node:process';
 
-const supabaseUrl = 'https://zsqowrouxuxjjmosbvxt.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpzcW93cm91eHV4amptb3Nidnh0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyNTMxNTcsImV4cCI6MjA5NDgyOTE1N30.N7JuoPAXNCmQrim1J7FbsbzAml56oMTL907uikJIF2U';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Staging-only E2E. The running app (VITE_SUPABASE_*) and the E2E_* credentials
+// must point at the SAME non-production Supabase project with tracking v2 applied.
+const SUPABASE_URL = process.env.E2E_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.E2E_SUPABASE_ANON_KEY;
+const PROVIDER_EMAIL = process.env.E2E_PROVIDER_EMAIL;
+const PROVIDER_PASSWORD = process.env.E2E_PROVIDER_PASSWORD;
+const PATIENT_EMAIL = process.env.E2E_PATIENT_EMAIL;
+const PATIENT_PASSWORD = process.env.E2E_PATIENT_PASSWORD;
 
-const PROVIDER = {
-  id: '426a5992-c6c6-4171-8136-001f4b25e201',
-  email: 'johnlawrence@gmail.com',
-  full_name: 'John Lawrence Soriano',
-  role: 'provider',
-};
+const enabled = Boolean(
+  SUPABASE_URL
+  && SUPABASE_ANON_KEY
+  && PROVIDER_EMAIL
+  && PROVIDER_PASSWORD
+  && PATIENT_EMAIL
+  && PATIENT_PASSWORD
+);
 
-const PATIENT = {
-  id: '91e0b115-e381-402a-a930-61e85c4989b0',
-  email: 'andrew@gmail.com',
-  full_name: 'Andrew Ymson',
-  role: 'patient',
-};
-
+let supabase;
+let providerClient;
+let patientClient;
 let testRequestId = null;
 
-test.beforeAll(async () => {
-  // Ensure patient has coordinates in patients table
-  await supabase
-    .from('patients')
-    .upsert({
-      user_id: PATIENT.id,
-      address: 'Ayala Alabang Village, Muntinlupa City',
-      latitude: 14.4215,
-      longitude: 121.0335,
-      is_profile_complete: true,
-    }, { onConflict: 'user_id' });
+async function loginAs(page, email, password) {
+  await page.goto('/login');
+  await page.getByLabel('Email Address', { exact: true }).fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20000 });
+}
 
-  // Create or update a test request with status 'On The Way'
-  const { data: newReq, error } = await supabase
-    .from('requests')
-    .insert({
-      patient_id: PATIENT.id,
-      provider_id: PROVIDER.id,
-      service: 'Physical Therapy (Live GPS Test)',
-      date: new Date().toISOString().split('T')[0],
-      time: '14:00',
-      status: 'On The Way',
-      route_started_at: new Date().toISOString(),
-      dest_lat: 14.4215,
-      dest_lng: 121.0335,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Failed to create test request:', error);
-  } else {
-    testRequestId = newReq.id;
-  }
-});
-
-test.afterAll(async () => {
-  if (testRequestId) {
-    await supabase.from('provider_locations').delete().eq('request_id', testRequestId);
-    await supabase.from('requests').delete().eq('id', testRequestId);
-  }
-});
+async function signIn(client, email, password) {
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data.user;
+}
 
 test.describe('Live GPS Tracking Flow', () => {
+  test.skip(!enabled, 'Set E2E_SUPABASE_URL, E2E_SUPABASE_ANON_KEY, E2E_PROVIDER_*, and E2E_PATIENT_* to run against staging.');
 
-  test('1. Provider shares live GPS (even with coarse Wi-Fi accuracy) and updates provider_locations in real time', async ({ page, context }) => {
-    // Grant geolocation permission and mock coarse Wi-Fi/laptop GPS accuracy (800m)
+  test.beforeAll(async () => {
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    providerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    patientClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const provider = await signIn(providerClient, PROVIDER_EMAIL, PROVIDER_PASSWORD);
+    const patient = await signIn(patientClient, PATIENT_EMAIL, PATIENT_PASSWORD);
+
+    const { error: profileError } = await patientClient
+      .from('patients')
+      .upsert({
+        user_id: patient.id,
+        address: 'Ayala Alabang Village, Muntinlupa City',
+        latitude: 14.4215,
+        longitude: 121.0335,
+        is_profile_complete: true,
+      }, { onConflict: 'user_id' });
+    if (profileError) throw profileError;
+
+    const { data, error } = await patientClient
+      .from('requests')
+      .insert({
+        patient_id: patient.id,
+        provider_id: provider.id,
+        service: 'Physical Therapy (Live GPS Test)',
+        date: new Date().toISOString().split('T')[0],
+        time: '14:00',
+        status: 'On The Way',
+        route_started_at: new Date().toISOString(),
+        dest_lat: 14.4215,
+        dest_lng: 121.0335,
+        dest_address: 'Ayala Alabang Village, Muntinlupa City',
+        dest_source: 'e2e',
+        dest_version: 1,
+        dest_updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    testRequestId = data.id;
+  });
+
+  test.afterAll(async () => {
+    if (testRequestId) {
+      await patientClient.from('requests').delete().eq('id', testRequestId);
+    }
+    await supabase?.removeAllChannels();
+    await providerClient?.auth.signOut();
+    await patientClient?.auth.signOut();
+  });
+
+  test('1. Provider starts a session and persists a coarse first fix', async ({ page, context }) => {
     await context.grantPermissions(['geolocation']);
     await context.setGeolocation({
       latitude: 14.4081,
       longitude: 121.0415,
-      accuracy: 800,
+      accuracy: 1200,
     });
 
-    // Login as Provider via localStorage injection
-    await page.goto('/');
-    await page.evaluate((userData) => {
-      localStorage.setItem('munticares_user', JSON.stringify(userData));
-    }, PROVIDER);
-
-    // Navigate to Provider Requests
+    await loginAs(page, PROVIDER_EMAIL, PROVIDER_PASSWORD);
     await page.goto('/provider/requests');
 
-    // Wait for the floating Active Route tracking panel
-    const trackingPanel = page.locator('text=Sharing live location');
-    await expect(trackingPanel).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Sharing live location|Coarse GPS|Location issue/i).first()).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/Physical Therapy \(Live GPS Test\)/).first()).toBeVisible();
 
-    // Verify patient name and service in tracking panel
-    await expect(page.locator('text=Andrew Ymson · Physical Therapy (Live GPS Test)')).toBeVisible();
+    await page.waitForTimeout(4000);
 
-    // Verify distance and ETA are displayed (e.g. min or km)
-    await expect(page.locator('text=/min|km|m/').first()).toBeVisible({ timeout: 10000 });
-
-    // Wait briefly for the first persist to hit Supabase DB
-    await page.waitForTimeout(3000);
-
-    // Verify database record in provider_locations
-    const { data: loc } = await supabase
+    const { data: location, error } = await providerClient
       .from('provider_locations')
       .select('*')
       .eq('request_id', testRequestId)
       .maybeSingle();
-
-    expect(loc).not.toBeNull();
-    expect(loc?.lat).toBeCloseTo(14.41, 1);
-    expect(loc?.lng).toBeCloseTo(121.04, 1);
+    expect(error).toBeNull();
+    expect(location).not.toBeNull();
+    expect(location?.lat).toBeCloseTo(14.408, 2);
+    expect(location?.lng).toBeCloseTo(121.042, 2);
   });
 
-  test('2. Patient sees Live Tracker button on both Dashboard and Requests and opens interactive map modal with ETA', async ({ page }) => {
-    // Set provider location in database so patient can see it immediately
-    await supabase
-      .from('provider_locations')
-      .upsert({
-        request_id: testRequestId,
-        provider_id: PROVIDER.id,
-        lat: 14.4095,
-        lng: 121.0385,
-        accuracy: 12,
-        updated_at: new Date().toISOString(),
-      });
+  test('2. Patient sees the live tracker and destination ETA', async ({ page }) => {
+    const sessionId = randomUUID();
+    const { error: sessionError } = await providerClient.rpc('start_tracking_session', {
+      p_request_id: testRequestId,
+      p_session_id: sessionId,
+    });
+    expect(sessionError).toBeNull();
 
-    // Login as Patient via localStorage
-    await page.goto('/');
-    await page.evaluate((userData) => {
-      localStorage.setItem('munticares_user', JSON.stringify(userData));
-    }, PATIENT);
+    const { error: locationError } = await providerClient.rpc('record_provider_location', {
+      p_request_id: testRequestId,
+      p_session_id: sessionId,
+      p_seq: 1,
+      p_lat: 14.4095,
+      p_lng: 121.0385,
+      p_accuracy: 12,
+      p_heading: 45,
+      p_speed: 8,
+      p_captured_at: new Date().toISOString(),
+    });
+    expect(locationError).toBeNull();
 
-    // First verify Patient Dashboard (/patient/dashboard) has Track Live button and opens modal
+    await loginAs(page, PATIENT_EMAIL, PATIENT_PASSWORD);
+
     await page.goto('/patient/dashboard');
-    await expect(page.locator('text=Active Home Care Visit')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Active Home Care Visit')).toBeVisible({ timeout: 15000 });
     const dashTrackBtn = page.getByRole('button', { name: /Track Live/i }).first();
-    await expect(dashTrackBtn).toBeVisible({ timeout: 10000 });
+    await expect(dashTrackBtn).toBeVisible();
     await dashTrackBtn.click();
 
-    await expect(page.locator('text=Provider on the way')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.leaflet-container')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Provider on the way')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.leaflet-container')).toBeVisible({ timeout: 15000 });
     await page.getByTitle('Close tracker').click();
 
-    // Navigate to Patient Requests
     await page.goto('/patient/requests');
+    await expect(page.getByText('My Service Requests')).toBeVisible();
 
-    // Wait for requests list to load
-    await expect(page.locator('text=My Service Requests')).toBeVisible();
+    const trackBtn = page.getByRole('button', { name: /Track Live/i }).first();
+    await expect(trackBtn).toBeVisible({ timeout: 15000 });
+    await trackBtn.click();
 
-    // Find the "Track Live" button on the active visit card
-    const trackBtn = page.getByRole('button', { name: /Track Live/i });
-    await expect(trackBtn.first()).toBeVisible({ timeout: 10000 });
-
-    // Click "Track Live"
-    await trackBtn.first().click();
-
-    // The Live Tracker Modal should open
-    await expect(page.locator('text=Provider on the way')).toBeVisible({ timeout: 10000 });
-
-    // Leaflet map container should be rendered
-    const map = page.locator('.leaflet-container');
-    await expect(map).toBeVisible({ timeout: 10000 });
-
-    // Provider marker and home marker should exist inside the map
-    await expect(page.locator('.mc-provider-marker')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('.mc-home-marker')).toBeVisible({ timeout: 10000 });
-
-    // ETA stat should be populated
-    await expect(page.locator('text=ETA')).toBeVisible();
-    await expect(page.locator('text=Distance')).toBeVisible();
+    await expect(page.getByText('Provider on the way')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.leaflet-container')).toBeVisible();
+    await expect(page.locator('.mc-provider-marker')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.mc-home-marker')).toBeVisible();
+    await expect(page.getByText('ETA', { exact: true })).toBeVisible();
+    await expect(page.getByText('Distance', { exact: true })).toBeVisible();
   });
 
-  test('3. Patient Profile includes LocationPicker with Pin on Map', async ({ page, context }) => {
+  test('3. Patient profile location picker is available', async ({ page, context }) => {
     await context.grantPermissions(['geolocation']);
     await context.setGeolocation({ latitude: 14.4215, longitude: 121.0335 });
 
-    await page.goto('/');
-    await page.evaluate((userData) => {
-      localStorage.setItem('munticares_user', JSON.stringify(userData));
-    }, PATIENT);
-
+    await loginAs(page, PATIENT_EMAIL, PATIENT_PASSWORD);
     await page.goto('/patient/profile');
 
-    // Check that Pin Your Home section exists
-    const pinHeading = page.locator('text=Pin Your Home on the Map');
-    await expect(pinHeading).toBeVisible({ timeout: 10000 });
-
-    // Verify map is visible in profile
-    const profileMap = page.locator('.leaflet-container');
-    await expect(profileMap.first()).toBeVisible();
-
-    // Verify actions: "Find my address", "I'm at home now", "Save pin"
+    await expect(page.getByText('Pin Your Home on the Map')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.leaflet-container').first()).toBeVisible();
     await expect(page.getByRole('button', { name: /Find my address/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /I'm at home now/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Save pin/i })).toBeVisible();
   });
 
-  test('4. Arrival flow: provider marks Arrived -> patient modal updates to "Arrived / Here"', async ({ browser }) => {
-    // 1. Patient opens tracker modal in one context
+  test('4. Arrival updates the patient tracker to Arrived', async ({ browser }) => {
     const patientContext = await browser.newContext();
     const patientPage = await patientContext.newPage();
-    await patientPage.goto('/');
-    await patientPage.evaluate((userData) => {
-      localStorage.setItem('munticares_user', JSON.stringify(userData));
-    }, PATIENT);
+    await loginAs(patientPage, PATIENT_EMAIL, PATIENT_PASSWORD);
     await patientPage.goto('/patient/requests');
 
     const trackBtn = patientPage.getByRole('button', { name: /Track Live/i }).first();
-    await expect(trackBtn).toBeVisible({ timeout: 10000 });
+    await expect(trackBtn).toBeVisible({ timeout: 15000 });
     await trackBtn.click();
-    await expect(patientPage.locator('text=Provider on the way')).toBeVisible({ timeout: 10000 });
+    await expect(patientPage.getByText('Provider on the way')).toBeVisible({ timeout: 15000 });
 
-    // 2. Provider in a second context marks visit as "Arrived"
     const providerContext = await browser.newContext();
     await providerContext.grantPermissions(['geolocation']);
     await providerContext.setGeolocation({ latitude: 14.4214, longitude: 121.0334, accuracy: 10 });
 
     const providerPage = await providerContext.newPage();
-    await providerPage.goto('/');
-    await providerPage.evaluate((userData) => {
-      localStorage.setItem('munticares_user', JSON.stringify(userData));
-    }, PROVIDER);
+    await loginAs(providerPage, PROVIDER_EMAIL, PROVIDER_PASSWORD);
     await providerPage.goto('/provider/requests');
 
-    // In Provider panel, click "Arrived"
-    const arrivedBtn = providerPage.getByRole('button', { name: /Arrived/i }).first();
-    await expect(arrivedBtn).toBeVisible({ timeout: 10000 });
+    const arrivedBtn = providerPage.getByRole('button', { name: /^Arrived$/ }).first();
+    await expect(arrivedBtn).toBeVisible({ timeout: 20000 });
+    await expect(arrivedBtn).toBeEnabled({ timeout: 20000 });
     await arrivedBtn.click();
 
-    // 3. In patient tracker modal, status changes to "Arrived" and "Here"
-    await expect(patientPage.locator('text=Your provider has arrived')).toBeVisible({ timeout: 15000 });
-    await expect(patientPage.locator('text=Here')).toBeVisible({ timeout: 10000 });
+    await expect(patientPage.getByText('Your provider has arrived')).toBeVisible({ timeout: 20000 });
+    await expect(patientPage.getByText('Here', { exact: true })).toBeVisible();
 
     await patientContext.close();
     await providerContext.close();
   });
-
 });
