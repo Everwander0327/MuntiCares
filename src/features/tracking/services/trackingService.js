@@ -239,11 +239,24 @@ export async function startPublishing({
   const startSession = async (takeover = false) => {
     if (stopped) return;
     try {
-      const { data, error } = await supabase.rpc('start_tracking_session', {
+      const rpcPayload = {
         p_request_id: requestId,
         p_session_id: sessionId,
-        p_takeover: takeover,
-      });
+      };
+      if (takeover) {
+        rpcPayload.p_takeover = true;
+      }
+
+      let { data, error } = await supabase.rpc('start_tracking_session', rpcPayload);
+
+      if (error && (error.code === 'PGRST202' || error.message?.includes('404')) && takeover) {
+        const fallbackRes = await supabase.rpc('start_tracking_session', {
+          p_request_id: requestId,
+          p_session_id: sessionId,
+        });
+        data = fallbackRes.data;
+        error = fallbackRes.error;
+      }
 
       if (error) {
         if (error.code === '42501' || error.message?.includes('Not allowed')) {
