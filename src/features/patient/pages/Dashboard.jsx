@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, Star, RotateCcw, ArrowRight } from 'lucide-react';
+import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import usePatientRequests from '@/hooks/usePatientRequests';
@@ -339,13 +339,13 @@ const PatientDashboard = () => {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="space-y-6 md:space-y-8"
+        className="space-y-4 sm:space-y-6 md:space-y-7 pb-10"
         style={pullDistance > 0 ? { transform: `translateY(${pullDistance}px)`, transition: 'transform 0.1s ease-out' } : { transition: 'transform 0.3s ease-out' }}
       >
         {/* Top Section: Community Highlights Carousel (Left) and Quick Actions Card (Right) */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
           {/* Highlights Hero Card (lg:col-span-7) - Image completely covers the entire card */}
-          <section className="lg:col-span-7 neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden relative flex flex-col justify-between min-h-[380px] sm:min-h-[440px] md:min-h-[480px]">
+          <section className="lg:col-span-7 neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden relative flex flex-col justify-between min-h-[380px] sm:min-h-[440px] lg:min-h-[480px]">
             {/* Full-Bleed Carousel Track - Image occupies 100% of the entire card */}
             <div className="absolute inset-0 z-0">
               <div
@@ -440,7 +440,7 @@ const PatientDashboard = () => {
           </section>
 
           {/* Quick Actions Card with Combined Horizontal Stats on Top (lg:col-span-5) */}
-          <div className="lg:col-span-5 neu-flat rounded-[2.25rem] p-6 flex flex-col justify-between gap-5">
+          <div className="lg:col-span-5 neu-flat rounded-2xl sm:rounded-[2.25rem] p-5 sm:p-6 flex flex-col justify-start gap-5">
             <div>
               {/* Horizontal Stats Row on Top: Light & Airy Semantic Hierarchy */}
               <div className="mb-4 pb-4 border-b border-[#D2E0EE] dark:border-[#2D3F54]">
@@ -553,7 +553,7 @@ const PatientDashboard = () => {
                   to="/patient/providers"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#C4623F] dark:hover:border-[#F2A98E]"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#FCEBE4] dark:bg-[#3B2219] text-[#C4623F] dark:text-[#F2A98E] border border-[#F8D4C7] dark:border-[#5C3325] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#C4623F] group-hover:text-white dark:group-hover:bg-[#F2A98E] dark:group-hover:text-[#2B1409] transition-all shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-[#FCEBE4] dark:bg-[#3B2219] text-[#C4623F] dark:text-[#F2A98E] border border-[#F8D4C7] dark:border-[#5C3325] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#C4623F] group-hover:text-white dark:group-hover:bg-[#F2A98E] dark:group-hover:text-[#2B1409] transition-all shadow-xs">
                     <Search className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -567,7 +567,7 @@ const PatientDashboard = () => {
                   to="/patient/requests"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#2F6FB5] dark:hover:border-[#8CBDF0]"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#DDEBF8] dark:bg-[#183049] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#C5DCF2] dark:border-[#24466B] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-[#DDEBF8] dark:bg-[#183049] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#C5DCF2] dark:border-[#24466B] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-xs">
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -581,7 +581,7 @@ const PatientDashboard = () => {
                   to="/patient/messages"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#2F6FB5] dark:hover:border-[#8CBDF0]"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-[#E9F1F9] dark:bg-[#1F2D3E] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#D2E0EE] dark:border-[#2D3F54] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-xs relative">
+                  <div className="w-9 h-9 rounded-xl bg-[#E9F1F9] dark:bg-[#1F2D3E] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#D2E0EE] dark:border-[#2D3F54] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-xs relative">
                     <MessageCircle className="w-4 h-4" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#BC3030] text-white rounded-full text-3xs font-extrabold flex items-center justify-center shadow-xs">
@@ -600,56 +600,19 @@ const PatientDashboard = () => {
               </div>
             </div>
 
-            {/* Suggested Suggestions Section */}
-            <div className="pt-3 border-t border-[#D2E0EE] dark:border-[#2D3F54] space-y-2">
-              <p className="text-3xs font-extrabold uppercase tracking-widest text-[#52657A] dark:text-[#A5B6C8] px-1 mb-1">Recommended for you</p>
-              {activeVisit && stats.accepted > 0 && (
-                <Link
-                  to={`/patient/messages?provider=${activeVisit.providerId}`}
-                  className="neu-btn p-2.5 rounded-xl flex items-center gap-2.5 text-[#17283B] dark:text-[#E6EEF6] text-xs font-semibold"
-                >
-                  <CheckCircle2 className="w-4 h-4 text-[#2C7A55] dark:text-[#7DD3A3] shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">Message {activeVisit.provider}</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#52657A] dark:text-[#A5B6C8]" />
-                </Link>
-              )}
-              {fetchedRequests?.some(r => r.status === 'Completed') && (
-                <Link
-                  to="/patient/providers"
-                  className="neu-btn p-2.5 rounded-xl flex items-center gap-2.5 text-[#17283B] dark:text-[#E6EEF6] text-xs font-semibold"
-                >
-                  <RotateCcw className="w-4 h-4 text-[#2F6FB5] dark:text-[#8CBDF0] shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">Book a follow-up visit</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#52657A] dark:text-[#A5B6C8]" />
-                </Link>
-              )}
-              {fetchedRequests?.some(r => ['Completed', 'Accepted'].includes(r.status)) && (
-                <Link
-                  to="/patient/requests"
-                  className="neu-btn p-2.5 rounded-xl flex items-center gap-2.5 text-[#17283B] dark:text-[#E6EEF6] text-xs font-semibold"
-                >
-                  <Star className="w-4 h-4 text-[#9C5A06] dark:text-[#F1BD6B] shrink-0" />
-                  <span className="min-w-0 flex-1 truncate">View visit receipts & history</span>
-                  <ArrowRight className="w-3.5 h-3.5 text-[#52657A] dark:text-[#A5B6C8]" />
-                </Link>
-              )}
-              {!fetchedRequests?.some(r => ['Accepted', 'On The Way', 'Arrived', 'Completed'].includes(r.status)) && (
-                <p className="neu-flat-sm p-3 rounded-xl text-2xs text-[#52657A] dark:text-[#A5B6C8] text-center font-medium">
-                  Connect with local healthcare pros for assistance.
-                </p>
-              )}
-            </div>
+
           </div>
         </div>
 
         {/* Live Visit Tracker */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.35 }}
-        >
-          <div className="w-full neu-flat rounded-[2.25rem] p-6 sm:p-7 relative overflow-hidden flex flex-col justify-between">
-            {activeVisit ? (() => {
+        {activeVisit && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.35 }}
+          >
+            <div className="w-full neu-flat rounded-2xl sm:rounded-[2.25rem] p-4 sm:p-6 relative overflow-hidden flex flex-col justify-between">
+              {(() => {
               const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
               const STEP_LABELS = ['Confirmed', 'On Route', 'Arrived', 'Done'];
               const STEP_ICONS = [
@@ -796,40 +759,13 @@ const PatientDashboard = () => {
                   </div>
                 </div>
               );
-            })() : (
-              <div className="text-center py-10 sm:py-12 my-auto">
-                <div className="neu-flat w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-5 text-primary">
-                  <Calendar className="w-8 h-8" />
-                </div>
-                <h4 className="text-[#17283B] dark:text-[#E6EEF6] font-display font-extrabold text-lg sm:text-xl">
-                  No Active Visits Scheduled
-                </h4>
-                <p className="text-sm text-[#52657A] dark:text-[#A5B6C8] mt-2 max-w-sm mx-auto leading-relaxed">
-                  You do not have any appointments in progress. Explore trusted health providers in Muntinlupa and book a consultation in minutes.
-                </p>
-                <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-                  <Link
-                    to="/patient/providers"
-                    className="neu-btn-primary px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-2 active:scale-95"
-                  >
-                    <Search className="w-4 h-4" />
-                    Find a Provider
-                  </Link>
-                  <Link
-                    to="/patient/requests"
-                    className="neu-btn px-6 py-3 rounded-2xl text-xs sm:text-sm font-bold text-[#17283B] dark:text-[#E6EEF6] inline-flex items-center justify-center gap-2 active:scale-95"
-                  >
-                    <FileText className="w-4 h-4 text-primary" />
-                    Past Requests
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-        </motion.div>
+              })()}
+            </div>
+          </motion.div>
+        )}
 
         {/* Recent Requests Section with Neumorphic Table / List (Compact layout) */}
-        <section className="neu-flat rounded-2xl sm:rounded-[2.25rem] p-4 sm:p-6 overflow-hidden">
+        <section className="neu-flat rounded-2xl sm:rounded-[2.25rem] p-3.5 sm:p-6 overflow-hidden">
           <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-[#D2E0EE] dark:border-[#2D3F54]">
             <div>
               <h2 className="font-display font-extrabold text-base sm:text-lg text-[#17283B] dark:text-[#E6EEF6]">
