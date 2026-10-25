@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { normalizeLocation, subscribeToProvider } from '../services/trackingService';
+import { normalizeLocation, subscribeToProvider, startPublishing } from '../services/trackingService';
 import { getRoute, getCircuitBreakerStatus, resetCircuitBreaker } from '../services/routing';
 
 // Mock Supabase Realtime channel
@@ -12,7 +12,9 @@ vi.mock('@/lib/supabase', () => {
       return mockChannel;
     }),
     subscribe: vi.fn(function (cb) {
-      setTimeout(() => cb('SUBSCRIBED'), 10);
+      if (typeof cb === 'function') {
+        setTimeout(() => cb('SUBSCRIBED'), 10);
+      }
       return mockChannel;
     }),
     send: vi.fn().mockResolvedValue({}),
@@ -194,4 +196,28 @@ describe('Notification deduplication via sessionStorage', () => {
     expect(isAlreadyNotified).toBe(true);
   });
 });
+
+describe('startPublishing Realtime resilience', () => {
+  it('does not throw when tracking channel is already subscribed by subscriber', async () => {
+    const reqId = 'col-test-1';
+    // First subscribe as patient
+    const sub = subscribeToProvider(reqId, { onLocation: vi.fn() });
+
+    // Then start publishing as provider for the same request
+    const pub = await startPublishing({
+      requestId: reqId,
+      destination: { lat: 14.4, lng: 121.0 },
+      onFix: vi.fn(),
+      onError: vi.fn(),
+    });
+
+    expect(pub).toBeDefined();
+    expect(pub.sessionId).toBeDefined();
+
+    // Clean up
+    await pub.stop();
+    sub();
+  });
+});
+
 

@@ -64,15 +64,32 @@ export function normalizeLocation(row, serverClockOffset = 0) {
 }
 
 function waitForSubscription(channel, timeoutMs = 7000) {
+  if (channel.state === 'joined' || channel.channelAdapter?.isJoined?.()) {
+    return Promise.resolve('SUBSCRIBED');
+  }
   return new Promise((resolve) => {
     let settled = false;
+    let pollInterval = null;
     const finish = (status) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (pollInterval) clearInterval(pollInterval);
       resolve(status);
     };
     const timer = setTimeout(() => finish('TIMED_OUT'), timeoutMs);
+
+    if (channel.state === 'joining' || channel.channelAdapter?.isJoining?.()) {
+      pollInterval = setInterval(() => {
+        if (channel.state === 'joined' || channel.channelAdapter?.isJoined?.()) {
+          finish('SUBSCRIBED');
+        } else if (channel.state === 'closed' || channel.channelAdapter?.isClosed?.()) {
+          finish('CLOSED');
+        }
+      }, 100);
+      return;
+    }
+
     channel.subscribe((status) => {
       if (['SUBSCRIBED', 'CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) {
         finish(status);
@@ -145,11 +162,33 @@ export function formatArrivalFailure(res) {
  * destination yet. Returns { lat, lng, address, source, version } or null.
  */
 export async function prepareTrackingDestination(requestId) {
-  const { data, error } = await supabase.rpc('prepare_tracking_destination', {
-    p_request_id: requestId,
-  });
-  if (error) throw error;
-  return data?.prepared ? toDestination(data) : null;
+  try {
+    const { data, error } = await supabase.rpc('prepare_tracking_destination', {
+      p_request_id: requestId,
+    });
+    if (error) {
+      if (error.code === 'PGRST202' || error.message?.includes('404') || error.message?.includes('not found')) {
+        const { data: req } = await supabase
+          .from('requests')
+          .select('dest_lat, dest_lng, dest_address, dest_source, dest_version')
+          .eq('id', requestId)
+          .maybeSingle();
+        return toDestination(req);
+      }
+      throw error;
+    }
+    return data?.prepared ? toDestination(data) : null;
+  } catch (err) {
+    if (err?.code === 'PGRST202' || err?.message?.includes('404') || err?.message?.includes('not found')) {
+      const { data: req } = await supabase
+        .from('requests')
+        .select('dest_lat, dest_lng, dest_address, dest_source, dest_version')
+        .eq('id', requestId)
+        .maybeSingle();
+      return toDestination(req);
+    }
+    throw err;
+  }
 }
 
 /** Patient-side destination edit. Increments dest_version on the server. */
@@ -202,6 +241,18 @@ export async function startPublishing({
     },
   });
 
+  const statusChannel = supabase
+    .channel(`tracking-pub-status:${requestId}:${sessionId}`)
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'requests', filter: `id=eq.${requestId}` },
+      ({ new: row }) => {
+        if (row && row.status !== TRACKING_STATUS) {
+          stop(`status_${row.status?.toLowerCase() || 'ended'}`);
+        }
+      }
+    );
+
   const stop = (reason = 'ended') => {
     if (stopPromise) return stopPromise;
     stopped = true;
@@ -227,11 +278,21 @@ export async function startPublishing({
           p_session_id: sessionId,
           p_reason: reason,
         });
-        if (error) console.warn('[tracking] session end failed', error.message);
+        if (error && error.code !== 'PGRST202' && !error.message?.includes('404')) {
+          console.warn('[tracking] session end failed', error.message);
+        }
       } catch (err) {
         console.warn('[tracking] session end failed', err?.message || err);
       }
-      await supabase.removeChannel(channel);
+      try {
+        await supabase.removeChannel(statusChannel);
+      } catch { /* ignore */ }
+      try {
+        const sharedEntry = sharedSubscriptions.get(requestId);
+        if (!sharedEntry || sharedEntry.refCount <= 0) {
+          await supabase.removeChannel(channel);
+        }
+      } catch { /* ignore */ }
     })();
     return stopPromise;
   };
@@ -253,8 +314,27 @@ export async function startPublishing({
         p_speed: fix.speed,
         p_captured_at: capturedAt,
       })
-      .then(({ error }) => {
-        if (error) console.warn('[tracking] persist failed', error.message);
+      .then(async ({ error }) => {
+        if (error) {
+          if (error.code === 'PGRST202' || error.message?.includes('404') || error.message?.includes('not found')) {
+            try {
+              await supabase.from('provider_locations').upsert({
+                request_id: requestId,
+                session_id: sessionId,
+                seq: fix.seq,
+                lat: fix.lat,
+                lng: fix.lng,
+                accuracy: fix.accuracy,
+                heading: fix.heading,
+                speed: fix.speed,
+                captured_at: capturedAt,
+                updated_at: new Date().toISOString(),
+              }, { onConflict: 'request_id' });
+            } catch { /* ignore fallback errors */ }
+            return;
+          }
+          console.warn('[tracking] persist failed', error.message);
+        }
       })
       .catch((err) => console.warn('[tracking] persist failed', err?.message || err));
   };
@@ -272,13 +352,26 @@ export async function startPublishing({
 
       let { data, error } = await supabase.rpc('start_tracking_session', rpcPayload);
 
-      if (error && (error.code === 'PGRST202' || error.message?.includes('404')) && takeover) {
-        const fallbackRes = await supabase.rpc('start_tracking_session', {
-          p_request_id: requestId,
-          p_session_id: sessionId,
+      if (error && (error.code === 'PGRST202' || error.message?.includes('404') || error.message?.includes('not found'))) {
+        const { data: req, error: reqError } = await supabase
+          .from('requests')
+          .select('id, status, dest_lat, dest_lng, dest_address, dest_source, dest_version')
+          .eq('id', requestId)
+          .maybeSingle();
+
+        if (reqError) throw reqError;
+        if (!req || req.status !== TRACKING_STATUS) {
+          await stop('not_on_the_way');
+          return;
+        }
+
+        onSession?.({
+          sessionId,
+          status: 'active',
+          startedAt: Date.now(),
+          destination: toDestination(req),
         });
-        data = fallbackRes.data;
-        error = fallbackRes.error;
+        return;
       }
 
       if (error) {
@@ -335,15 +428,7 @@ export async function startPublishing({
     };
   }
 
-  channel.on(
-    'postgres_changes',
-    { event: 'UPDATE', schema: 'public', table: 'requests', filter: `id=eq.${requestId}` },
-    ({ new: row }) => {
-      if (row && row.status !== TRACKING_STATUS) {
-        stop(`status_${row.status?.toLowerCase() || 'ended'}`);
-      }
-    }
-  );
+  statusChannel.subscribe();
 
   const subStatus = await waitForSubscription(channel);
   if (subStatus !== 'SUBSCRIBED' && !stopped) {
@@ -359,6 +444,17 @@ export async function startPublishing({
       });
 
       if (error) {
+        if (error.code === 'PGRST202' || error.message?.includes('404') || error.message?.includes('not found')) {
+          const { data: req } = await supabase
+            .from('requests')
+            .select('status')
+            .eq('id', requestId)
+            .maybeSingle();
+          if (req && req.status !== TRACKING_STATUS) {
+            await stop(`status_${req.status.toLowerCase()}`);
+          }
+          return;
+        }
         if (error.code === '42501') {
           await stop('ended');
           return;
