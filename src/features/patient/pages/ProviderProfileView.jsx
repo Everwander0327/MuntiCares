@@ -11,6 +11,8 @@ import { supabase } from '@/lib/supabase';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
+import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 const getTrustLevel = (score) => {
   if (score >= 90) return { label: 'Highly Trusted', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
@@ -23,6 +25,8 @@ const ProviderProfileView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { isUserOnline } = usePresence();
+  const { user } = useAuth();
+  const [activeBooking, setActiveBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [provider, setProvider] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -52,6 +56,17 @@ const ProviderProfileView = () => {
         if (provError) throw provError;
 
         setProvider({ ...userData, ...provData });
+
+        if (user?.id) {
+          const { data: ongoingReq } = await supabase
+            .from('requests')
+            .select('id, status')
+            .eq('patient_id', user.id)
+            .eq('provider_id', id)
+            .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived'])
+            .maybeSingle();
+          setActiveBooking(ongoingReq || null);
+        }
 
         const { data: revData } = await supabase
           .from('provider_reviews')
@@ -89,7 +104,31 @@ const ProviderProfileView = () => {
       }
     };
     fetchData();
-  }, [id, navigate]);
+  }, [id, navigate, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !id) return;
+    const ch = supabase
+      .channel(`provider-profile-booking-${user.id}-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requests', filter: `patient_id=eq.${user.id}` },
+        async () => {
+          const { data: ongoingReq } = await supabase
+            .from('requests')
+            .select('id, status')
+            .eq('patient_id', user.id)
+            .eq('provider_id', id)
+            .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived'])
+            .maybeSingle();
+          setActiveBooking(ongoingReq || null);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [user?.id, id]);
 
   if (loading) {
     return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;
@@ -239,14 +278,25 @@ const ProviderProfileView = () => {
 
                 {/* Call to Actions */}
                 <div className="pt-1 space-y-2">
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate(`/patient/providers?book=${id}`)}
-                    className="w-full py-3 rounded-2xl neu-btn-primary font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                  >
-                    <CalendarDays className="w-4 h-4" />
-                    <span>Book — ₱{Number(provider.price_per_service || 0).toLocaleString()}</span>
-                  </motion.button>
+                  {activeBooking ? (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navigate('/patient/requests')}
+                      className="w-full py-3 rounded-2xl neu-btn font-bold text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <span>{activeBooking.status === 'Pending' ? 'Request Pending — View' : 'Ongoing Visit — Track Live'}</span>
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navigate(`/patient/providers?book=${id}`)}
+                      className="w-full py-3 rounded-2xl neu-btn-primary font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                    >
+                      <CalendarDays className="w-4 h-4" />
+                      <span>Book — ₱{Number(provider.price_per_service || 0).toLocaleString()}</span>
+                    </motion.button>
+                  )}
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate(`/patient/messages?provider=${id}&name=${encodeURIComponent(provider.full_name || '')}`)}
@@ -348,7 +398,19 @@ const ProviderProfileView = () => {
                 {displayedServices.map((s, i) => (
                   <button
                     key={i}
-                    onClick={() => navigate(`/patient/providers?book=${id}&service=${encodeURIComponent(s)}`)}
+                    onClick={() => {
+                      if (activeBooking) {
+                        toast(
+                          activeBooking.status === 'Pending'
+                            ? 'You already have a pending booking request with this provider. View it in My Requests.'
+                            : `You already have an ongoing visit (${activeBooking.status}) with this provider. Track it in My Requests.`,
+                          { icon: 'ℹ️' }
+                        );
+                        navigate('/patient/requests');
+                        return;
+                      }
+                      navigate(`/patient/providers?book=${id}&service=${encodeURIComponent(s)}`);
+                    }}
                     className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                   >
                     <div className="min-w-0 pr-2">

@@ -518,6 +518,58 @@ CREATE TRIGGER trg_protect_requests_integrity
   FOR EACH ROW
   EXECUTE FUNCTION public.protect_requests_integrity();
 
+-- 2.6 Protect new booking creation: prevent duplicate active/ongoing bookings between patient and provider
+CREATE OR REPLACE FUNCTION public.validate_new_request()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $
+BEGIN
+  -- Apply checks when an authenticated client (not admin/service_role) creates a request
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin() THEN
+    -- Patient must be the inserting user
+    IF NEW.patient_id != auth.uid() THEN
+      RAISE EXCEPTION 'Unauthorized: cannot create a booking on behalf of another user'
+        USING ERRCODE = '42501';
+    END IF;
+
+    -- Cannot book with self
+    IF NEW.provider_id = auth.uid() THEN
+      RAISE EXCEPTION 'Cannot book an appointment with yourself'
+        USING ERRCODE = '42501';
+    END IF;
+
+    -- Ensure initial status is always Pending
+    IF NEW.status IS DISTINCT FROM 'Pending' THEN
+      NEW.status := 'Pending';
+    END IF;
+
+    -- Prevent multiple active or ongoing bookings between the same patient and provider
+    IF EXISTS (
+      SELECT 1 FROM public.requests
+      WHERE patient_id = NEW.patient_id
+        AND provider_id = NEW.provider_id
+        AND status IN ('Pending', 'Accepted', 'On The Way', 'Arrived')
+    ) THEN
+      RAISE EXCEPTION 'You already have an active or ongoing booking with this provider'
+        USING ERRCODE = '42501';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$;
+
+REVOKE ALL ON FUNCTION public.validate_new_request() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.validate_new_request() TO authenticated;
+
+DROP TRIGGER IF EXISTS trg_validate_new_request ON public.requests;
+CREATE TRIGGER trg_validate_new_request
+  BEFORE INSERT ON public.requests
+  FOR EACH ROW
+  EXECUTE FUNCTION public.validate_new_request();
+
 
 -- ---------------------------------------------------------------------------
 -- PRIORITY 3: SESSION OWNERSHIP AND ERROR HANDLING

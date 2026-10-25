@@ -33,6 +33,7 @@ const PatientProviders = () => {
   const { isUserOnline } = usePresence();
   const [searchTerm, setSearchTerm] = useState('');
   const [requested, setRequested] = useState([]);
+  const [activeRequestsMap, setActiveRequestsMap] = useState({});
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchHistory, setSearchHistory] = useState([]);
@@ -161,12 +162,15 @@ const PatientProviders = () => {
         if (user) {
           const { data: existingRequests } = await supabase
             .from('requests')
-            .select('provider_id')
+            .select('provider_id, status')
             .eq('patient_id', user.id)
-            .eq('status', 'Pending');
+            .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
 
           if (existingRequests) {
             setRequested(existingRequests.map(r => r.provider_id));
+            const statusMap = {};
+            existingRequests.forEach(r => { statusMap[r.provider_id] = r.status; });
+            setActiveRequestsMap(statusMap);
           }
         }
       } catch (err) {
@@ -178,6 +182,35 @@ const PatientProviders = () => {
 
     fetchProviders();
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const ch = supabase
+      .channel(`patient-providers-requests-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requests', filter: `patient_id=eq.${user.id}` },
+        async () => {
+          const { data: ongoing } = await supabase
+            .from('requests')
+            .select('provider_id, status')
+            .eq('patient_id', user.id)
+            .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
+
+          if (ongoing) {
+            setRequested(ongoing.map((r) => r.provider_id));
+            const statusMap = {};
+            ongoing.forEach((r) => { statusMap[r.provider_id] = r.status; });
+            setActiveRequestsMap(statusMap);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!viewingProvider) return;
@@ -290,8 +323,14 @@ const PatientProviders = () => {
   }, [providers, searchTerm, sortBy]);
 
   const openBookingModal = (provider, presetService) => {
-    if (requested.includes(provider.id)) {
-      toast('You already have a pending booking with this provider. You can track or manage it in My Requests.', { icon: 'ℹ️' });
+    const existingStatus = activeRequestsMap[provider.id];
+    if (requested.includes(provider.id) || existingStatus) {
+      toast(
+        existingStatus === 'Pending'
+          ? `You already have a pending booking request with ${provider.full_name || 'this provider'}. You can track or manage it in My Requests.`
+          : `You already have an ongoing visit (${existingStatus || 'in progress'}) with ${provider.full_name || 'this provider'}. Track it in My Requests.`,
+        { icon: 'ℹ️' }
+      );
       navigate('/patient/requests');
       return;
     }
@@ -405,6 +444,30 @@ const PatientProviders = () => {
       // 1. Capture provider info before it gets cleared
       const providerId = selectedProvider.id;
 
+      // 1b. Defense-in-depth: verify no active booking with this provider exists before creating new one
+      const { data: existingActive } = await supabase
+        .from('requests')
+        .select('id, status')
+        .eq('patient_id', user.id)
+        .eq('provider_id', providerId)
+        .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived'])
+        .maybeSingle();
+
+      if (existingActive) {
+        toast(
+          existingActive.status === 'Pending'
+            ? 'You already have a pending booking request with this provider.'
+            : `You already have an ongoing visit (${existingActive.status}) with this provider. Track it in My Requests.`,
+          { icon: 'ℹ️' }
+        );
+        setRequested(prev => [...new Set([...prev, providerId])]);
+        setActiveRequestsMap(prev => ({ ...prev, [providerId]: existingActive.status }));
+        setBookingLoading(false);
+        setSelectedProvider(null);
+        navigate('/patient/requests');
+        return;
+      }
+
       // 2. Send the request
       const { error: reqError } = await supabase
         .from('requests')
@@ -441,7 +504,8 @@ const PatientProviders = () => {
         console.warn('Could not grant consent access:', consentErr);
       }
 
-      setRequested([...requested, providerId]);
+      setRequested(prev => [...new Set([...prev, providerId])]);
+      setActiveRequestsMap(prev => ({ ...prev, [providerId]: 'Pending' }));
       setSelectedProvider(null);
       setVisitDestination(
         patientHome?.lat != null
@@ -692,7 +756,7 @@ const PatientProviders = () => {
                   {requested.includes(p.id) ? (
                     <>
                       <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span>Request Sent</span>
+                      <span>{getBookingButtonLabel(p.id) || 'Request Sent'}</span>
                     </>
                   ) : (
                     <span>View Profile</span>
@@ -1283,7 +1347,7 @@ const PatientProviders = () => {
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>{requested.includes(viewingProvider.id) ? 'Request Sent' : `Book Appointment — ₱${Number(viewingProvider.price_per_service || 0).toLocaleString()}`}</span>
+                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || 'Ongoing Visit') : `Book Appointment — ₱${Number(viewingProvider.price_per_service || 0).toLocaleString()}`}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -1551,7 +1615,7 @@ const PatientProviders = () => {
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>{requested.includes(viewingProvider.id) ? 'Request Sent' : `Book Appointment — ₱${Number(viewingProvider.price_per_service || 0).toLocaleString()}`}</span>
+                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || 'Ongoing Visit') : `Book Appointment — ₱${Number(viewingProvider.price_per_service || 0).toLocaleString()}`}</span>
                 </button>
                 <button
                   onClick={() => {
