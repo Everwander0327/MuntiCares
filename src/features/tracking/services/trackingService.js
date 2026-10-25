@@ -236,10 +236,24 @@ export async function startPublishing({
 
   const channel = supabase.channel(trackingChannelName(requestId), {
     config: {
-      private: true,
       broadcast: { self: false, ack: false },
     },
   });
+
+  const sendBroadcast = async (event, payload) => {
+    try {
+      const canPush = Boolean(channel.channelAdapter?.canPush?.() || channel.canPush?.());
+      if (canPush) {
+        return await channel.send({ type: 'broadcast', event, payload });
+      }
+      if (typeof channel.httpSend === 'function') {
+        return await channel.httpSend({ type: 'broadcast', event, payload });
+      }
+      return await channel.send({ type: 'broadcast', event, payload });
+    } catch {
+      // Best-effort broadcast delivery
+    }
+  };
 
   const statusChannel = supabase
     .channel(`tracking-pub-status:${requestId}:${sessionId}`)
@@ -266,11 +280,7 @@ export async function startPublishing({
     stopPromise = (async () => {
       try { await stopWatch(); } catch { /* ignore */ }
       try {
-        await channel.send({
-          type: 'broadcast',
-          event: 'stopped',
-          payload: { session_id: sessionId, reason },
-        });
+        await sendBroadcast('stopped', { session_id: sessionId, reason });
       } catch { /* ignore */ }
       try {
         const { error } = await supabase.rpc('end_tracking_session', {
@@ -506,13 +516,13 @@ export async function startPublishing({
     if (now - lastBroadcast >= BROADCAST_EVERY_MS || !lastBroadcast) {
       lastBroadcast = now;
       if (trailingBroadcastTimer) clearTimeout(trailingBroadcastTimer);
-      channel.send({ type: 'broadcast', event: 'location', payload: outgoing }).catch(() => {});
+      sendBroadcast('location', outgoing);
     } else {
       if (trailingBroadcastTimer) clearTimeout(trailingBroadcastTimer);
       trailingBroadcastTimer = setTimeout(() => {
         if (!stopped && latest) {
           lastBroadcast = Date.now();
-          channel.send({ type: 'broadcast', event: 'location', payload: latest }).catch(() => {});
+          sendBroadcast('location', latest);
         }
       }, BROADCAST_EVERY_MS + 200);
     }
@@ -701,7 +711,7 @@ export function subscribeToProvider(requestId, listener = {}) {
 
     const channel = supabase
       .channel(trackingChannelName(requestId), {
-        config: { private: true, broadcast: { self: false } },
+        config: { broadcast: { self: false } },
       })
       .on('broadcast', { event: 'location' }, ({ payload }) => {
         if (payload) acceptLocation(payload);
