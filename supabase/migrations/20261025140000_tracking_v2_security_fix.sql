@@ -524,6 +524,9 @@ CREATE TRIGGER trg_protect_requests_integrity
 -- ---------------------------------------------------------------------------
 
 -- 3.1 start_tracking_session with session conflict detection & takeover parameter
+-- Drop older 2-argument signature to prevent PGRST203 function overloading ambiguity
+DROP FUNCTION IF EXISTS public.start_tracking_session(uuid, uuid);
+
 CREATE OR REPLACE FUNCTION public.start_tracking_session(
   p_request_id uuid,
   p_session_id uuid DEFAULT gen_random_uuid(),

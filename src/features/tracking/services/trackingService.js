@@ -355,14 +355,23 @@ export async function startPublishing({
       const rpcPayload = {
         p_request_id: requestId,
         p_session_id: sessionId,
+        p_takeover: Boolean(takeover),
       };
-      if (takeover) {
-        rpcPayload.p_takeover = true;
-      }
 
       let { data, error } = await supabase.rpc('start_tracking_session', rpcPayload);
 
-      if (error && (error.code === 'PGRST202' || error.message?.includes('404') || error.message?.includes('not found'))) {
+      // If database only has the older 2-arg signature without p_takeover, retry with 2 args:
+      if (error && error.code === 'PGRST202') {
+        const fallbackRes = await supabase.rpc('start_tracking_session', {
+          p_request_id: requestId,
+          p_session_id: sessionId,
+        });
+        data = fallbackRes.data;
+        error = fallbackRes.error;
+      }
+
+      // If ambiguous overload (PGRST203) or missing function (PGRST202 / 404):
+      if (error && (error.code === 'PGRST203' || error.code === 'PGRST202' || error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('best candidate'))) {
         const { data: req, error: reqError } = await supabase
           .from('requests')
           .select('id, status, dest_lat, dest_lng, dest_address, dest_source, dest_version')
@@ -385,7 +394,7 @@ export async function startPublishing({
       }
 
       if (error) {
-        if (error.code === '42501' || error.message?.includes('Not allowed')) {
+        if (error.code === '42501' || error.message?.includes('Not allowed') || error.message?.includes('Not authenticated')) {
           await stop('not_allowed');
           onError?.(new Error('You are not authorized to track this visit.'));
           return;
