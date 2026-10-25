@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   Clock, MapPin, MessageSquare, XCircle, FileUp, 
-  Search, SlidersHorizontal, Check, Calendar, Activity, 
-  ChevronRight, ChevronLeft, ArrowUpDown, Filter, Sparkles, X, ChevronDown,
-  AlertCircle, CheckCircle2, ShieldAlert, Navigation
+  Search, SlidersHorizontal, Check, Calendar,
+  ChevronRight, ChevronLeft, Sparkles, X, ChevronDown,
+  AlertCircle, CheckCircle2, Navigation
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -198,14 +198,10 @@ const RequestCard = ({
             <button
               type="button"
               onClick={() => onTrack({ id, providerId, patientId, provider, providerAvatarUrl, service })}
-              className="col-span-1 sm:col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-primary dark:text-[#8CBDF0] border-emerald-500/30 dark:border-emerald-400/30 flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform order-1"
+              className="col-span-1 sm:col-span-1 min-h-[44px] justify-center px-3.5 py-2.5 sm:py-2 rounded-lg text-xs font-bold text-primary dark:text-[#8CBDF0] bg-white/70 dark:bg-white/[0.04] border border-primary/25 dark:border-[#8CBDF0]/25 flex items-center gap-1.5 cursor-pointer hover:bg-primary/5 dark:hover:bg-[#8CBDF0]/10 active:scale-[0.98] transition-colors order-1"
             >
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <Navigation className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Track Live</span>
+              <Navigation className="w-4 h-4 shrink-0" />
+              <span className="truncate">Track live</span>
             </button>
           )}
 

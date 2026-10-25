@@ -1,15 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Navigation, Home, Loader2, ChevronDown, ChevronUp, AlertTriangle, MapPinned, Minimize2, Maximize2, MessageSquare } from 'lucide-react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import {
+  Home,
+  Loader2,
+  AlertTriangle,
+  MapPinned,
+  Minimize2,
+  Maximize2,
+  MessageSquare,
+  Clock,
+  Route,
+  MapPin,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { TRACKING_STATUS, prepareTrackingDestination, startPublishing } from '../services/trackingService';
+import {
+  TRACKING_STATUS,
+  TRACKING_STALE_MS,
+  ARRIVAL_RADIUS_M,
+  prepareTrackingDestination,
+  startPublishing,
+  markVisitArrived,
+  formatArrivalFailure,
+} from '../services/trackingService';
 import { isNative } from '../services/locationSource';
 import useRouteEta from '../hooks/useRouteEta';
+import useMediaQuery from '@/hooks/useMediaQuery';
 import { formatDistance, formatDuration } from '../services/geo';
 import TrackingMap from './TrackingMap';
+import { getProviderStatus, formatAccuracy, formatFreshness } from './trackingStatus';
+
+const STALE_AFTER_S = TRACKING_STALE_MS / 1000;
 
 /**
  * Global, always-mounted for providers. Automatically starts sharing GPS
@@ -73,10 +96,18 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   const destinationRef = useRef(destination);
   destinationRef.current = destination;
   const [near, setNear] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [view, setView] = useState('map'); // Redesign: underlined Map / Trip details tabs
+  const [follow, setFollow] = useState(true);
   const [minimized, setMinimized] = useState(false);
   const [arriving, setArriving] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const minimizeRef = useRef(null);
+  const expandRef = useRef(null);
+  const wasMinimizedRef = useRef(minimized);
+  const mapTabRef = useRef(null);
+  const detailsTabRef = useRef(null);
   const session = useRef(null);
   const error = gpsError || syncError;
   const { route, distance, duration } = useRouteEta(
@@ -84,6 +115,31 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
     destination,
     destination?.version || 0
   );
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Moving between the dock and the collapsed bar must not drop keyboard focus.
+  useEffect(() => {
+    if (wasMinimizedRef.current === minimized) return;
+    wasMinimizedRef.current = minimized;
+    if (minimized) expandRef.current?.focus();
+    else minimizeRef.current?.focus();
+  }, [minimized]);
+
+  const onTabKeyDown = (event) => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    const next = view === 'map' ? 'details' : 'map';
+    setView(next);
+    (next === 'map' ? mapTabRef : detailsTabRef).current?.focus();
+  };
+
+  useEffect(() => {
+    setNear(false);
+  }, [visit.dest_lat, visit.dest_lng]);
 
   useEffect(() => {
     if (visit.dest_lat == null || visit.dest_lng == null) return;
@@ -134,6 +190,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
           },
           onNearDestination: () => {
             setNear(true);
+            setView('map');
             setMinimized(false);
             toast.success("You're near the patient's address. Tap \"Arrived\" when you're there.", { duration: 6000 });
           },
@@ -178,23 +235,27 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   }, [visit.id, onArrived]);
 
   const markArrived = async () => {
-    if (!fix || fix.degraded) {
-      toast.error('Waiting for a precise GPS fix before marking arrived.');
+    const fixAge = fix?.timestamp ? Date.now() - fix.timestamp : null;
+    if (!fix || fix.degraded || fixAge == null || fixAge >= TRACKING_STALE_MS) {
+      toast.error('Waiting for a fresh, precise GPS fix before marking arrived.');
       return;
     }
     setArriving(true);
     try {
-      await session.current?.stop('arrived');
-    } catch { /* ignore */ }
-    const { error: err } = await supabase
-      .from('requests')
-      .update({ status: 'Arrived', arrived_at: new Date().toISOString() })
-      .eq('id', visit.id);
-    setArriving(false);
-    if (err) toast.error('Failed to mark arrived.');
-    else {
-      toast.success('Marked as arrived!');
-      onArrived?.();
+      const res = await markVisitArrived(visit.id, session.current?.sessionId);
+      if (res?.ok) {
+        toast.success('Marked as arrived!');
+        try {
+          await session.current?.stop('arrived');
+        } catch { /* ignore */ }
+        onArrived?.();
+      } else {
+        toast.error(formatArrivalFailure(res));
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Failed to mark arrived.');
+    } finally {
+      setArriving(false);
     }
   };
 
@@ -202,13 +263,29 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
     ? `https://www.google.com/maps/dir/?api=1&destination=${destination.lat},${destination.lng}&travelmode=driving`
     : null;
 
-  const statusLabel = error
-    ? 'Location issue'
-    : fix?.degraded
-      ? 'Coarse GPS · Recovering…'
-      : fix
-        ? 'On Route · Live GPS'
-        : 'Acquiring GPS…';
+  const ageS = fix?.timestamp ? Math.max(0, Math.round((now - fix.timestamp) / 1000)) : null;
+  const fixFresh = ageS != null && ageS < STALE_AFTER_S;
+  const stale = Boolean(fix) && !fixFresh;
+  const statusMeta = getProviderStatus({ fix, error, stale });
+  const freshness = formatFreshness(ageS);
+  const accuracy = formatAccuracy(fix?.accuracy);
+  const preciseFix = Boolean(fix) && !fix.degraded && fixFresh;
+  const fixQuality = !fix ? 'No GPS fix' : stale ? 'Last known fix' : fix.degraded ? 'Approximate GPS' : 'Precise GPS';
+
+  // Redesign: arrival stays locked until a fresh, precise fix AND within 50 m.
+  const withinArrival = near || (distance != null && distance <= ARRIVAL_RADIUS_M);
+  const canArrive = preciseFix && withinArrival;
+  const arrivalReason = !fix
+    ? 'Waiting for GPS'
+    : stale
+      ? 'GPS signal delayed — wait for a fresh fix'
+      : fix.degraded
+        ? 'Waiting for precise GPS'
+        : withinArrival
+          ? null
+          : distance == null
+            ? 'Visit location not set'
+            : `${formatDistance(distance)} from the visit — arrive within 50 m to unlock`;
 
   const patientName = visit.patient?.full_name || 'Patient';
   const patientAvatar = visit.patient?.avatar_url || null;
@@ -218,192 +295,314 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+  const patientTo = visit.patient_id ? `/provider/patients/${visit.patient_id}/profile` : null;
+  const chatTo = visit.patient_id
+    ? `/provider/messages?partner=${visit.patient_id}&name=${encodeURIComponent(patientName)}`
+    : null;
+
+  const { Icon: StatusIcon } = statusMeta;
+
+  const patientRow = (
+    <div className="mc-provider-row">
+      {patientTo ? (
+        <Link to={patientTo} title="View Patient Profile" className="shrink-0">
+          <div className="mc-avatar">
+            {patientAvatar ? <img src={patientAvatar} alt={patientName} /> : patientInitials}
+            <span className={`mc-avatar__dot${statusMeta.level === 'good' ? '' : statusMeta.level === 'caution' ? ' is-caution' : ' is-problem'}`} />
+          </div>
+        </Link>
+      ) : (
+        <div className="mc-avatar">
+          {patientAvatar ? <img src={patientAvatar} alt={patientName} /> : patientInitials}
+        </div>
+      )}
+
+      <div className="min-w-0 flex-1">
+        <p className="mc-kicker">On the way to</p>
+        {patientTo ? (
+          <Link to={patientTo} className="mc-provider-name block">{patientName}</Link>
+        ) : (
+          <p className="mc-provider-name">{patientName}</p>
+        )}
+        <p className="mc-muted truncate">{visit.service || 'Home care visit'}</p>
+      </div>
+
+      {chatTo && (
+        <Link
+          to={chatTo}
+          title="Message Patient"
+          aria-label={`Message ${patientName}`}
+          className="mc-icon-btn"
+        >
+          <MessageSquare className="w-4 h-4" />
+        </Link>
+      )}
+      <button
+        ref={minimizeRef}
+        type="button"
+        onClick={() => setMinimized(true)}
+        title="Collapse live tracking"
+        aria-label="Collapse live tracking panel"
+        className="mc-icon-btn"
+      >
+        <Minimize2 className="w-4 h-4" />
+      </button>
+    </div>
+  );
+
+  const statusLine = (
+    <span className={`mc-status-line mc-status-line--inline is-${statusMeta.level}`}>
+      <span
+        className={`mc-status-dot is-${statusMeta.level}${statusMeta.pulse ? ' mc-status-dot--pulse' : ''}`}
+        aria-hidden="true"
+      >
+        <StatusIcon className={statusMeta.spin ? 'animate-spin' : ''} />
+      </span>
+      <span className="mc-status-line__label" role="status" aria-live="polite">
+        {statusMeta.label}
+      </span>
+      {accuracy && (
+        <>
+          <span className="mc-status-line__sep" aria-hidden="true">·</span>
+          <span className="mc-status-line__meta">{accuracy}</span>
+        </>
+      )}
+      <span className="mc-status-line__sep" aria-hidden="true">·</span>
+      <span className="mc-status-line__meta">{freshness}</span>
+    </span>
+  );
+
+  const etaBlock = (
+    <div className="mc-eta-block">
+      <div className="mc-eta-copy min-w-0">
+        <p className="mc-kicker">Estimated arrival</p>
+        <div className="mc-eta-value">{formatDuration(duration)}</div>
+        <p className="mc-eta-meta">
+          <span>{freshness}</span>
+          <span className="mc-dot-sep" aria-hidden="true" />
+          <span>{fixQuality}</span>
+        </p>
+      </div>
+      <div className="shrink-0 text-right">
+        <p className="mc-kicker">Distance</p>
+        <div className="mc-distance-value">{formatDistance(distance)}</div>
+      </div>
+    </div>
+  );
+
+  const primaryAction = withinArrival ? (
+    <button
+      type="button"
+      onClick={markArrived}
+      disabled={arriving || !canArrive}
+      className="mc-btn mc-btn--success mc-btn--block"
+      title={arrivalReason || 'Mark arrived'}
+    >
+      {arriving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Home className="w-4 h-4" />}
+      {arriving ? 'Marking arrived…' : 'Arrived'}
+    </button>
+  ) : (
+    <a
+      href={navUrl || '#'}
+      target="_blank"
+      rel="noreferrer"
+      className={`mc-btn mc-btn--primary mc-btn--block${!navUrl ? ' pointer-events-none opacity-50' : ''}`}
+      aria-disabled={!navUrl}
+    >
+      <MapPinned className="w-4 h-4" />
+      Navigate
+    </a>
+  );
+
+  const secondaryAction = withinArrival ? (
+    <a
+      href={navUrl || '#'}
+      target="_blank"
+      rel="noreferrer"
+      className={`mc-btn mc-btn--secondary mc-btn--block${!navUrl ? ' pointer-events-none opacity-50' : ''}`}
+      aria-disabled={!navUrl}
+    >
+      <MapPinned className="w-4 h-4" />
+      Navigate
+    </a>
+  ) : (
+    <button
+      type="button"
+      onClick={markArrived}
+      disabled={arriving || !canArrive}
+      className="mc-btn mc-btn--secondary mc-btn--block"
+    >
+      <Home className="w-4 h-4" />
+      Arrived
+    </button>
+  );
+
+  const tripDetails = (
+    <div className="mc-stack mc-stack--tight">
+      <div className="mc-metric-row">
+        <MapPin className="w-4 h-4" />
+        <span className="truncate">{destination?.address || 'Visit location not confirmed'}</span>
+      </div>
+      <div className="mc-metric-row">
+        <Clock className="w-4 h-4" />
+        <span>{freshness}</span>
+        <span className="mc-dot-sep" aria-hidden="true" />
+        <span>{fixQuality}</span>
+      </div>
+      <div className="mc-metric-row">
+        <Route className="w-4 h-4" />
+        <span>{formatDistance(distance)} remaining</span>
+      </div>
+      {!isNative() && (
+        <p className="mc-muted">
+          Keep this screen open while traveling. Use the MuntiCares app for background tracking.
+        </p>
+      )}
+    </div>
+  );
+
+  const alerts = (
+    <>
+      {error && (
+        <div className="mc-note mc-note--problem" role="alert">
+          <AlertTriangle className="w-4 h-4" />
+          <span className="flex-1">{error}</span>
+          <button type="button" onClick={() => setRetryKey((k) => k + 1)} className="mc-link">
+            Retry GPS
+          </button>
+        </div>
+      )}
+      {!error && (fix?.degraded || !destination) && (
+        <div className="mc-note">
+          <AlertTriangle className="w-4 h-4" />
+          <span>
+            {fix?.degraded
+              ? `GPS accuracy is ${formatAccuracy(fix.rawAccuracy || fix.accuracy) || 'low'}. Arrival will unlock after a precise fix.`
+              : 'The patient has not confirmed a visit destination yet. Navigation and arrival distance are unavailable.'}
+          </span>
+        </div>
+      )}
+    </>
+  );
 
   return (
-    <AnimatePresence mode="wait">
-      {minimized ? (
+    <MotionConfig reducedMotion="user">
+      <AnimatePresence>
+        {minimized ? (
         <motion.button
-          key="minimized-pill"
+          ref={expandRef}
+          key="collapsed-bar"
           type="button"
           onClick={() => setMinimized(false)}
-          initial={{ scale: 0.85, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.85, opacity: 0 }}
-          title="Expand Live Route Tracker"
-          className="fixed z-[900] right-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] lg:bottom-6 lg:right-6 neu-flat px-3.5 py-2.5 rounded-full shadow-2xl border border-white/70 dark:border-white/10 flex items-center gap-2.5 cursor-pointer hover:scale-[1.02] active:scale-95 transition-transform"
-        >
-          <span className="relative flex h-2.5 w-2.5 shrink-0">
-            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${error ? 'bg-rose-400' : 'bg-emerald-400'}`} />
-            <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${error ? 'bg-rose-500' : 'bg-emerald-500'}`} />
-          </span>
-          <Navigation className="w-4 h-4 text-primary shrink-0" />
-          <div className="text-left">
-            <p className="text-3xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 leading-none">
-              {statusLabel}
-            </p>
-            <p className="text-2xs font-bold text-slate-800 dark:text-white tabular-nums leading-tight mt-0.5">
-              {formatDuration(duration)} · {formatDistance(distance)}
-            </p>
-          </div>
-          <Maximize2 className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
-        </motion.button>
-      ) : (
-        <motion.div
-          key="expanded-card"
-          initial={{ y: 80, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 80, opacity: 0 }}
-          className="fixed z-[900] left-3 right-3 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] sm:left-auto sm:right-4 sm:w-[370px] lg:bottom-6 lg:right-6 lg:w-[390px]"
-        >
-          <div className="neu-flat rounded-[1.75rem] overflow-hidden shadow-2xl border border-white/60 dark:border-white/10">
-            <AnimatePresence initial={false}>
-              {expanded && (
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: 210 }}
-                  exit={{ height: 0 }}
-                  className="overflow-hidden border-b border-[#D2E0EE]/70 dark:border-[#2D3F54]"
-                >
-                  <TrackingMap
-                    provider={fix}
-                    destination={destination}
-                    route={route}
-                    follow
-                    compact
-                    providerAvatar={providerAvatar}
-                    providerName={providerName}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="p-3.5 sm:p-4 space-y-3">
-              <div className="flex items-center gap-3">
-                <Link
-                  to={visit.patient_id ? `/provider/patients/${visit.patient_id}/profile` : '#'}
-                  title="View Patient Profile"
-                  className="relative w-10 h-10 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0 overflow-hidden text-primary dark:text-[#8CBDF0] font-black text-xs"
-                >
-                  {patientAvatar ? (
-                    <img src={patientAvatar} alt={patientName} className="w-full h-full object-cover" />
-                  ) : (
-                    patientInitials || <Navigation className="w-5 h-5 text-primary dark:text-[#8CBDF0]" />
-                  )}
-                  {fix && !error && (
-                    <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white dark:border-slate-900" />
-                    </span>
-                  )}
-                </Link>
-                <div className="min-w-0 flex-1">
-                  <p className="text-3xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                    {error
-                      ? 'Location issue'
-                      : fix?.degraded
-                        ? 'Coarse GPS · Recovering…'
-                        : fix
-                          ? 'On Route · Sharing live location'
-                          : 'Acquiring GPS…'}
+            initial={{ opacity: 0, y: isDesktop ? 0 : 16, x: isDesktop ? 16 : 0 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: isDesktop ? 0 : 16, x: isDesktop ? 16 : 0 }}
+            title="Expand Live Route Tracker"
+            aria-label={`${statusMeta.label}. Expand live route tracker.`}
+            aria-expanded="false"
+            className={`mc-tracker mc-provider-collapsed ${isDesktop ? 'mc-provider-collapsed--desktop' : 'mc-provider-collapsed--mobile'}`}
+          >
+            <span
+              className={`mc-status-dot is-${statusMeta.level}${statusMeta.pulse ? ' mc-status-dot--pulse' : ''}`}
+              aria-hidden="true"
+            >
+              <StatusIcon className={statusMeta.spin ? 'animate-spin' : ''} />
+            </span>
+            <span className="mc-provider-collapsed__text">
+              <span className="mc-provider-collapsed__label" role="status" aria-live="polite">{statusMeta.label}</span>
+              <span className="mc-provider-collapsed__value">
+                {formatDuration(duration)} · {formatDistance(distance)}
+              </span>
+            </span>
+            <Maximize2 className="w-4 h-4 shrink-0" />
+          </motion.button>
+        ) : (
+          <motion.section
+            key="docked-panel"
+            initial={{ opacity: 0, y: isDesktop ? 0 : 24, x: isDesktop ? 24 : 0 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: isDesktop ? 0 : 24, x: isDesktop ? 24 : 0 }}
+            className={`mc-tracker mc-provider-dock ${isDesktop ? 'mc-provider-dock--desktop' : 'mc-provider-dock--mobile'}`}
+            aria-label="Live route tracker"
+          >
+            <div className="mc-provider-scroll">
+              {patientRow}
+              {statusLine}
+              <div className="mc-divider" />
+              {etaBlock}
+  
+              <div className="mc-actions">
+                {primaryAction}
+                {secondaryAction}
+                {arrivalReason && (
+                  <p className="mc-lock-reason">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    {arrivalReason}
                   </p>
-                  <Link
-                    to={visit.patient_id ? `/provider/patients/${visit.patient_id}/profile` : '#'}
-                    className="text-xs font-bold text-slate-800 dark:text-white hover:text-primary dark:hover:text-[#8CBDF0] transition-colors truncate block"
-                  >
-                    {patientName} · {visit.service}
-                  </Link>
-                  <p className="text-2xs text-slate-500 dark:text-slate-400 font-semibold tabular-nums">
-                    {formatDuration(duration)} · {formatDistance(distance)}
-                    {fix?.accuracy ? ` · ±${Math.round(fix.accuracy)}m` : ''}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {visit.patient_id && (
-                    <Link
-                      to={`/provider/messages?partner=${visit.patient_id}&name=${encodeURIComponent(patientName)}`}
-                      title="Message Patient"
-                      className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-primary dark:text-[#8CBDF0] cursor-pointer"
-                    >
-                      <MessageSquare className="w-3.5 h-3.5" />
-                    </Link>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setExpanded((e) => !e)}
-                    title={expanded ? 'Hide map' : 'Show map'}
-                    className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-300 cursor-pointer"
-                  >
-                    {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setExpanded(false); setMinimized(true); }}
-                    title="Minimize tracker"
-                    className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-300 cursor-pointer"
-                  >
-                    <Minimize2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                )}
+                {withinArrival && !arrivalReason && (
+                  <p className="mc-muted">You are within 50 m of the visit location.</p>
+                )}
               </div>
-
-              {error && (
-                <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 space-y-1.5">
-                  <div className="flex items-start gap-1.5 text-2xs font-semibold leading-relaxed">
-                    <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-rose-500" />
-                    <span className="flex-1">{error}</span>
-                  </div>
-                  <div className="flex justify-end pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setRetryKey((k) => k + 1)}
-                      className="neu-btn px-2.5 py-1 rounded-lg text-3xs font-extrabold text-rose-600 hover:text-rose-700 cursor-pointer"
-                    >
-                      Retry GPS
-                    </button>
-                  </div>
-                </div>
-              )}
-              {!error && (fix?.degraded || !destination) && (
-                <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 flex items-start gap-1.5 text-2xs font-semibold leading-relaxed">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5 text-amber-500" />
-                  <span className="flex-1">
-                    {fix?.degraded
-                      ? `GPS accuracy is ±${Math.round(fix.rawAccuracy || fix.accuracy || 0)}m. Arrival will unlock after a precise fix.`
-                      : 'The patient has not confirmed a visit destination yet. Navigation and arrival distance are unavailable.'}
-                  </span>
-                </div>
-              )}
-              {!isNative() && !error && (
-                <p className="text-3xs text-slate-400 dark:text-slate-400 font-medium leading-snug">
-                  Keep this screen open while traveling. Use the MuntiCares app for background tracking.
-                </p>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <a
-                  href={navUrl || '#'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`neu-btn px-3 py-2.5 rounded-xl text-xs font-bold text-primary dark:text-[#8CBDF0] flex items-center justify-center gap-1.5 ${!navUrl ? 'opacity-40 pointer-events-none' : ''}`}
-                >
-                  <MapPinned className="w-3.5 h-3.5" /> Navigate
-                </a>
-                <button
-                  type="button"
-                  onClick={markArrived}
-                  disabled={arriving || !fix || fix.degraded}
-                  className={`px-3 py-2.5 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm disabled:opacity-40 disabled:cursor-not-allowed ${
-                    near ? 'bg-emerald-600 hover:bg-emerald-700 animate-pulse' : 'bg-amber-500 hover:bg-amber-600'
-                  }`}
-                >
-                  {arriving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Home className="w-3.5 h-3.5" />}
-                  {fix?.degraded ? 'Waiting GPS' : 'Arrived'}
-                </button>
-              </div>
+  
+              {alerts}
+  
+            <div className="mc-tabs" role="tablist" aria-label="Tracking panel view" onKeyDown={onTabKeyDown}>
+              <button
+                ref={mapTabRef}
+                type="button"
+                role="tab"
+                id="provider-tab-map"
+                aria-controls="provider-view-map"
+                aria-selected={view === 'map'}
+                tabIndex={view === 'map' ? 0 : -1}
+                className="mc-tab"
+                onClick={() => setView('map')}
+              >
+                Map
+              </button>
+              <button
+                ref={detailsTabRef}
+                type="button"
+                role="tab"
+                id="provider-tab-details"
+                aria-controls="provider-view-details"
+                aria-selected={view === 'details'}
+                tabIndex={view === 'details' ? 0 : -1}
+                className="mc-tab"
+                onClick={() => setView('details')}
+              >
+                Trip details
+              </button>
             </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+
+            <div
+              role="tabpanel"
+              id={`provider-view-${view}`}
+              aria-labelledby={`provider-tab-${view}`}
+              className={view === 'map' ? 'mc-provider-map' : undefined}
+            >
+              {view === 'map' ? (
+                <TrackingMap
+                  provider={fix}
+                  destination={destination}
+                  route={route}
+                  follow={follow}
+                  onToggleFollow={setFollow}
+                  compact
+                  providerAvatar={providerAvatar}
+                  providerName={providerName}
+                  stale={stale}
+                  waiting={!fix}
+                />
+              ) : (
+                tripDetails
+              )}
+            </div>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </MotionConfig>
   );
 }

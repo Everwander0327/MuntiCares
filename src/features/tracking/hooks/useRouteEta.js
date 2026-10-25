@@ -3,84 +3,282 @@ import { getRoute } from '../services/routing';
 import { distanceToPolyline, haversine, projectOnRoute } from '../services/geo';
 
 const MIN_FETCH_MS = 5000;
-const REROUTE_OFF_PATH_M = 100;
-const REROUTE_EVERY_MS = 60000;
+const OFF_ROUTE_SAMPLES_THRESHOLD = 3;
+
+// Global shared store per destination/request key so multiple components share identical route & ETA
+const sharedEtaStore = new Map();
+
+function getStoreKey(requestId, destination, destVersion) {
+  if (requestId) return `req:${requestId}`;
+  if (destination?.lat != null && destination?.lng != null) {
+    return `dest:${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}:${destVersion || 0}`;
+  }
+  return null;
+}
+
+/**
+ * Precomputes cumulative segment lengths once for a route geometry.
+ */
+function prepareRouteGeometry(coords, rawDistance, rawDuration) {
+  if (!Array.isArray(coords) || coords.length < 2) return null;
+
+  const segments = [];
+  let totalLength = 0;
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const len = haversine(
+      { lat: coords[i][0], lng: coords[i][1] },
+      { lat: coords[i + 1][0], lng: coords[i + 1][1] }
+    );
+    segments.push({
+      index: i,
+      start: coords[i],
+      end: coords[i + 1],
+      length: len,
+      before: totalLength,
+    });
+    totalLength += len;
+  }
+
+  return {
+    coords,
+    distance: rawDistance || totalLength,
+    duration: rawDuration,
+    totalLength,
+    segments,
+  };
+}
+
+/**
+ * Projects provider onto precomputed route segments forward from the last known segment index.
+ */
+function projectOnPreparedRoute(provider, preparedRoute, lastIndex = 0) {
+  if (!provider || !preparedRoute || !preparedRoute.segments.length) return null;
+
+  const { coords, segments, totalLength } = preparedRoute;
+  if (!(totalLength > 0)) return null;
+
+  const toRad = (d) => (d * Math.PI) / 180;
+  const kx = Math.cos(toRad(provider.lat)) * 111320;
+  const ky = 110540;
+
+  let best = null;
+  // Search window: check a few segments before lastIndex in case of minor GPS jitter, then forward
+  const startIdx = Math.max(0, lastIndex - 2);
+
+  for (let i = startIdx; i < segments.length; i++) {
+    const seg = segments[i];
+    const ax = (seg.start[1] - provider.lng) * kx;
+    const ay = (seg.start[0] - provider.lat) * ky;
+    const bx = (seg.end[1] - provider.lng) * kx;
+    const by = (seg.end[0] - provider.lat) * ky;
+    const dx = bx - ax;
+    const dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len2)) : 0;
+    const cx = ax + t * dx;
+    const cy = ay + t * dy;
+    const offRoute = Math.hypot(cx, cy);
+    const along = seg.before + t * seg.length;
+
+    if (!best || offRoute < best.offRoute) {
+      best = {
+        index: i,
+        lat: seg.start[0] + t * (seg.end[0] - seg.start[0]),
+        lng: seg.start[1] + t * (seg.end[1] - seg.start[1]),
+        along,
+        remaining: Math.max(0, totalLength - along),
+        total: totalLength,
+        offRoute,
+      };
+    }
+  }
+
+  // Fallback to full route projection if search forward did not yield a close segment
+  if (!best || best.offRoute > 250) {
+    const fullProj = projectOnRoute(provider, coords);
+    return fullProj ? { ...fullProj, index: 0 } : best;
+  }
+
+  return best;
+}
 
 /**
  * Keeps an OSRM route + ETA up to date as the provider moves.
- * Provider movement never aborts an in-flight request; destination changes
- * invalidate it instead. ETA between refetches is scaled by the provider's
- * projection onto the current route rather than by straight-line distance.
+ * - Shared store per request/destination key
+ * - Returns explicit source: 'route' | 'estimate'
+ * - Reroutes only when destination changes or 3 consecutive off-route samples occur
+ * - Precomputed segment lengths and monotonic progress forward
  */
-export default function useRouteEta(provider, destination, destVersion = 0) {
-  const [route, setRoute] = useState(null);
-  const routeRef = useRef(null);
-  routeRef.current = route;
-  const meta = useRef({ at: 0, destKey: null });
-  const busy = useRef(false);
-  const token = useRef(0);
+export default function useRouteEta(provider, destination, destVersion = 0, requestId = null) {
+  const storeKey = getStoreKey(requestId, destination, destVersion);
+
+  const [state, setState] = useState(() => {
+    if (storeKey && sharedEtaStore.has(storeKey)) {
+      return sharedEtaStore.get(storeKey).value;
+    }
+    return { route: null, distance: null, duration: null, source: 'estimate' };
+  });
+
+  const internalRef = useRef({
+    preparedRoute: null,
+    lastIndex: 0,
+    lastRemaining: Infinity,
+    consecutiveOffRoute: 0,
+    lastFetchAt: 0,
+    busy: false,
+    token: 0,
+  });
 
   const hasDestination = destination?.lat != null && destination?.lng != null;
-  const destKey = hasDestination
-    ? `${destination.lat.toFixed(6)},${destination.lng.toFixed(6)}:${destVersion}`
-    : null;
 
+  // Subscribe to shared store changes for this key
   useEffect(() => {
-    token.current += 1;
-    busy.current = false;
-    meta.current = { at: 0, destKey };
-    routeRef.current = null;
-    setRoute(null);
-  }, [destKey]);
+    if (!storeKey) return;
+    let store = sharedEtaStore.get(storeKey);
+    if (!store) {
+      store = {
+        value: { route: null, distance: null, duration: null, source: 'estimate' },
+        listeners: new Set(),
+      };
+      sharedEtaStore.set(storeKey, store);
+    }
 
+    const listener = (val) => setState(val);
+    store.listeners.add(listener);
+
+    return () => {
+      store.listeners.delete(listener);
+      if (store.listeners.size === 0) {
+        sharedEtaStore.delete(storeKey);
+      }
+    };
+  }, [storeKey]);
+
+  // Destination change: reset route and off-route trackers
   useEffect(() => {
-    if (provider?.lat == null || provider?.lng == null || !destKey) return;
+    const internal = internalRef.current;
+    internal.token += 1;
+    internal.busy = false;
+    internal.lastFetchAt = 0;
+    internal.preparedRoute = null;
+    internal.lastIndex = 0;
+    internal.lastRemaining = Infinity;
+    internal.consecutiveOffRoute = 0;
+  }, [destination?.lat, destination?.lng, destVersion]);
+
+  // Route fetching and off-route evaluation
+  useEffect(() => {
+    if (provider?.lat == null || provider?.lng == null || !hasDestination || !storeKey) return;
+
+    const internal = internalRef.current;
     const now = Date.now();
-    if (busy.current || now - meta.current.at < MIN_FETCH_MS) return;
 
-    const off = routeRef.current
-      ? distanceToPolyline(provider, routeRef.current.coords)
-      : Infinity;
-    const stale = now - meta.current.at > REROUTE_EVERY_MS;
-    if (routeRef.current && off < REROUTE_OFF_PATH_M && !stale) return;
+    if (internal.busy || now - internal.lastFetchAt < MIN_FETCH_MS) return;
 
-    const myToken = ++token.current;
-    busy.current = true;
+    let shouldFetch = false;
+
+    if (!internal.preparedRoute) {
+      shouldFetch = true;
+    } else {
+      const offRouteDist = distanceToPolyline(provider, internal.preparedRoute.coords);
+      const accuracyAwareThreshold = Math.max(100, (provider.accuracy || 30) * 1.5);
+
+      if (offRouteDist > accuracyAwareThreshold) {
+        internal.consecutiveOffRoute += 1;
+        if (internal.consecutiveOffRoute >= OFF_ROUTE_SAMPLES_THRESHOLD) {
+          shouldFetch = true;
+        }
+      } else {
+        internal.consecutiveOffRoute = 0;
+      }
+    }
+
+    if (!shouldFetch) return;
+
+    const myToken = ++internal.token;
+    internal.busy = true;
+
     getRoute(provider, destination)
       .then((next) => {
-        if (myToken !== token.current) return;
-        meta.current = { at: Date.now(), destKey };
-        if (next) {
-          routeRef.current = next;
-          setRoute(next);
+        if (myToken !== internal.token) return;
+        internal.lastFetchAt = Date.now();
+        internal.consecutiveOffRoute = 0;
+
+        if (next && next.coords) {
+          internal.preparedRoute = prepareRouteGeometry(next.coords, next.distance, next.duration);
+          internal.lastIndex = 0;
+          internal.lastRemaining = internal.preparedRoute.totalLength;
         }
       })
       .finally(() => {
-        if (myToken === token.current) busy.current = false;
+        if (myToken === internal.token) internal.busy = false;
       });
-  }, [provider?.lat, provider?.lng, destKey]);
+  }, [provider?.lat, provider?.lng, hasDestination, storeKey, destination]);
 
-  let distance = null;
-  let duration = null;
+  // Calculate projected distance, duration, and monotonic progress
+  useEffect(() => {
+    if (provider?.lat == null || !hasDestination || !storeKey) {
+      const emptyVal = { route: null, distance: null, duration: null, source: 'estimate' };
+      const store = sharedEtaStore.get(storeKey);
+      if (store) {
+        store.value = emptyVal;
+        store.listeners.forEach((l) => l(emptyVal));
+      } else {
+        setState(emptyVal);
+      }
+      return;
+    }
 
-  if (provider?.lat != null && hasDestination) {
+    const internal = internalRef.current;
     const straight = haversine(provider, destination);
-    const projection = route ? projectOnRoute(provider, route.coords) : null;
+    let distance = null;
+    let duration = null;
+    let source = 'estimate';
 
-    if (route && projection?.total > 0) {
-      const scale = route.distance / projection.total;
-      distance = projection.remaining * scale;
-      duration = route.duration * (projection.remaining / projection.total);
+    if (internal.preparedRoute) {
+      const projection = projectOnPreparedRoute(provider, internal.preparedRoute, internal.lastIndex);
 
-      if (projection.offRoute > REROUTE_OFF_PATH_M * 2) {
+      if (projection && projection.total > 0 && projection.offRoute <= Math.max(150, (provider.accuracy || 30) * 2)) {
+        source = 'route';
+        internal.lastIndex = projection.index;
+
+        const scale = internal.preparedRoute.distance / projection.total;
+        const currentRemaining = projection.remaining * scale;
+
+        // Monotonic remaining distance along the route
+        if (currentRemaining < internal.lastRemaining) {
+          internal.lastRemaining = currentRemaining;
+        }
+        distance = internal.lastRemaining;
+        duration = internal.preparedRoute.duration * (internal.lastRemaining / internal.preparedRoute.distance);
+      } else {
+        // Fallback estimate
+        source = 'estimate';
         distance = straight * 1.4;
         duration = (distance / 1000 / 20) * 3600;
       }
     } else {
+      source = 'estimate';
       distance = straight * 1.4;
       duration = (distance / 1000 / 20) * 3600;
     }
-  }
 
-  return { route: route?.coords || null, distance, duration };
+    const nextVal = {
+      route: internal.preparedRoute?.coords || null,
+      distance,
+      duration,
+      source,
+    };
+
+    const store = sharedEtaStore.get(storeKey);
+    if (store) {
+      store.value = nextVal;
+      store.listeners.forEach((l) => l(nextVal));
+    } else {
+      setState(nextVal);
+    }
+  }, [provider?.lat, provider?.lng, provider?.accuracy, hasDestination, storeKey, destination]);
+
+  return state;
 }

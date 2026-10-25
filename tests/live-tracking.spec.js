@@ -105,7 +105,7 @@ test.describe('Live GPS Tracking Flow', () => {
     await loginAs(page, PROVIDER_EMAIL, PROVIDER_PASSWORD);
     await page.goto('/provider/requests');
 
-    await expect(page.getByText(/Sharing live location|Coarse GPS|Location issue/i).first()).toBeVisible({ timeout: 20000 });
+    await expect(page.getByText(/On route · Live GPS|Acquiring GPS|Approximate location|Location issue/i).first()).toBeVisible({ timeout: 20000 });
     await expect(page.getByText(/Physical Therapy \(Live GPS Test\)/).first()).toBeVisible();
 
     await page.waitForTimeout(4000);
@@ -146,11 +146,11 @@ test.describe('Live GPS Tracking Flow', () => {
 
     await page.goto('/patient/dashboard');
     await expect(page.getByText('Active Home Care Visit')).toBeVisible({ timeout: 15000 });
-    const dashTrackBtn = page.getByRole('button', { name: /Track Live/i }).first();
-    await expect(dashTrackBtn).toBeVisible();
-    await dashTrackBtn.click();
+    const dashTrackLink = page.getByRole('link', { name: /Track live/i }).first();
+    await expect(dashTrackLink).toBeVisible();
+    await dashTrackLink.click();
 
-    await expect(page.getByText('Provider on the way')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.mc-status-line__label').filter({ hasText: 'Live GPS' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('.leaflet-container')).toBeVisible({ timeout: 15000 });
     await page.getByTitle('Close tracker').click();
 
@@ -161,12 +161,12 @@ test.describe('Live GPS Tracking Flow', () => {
     await expect(trackBtn).toBeVisible({ timeout: 15000 });
     await trackBtn.click();
 
-    await expect(page.getByText('Provider on the way')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.mc-status-line__label').filter({ hasText: 'Live GPS' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('.leaflet-container')).toBeVisible();
     await expect(page.locator('.mc-provider-marker')).toBeVisible({ timeout: 15000 });
     await expect(page.locator('.mc-home-marker')).toBeVisible();
-    await expect(page.getByText('ETA', { exact: true })).toBeVisible();
-    await expect(page.getByText('Distance', { exact: true })).toBeVisible();
+    await expect(page.getByText('Estimated arrival', { exact: true })).toBeVisible();
+    await expect(page.getByText(/away$/).first()).toBeVisible();
   });
 
   test('3. Patient profile location picker is available', async ({ page, context }) => {
@@ -192,7 +192,7 @@ test.describe('Live GPS Tracking Flow', () => {
     const trackBtn = patientPage.getByRole('button', { name: /Track Live/i }).first();
     await expect(trackBtn).toBeVisible({ timeout: 15000 });
     await trackBtn.click();
-    await expect(patientPage.getByText('Provider on the way')).toBeVisible({ timeout: 15000 });
+    await expect(patientPage.locator('.mc-status-line__label').filter({ hasText: 'Live GPS' }).first()).toBeVisible({ timeout: 15000 });
 
     const providerContext = await browser.newContext();
     await providerContext.grantPermissions(['geolocation']);
@@ -207,8 +207,8 @@ test.describe('Live GPS Tracking Flow', () => {
     await expect(arrivedBtn).toBeEnabled({ timeout: 20000 });
     await arrivedBtn.click();
 
-    await expect(patientPage.getByText('Your provider has arrived')).toBeVisible({ timeout: 20000 });
-    await expect(patientPage.getByText('Here', { exact: true })).toBeVisible();
+    await expect(patientPage.locator('.mc-status-line__label').filter({ hasText: 'Arrived' }).first()).toBeVisible({ timeout: 20000 });
+    await expect(patientPage.getByText('On site', { exact: true }).first()).toBeVisible();
 
     await patientContext.close();
     await providerContext.close();

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Clock, CheckCircle2, AlertCircle, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, Star, RotateCcw, ArrowRight, Sparkles, PhoneCall } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, Star, RotateCcw, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import useCountUp from '@/hooks/useCountUp';
 import usePatientRequests from '@/hooks/usePatientRequests';
 import { SkeletonPage } from '@/shared/ui';
 import { LiveVisitTrackerModal } from '@/features/tracking/components';
@@ -41,37 +40,6 @@ const muntiHighlights = [
   },
 ];
 
-const staggerContainer = {
-  animate: { transition: { staggerChildren: 0.1 } },
-};
-const staggerItem = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
-
-const StatItem = ({ label, value, icon, iconColor }) => {
-  const { count, ref } = useCountUp(parseInt(value) || 0, 1200, false);
-
-  return (
-    <div className="flex items-center gap-3.5 sm:gap-4 p-2 transition-all">
-      {/* Left side: Raised Icon Container */}
-      <div className="neu-flat-sm w-12 h-12 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center p-3 shrink-0">
-        {React.cloneElement(icon, { className: `w-5 h-5 sm:w-6 sm:h-6 ${iconColor}` })}
-      </div>
-
-      {/* Right side: Label and Count */}
-      <div className="min-w-0 flex-1">
-        <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold tracking-wide truncate">
-          {label}
-        </p>
-        <p className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mt-0.5 leading-none" ref={ref}>
-          {count}
-        </p>
-      </div>
-    </div>
-  );
-};
-
 const PatientDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
@@ -82,7 +50,6 @@ const PatientDashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
   const touchStartY = React.useRef(0);
   const pullDistRef = React.useRef(0);
   const isPulling = React.useRef(false);
@@ -342,8 +309,6 @@ const PatientDashboard = () => {
     }
   };
 
-  const firstName = user?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'there';
-
   if (loading) {
     return (
       <DashboardLayout role="patient">
@@ -491,7 +456,7 @@ const PatientDashboard = () => {
                   </Link>
                 </div>
 
-                {/* Compact Live Status Pill (Style A) or Empty State */}
+                {/* Slim active-visit banner or empty state */}
                 {activeVisit ? (
                   <Link
                     to="/patient/requests"
@@ -508,26 +473,24 @@ const PatientDashboard = () => {
                         });
                       }
                     }}
-                    className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2.5 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/20 hover:border-emerald-500/40 transition-all group cursor-pointer"
+                    className="group mb-3 flex w-full items-center gap-3 rounded-lg border-l-2 border-emerald-500 bg-emerald-500/[0.07] px-3 py-2.5 transition-colors hover:bg-emerald-500/[0.12] dark:bg-emerald-500/10 dark:hover:bg-emerald-500/15"
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="relative flex h-2 w-2 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                      </span>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-primary transition-colors">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-extrabold mr-1.5 uppercase tracking-wide text-3xs">
-                          {activeVisit.status}:
-                        </span>
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-3xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                        {activeVisit.status}
+                      </p>
+                      <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">
                         {activeVisit.provider} &bull; {activeVisit.service}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0 text-slate-400 group-hover:text-primary text-3xs font-semibold">
-                      <span className="hidden sm:inline">
-                        {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track Live' : (activeVisit.time || 'Today')}
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </div>
+                    <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-emerald-700 underline underline-offset-4 dark:text-emerald-300">
+                      {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track live' : (activeVisit.time || 'Today')}
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </span>
                   </Link>
                 ) : (
                   <div className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-[#E9F1F9]/60 dark:bg-[#183049]/40 border border-[#D2E0EE]/60 dark:border-white/5 text-[#52657A]">
@@ -727,7 +690,7 @@ const PatientDashboard = () => {
                         )}
                       </Link>
                       <div className="min-w-0">
-                        <div className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-[#52657A] dark:text-[#A5B6C8] mb-1">
+                        <div className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-nano font-extrabold uppercase tracking-wider text-[#52657A] dark:text-[#A5B6C8] mb-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#2C7A55] dark:bg-[#7DD3A3] animate-ping" />
                           Active Home Care Visit
                         </div>
@@ -751,21 +714,22 @@ const PatientDashboard = () => {
                             providerAvatarUrl: activeVisit.providerAvatarUrl,
                             service: activeVisit.service,
                           })}
-                          className="neu-btn px-3.5 py-2.5 rounded-2xl text-xs font-bold text-primary dark:text-[#8CBDF0] transition-all flex items-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
+                          className="neu-btn min-h-[44px] px-3.5 py-2.5 rounded-2xl text-xs font-bold text-primary dark:text-[#8CBDF0] transition-all flex items-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
                           title="Open Live GPS Tracker"
                         >
                           <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                           </span>
-                          <Navigation className="w-3.5 h-3.5" />
+                          <Navigation className="w-4 h-4" />
                           <span>Track Live</span>
                         </button>
                       )}
                       <Link 
                         to={`/patient/messages?provider=${activeVisit.providerId}`}
-                        className="neu-btn p-3 rounded-2xl text-primary transition-all flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0.5"
+                        className="neu-btn w-11 h-11 rounded-2xl text-primary transition-all flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0.5"
                         title="Chat with Provider"
+                        aria-label={`Chat with ${activeVisit.provider}`}
                       >
                         <MessageSquare className="w-4 h-4" />
                       </Link>
@@ -816,7 +780,7 @@ const PatientDashboard = () => {
 
                     <div className="flex items-center justify-between px-1">
                       {STEP_LABELS.map((label, i) => (
-                        <span key={label} className={`text-3xs sm:text-2xs font-extrabold uppercase tracking-wider text-center transition-colors ${
+                        <span key={label} className={`text-nano font-extrabold uppercase tracking-wider text-center transition-colors ${
                           i <= currentStep ? 'text-primary dark:text-[#8CBDF0] font-bold' : 'text-[#52657A]/60 dark:text-[#A5B6C8]/60'
                         }`}>
                           {label}
@@ -826,28 +790,9 @@ const PatientDashboard = () => {
                   </div>
 
                   {/* Status Banner */}
-                  <div className="neu-flat-sm p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm font-medium text-[#17283B] dark:text-[#E6EEF6]">
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className="w-3 h-3 rounded-full bg-primary shrink-0 animate-ping" />
-                      <p className="leading-relaxed text-xs sm:text-sm">{STATUS_MESSAGES[activeVisit.status]}</p>
-                    </div>
-                    {['On The Way', 'Arrived'].includes(activeVisit.status) && (
-                      <button
-                        type="button"
-                        onClick={() => setTrackingReq({
-                          id: activeVisit.id,
-                          providerId: activeVisit.providerId,
-                          patientId: activeVisit.patientId || user?.id,
-                          provider: activeVisit.provider,
-                          providerAvatarUrl: activeVisit.providerAvatarUrl,
-                          service: activeVisit.service,
-                        })}
-                        className="neu-btn-primary shrink-0 px-4 py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95 transition-transform"
-                      >
-                        <Navigation className="w-3.5 h-3.5" />
-                        <span>Open Live Map</span>
-                      </button>
-                    )}
+                  <div className="neu-flat-sm p-4 rounded-2xl flex items-center gap-3.5 text-sm font-medium text-[#17283B] dark:text-[#E6EEF6]">
+                    <div className="w-3 h-3 rounded-full bg-primary shrink-0 animate-ping" />
+                    <p className="leading-relaxed text-xs sm:text-sm">{STATUS_MESSAGES[activeVisit.status]}</p>
                   </div>
                 </div>
               );

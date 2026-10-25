@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, Circle, useMap } from 'react-leaflet';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Polyline, Circle, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Globe, Plus, Minus, Maximize2, Crosshair } from 'lucide-react';
@@ -10,20 +10,20 @@ const TILES = {
   streets: {
     name: 'Modern Street',
     url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
     maxZoom: 19,
   },
   satellite: {
     name: 'Satellite',
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    attribution: '&copy; <a href="https://www.esri.com/">Esri</a>, Maxar, Earthstar Geographics',
+    attribution: '&copy; <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, Maxar, Earthstar Geographics',
     maxZoom: 19,
   },
 };
 
 const escapeAttr = (str = '') => String(str).replace(/["'<>]/g, '');
 
-const providerIcon = (heading, avatarUrl, providerName) => {
+const providerIcon = (heading, avatarUrl, providerName, stale = false) => {
   const initials = (providerName || '')
     .split(' ')
     .map((n) => n[0])
@@ -42,7 +42,7 @@ const providerIcon = (heading, avatarUrl, providerName) => {
     iconSize: [52, 52],
     iconAnchor: [26, 26],
     html: `
-      <div class="mc-nav-vehicle mc-provider-marker">
+      <div class="mc-nav-vehicle mc-provider-marker${stale ? ' mc-nav-stale' : ''}">
         <div class="mc-nav-halo"></div>
         <div class="mc-nav-heading" style="transform: rotate(${heading != null && isFinite(heading) ? heading : 0}deg);">
           <div class="mc-nav-arrow">
@@ -72,33 +72,43 @@ const homeIcon = L.divIcon({
 });
 
 /** Smoothly animates a marker between GPS fixes instead of jumping. */
-function AnimatedMarker({ position, heading, avatarUrl, providerName }) {
+function AnimatedMarker({ position, heading, avatarUrl, providerName, stale }) {
   const ref = useRef(null);
   const from = useRef(position);
+  const lat = position?.[0];
+  const lng = position?.[1];
   const icon = useMemo(
-    () => providerIcon(heading, avatarUrl, providerName),
-    [heading, avatarUrl, providerName]
+    () => providerIcon(heading, avatarUrl, providerName, stale),
+    [heading, avatarUrl, providerName, stale]
   );
 
   useEffect(() => {
     const marker = ref.current;
-    if (!marker || !position) return;
-    const start = from.current || position;
+    if (!marker || lat == null || lng == null) return undefined;
+    const target = [lat, lng];
+    const reducesMotion = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reducesMotion) {
+      marker.setLatLng(target);
+      from.current = target;
+      return undefined;
+    }
+    const start = from.current || target;
     const t0 = performance.now();
     const dur = 1000;
     let raf;
     const step = (t) => {
       const k = Math.min(1, (t - t0) / dur);
       const e = 1 - Math.pow(1 - k, 3);
-      const lat = start[0] + (position[0] - start[0]) * e;
-      const lng = start[1] + (position[1] - start[1]) * e;
-      marker.setLatLng([lat, lng]);
+      const nextLat = start[0] + (target[0] - start[0]) * e;
+      const nextLng = start[1] + (target[1] - start[1]) * e;
+      marker.setLatLng([nextLat, nextLng]);
       if (k < 1) raf = requestAnimationFrame(step);
-      else from.current = position;
+      else from.current = target;
     };
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [position?.[0], position?.[1]]);
+  }, [lat, lng]);
 
   if (!position) return null;
   return <Marker ref={ref} position={from.current || position} icon={icon} zIndexOffset={1000} />;
@@ -130,34 +140,85 @@ function FitBounds({ provider, destination, follow, fitTrigger }) {
   const map = useMap();
   const fittedBoth = useRef(false);
   const fittedInitial = useRef(false);
+  const pLat = provider?.[0];
+  const pLng = provider?.[1];
+  const dLat = destination?.[0];
+  const dLng = destination?.[1];
+
+  // Re-fit only when the visit destination changes, not on every GPS fix.
+  useEffect(() => {
+    fittedBoth.current = false;
+    fittedInitial.current = false;
+  }, [dLat, dLng]);
 
   useEffect(() => {
-    if (provider && destination) {
+    const p = pLat != null && pLng != null ? [pLat, pLng] : null;
+    const d = dLat != null && dLng != null ? [dLat, dLng] : null;
+    if (p && d) {
       if (!fittedBoth.current) {
-        map.fitBounds([provider, destination], { padding: [65, 65], maxZoom: 17 });
+        map.fitBounds([p, d], { padding: [65, 65], maxZoom: 17 });
         fittedBoth.current = true;
       } else if (follow) {
-        map.panTo(provider, { animate: true });
+        map.panTo(p, { animate: true });
       }
-    } else if ((provider || destination) && !fittedInitial.current) {
-      map.setView(provider || destination, 16);
+    } else if ((p || d) && !fittedInitial.current) {
+      map.setView(p || d, 16);
       fittedInitial.current = true;
     }
-  }, [provider?.[0], provider?.[1], destination?.[0], destination?.[1], follow, map]);
+  }, [pLat, pLng, dLat, dLng, follow, map]);
 
   useEffect(() => {
     if (!fitTrigger) return;
-    if (provider && destination) {
-      map.fitBounds([provider, destination], { padding: [65, 65], maxZoom: 17, animate: true });
-    } else if (provider || destination) {
-      map.setView(provider || destination, 16, { animate: true });
+    const p = pLat != null && pLng != null ? [pLat, pLng] : null;
+    const d = dLat != null && dLng != null ? [dLat, dLng] : null;
+    if (p && d) {
+      map.fitBounds([p, d], { padding: [65, 65], maxZoom: 17, animate: true });
+    } else if (p || d) {
+      map.setView(p || d, 16, { animate: true });
     }
-  }, [fitTrigger]);
+  }, [fitTrigger, pLat, pLng, dLat, dLng, map]);
 
   return null;
 }
 
-export default function TrackingMap({
+/** Manual map movement releases follow mode instead of fighting the user. */
+function PanGuard({ onPan }) {
+  useMapEvents({
+    dragstart() { onPan?.(); },
+  });
+  return null;
+}
+
+/** Presentation-only breadcrumb of recent fixes; older points fade out. */
+function TrailLayer({ trail, accent }) {
+  const segments = useMemo(() => {
+    if (!trail || trail.length < 2) return [];
+    return trail.slice(1).map((point, index) => {
+      const progress = (index + 1) / (trail.length - 1);
+      return {
+        key: `trail-${index}`,
+        positions: [trail[index], point],
+        opacity: 0.08 + progress * 0.62,
+        weight: 2 + progress * 4,
+      };
+    });
+  }, [trail]);
+
+  return segments.map((segment) => (
+    <Polyline
+      key={segment.key}
+      positions={segment.positions}
+      pathOptions={{
+        color: accent,
+        weight: segment.weight,
+        opacity: segment.opacity,
+        lineCap: 'round',
+      }}
+    />
+  ));
+}
+
+const TrackingMap = forwardRef(function TrackingMap({
   provider,
   providerAvatar,
   providerName,
@@ -166,28 +227,60 @@ export default function TrackingMap({
   follow = false,
   onToggleFollow,
   compact = false,
+  stale = false,
+  waiting = false,
+  controlsAlign = 'center',
   className = '',
-}) {
+}, ref) {
   const { dark } = useTheme();
   const [layerType, setLayerType] = useState('auto'); // 'auto' | 'satellite' | 'streets'
   const [fitTrigger, setFitTrigger] = useState(0);
+  const [trail, setTrail] = useState([]);
+  const lastTrailPoint = useRef(null);
   const mapRef = useRef(null);
 
+  const p = provider ? [provider.lat, provider.lng] : null;
+  const d = destination ? [destination.lat, destination.lng] : null;
+  const pLat = p?.[0];
+  const pLng = p?.[1];
+  const center = p || d || [14.4081, 121.0415]; // Muntinlupa
+  const accent = dark ? '#8CBDF0' : '#2F6FB5';
   const activeTileKey = layerType === 'satellite' ? 'satellite' : 'streets';
   const isDarkStreet = activeTileKey === 'streets' && dark;
   const tile = TILES[activeTileKey];
 
-  const p = provider ? [provider.lat, provider.lng] : null;
-  const d = destination ? [destination.lat, destination.lng] : null;
-  const center = p || d || [14.4081, 121.0415]; // Muntinlupa
+  const fitRoute = useCallback(() => {
+    onToggleFollow?.(false);
+    setFitTrigger((count) => count + 1);
+  }, [onToggleFollow]);
+
+  useImperativeHandle(ref, () => ({
+    zoomIn: () => mapRef.current?.zoomIn(),
+    zoomOut: () => mapRef.current?.zoomOut(),
+    fitRoute,
+  }), [fitRoute]);
+
+  // Record a fading trail as fixes arrive. This does not alter the GPS pipeline.
+  useEffect(() => {
+    if (pLat == null || pLng == null) return;
+    const point = [pLat, pLng];
+    const last = lastTrailPoint.current;
+    const moved = !last || Math.abs(last[0] - pLat) + Math.abs(last[1] - pLng) > 0.000018;
+    if (!moved) return;
+    lastTrailPoint.current = point;
+    setTrail((current) => [...current, point].slice(-48));
+  }, [pLat, pLng]);
 
   return (
-    <div className={`relative w-full h-full ${className}`}>
+    <div
+      className={`relative w-full h-full mc-map-wrap ${className}`}
+      role="region"
+      aria-label="Live provider map"
+    >
       <MapContainer
         center={center}
         zoom={15}
         zoomControl={false}
-        attributionControl={false}
         className="w-full h-full"
         style={{ background: dark ? '#0f172a' : '#eaf2f8' }}
       >
@@ -196,17 +289,20 @@ export default function TrackingMap({
           url={tile.url}
           attribution={tile.attribution}
           maxZoom={tile.maxZoom}
-          className={isDarkStreet ? 'mc-dark-tiles' : ''}
+          className={`mc-map-tiles${isDarkStreet ? ' mc-dark-tiles' : ''}${activeTileKey === 'streets' ? ' mc-muted-tiles' : ''}`}
         />
 
-        {/* Glow & outline polyline for traffic/navigation look */}
+        {/* Planned route, kept legible above the muted basemap */}
         {route?.length > 1 && (
           <>
-            <Polyline positions={route} pathOptions={{ color: '#0ea5e9', weight: 11, opacity: 0.35, lineCap: 'round' }} />
-            <Polyline positions={route} pathOptions={{ color: '#0284c7', weight: 6, opacity: 0.95, lineCap: 'round' }} />
-            <Polyline positions={route} pathOptions={{ color: '#ffffff', weight: 2, opacity: 0.9, dashArray: '6, 10' }} />
+            <Polyline positions={route} pathOptions={{ color: accent, weight: 10, opacity: 0.16, lineCap: 'round' }} />
+            <Polyline positions={route} pathOptions={{ color: accent, weight: 5, opacity: 0.9, lineCap: 'round' }} />
+            <Polyline positions={route} pathOptions={{ color: '#ffffff', weight: 2, opacity: 0.78, dashArray: '6, 10' }} />
           </>
         )}
+
+        {/* Recent movement trail: older fades, newest bold */}
+        <TrailLayer trail={trail} accent={accent} />
 
         {/* Accuracy radar circle */}
         {p && provider.accuracy > 0 && (
@@ -214,10 +310,10 @@ export default function TrackingMap({
             center={p}
             radius={Math.min(provider.accuracy, 120)}
             pathOptions={{
-              color: '#0284c7',
+              color: accent,
               weight: 1.5,
-              fillColor: '#38bdf8',
-              fillOpacity: 0.12,
+              fillColor: accent,
+              fillOpacity: 0.1,
             }}
           />
         )}
@@ -228,80 +324,89 @@ export default function TrackingMap({
           heading={provider?.heading}
           avatarUrl={providerAvatar}
           providerName={providerName}
+          stale={stale}
         />
         <FitBounds provider={p} destination={d} follow={follow} fitTrigger={fitTrigger} />
         <MapAutoResize mapRef={mapRef} />
+        {onToggleFollow && <PanGuard onPan={() => onToggleFollow(false)} />}
       </MapContainer>
 
-      {/* Bottom-Left: Map / Satellite Style Switcher */}
-      <div className="absolute bottom-3.5 left-3.5 z-[1000] flex items-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-md rounded-2xl p-1 shadow-lg border border-white/70 dark:border-white/10 select-none">
+      {/* Redesign: waiting state is a skeleton, never a fake/frozen live pin */}
+      {waiting && (
+        <div className="mc-map-skeleton" aria-hidden="true">
+          <div className="mc-map-skeleton__body">
+            <div className="mc-map-skeleton__row">
+              <span className="mc-status-dot is-caution">
+                <Globe className="w-3 h-3" />
+              </span>
+              <span className="mc-map-skeleton__text">Locating provider…</span>
+            </div>
+            <div className="mc-skeleton-line" />
+            <div className="mc-skeleton-line mc-skeleton-line--short" />
+            <div className="mc-skeleton-line mc-skeleton-line--tiny" />
+          </div>
+        </div>
+      )}
+
+      {/* Redesign: one vertical control stack, no scattered map chrome */}
+      <div className={`mc-map-controls ${controlsAlign === 'top' ? 'mc-map-controls--top' : 'mc-map-controls--center'}`}>
         <button
           type="button"
           onClick={() => setLayerType(layerType === 'satellite' ? 'auto' : 'satellite')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-3xs font-extrabold transition-all cursor-pointer ${
-            layerType === 'satellite'
-              ? 'bg-primary text-white shadow-sm'
-              : 'text-slate-700 dark:text-slate-200 hover:text-primary'
-          }`}
-          title="Toggle Satellite View"
+          className="mc-map-control"
+          title={layerType === 'satellite' ? 'Switch to street map' : 'Switch to satellite view'}
+          aria-label={layerType === 'satellite' ? 'Switch to street map' : 'Switch to satellite view'}
+          aria-pressed={layerType === 'satellite'}
         >
-          <Globe className="w-3.5 h-3.5" />
-          <span>{layerType === 'satellite' ? 'Satellite' : 'Map'}</span>
+          <Globe className="w-4 h-4" />
         </button>
-      </div>
-
-      {/* Bottom-Right: Desktop Zoom (+/-), Fit Route, and Follow Provider Controls */}
-      <div className="absolute bottom-3.5 right-3.5 z-[1000] flex flex-col items-center gap-2 select-none">
-        {!compact && (
-          <div className="hidden sm:flex flex-col rounded-2xl overflow-hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/70 dark:border-white/10">
-            <button
-              type="button"
-              onClick={() => mapRef.current?.zoomIn()}
-              title="Zoom in"
-              className="w-10 h-9 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-primary hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors cursor-pointer border-b border-slate-200/60 dark:border-white/10"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => mapRef.current?.zoomOut()}
-              title="Zoom out"
-              className="w-10 h-9 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-primary hover:bg-slate-100/60 dark:hover:bg-slate-800/60 transition-colors cursor-pointer"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {(p || d) && (
-          <button
-            type="button"
-            onClick={() => {
-              onToggleFollow?.(false);
-              setFitTrigger((c) => c + 1);
-            }}
-            title="Fit entire route in view"
-            className="w-10 h-10 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-lg border border-white/70 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-primary active:scale-95 transition-all cursor-pointer"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </button>
-        )}
-
+        <button
+          type="button"
+          onClick={() => mapRef.current?.zoomIn()}
+          className="mc-map-control"
+          title="Zoom in"
+          aria-label="Zoom in"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => mapRef.current?.zoomOut()}
+          className="mc-map-control"
+          title="Zoom out"
+          aria-label="Zoom out"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          onClick={fitRoute}
+          disabled={!p && !d}
+          className="mc-map-control disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Fit entire route in view"
+          aria-label="Fit entire route in view"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </button>
         {onToggleFollow && (
           <button
             type="button"
-            onClick={() => onToggleFollow((f) => !f)}
+            onClick={() => onToggleFollow(!follow)}
+            className="mc-map-control"
             title={follow ? 'Following provider (click to unlock)' : 'Follow provider'}
-            className={`w-10 h-10 rounded-2xl shadow-lg border flex items-center justify-center active:scale-95 transition-all cursor-pointer ${
-              follow
-                ? 'bg-primary text-white border-primary/50'
-                : 'bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-primary border-white/70 dark:border-white/10'
-            }`}
+            aria-label={follow ? 'Stop following provider' : 'Follow provider'}
+            aria-pressed={follow}
           >
             <Crosshair className="w-4 h-4" />
           </button>
         )}
       </div>
+
+      {compact && (
+        <span className="sr-only">Compact live route map</span>
+      )}
     </div>
   );
-}
+});
+
+export default TrackingMap;

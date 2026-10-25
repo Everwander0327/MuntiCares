@@ -121,8 +121,8 @@ export default function LocationPicker({
   useEffect(() => { if (!initial && address) findAddress(); }, []); // auto-try once
 
   return (
-    <div className="space-y-3">
-      <div className="relative h-64 sm:h-72 rounded-2xl overflow-hidden neu-inset border border-[#D2E0EE]/70 dark:border-[#2D3F54]">
+    <div className="mc-stack">
+      <div className="mc-location-map">
         <MapContainer
           center={pos ? [pos.lat, pos.lng] : [14.4081, 121.0415]}
           zoom={pos ? 17 : 13}
@@ -133,9 +133,9 @@ export default function LocationPicker({
           <TileLayer
             key={dark ? 'dark' : 'light'}
             url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>'
             maxZoom={19}
-            className={dark ? 'mc-dark-tiles' : ''}
+            className={`mc-map-tiles mc-muted-tiles${dark ? ' mc-dark-tiles' : ''}`}
           />
           <ClickToMove onPick={setPos} />
           <Recenter pos={pos} />
@@ -143,69 +143,71 @@ export default function LocationPicker({
           {pos && <Marker position={[pos.lat, pos.lng]} icon={pinIcon} draggable eventHandlers={handlers} ref={markerRef} />}
         </MapContainer>
 
-        {/* Desktop Zoom (+/-) Controls */}
-        <div className="hidden sm:flex flex-col absolute bottom-3 right-3 z-[500] rounded-xl overflow-hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-md shadow-md border border-white/70 dark:border-white/10">
+        {/* Desktop zoom stays as one compact vertical control stack */}
+        <div className="mc-map-controls m-0 hidden sm:flex" style={{ top: 'auto', bottom: 12, transform: 'none' }}>
           <button
             type="button"
             onClick={() => mapRef.current?.zoomIn()}
             title="Zoom in"
-            className="w-8 h-8 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-primary cursor-pointer border-b border-slate-200/60 dark:border-white/10"
+            aria-label="Zoom in"
+            className="mc-map-control"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={() => mapRef.current?.zoomOut()}
             title="Zoom out"
-            className="w-8 h-8 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-primary cursor-pointer"
+            aria-label="Zoom out"
+            className="mc-map-control"
           >
-            <Minus className="w-3.5 h-3.5" />
+            <Minus className="w-4 h-4" />
           </button>
         </div>
 
         {!pos && (
-          <div className="absolute inset-0 z-[500] flex items-center justify-center pointer-events-none p-4">
-            <span className="px-3.5 py-2 rounded-xl bg-white/92 dark:bg-slate-900/92 backdrop-blur-md text-2xs font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5 shadow-lg border border-white/60 dark:border-white/10">
-              <MapPin className="w-3.5 h-3.5 text-primary" /> {emptyHint}
+          <div className="pointer-events-none absolute inset-0 z-[500] flex items-center justify-center p-4">
+            <span className="flex items-center gap-2 rounded-lg border border-[var(--trk-border)] bg-[var(--trk-surface-overlay)] px-3 py-2 text-xs font-semibold text-[var(--trk-text-secondary)] shadow-[var(--trk-shadow-sm)] backdrop-blur-md">
+              <MapPin className="h-3.5 w-3.5 text-[var(--trk-accent)]" /> {emptyHint}
             </span>
           </div>
         )}
       </div>
 
       {/* Responsive 2-col on mobile, inline flex on desktop */}
-      <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
         <button
           type="button"
           onClick={findAddress}
           disabled={!address || !!busy}
-          className="col-span-1 neu-btn px-3 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-primary dark:text-[#8CBDF0] flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer"
+          className="mc-btn mc-btn--secondary col-span-1 px-3"
         >
-          {busy === 'geo' ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <Search className="w-3.5 h-3.5 shrink-0" />}
+          {busy === 'geo' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
           <span className="truncate">Find my address</span>
         </button>
         <button
           type="button"
           onClick={useGps}
           disabled={!!busy}
-          className="col-span-1 neu-btn px-3 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-primary dark:text-[#8CBDF0] flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer"
+          className="mc-btn mc-btn--secondary col-span-1 px-3"
         >
-          {busy === 'gps' ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <LocateFixed className="w-3.5 h-3.5 shrink-0" />}
+          {busy === 'gps' ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
           <span className="truncate">{locateLabel}</span>
         </button>
         <button
           type="button"
           onClick={save}
           disabled={!pos || !!busy}
-          className="col-span-2 sm:col-span-1 sm:ml-auto neu-btn-primary px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-40 cursor-pointer shadow-sm"
+          className="mc-btn mc-btn--primary col-span-2 sm:col-span-1 sm:ml-auto"
         >
-          {busy === 'save' ? <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" /> : <Check className="w-3.5 h-3.5 shrink-0" />}
+          {busy === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
           <span>{saveLabel}</span>
         </button>
       </div>
 
       {pos && (
-        <p className="text-3xs text-slate-400 dark:text-slate-400 font-medium tabular-nums flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+        <p className="mc-metric-row">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--trk-good)]" />
           <span>{pos.lat.toFixed(6)}, {pos.lng.toFixed(6)} &bull; Drag pin or tap map to fine-tune</span>
         </p>
       )}

@@ -10,6 +10,7 @@ const THRESHOLDS = [120, 300, 600];
 /**
  * Global patient-side monitor. Watches On The Way visits even when the tracker
  * modal is closed and raises 10/5/2-minute + arrival alerts.
+ * Persists notified keys in sessionStorage to survive page reloads.
  */
 export default function PatientTrackingMonitor() {
   const { user } = useAuth();
@@ -52,8 +53,19 @@ export default function PatientTrackingMonitor() {
 
           if (row?.status === 'Arrived' && previous !== 'Arrived') {
             const key = `arrived:${row.id}`;
-            if (!arrivedNotified.current.has(key)) {
+            let alreadyNotified = arrivedNotified.current.has(key);
+            if (!alreadyNotified) {
+              try {
+                alreadyNotified = sessionStorage.getItem(`mc_arrived_${row.id}`) === 'true';
+              } catch { /* ignore */ }
+            }
+
+            if (!alreadyNotified) {
               arrivedNotified.current.add(key);
+              try {
+                sessionStorage.setItem(`mc_arrived_${row.id}`, 'true');
+              } catch { /* ignore */ }
+
               notifyTracking(
                 'Provider has arrived',
                 'Your provider is at the visit location. Please be ready to welcome them.',
@@ -86,7 +98,23 @@ export default function PatientTrackingMonitor() {
 function TrackingAlertWatcher({ request }) {
   const [provider, setProvider] = useState(null);
   const [session, setSession] = useState(null);
-  const sent = useRef(new Set());
+
+  const getPersistedSent = () => {
+    try {
+      const raw = sessionStorage.getItem(`mc_eta_sent_${request.id}`);
+      return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+      return new Set();
+    }
+  };
+
+  const markPersistedSent = (seconds) => {
+    try {
+      const current = getPersistedSent();
+      current.add(seconds);
+      sessionStorage.setItem(`mc_eta_sent_${request.id}`, JSON.stringify([...current]));
+    } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     const unsubscribe = subscribeToProvider(request.id, {
@@ -105,15 +133,22 @@ function TrackingAlertWatcher({ request }) {
       }
     : null;
 
-  const { duration } = useRouteEta(provider, destination, destination?.version || 0);
+  const { duration, source } = useRouteEta(
+    provider,
+    destination,
+    destination?.version || 0,
+    request.id
+  );
 
   useEffect(() => {
-    if (!duration || !provider || provider.degraded) return;
+    // Skip notifications if duration is missing, fix is degraded, or ETA is based on pure straight-line estimate
+    if (!duration || !provider || provider.degraded || source === 'estimate') return;
     if (session?.status !== 'active') return;
     if (provider.timestamp && Date.now() - provider.timestamp > 120000) return;
 
+    const sent = getPersistedSent();
     const threshold = THRESHOLDS.find(
-      (seconds) => duration <= seconds && !sent.current.has(seconds)
+      (seconds) => duration <= seconds && !sent.has(seconds)
     );
     if (!threshold) return;
 
@@ -126,9 +161,9 @@ function TrackingAlertWatcher({ request }) {
     );
 
     THRESHOLDS.forEach((seconds) => {
-      if (seconds >= threshold) sent.current.add(seconds);
+      if (seconds >= threshold) markPersistedSent(seconds);
     });
-  }, [duration, provider, session?.status, request.id, request.provider?.full_name, request.service]);
+  }, [duration, source, provider, session?.status, request.id, request.provider?.full_name, request.service]);
 
   return null;
 }
