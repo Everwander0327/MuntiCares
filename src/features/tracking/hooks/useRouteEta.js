@@ -16,6 +16,17 @@ function getStoreKey(requestId, destination, destVersion) {
   return null;
 }
 
+function areEtaValuesEqual(a, b) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.source === b.source &&
+    a.distance === b.distance &&
+    a.duration === b.duration &&
+    a.route === b.route
+  );
+}
+
 /**
  * Precomputes cumulative segment lengths once for a route geometry.
  */
@@ -131,6 +142,8 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
   });
 
   const hasDestination = destination?.lat != null && destination?.lng != null;
+  const destLat = destination?.lat;
+  const destLng = destination?.lng;
 
   // Subscribe to shared store changes for this key
   useEffect(() => {
@@ -144,7 +157,9 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
       sharedEtaStore.set(storeKey, store);
     }
 
-    const listener = (val) => setState(val);
+    const listener = (val) => {
+      setState((prev) => (areEtaValuesEqual(prev, val) ? prev : val));
+    };
     store.listeners.add(listener);
 
     return () => {
@@ -165,7 +180,7 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
     internal.lastIndex = 0;
     internal.lastRemaining = Infinity;
     internal.consecutiveOffRoute = 0;
-  }, [destination?.lat, destination?.lng, destVersion]);
+  }, [destLat, destLng, destVersion]);
 
   // Route fetching and off-route evaluation
   useEffect(() => {
@@ -199,7 +214,7 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
     const myToken = ++internal.token;
     internal.busy = true;
 
-    getRoute(provider, destination)
+    getRoute(provider, { lat: destLat, lng: destLng })
       .then((next) => {
         if (myToken !== internal.token) return;
         internal.lastFetchAt = Date.now();
@@ -214,24 +229,29 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
       .finally(() => {
         if (myToken === internal.token) internal.busy = false;
       });
-  }, [provider?.lat, provider?.lng, hasDestination, storeKey, destination]);
+  }, [provider?.lat, provider?.lng, hasDestination, storeKey, destLat, destLng]);
 
   // Calculate projected distance, duration, and monotonic progress
   useEffect(() => {
-    if (provider?.lat == null || !hasDestination || !storeKey) {
-      const emptyVal = { route: null, distance: null, duration: null, source: 'estimate' };
-      const store = sharedEtaStore.get(storeKey);
+    const notifyOrSet = (nextVal) => {
+      const store = storeKey ? sharedEtaStore.get(storeKey) : null;
       if (store) {
-        store.value = emptyVal;
-        store.listeners.forEach((l) => l(emptyVal));
+        if (!areEtaValuesEqual(store.value, nextVal)) {
+          store.value = nextVal;
+          store.listeners.forEach((l) => l(nextVal));
+        }
       } else {
-        setState(emptyVal);
+        setState((prev) => (areEtaValuesEqual(prev, nextVal) ? prev : nextVal));
       }
+    };
+
+    if (provider?.lat == null || !hasDestination || !storeKey) {
+      notifyOrSet({ route: null, distance: null, duration: null, source: 'estimate' });
       return;
     }
 
     const internal = internalRef.current;
-    const straight = haversine(provider, destination);
+    const straight = haversine(provider, { lat: destLat, lng: destLng });
     let distance = null;
     let duration = null;
     let source = 'estimate';
@@ -264,21 +284,13 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
       duration = (distance / 1000 / 20) * 3600;
     }
 
-    const nextVal = {
+    notifyOrSet({
       route: internal.preparedRoute?.coords || null,
       distance,
       duration,
       source,
-    };
-
-    const store = sharedEtaStore.get(storeKey);
-    if (store) {
-      store.value = nextVal;
-      store.listeners.forEach((l) => l(nextVal));
-    } else {
-      setState(nextVal);
-    }
-  }, [provider?.lat, provider?.lng, provider?.accuracy, hasDestination, storeKey, destination]);
+    });
+  }, [provider?.lat, provider?.lng, provider?.accuracy, hasDestination, storeKey, destLat, destLng]);
 
   return state;
 }

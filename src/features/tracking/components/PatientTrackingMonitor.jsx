@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import useRouteEta from '../hooks/useRouteEta';
@@ -125,18 +125,20 @@ function TrackingAlertWatcher({ request }) {
     return unsubscribe;
   }, [request.id]);
 
-  const destination = request.dest_lat != null && request.dest_lng != null
-    ? {
-        lat: request.dest_lat,
-        lng: request.dest_lng,
-        version: request.dest_version || 0,
-      }
-    : null;
+  const destLat = request.dest_lat;
+  const destLng = request.dest_lng;
+  const destVersion = request.dest_version || 0;
+
+  const destination = useMemo(() => {
+    return destLat != null && destLng != null
+      ? { lat: destLat, lng: destLng, version: destVersion }
+      : null;
+  }, [destLat, destLng, destVersion]);
 
   const { duration, source } = useRouteEta(
     provider,
     destination,
-    destination?.version || 0,
+    destVersion,
     request.id
   );
 
