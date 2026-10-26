@@ -113,7 +113,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       mapRef.current.flyTo({
         center: [lng, lat],
         zoom: 17,
-        pitch: 35,
+        pitch: 0,
         essential: true,
       });
     },
@@ -140,7 +140,9 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       style: darkRef.current ? STYLE_DARK : STYLE_LIGHT,
       center: startCenter,
       zoom: initCoords ? 17 : 14.5,
-      pitch: 35, // 35-degree modern delivery app 3D perspective
+      pitch: 0, // Flat top-down 2D perspective
+      maxPitch: 0,
+      pitchWithRotate: false,
       bearing: 0,
       attributionControl: false,
     });
@@ -287,7 +289,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
         mapRef.current?.flyTo({
           center: [longitude, latitude],
           zoom: 17.5,
-          pitch: 35,
+          pitch: 0,
           essential: true,
         });
         toast.success('Centered on your GPS location');
