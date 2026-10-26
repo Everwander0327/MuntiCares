@@ -1,0 +1,224 @@
+{
+  "generatedAt": "2026-10-26T18:32:41.141Z",
+  "base": "http://localhost:5173",
+  "routes": [
+    {
+      "name": "public-landing",
+      "route": "/",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "public-login",
+      "route": "/login",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "public-register",
+      "route": "/register",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "public-onboarding",
+      "route": "/onboarding",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "patient-patient-dashboard",
+      "route": "/patient/dashboard",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "patient-patient-providers-426a5992-c6c6-4171-8136-001f4b25e201-profile",
+      "route": "/patient/providers/426a5992-c6c6-4171-8136-001f4b25e201/profile",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "patient-patient-providers",
+      "route": "/patient/providers",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "patient-patient-requests",
+      "route": "/patient/requests",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "patient-patient-messages",
+      "route": "/patient/messages",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "patient-patient-consent",
+      "route": "/patient/consent",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "patient-patient-profile",
+      "route": "/patient/profile",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "patient-patient-onboarding",
+      "route": "/patient/onboarding",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "provider-provider-dashboard",
+      "route": "/provider/dashboard",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "provider-provider-requests",
+      "route": "/provider/requests",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "provider-provider-patients-91e0b115-e381-402a-a930-61e85c4989b0-profile",
+      "route": "/provider/patients/91e0b115-e381-402a-a930-61e85c4989b0/profile",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "provider-provider-patients",
+      "route": "/provider/patients",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "provider-provider-schedule",
+      "route": "/provider/schedule",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "provider-provider-messages",
+      "route": "/provider/messages",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "provider-provider-profile",
+      "route": "/provider/profile",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "admin-admin-dashboard",
+      "route": "/admin/dashboard",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "admin-admin-patients",
+      "route": "/admin/patients",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "admin-admin-providers",
+      "route": "/admin/providers",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "admin-admin-requests",
+      "route": "/admin/requests",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "admin-admin-profile",
+      "route": "/admin/profile",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    },
+    {
+      "name": "admin-admin-announcements",
+      "route": "/admin/announcements",
+      "consoleErrors": 0,
+      "consoleSamples": []
+    }
+  ],
+  "gates": [
+    {
+      "id": 1,
+      "status": "FAIL",
+      "measured": 270,
+      "failureCount": 140
+    },
+    {
+      "id": 2,
+      "status": "FAIL",
+      "measured": "0/7 compliant (7 reached)",
+      "failureCount": 7
+    },
+    {
+      "id": 3,
+      "status": "FAIL",
+      "measured": 6194,
+      "failureCount": 208
+    },
+    {
+      "id": 4,
+      "status": "FAIL",
+      "measured": 554,
+      "failureCount": 180
+    },
+    {
+      "id": 5,
+      "status": "FAIL",
+      "measured": 974,
+      "failureCount": 192
+    },
+    {
+      "id": 6,
+      "status": "FAIL",
+      "measured": "/patient/dashboard @375 light: h1=0",
+      "failureCount": 30
+    },
+    {
+      "id": 7,
+      "status": "PASS",
+      "measured": 0,
+      "failureCount": 0
+    },
+    {
+      "id": 8,
+      "status": "FAIL",
+      "measured": "15 failing probes/audits",
+      "failureCount": 15
+    },
+    {
+      "id": 9,
+      "status": "FAIL",
+      "measured": 834,
+      "failureCount": 12
+    },
+    {
+      "id": 10,
+      "status": "PASS",
+      "measured": 0,
+      "failureCount": 0
+    },
+    {
+      "id": 11,
+      "status": "PASS",
+      "measured": 0,
+      "failureCount": 0
+    }
+  ]
+}
