@@ -144,7 +144,6 @@ ALTER TABLE public.visit_notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.patient_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.provider_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
 
 -- Clean existing policies before recreation
 DO $$
@@ -380,15 +379,3 @@ CREATE POLICY "announcements_admin_manage" ON public.announcements
   FOR ALL TO authenticated
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
-
--- ========================================================
--- 18. POLICIES: public.transactions
--- ========================================================
-CREATE POLICY "transactions_select_parties" ON public.transactions
-  FOR SELECT TO authenticated
-  USING (patient_id = auth.uid() OR provider_id = auth.uid() OR public.is_admin());
-
-CREATE POLICY "transactions_insert_update" ON public.transactions
-  FOR ALL TO authenticated
-  USING (patient_id = auth.uid() OR provider_id = auth.uid() OR public.is_admin())
-  WITH CHECK (patient_id = auth.uid() OR provider_id = auth.uid() OR public.is_admin());

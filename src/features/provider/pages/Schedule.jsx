@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage } from '@/shared/ui';
 import PatientRecordModal from '../components/PatientRecordModal';
+import { markVisitArrived, formatArrivalFailure } from '@/features/tracking/services/trackingService';
 import toast from 'react-hot-toast';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -49,7 +50,7 @@ const ProviderSchedule = () => {
       try {
         const { data, error } = await supabase
           .from('requests')
-          .select('id, patient_id, service, date, time, status, price, notes, patient:patient_id(full_name, avatar_url)')
+          .select('id, patient_id, service, date, time, status, notes, patient:patient_id(full_name, avatar_url)')
           .eq('provider_id', user.id)
           .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed']);
 
@@ -83,7 +84,6 @@ const ProviderSchedule = () => {
             time: r.time,
             timeLabel: timeStr,
             status: r.status,
-            price: r.price,
             notes: r.notes || '',
             address: profile?.address || 'Address not provided',
           };
@@ -175,18 +175,29 @@ const ProviderSchedule = () => {
   };
 
   // Stats
-  const todayAppts = appointments.filter(a => {
+  const _todayAppts = appointments.filter(a => {
     const today = new Date();
     return isSameDay(a.date, today);
   });
-  const activeVisits = appointments.filter(a => a.status === 'On The Way' || a.status === 'Arrived').length;
-  const completedToday = todayAppts.filter(a => a.status === 'Completed').length;
+
+
 
   // Status update
   const handleStatusUpdate = async (appointmentId, newStatus) => {
     setUpdatingId(appointmentId);
     try {
       const appt = appointments.find(a => a.id === appointmentId);
+
+      if (newStatus === 'Arrived') {
+        const res = await markVisitArrived(appointmentId);
+        if (!res?.ok) {
+          toast.error(formatArrivalFailure(res));
+          return;
+        }
+        setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'Arrived' } : a));
+        toast.success('Status updated to "Arrived"');
+        return;
+      }
 
       const payload = { status: newStatus };
       const nowIso = new Date().toISOString();

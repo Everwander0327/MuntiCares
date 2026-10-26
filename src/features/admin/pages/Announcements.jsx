@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
-  Megaphone, Send, Trash2, Users, Briefcase, Database, 
-  Sparkles, Check, Clock, Radio, Search, Filter, AlertCircle, Eye
+  Send, Trash2, Users, Briefcase, Database, 
+  Check, Search, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/supabase';

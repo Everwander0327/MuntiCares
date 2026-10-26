@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from './animations';
-import { ArrowRight, CheckCircle } from '@phosphor-icons/react';
+import { CheckCircle } from '@phosphor-icons/react';
 
 const FLUID = [0.32, 0.72, 0, 1];
 

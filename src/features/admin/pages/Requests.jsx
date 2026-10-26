@@ -5,7 +5,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   Search, Download, ArrowUpDown, X, Calendar, Clock, 
   User, Stethoscope, Check, Trash2, CheckSquare, 
-  MapPin, FileText, ChevronRight, AlertCircle, ShieldAlert, CheckCircle2
+  FileText, ChevronRight, AlertCircle, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomSelect, DateRangePicker, Pagination, SkeletonPage, EmptyState } from '@/shared/ui';

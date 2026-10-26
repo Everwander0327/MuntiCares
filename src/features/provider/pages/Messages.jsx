@@ -3,13 +3,13 @@ import { createPortal } from 'react-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { MessageCircle, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
 import { useLocation } from 'react-router-dom';
-import useMediaQuery from '@/hooks/useMediaQuery';
 
-const slideVariants = {
+
+const _slideVariants = {
   initial: { x: '30%', opacity: 0 },
   animate: { x: 0, opacity: 1, transition: { type: 'spring', damping: 25, stiffness: 250 } },
   exit: { x: '30%', opacity: 0, transition: { duration: 0.15 } },
@@ -18,7 +18,7 @@ const slideVariants = {
 const ProviderMessages = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const isDesktop = useMediaQuery('(min-width: 1024px)');
+
   const [view, setView] = useState('list');
   const [selectedPartner, setSelectedPartner] = useState(null);
   const [currentUserData, setCurrentUserData] = useState(() =>

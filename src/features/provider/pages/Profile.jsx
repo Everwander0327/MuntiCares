@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Mail, Phone, MapPin, Award, BookOpen, Clock, LogOut, Calendar, CheckCircle2, ShieldCheck, Save, Shield, User } from 'lucide-react';
+import { Mail, Phone, MapPin, Award, Clock, LogOut, CheckCircle2, ShieldCheck, Save, Shield, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,7 +40,6 @@ const ProviderProfile = () => {
     location: '',
     bio: '',
     services: [],
-    price_per_service: 0,
     is_profile_complete: false,
     is_approved: false,
     professional_id_path: null,
@@ -94,7 +93,6 @@ const ProviderProfile = () => {
           location: provData.location || 'Muntinlupa City',
           bio: provData.bio || '',
           services: provData.services || [],
-          price_per_service: provData.price_per_service || 0,
           is_profile_complete: provData.is_profile_complete,
           is_approved: provData.is_approved,
           professional_id_path: provData.professional_id_path || null,
@@ -133,7 +131,6 @@ const ProviderProfile = () => {
         phone: editForm.phone,
         location: editForm.location,
         bio: editForm.bio,
-        price_per_service: editForm.price_per_service,
         is_profile_complete: true,
       };
 
@@ -229,7 +226,7 @@ const ProviderProfile = () => {
             <div>
               <h3 className="text-amber-800 dark:text-amber-300 font-extrabold text-xs sm:text-base">Profile Incomplete</h3>
               <p className="text-amber-700/80 dark:text-amber-200/70 text-3xs sm:text-xs mt-0.5 leading-relaxed">
-                Please fill out your contact details, bio, and rates so you can be approved by an Admin and become visible to patients.
+                Please fill out your contact details and bio so you can be approved by an Admin and become visible to patients.
               </p>
             </div>
           </motion.div>
@@ -334,12 +331,6 @@ const ProviderProfile = () => {
 
                   <div className="border-t border-slate-200/50 dark:border-white/5" />
                   <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                    <span className="text-3xs uppercase font-extrabold text-slate-400">Rate</span>
-                    <span className="font-black text-primary">₱{Number(profile.price_per_service || 0).toLocaleString()}</span>
-                  </div>
-
-                  <div className="border-t border-slate-200/50 dark:border-white/5" />
-                  <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
                     <span className="text-3xs uppercase font-extrabold text-slate-400">Joined</span>
                     <span className="font-semibold">{profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}</span>
                   </div>
@@ -395,8 +386,8 @@ const ProviderProfile = () => {
                   <div className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden">
                     <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
-                        <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Professional Details & Rates</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Your bio, location, and fees displayed during patient booking</p>
+                        <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Professional Details</h3>
+                        <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Your bio and location displayed during patient booking</p>
                       </div>
                       {!editingOverview ? (
                         <motion.button
@@ -489,28 +480,6 @@ const ProviderProfile = () => {
                             <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
                               <MapPin className="w-4 h-4 text-primary shrink-0" />
                               <span>{profile.location || 'No location set'}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Rate per Service (₱)</p>
-                          {editingOverview ? (
-                            <div className="relative">
-                              <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                              <input
-                                type="number" 
-                                name="price_per_service"
-                                value={editForm.price_per_service}
-                                onChange={e => setEditForm({...editForm, price_per_service: Number(e.target.value)})}
-                                placeholder="e.g. 1500"
-                                className="w-full neu-inset rounded-xl py-2.5 sm:py-3 pl-10 pr-3.5 sm:pr-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
-                              />
-                            </div>
-                          ) : (
-                            <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-black text-slate-800 dark:text-slate-100">
-                              <BookOpen className="w-4 h-4 text-primary shrink-0" />
-                              <span className="text-primary font-black">₱{Number(profile.price_per_service || 0).toLocaleString()}</span>
                             </div>
                           )}
                         </div>

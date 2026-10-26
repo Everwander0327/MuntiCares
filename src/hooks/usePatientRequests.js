@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { playToastSound } from '../lib/audio';
@@ -38,7 +38,7 @@ export default function usePatientRequests(patientId) {
   const [loading, setLoading] = useState(true);
   const channelRef = useRef(null);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     if (!patientId) {
       setRequests([]);
       setLoading(false);
@@ -77,7 +77,6 @@ export default function usePatientRequests(patientId) {
         date: req.date,
         time: req.time,
         status: req.status,
-        price: req.price || '0',
         location: locationMap[req.provider_id] || req.provider?.location || 'Muntinlupa City',
         originalNotes: req.notes || '',
         destLat: req.dest_lat ?? null,
@@ -96,7 +95,7 @@ export default function usePatientRequests(patientId) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [patientId]);
 
   useEffect(() => {
     if (!patientId) {
@@ -145,7 +144,6 @@ export default function usePatientRequests(patientId) {
                   date: newRow.date ?? r.date,
                   time: newRow.time ?? r.time,
                   status: newRow.status ?? r.status,
-                  price: newRow.price ?? r.price ?? '0',
                   location: newRow.provider?.location || (r.location && r.location !== 'Unknown' ? r.location : 'Muntinlupa City'),
                   originalNotes: newRow.notes ?? r.originalNotes ?? '',
                   destLat: newRow.dest_lat !== undefined ? newRow.dest_lat : r.destLat,
@@ -182,7 +180,7 @@ export default function usePatientRequests(patientId) {
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
     };
-  }, [patientId]);
+  }, [patientId, fetchRequests]);
 
   return { requests, loading, refetch: fetchRequests };
 }

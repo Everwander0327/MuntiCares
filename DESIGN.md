@@ -38,7 +38,7 @@ Single-accent system. Never mix warm/cool grays. Never use pure black.
 - **Muted Steel** (#64748B / #71717A) — Secondary text, descriptions, `text-slate-500 dark:text-slate-400`
 - **Faint Slate** (#94A3B8) — Tertiary text, timestamps, disabled, placeholder
 - **Whisper Border** (rgba(0,0,0,0.05) light / rgba(255,255,255,0.10) dark) — `ring-1 ring-black/5 dark:ring-white/10`, `border-slate-100 dark:border-slate-700`. 1px structural lines only
-- **Clinical Trust Blue** (#1E6FBF) — THE single accent. CTAs, active states, focus rings, price, links. Saturation <80%
+- **Clinical Trust Blue** (#1E6FBF) — THE single accent. CTAs, active states, focus rings, links. Saturation <80%
   - 50 (#EFF6FF) — pill washes, service tags `bg-blue-50 dark:bg-blue-900/30`
   - 100 (#DBEAFE), 200 (#BFDBFE), 300 (#93C5FD), 400 (#60A5FA)
   - 500 (#2E86DE), 600 (#1E6FBF DEFAULT), 700 (#1A5A9E hover), 800 (#1E4A80), 900 (#1E3A5F)
@@ -58,9 +58,8 @@ Single-accent system. Never mix warm/cool grays. Never use pure black.
 
 - **Display:** `Cabinet Grotesk`, `Clash Display`, `Plus Jakarta Sans` fallback — Track-tight (`-0.02em` to `-0.03em`), weight 700-800, `font-display` class. Controlled scale: page H1 `text-2xl md:text-[1.75rem]`, profile name `text-xl md:text-2xl`, sheet name `text-sm md:text-xl`. Leading compressed (`1.02-1.1`). Hierarchy through weight + color, not massive size. `text-wrap: balance` for heroes
 - **Body:** `Outfit`, `Plus Jakarta Sans` — Weight 400-600, relaxed leading (`1.75` app body, `1.65` cards), `text-sm md:text-sm`, secondary color `text-slate-600 dark:text-slate-300`. Max 65ch per line. Eyebrow labels: `text-2xs uppercase tracking-wider font-bold text-slate-400`
-- **Mono / Numbers:** System tabular or `JetBrains Mono` for trust scores (`{score}/100`), prices (`₱1,200/svc`), timestamps. When density exceeds 7, all numbers must use monospace
+- **Mono / Numbers:** System tabular or `JetBrains Mono` for trust scores (`{score}/100`), timestamps. When density exceeds 7, all numbers must use monospace
 - **Scale tokens:** `3xs 0.5625rem`, `2xs 0.625rem`, `nano 0.6875rem`, `xs/sm/base` standard. Never shrink body below `14px` / `0.875rem`
-- **Inline price pattern:** `font-bold text-slate-700 dark:text-slate-200` + `font-bold text-primary` for emphasis price
 
 ### Banned Fonts
 - `Inter` — BANNED in premium contexts. Use `Outfit` + `Cabinet Grotesk`
@@ -69,7 +68,7 @@ Single-accent system. Never mix warm/cool grays. Never use pure black.
 ## 4. Component Stylings
 
 * **Buttons:** Fully rounded pills `rounded-full`. Flat, no outer glow. Primary: `btn-primary` — Trust Blue fill + white text + `shadow-lg shadow-primary/20`, hover `bg-primary-700 + shadow-soft`, active `scale-[0.97-0.98]` tactile push + ripple. Secondary: `btn-outline` — `border-primary/30 text-primary`, hover fill blue + white text. Ghost icon island: `btn-island-icon w-8 h-8 rounded-full bg-black/5`. Destructive: red-50 wash + red-700 text + red-200 border. Disabled pending: `bg-green-50 dark:bg-green-900/30 text-green-700 cursor-not-allowed shadow-none`. Min touch target `44px`, mobile full-width. Max 1 primary CTA per sheet/modal
-* **Cards / Provider Grid Cards:** `bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-5 rounded-[1.25rem] border border-black/5 dark:border-white/10 shadow-softer hover:shadow-soft hover:-translate-y-0.5 hover:border-primary/20 transition-all duration-500`. Structure: avatar row (12x12 rounded-xl blue-50 initials or avatar image + online dot) -> name + 5-star row -> trust bar -> service pills -> location + price -> full-width CTA. Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`. Never span/featured cards in directory
+* **Cards / Provider Grid Cards:** `bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-5 rounded-[1.25rem] border border-black/5 dark:border-white/10 shadow-softer hover:shadow-soft hover:-translate-y-0.5 hover:border-primary/20 transition-all duration-500`. Structure: avatar row (12x12 rounded-xl blue-50 initials or avatar image + online dot) -> name + 5-star row -> trust bar -> service pills -> location -> full-width CTA. Grid: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`. Never span/featured cards in directory
 * **Bottom Sheet (Provider Details):** `fixed inset-x-0 bottom-0 rounded-t-[2rem] sm:max-w-lg sm:mx-auto sm:bottom-4 sm:rounded-[2.5rem] max-h-[85vh] overflow-y-auto`. Grab handle `mx-auto h-1 w-10 rounded-full bg-slate-200 sm:hidden`. Cover: `h-20 bg-ink + mesh-ambient` with radial glows + dot pattern, avatar overlap `-mt-10 w-16 h-16 rounded-2xl ring-4 ring-white`. Single scroll only — NO nested inner scroll. Sticky footer: `sticky bottom-0 bg-white/80 backdrop-blur-xl border-t` with 2 buttons only (`View Profile` outline + `Book Appointment` primary). No 3-button `Close` redundancy — rely on overlay/X
 * **Trust Score:** Label `text-2xs uppercase font-bold text-slate-400` + value `text-2xs font-bold`. Bar `h-1.5 md:h-2 bg-slate-100 dark:bg-slate-700 rounded-full`, fill `bg-green-500 >=70 / bg-amber-500 >=40 / bg-slate-400 else`. Sheet shows 1-line summary + collapsible breakdown; full profile shows badge (`Highly Trusted >=90 emerald / Trusted >=70 green / Developing >=40 amber / Needs Improvement red`)
 * **Pills / Tags:** Services `px-2.5 py-1 bg-slate-50 dark:bg-white/5 text-slate-600 rounded-lg text-nano font-semibold border border-black/5`. Specializations `bg-blue-50 text-primary border-blue-100 rounded-xl text-xs font-bold`. Verified `ShieldCheck + Verified text-2xs font-bold text-blue-600`. Status: Approved green-100 / Pending yellow-100 / Banned red-100 / Incomplete slate-100, `rounded-full text-2xs uppercase tracking-widest` + pulsing `status-dot`
@@ -126,7 +125,7 @@ Every screen must be verified at 375px, 390px, 768px, 1024px, 1440px. Responsive
 - No centered hero when variance >4 — use split/asymmetric
 - No filler text: Scroll to explore, Swipe down, Discover more, scroll arrows, bouncing chevrons
 - No generic names (John Doe, Acme, Nexus) — use Filipino clinical context (Muntinlupa City, General Care)
-- No fake round numbers (99.99%, 50%) — use organic trust scores, real prices `₱1,200/svc`
+- No fake round numbers (99.99%, 50%) — use organic trust scores
 - No AI copy clichés: Elevate, Seamless, Unleash, Next-Gen, Revolutionize
 - No broken Unsplash links — use `picsum.photos/seed/{id}/800/600` or initials SVG avatars
 - No generic shadcn defaults — radii `1.25rem-2.5rem`, Trust Blue, whisper shadows required

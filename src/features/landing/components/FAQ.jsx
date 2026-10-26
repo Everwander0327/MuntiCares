@@ -14,10 +14,6 @@ const faqs = [
     a: 'We currently serve all 9 barangays of Muntinlupa City: Alabang, Ayala Alabang, Bayanan, Buli, Cupang, Poblacion, Putatan, Sucat, and Tunasan. We are actively expanding to nearby cities.',
   },
   {
-    q: 'How are service fees handled?',
-    a: 'Service fees are agreed upon between you and your provider before the visit begins. MuntiCares keeps the process transparent, so you always know the cost of your care upfront.',
-  },
-  {
     q: "Can I switch providers if I'm not satisfied?",
     a: 'Absolutely. You can request a different provider at any time. We encourage you to find the right match for your needs, and our support team is happy to help facilitate a smooth transition.',
   },

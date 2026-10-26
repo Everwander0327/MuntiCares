@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { IMAGES } from '@/lib/images';
 const heroImage = IMAGES.brand.heroAuth;
-import { Heart, Stethoscope, ArrowUpRight } from '@phosphor-icons/react';
+import { Stethoscope, ArrowUpRight } from '@phosphor-icons/react';
 import { Mail, Lock, User, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
@@ -15,8 +15,8 @@ import confetti from 'canvas-confetti';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { FormInput, FormCheckbox } from '@/shared/ui';
-import { ThemeToggle } from '@/shared/feedback';
-import { ArrowLeft } from 'lucide-react';
+
+
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -51,7 +51,7 @@ const getPasswordStrength = (password) => {
 const strengthLabels = ['', 'Weak', 'Fair', 'Good', 'Strong', 'Very Strong'];
 const strengthColors = ['', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-lime-400', 'bg-green-400'];
 
-const TabButton = ({ active, label, onClick }) => (
+const _TabButton = ({ active, label, onClick }) => (
   <button
     onClick={onClick}
     className={`relative px-4 md:px-8 py-1.5 md:py-3 text-sm md:text-lg font-semibold transition-all duration-700 ease-fluid ${active ? 'text-primary' : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'

@@ -16,8 +16,8 @@ import {
   Bell,
   CalendarDays,
   MessageCircle,
-  Megaphone,
-  Menu
+  Megaphone
+
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -85,6 +85,22 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   const [currentUserProfile, setCurrentUserProfile] = useState(() => authUser);
   const mainRef = useRef(null);
   const channelRef = useRef(null);
+  const latestAuthUserRef = useRef(authUser);
+  latestAuthUserRef.current = authUser;
+
+  useEffect(() => {
+    if (role !== 'patient' || !authUser?.id) return;
+    supabase
+      .from('patients')
+      .select('is_profile_complete')
+      .eq('user_id', authUser.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!error && (!data || !data.is_profile_complete)) {
+          navigate('/patient/onboarding', { replace: true });
+        }
+      });
+  }, [role, authUser?.id, navigate]);
 
   // Keep local user profile fresh and subscribe to Supabase users changes
   useEffect(() => {
@@ -103,7 +119,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
 
       if (data) {
         setCurrentUserProfile(prev => ({ ...prev, ...data }));
-        if (data.avatar_url !== authUser.avatar_url || data.full_name !== authUser.full_name) {
+        if (data.avatar_url !== latestAuthUserRef.current?.avatar_url || data.full_name !== latestAuthUserRef.current?.full_name) {
           updateUser?.(data);
         }
       }

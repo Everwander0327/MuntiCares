@@ -1,17 +1,17 @@
-import { markVisitArrived, formatArrivalFailure } from '../../tracking/services/trackingService';
+
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
-  Clock, Users, CheckCircle, Check, X, Calendar, ChevronRight, ChevronLeft,
-  Star, MessageCircle, ArrowRight, ArrowUpRight, Activity, Sparkles, 
-  UserCheck, Stethoscope, CheckCircle2, Navigation, Home, MessageSquare, 
-  Search, FileText, RotateCcw, AlertCircle, ShieldCheck, MapPin
+  Calendar, ChevronRight, ChevronLeft,
+  Star, MessageCircle, ArrowRight,
+  Stethoscope, CheckCircle2, Navigation, Home,
+  FileText
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+
 import { Link } from 'react-router-dom';
 import useCountUp from '@/hooks/useCountUp';
-import { SkeletonPage, EmptyState } from '@/shared/ui';
+import { SkeletonPage } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -47,15 +47,15 @@ const providerHighlights = [
   },
 ];
 
-const staggerContainer = {
+const _staggerContainer = {
   animate: { transition: { staggerChildren: 0.08 } },
 };
-const staggerItem = {
+const _staggerItem = {
   initial: { opacity: 0, y: 16 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
 };
 
-const StatItem = ({ label, value, icon, iconColor }) => {
+const _StatItem = ({ label, value, icon, iconColor }) => {
   const { count, ref } = useCountUp(parseInt(value) || 0, 1200, false);
 
   return (
@@ -75,7 +75,7 @@ const StatItem = ({ label, value, icon, iconColor }) => {
   );
 };
 
-const STATUS_FLOW = {
+const _STATUS_FLOW = {
   Accepted: { next: 'On The Way', icon: <Navigation className="w-4 h-4" />, label: 'Start Travel (On The Way)', color: 'neu-btn-primary text-white' },
   'On The Way': { next: 'Arrived', icon: <Home className="w-4 h-4" />, label: 'Mark Arrived on Site', color: 'neu-btn bg-amber-500 text-white hover:bg-amber-600' },
   Arrived: { next: 'Completed', icon: <CheckCircle2 className="w-4 h-4" />, label: 'Complete Home Visit', color: 'neu-btn bg-emerald-600 text-white hover:bg-emerald-700' },
@@ -84,7 +84,7 @@ const STATUS_FLOW = {
 const ProviderDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState({});
-  const [updatingVisitId, setUpdatingVisitId] = useState(null);
+  const [, setUpdatingVisitId] = useState(null);
   
   const [stats, setStats] = useState({ pending: 0, active: 0, completed: 0 });
   const [activeVisit, setActiveVisit] = useState(null);
@@ -172,7 +172,7 @@ const ProviderDashboard = () => {
     try {
       const { data, error } = await supabase
         .from('requests')
-        .select('id, patient_id, service, date, time, status, created_at, notes, price, patient:patient_id(full_name, avatar_url)')
+        .select('id, patient_id, service, date, time, status, created_at, notes, patient:patient_id(full_name, avatar_url)')
         .eq('provider_id', user.id)
         .order('date', { ascending: false });
 
@@ -358,7 +358,7 @@ const ProviderDashboard = () => {
   };
 
   // Live Visit Stepper update
-  const handleAdvanceVisit = async (visitId, nextStatus) => {
+  const _handleAdvanceVisit = async (visitId, nextStatus) => {
     setUpdatingVisitId(visitId);
     try {
       const payload = { status: nextStatus };
@@ -382,7 +382,7 @@ const ProviderDashboard = () => {
     }
   };
 
-  const providerName = user?.user_metadata?.full_name?.split(' ')[0] || 'Doctor';
+  const _providerName = user?.user_metadata?.full_name?.split(' ')[0] || 'Doctor';
 
   if (loading) {
     return (
@@ -393,17 +393,17 @@ const ProviderDashboard = () => {
   }
 
   const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
-  const STEP_LABELS = ['Confirmed', 'On Route', 'Arrived', 'Done'];
-  const STEP_ICONS = [
+  const _STEP_LABELS = ['Confirmed', 'On Route', 'Arrived', 'Done'];
+  const _STEP_ICONS = [
     <CheckCircle2 key="confirmed" className="w-4 h-4" />,
     <Navigation key="enroute" className="w-4 h-4" />,
     <Home key="arrived" className="w-4 h-4" />,
     <Stethoscope key="done" className="w-4 h-4" />,
   ];
 
-  const currentStep = activeVisit ? STATUS_STEPS.indexOf(activeVisit.status) : -1;
+  const _currentStep = activeVisit ? STATUS_STEPS.indexOf(activeVisit.status) : -1;
 
-  const STATUS_MESSAGES = {
+  const _STATUS_MESSAGES = {
     Accepted: 'You confirmed this visit. Head to the patient address at the scheduled appointment time.',
     'On The Way': 'You are currently on route to the patient location. Patient has been notified.',
     Arrived: 'You are on-site at the patient home. Conduct care and logging.',
@@ -606,7 +606,7 @@ const ProviderDashboard = () => {
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="block text-xs sm:text-[13px] font-bold">Today's Schedule</span>
+                    <span className="block text-xs sm:text-[13px] font-bold">Today&apos;s Schedule</span>
                     <span className="block text-[11px] text-slate-400 truncate">View calendar & bookings</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />

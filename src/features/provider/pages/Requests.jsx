@@ -1,10 +1,10 @@
 import { markVisitArrived, formatArrivalFailure } from '../../tracking/services/trackingService';
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   Check, X, MapPin, Calendar, Clock, CheckCircle2, Loader2, 
-  Search, SlidersHorizontal, Navigation, Home, MessageSquare, 
-  ChevronLeft, ChevronRight, User, Stethoscope, AlertCircle, Sparkles, Filter
+  Search, Navigation, Home, MessageSquare, 
+  ChevronLeft, ChevronRight, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -189,6 +189,17 @@ const ProviderRequests = () => {
   const handleAdvanceVisit = async (visitId, nextStatus) => {
     setUpdatingVisitId(visitId);
     try {
+      if (nextStatus === 'Arrived') {
+        const res = await markVisitArrived(visitId);
+        if (!res?.ok) {
+          toast.error(formatArrivalFailure(res));
+          return;
+        }
+        toast.success('Visit updated to "Arrived"!');
+        fetchAll();
+        return;
+      }
+
       const payload = { status: nextStatus };
       const nowIso = new Date().toISOString();
       if (nextStatus === 'On The Way') payload.route_started_at = nowIso;
@@ -243,7 +254,7 @@ const ProviderRequests = () => {
 
       return matchesFilter && matchesSearch;
     });
-  }, [requests, filter, searchTerm]);
+  }, [requests, filter, searchTerm, isReqActive]);
 
   // Reset page when filtering or searching
   useEffect(() => {
@@ -507,7 +518,7 @@ const ProviderRequests = () => {
                     </p>
                     {req.notes && req.notes.trim() ? (
                       <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
-                        "{req.notes}"
+                        &ldquo;{req.notes}&rdquo;
                       </p>
                     ) : (
                       <p className="text-xs text-slate-400 dark:text-slate-500 italic">

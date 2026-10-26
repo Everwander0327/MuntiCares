@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Search, Star, MapPin, X, Calendar, FileText, CheckCircle2, Shield, ShieldCheck, SlidersHorizontal, Check, Sun, Sunset, Clock, CalendarDays, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Star, MapPin, Home, X, Calendar, FileText, CheckCircle2, Shield, ShieldCheck, SlidersHorizontal, Check, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { CustomSelect, SkeletonPage, EmptyState, Sheet, SheetContent, SheetTitle, SheetDescription } from '@/shared/ui';
+import { SkeletonPage, EmptyState, Sheet, SheetContent, SheetTitle, SheetDescription } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
@@ -34,10 +34,22 @@ const PatientProviders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [requested, setRequested] = useState([]);
   const [activeRequestsMap, setActiveRequestsMap] = useState({});
+
+  // Maps the patient's active request status with a provider to a button label.
+  const getBookingButtonLabel = (providerId) => {
+    const status = activeRequestsMap[providerId];
+    if (!status) return null;
+    switch (status) {
+      case 'Pending': return 'Pending Request';
+      case 'Accepted': return 'Visit Confirmed';
+      case 'On The Way': return 'Provider On The Way';
+      case 'Arrived': return 'Provider Arrived';
+      default: return `${status} Visit`;
+    }
+  };
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchHistory, setSearchHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
+  const [, setSearchHistory] = useState([]);
   const searchRef = React.useRef(null);
   
   // Booking & Viewing Modal State
@@ -137,7 +149,7 @@ const PatientProviders = () => {
       try {
         const { data, error } = await supabase
           .from('providers')
-          .select('id, user_id, services, rating, location, price_per_service, is_approved, bio, phone, professional_id_status, trust_score, user:user_id(id, full_name, email, avatar_url)')
+          .select('id, user_id, services, rating, location, is_approved, bio, phone, professional_id_status, trust_score, user:user_id(id, full_name, email, avatar_url)')
           .eq('is_approved', true);
 
         if (error) throw error;
@@ -151,7 +163,6 @@ const PatientProviders = () => {
           services: p.services || [],
           rating: p.rating || 0,
           location: p.location || 'Muntinlupa City',
-          price_per_service: p.price_per_service || 0,
           professional_id_status: p.professional_id_status || 'none',
           trust_score: p.trust_score || 0,
           avatar_url: p.user?.avatar_url || '',
@@ -314,8 +325,6 @@ const PatientProviders = () => {
       switch (sortBy) {
         case 'popular': return (b.rating || 0) - (a.rating || 0);
         case 'rating': return (b.rating || 0) - (a.rating || 0);
-        case 'price_low': return (a.price_per_service || 0) - (b.price_per_service || 0);
-        case 'price_high': return (b.price_per_service || 0) - (a.price_per_service || 0);
         case 'trust': return (b.trust_score || 0) - (a.trust_score || 0);
         default: return 0;
       }
@@ -478,7 +487,6 @@ const PatientProviders = () => {
           date: values.date,
           time: values.time + ':00',
           status: 'Pending',
-          price: String(selectedProvider.price_per_service || 0),
           notes: values.notes,
           dest_lat: destination.lat,
           dest_lng: destination.lng,
@@ -534,8 +542,6 @@ const PatientProviders = () => {
   const sortOptions = [
     { value: 'popular', label: 'Most Popular' },
     { value: 'rating', label: 'Highest Rated' },
-    { value: 'price_low', label: 'Price: Low to High' },
-    { value: 'price_high', label: 'Price: High to Low' },
     { value: 'trust', label: 'Trust Score' },
   ];
 
@@ -730,17 +736,12 @@ const PatientProviders = () => {
                     )}
                   </div>
 
-                  {/* Location + Price (Clean inline, no card box on price) */}
+                  {/* Location */}
                   <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-5">
                     <span className="flex items-center gap-1.5 min-w-0 truncate">
                       <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                       <span className="truncate">{p.location || 'Muntinlupa City'}</span>
                     </span>
-                    {p.price_per_service > 0 && (
-                      <span className="font-black tabular-nums text-emerald-600 dark:text-emerald-400 shrink-0 ml-2">
-                        ₱{Number(p.price_per_service).toLocaleString()}<span className="text-3xs font-normal text-slate-400">/visit</span>
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -848,9 +849,6 @@ const PatientProviders = () => {
                         <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                           {watchedService || 'Select a service...'}
                         </span>
-                        <span className="text-2xs font-black text-emerald-600 dark:text-emerald-400 shrink-0 neu-flat-sm px-2 py-0.5 rounded-lg">
-                          ₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}
-                        </span>
                       </div>
                       <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${openServiceMenu ? 'rotate-180 text-primary' : ''}`} />
                     </button>
@@ -882,12 +880,7 @@ const PatientProviders = () => {
                                 }`}
                               >
                                 <span className="text-xs font-bold">{s}</span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`text-xs ${isSelected ? 'text-white' : 'text-emerald-600 dark:text-emerald-400 font-black'}`}>
-                                    ₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}
-                                  </span>
-                                  {isSelected && <Check className="w-3.5 h-3.5" />}
-                                </div>
+                                {isSelected && <Check className="w-3.5 h-3.5" />}
                               </button>
                             );
                           })}
@@ -1022,29 +1015,35 @@ const PatientProviders = () => {
                   </div>
 
                   {/* Visit Location */}
+                  {/* Visit Location */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                      4. Visit Location
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        4. Visit Location
+                      </label>
+                      <span className="text-3xs font-semibold text-slate-500 dark:text-slate-400">
+                        {visitDestination?.source === 'booking' ? 'Custom visit location' : 'Saved address'}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => setDestinationModalOpen(true)}
-                      className="w-full neu-flat-sm rounded-xl p-3 flex items-center gap-3 text-left transition-all cursor-pointer outline-none select-none"
+                      className="w-full neu-flat-sm rounded-xl p-3 flex items-center gap-3 text-left transition-all cursor-pointer outline-none select-none hover:border-primary/30"
                     >
-                      <div className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-[#8CBDF0] shrink-0">
-                        <MapPin className="w-4 h-4" />
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-[#8CBDF0] shrink-0">
+                        <Home className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
-                          {visitDestination?.address || patientHome?.address || 'Confirm the visit location'}
+                          {visitDestination?.address || patientHome?.address || 'Set visit location'}
                         </p>
                         <p className="text-3xs text-slate-500 dark:text-slate-400 font-semibold truncate mt-0.5">
-                          {visitDestination
-                            ? `${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)} · For this visit only`
-                            : 'The provider will navigate to this exact pin'}
+                          {visitDestination?.lat
+                            ? `GPS Pin Confirmed (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)}) · Tap to change`
+                            : 'Tap to set address & gate directions'}
                         </p>
                       </div>
-                      <span className="text-2xs font-extrabold text-primary dark:text-[#8CBDF0] shrink-0">
+                      <span className="text-2xs font-extrabold text-primary dark:text-[#8CBDF0] shrink-0 px-2 py-1 rounded-lg bg-primary/5">
                         Change
                       </span>
                     </button>
@@ -1140,10 +1139,6 @@ const PatientProviders = () => {
                       <div>
                         <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Service</span>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{vals.service}</p>
-                      </div>
-                      <div>
-                        <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Fee</span>
-                        <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">₱{Number(selectedProvider.price_per_service || 0).toLocaleString()}</p>
                       </div>
                       <div>
                         <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Date</span>
@@ -1272,14 +1267,11 @@ const PatientProviders = () => {
                   </div>
                 </div>
 
-                {/* Location & Fee */}
+                {/* Location */}
                 <div className="mt-3.5 pt-3 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-3 text-xs">
                   <p className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5 truncate">
                     <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span className="truncate">{viewingProvider.location || 'Muntinlupa City'}</span>
-                  </p>
-                  <p className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400 shrink-0">
-                    ₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}<span className="text-3xs font-normal text-slate-400">/visit</span>
                   </p>
                 </div>
               </div>
@@ -1347,7 +1339,7 @@ const PatientProviders = () => {
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || 'Ongoing Visit') : `Book Appointment — ₱${Number(viewingProvider.price_per_service || 0).toLocaleString()}`}</span>
+                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || 'Ongoing Visit') : 'Book Appointment'}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -1418,10 +1410,6 @@ const PatientProviders = () => {
 
                     <div className="neu-flat-sm p-4 rounded-2xl space-y-2.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 font-medium">Standard Consultation Fee</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400">₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
                         <span className="text-slate-400 font-medium">Primary Area</span>
                         <span className="font-semibold text-slate-700 dark:text-slate-200">{viewingProvider.location || 'Muntinlupa City'}</span>
                       </div>
@@ -1459,7 +1447,6 @@ const PatientProviders = () => {
                           className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                         >
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">{s}</span>
-                          <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0 ml-2">₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}</span>
                         </button>
                       ))}
                       {(!viewingProvider.services || viewingProvider.services.length === 0) && (
@@ -1501,19 +1488,14 @@ const PatientProviders = () => {
 
               {/* Desktop Single-Page Seamless Layout */}
               <div className="hidden md:flex flex-col flex-1 min-h-0 overflow-y-auto px-7 py-6 space-y-6">
-                {/* Section 1: Practice Details & Fee Cards */}
+                {/* Section 1: Practice Details */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Practice & Consultation</h3>
                     <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">Muntinlupa Health Network</span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="neu-flat-sm p-4 rounded-2xl">
-                      <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Consultation Fee</p>
-                      <p className="text-lg font-black text-emerald-600 dark:text-emerald-400 mt-1">₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}</p>
-                      <p className="text-3xs text-slate-400 mt-1">Standard per-session visit rate</p>
-                    </div>
+                  <div className="grid grid-cols-1 gap-3">
                     <div className="neu-flat-sm p-4 rounded-2xl">
                       <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Practice Schedule</p>
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1.5">Mon – Sat • 9:00 AM – 5:00 PM</p>
@@ -1559,7 +1541,6 @@ const PatientProviders = () => {
                           <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">{s}</p>
                           <p className="text-3xs text-slate-400">Available for booking</p>
                         </div>
-                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">₱{Number(viewingProvider.price_per_service || 0).toLocaleString()}</span>
                       </button>
                     ))}
                     {(!viewingProvider.services || viewingProvider.services.length === 0) && (
@@ -1615,7 +1596,7 @@ const PatientProviders = () => {
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || 'Ongoing Visit') : `Book Appointment — ₱${Number(viewingProvider.price_per_service || 0).toLocaleString()}`}</span>
+                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || 'Ongoing Visit') : 'Book Appointment'}</span>
                 </button>
                 <button
                   onClick={() => {

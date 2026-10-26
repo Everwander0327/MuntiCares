@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
-  Mail, Phone, MapPin, Calendar, Shield, ShieldCheck, 
+  MapPin, Calendar, Shield, ShieldCheck, 
   Star, CheckCircle2, Clock, MessageCircle, CalendarDays, ArrowLeft, Users, 
   ChevronDown, ChevronUp, Activity
 } from 'lucide-react';
@@ -294,7 +294,7 @@ const ProviderProfileView = () => {
                       className="w-full py-3 rounded-2xl neu-btn-primary font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
                     >
                       <CalendarDays className="w-4 h-4" />
-                      <span>Book — ₱{Number(provider.price_per_service || 0).toLocaleString()}</span>
+                      <span>Book Appointment</span>
                     </motion.button>
                   )}
                   <motion.button
@@ -342,14 +342,9 @@ const ProviderProfileView = () => {
                   </p>
                 </div>
 
-                {/* 3 Detail Columns with Border Dividers */}
-                <div className="pt-3.5 border-t border-slate-200/60 dark:border-white/5 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/60 dark:divide-white/5 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-0">
+                {/* Detail Columns with Border Dividers */}
+                <div className="pt-3.5 border-t border-slate-200/60 dark:border-white/5 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/60 dark:divide-white/5 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-0">
                   <div className="sm:pr-4">
-                    <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Consultation Fee</p>
-                    <p className="text-base font-black text-emerald-600 dark:text-emerald-400 mt-1">₱{Number(provider.price_per_service || 0).toLocaleString()}</p>
-                    <p className="text-3xs text-slate-400 mt-0.5">Standard per-session</p>
-                  </div>
-                  <div className="pt-3 sm:pt-0 sm:px-4">
                     <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Practice Hours</p>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">Mon – Sat • 9AM – 5PM</p>
                     <p className="text-3xs text-slate-400 mt-0.5">Walk-ins & appointments</p>
@@ -417,7 +412,6 @@ const ProviderProfileView = () => {
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">{s}</p>
                       <p className="text-3xs text-slate-400">Available for appointment</p>
                     </div>
-                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 shrink-0">₱{Number(provider.price_per_service || 0).toLocaleString()}</span>
                   </button>
                 ))}
                 {servicesList.length === 0 && (

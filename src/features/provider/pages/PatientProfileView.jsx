@@ -615,7 +615,7 @@ const PatientProfileView = () => {
                               {/* Doctor's Note */}
                               {note.notes && (
                                 <div className="neu-inset p-3.5 sm:p-4 rounded-2xl">
-                                  <p className="text-3xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Doctor's Clinical Assessment</p>
+                                  <p className="text-3xs font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Doctor&apos;s Clinical Assessment</p>
                                   <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">{note.notes}</p>
                                 </div>
                               )}

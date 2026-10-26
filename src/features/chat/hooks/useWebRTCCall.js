@@ -77,7 +77,7 @@ function getSignalingChannel(topic) {
   return entry;
 }
 
-const waitForIceGathering = (pc, timeoutMs) =>
+export const waitForIceGathering = (pc, timeoutMs) =>
   new Promise((resolve) => {
     if (pc.iceGatheringState === 'complete') return resolve();
     const check = () => {

@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
-  ShieldCheck, Info, Calendar, ChevronDown, ChevronUp, 
+  ShieldCheck, Calendar, 
   History, Eye, Check, X, Clock, MoreHorizontal, FileText, Activity,
-  Search, ShieldAlert, Sparkles, RefreshCw
+  Search, ShieldAlert, RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,11 +41,11 @@ const PERMISSION_LABELS = {
 
 const DEFAULT_PERMS = { medical_history: true, documents: true, visit_notes: true };
 
-const staggerContainer = {
+const _staggerContainer = {
   animate: { transition: { staggerChildren: 0.05 } },
 };
 
-const staggerItem = {
+const _staggerItem = {
   initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.16, 1, 0.3, 1] } },
 };
@@ -60,7 +60,7 @@ const ProviderCard = ({
   isEnabled, 
   permissions, 
   onToggle, 
-  onPermChange, 
+
   loading, 
   onOpenPermissions 
 }) => {
@@ -676,7 +676,7 @@ const PatientConsent = () => {
                         <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
                           <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
                           <p className="text-xs sm:text-sm font-bold">No permission changes logged yet</p>
-                          <p className="text-3xs text-slate-400 mt-0.5">Toggle a provider's access to see audit entries here.</p>
+                          <p className="text-3xs text-slate-400 mt-0.5">Toggle a provider&apos;s access to see audit entries here.</p>
                         </div>
                       ) : (
                         consentHistory.map((entry, idx) => (

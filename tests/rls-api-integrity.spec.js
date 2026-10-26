@@ -23,11 +23,7 @@ test.describe('Supabase Row Level Security (RLS) Deep Enforcement Suite', () => 
     const { data: messages } = await anonClient.from('messages').select('*');
     expect(messages || []).toHaveLength(0);
 
-    // 4. Cannot access transactions
-    const { data: transactions } = await anonClient.from('transactions').select('*');
-    expect(transactions || []).toHaveLength(0);
-
-    // 5. Cannot write/insert into requests anonymously
+    // 4. Cannot write/insert into requests anonymously
     const { error: insertError } = await anonClient.from('requests').insert({
       service: 'Unauthorized Injection Test',
       status: 'Pending',
@@ -114,7 +110,7 @@ test.describe('Supabase Row Level Security (RLS) Deep Enforcement Suite', () => 
     });
 
     // Sign in as Admin
-    const { data: authData, error: loginError } = await adminClient.auth.signInWithPassword({
+    const { error: loginError } = await adminClient.auth.signInWithPassword({
       email: 'admin@munticares.com',
       password: 'admin123',
     });

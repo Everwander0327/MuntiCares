@@ -71,7 +71,7 @@ const getStatusStyle = (status) => {
 
 const RequestCard = ({ 
   id, providerId, patientId, provider, providerAvatarUrl, service, date, time, 
-  status, price, location, originalNotes, onRateProvider, isRated, 
+  status, location, originalNotes, onRateProvider, isRated, 
   onManageRequest, onPreSession, presessionSubmitted, onTrack
 }) => {
   const statusTheme = getStatusStyle(status);
@@ -83,7 +83,7 @@ const RequestCard = ({
     >
       {/* Upper Content Area */}
       <div className="p-4 sm:p-6 space-y-3 sm:space-y-3.5">
-        {/* Top Header: Provider Avatar & Info + Status Badge & Mobile Price */}
+        {/* Top Header: Provider Avatar & Info + Status Badge */}
         <div className="flex items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
             {providerId ? (
@@ -130,7 +130,7 @@ const RequestCard = ({
             </div>
           </div>
 
-          {/* Status Badge & Mobile Price */}
+          {/* Status Badge */}
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 sm:gap-3 shrink-0">
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-3xs shadow-xs ${statusTheme.badge}`}>
               {statusTheme.ping ? (
@@ -142,9 +142,6 @@ const RequestCard = ({
                 <statusTheme.icon className="w-3 h-3 shrink-0" />
               )}
               <span>{status}</span>
-            </span>
-            <span className="font-display text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums sm:hidden">
-              ₱{Number(price || 0).toLocaleString()}
             </span>
           </div>
         </div>
@@ -171,10 +168,6 @@ const RequestCard = ({
               <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
               <span className="truncate max-w-[130px] sm:max-w-none">{location || 'Muntinlupa City'}</span>
             </span>
-          </div>
-
-          <div className="hidden sm:block font-display text-sm font-black text-[#2C7A55] dark:text-[#7DD3A3] tabular-nums">
-            ₱{Number(price || 0).toLocaleString()}
           </div>
         </div>
       </div>
@@ -575,7 +568,6 @@ const PatientRequests = () => {
                 date={req.date}
                 time={req.time}
                 status={req.status}
-                price={req.price}
                 location={req.location}
                 originalNotes={req.originalNotes}
                 isRated={!!ratedRequests[req.id]}

@@ -20,6 +20,7 @@ import useRouteEta from '../hooks/useRouteEta';
 import { subscribeToProvider, updateTrackingDestination } from '../services/trackingService';
 import { ensurePatientCoords } from '../services/geocoding';
 import { formatDistance, formatDuration } from '../services/geo';
+import { parseFullVisitAddress } from '../services/addressFormat';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useFocusTrap from '@/hooks/useFocusTrap';
 import useMediaQuery from '@/hooks/useMediaQuery';
@@ -617,12 +618,8 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                         />
                         {journeyProgress}
                         {warnings}
-                        {mobileSheet === 'full' && (
-                          <>
-                            {destinationRow}
-                            {details}
-                          </>
-                        )}
+                        {destinationRow}
+                        {mobileSheet === 'full' && details}
                       </>
                     )}
                   </div>
@@ -771,20 +768,41 @@ function JourneyProgress({ progressPct, arrived }) {
 }
 
 function DestinationRow({ address, canEdit, hasDestination, onChange }) {
+  const parsed = parseFullVisitAddress(address);
+  const displayTitle = parsed.baseAddress || address;
+  const gateNotes = parsed.instructions;
+
   return (
-    <div className="mc-provider-row">
-      <span className="mc-avatar" aria-hidden="true">
-        <MapPin className="w-5 h-5" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="mc-kicker">Visit location</p>
-        <p className="mc-title truncate">{address}</p>
+    <div className="mc-stack mc-stack--tight p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <p className="mc-kicker text-3xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Delivering care to
+          </p>
+        </div>
+        {canEdit && (
+          <button type="button" onClick={onChange} className="mc-link text-2xs font-extrabold shrink-0">
+            {hasDestination ? 'Adjust' : 'Set location'}
+          </button>
+        )}
       </div>
-      {canEdit && (
-        <button type="button" onClick={onChange} className="mc-link shrink-0">
-          {hasDestination ? 'Change' : 'Set location'}
-        </button>
-      )}
+
+      <div className="flex items-start gap-2.5">
+        <span className="mc-avatar shrink-0 mt-0.5" aria-hidden="true">
+          <MapPin className="w-4 h-4 text-primary" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="mc-title text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
+            {displayTitle}
+          </p>
+          {gateNotes && (
+            <p className="mt-1 text-3xs font-medium text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-200/50 dark:border-white/5">
+              <strong className="font-extrabold text-primary dark:text-[#8CBDF0]">Gate / Arrival:</strong> {gateNotes}
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

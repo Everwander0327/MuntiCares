@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Search, ShieldCheck, ShieldAlert, Star, X, MapPin, Phone, Mail, BookOpen, Check, Ban, Clock, ExternalLink, FileText, Download, ArrowUpDown } from 'lucide-react';
+import { Search, ShieldCheck, ShieldAlert, Star, X, MapPin, Phone, Mail, Check, Ban, Clock, ExternalLink, FileText, Download, ArrowUpDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CustomSelect, DateRangePicker, Pagination, SkeletonPage, EmptyState } from '@/shared/ui';
 import useSort from '@/hooks/useSort';
@@ -61,7 +61,6 @@ const AdminProviders = () => {
           services: p.services || [],
           rating: p.rating || 0,
           location: p.location || 'Muntinlupa City',
-          price_per_service: p.price_per_service || 0,
           phone: p.phone || '',
           bio: p.bio || '',
           is_profile_complete: p.is_profile_complete,
@@ -371,7 +370,7 @@ const AdminProviders = () => {
     toast.success('Providers exported to CSV.');
   };
 
-  const getStatusStyle = (status) => {
+  const _getStatusStyle = (status) => {
     switch (status) {
       case 'Approved': return { bg: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300', dot: 'bg-green-500' };
       case 'Pending Approval': return { bg: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', dot: 'bg-yellow-500' };
@@ -948,10 +947,6 @@ const AdminProviders = () => {
                     <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
                       <MapPin className="w-4 h-4 text-primary shrink-0" />
                       <span>{selectedProvider.location}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
-                      <BookOpen className="w-4 h-4 text-primary shrink-0" />
-                      <span>₱{selectedProvider.price_per_service} per service</span>
                     </div>
                     <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
                       <Star className="w-4 h-4 text-amber-500 fill-current shrink-0" />

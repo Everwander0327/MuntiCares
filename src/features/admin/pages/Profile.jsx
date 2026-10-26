@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
-  LogOut, Shield, Calendar, Users, Briefcase, FileText, 
-  User, BarChart3, CheckCircle2, Lock, Save, Sparkles, Mail
+  LogOut, Shield, Users, Briefcase, FileText, 
+  User, BarChart3, Lock, Save
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage } from '@/shared/ui';

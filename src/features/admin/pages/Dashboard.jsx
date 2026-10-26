@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { ArrowUpRight } from 'lucide-react';
+
 import { motion } from 'framer-motion';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, Legend, LineChart, Line, AreaChart, Area, Label 
+  PieChart, Pie, Cell, Legend, AreaChart, Area, Label 
 } from 'recharts';
 import { DateRangePicker, SkeletonPage } from '@/shared/ui';
 import useCountUp from '@/hooks/useCountUp';

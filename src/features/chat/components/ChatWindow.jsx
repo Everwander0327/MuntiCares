@@ -586,7 +586,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 )}
 
                 {/* Remote Audio Track: Always mounted */}
-                <audio ref={remoteAudioRef} data-testid="remote-audio" autoPlay playsInline />
+                <audio ref={remoteAudioRef} data-testid="remote-audio" autoPlay />
 
                 {/* PiP Local Video Preview */}
                 <div className={`absolute bottom-6 right-5 w-28 sm:w-36 aspect-video rounded-2xl overflow-hidden neu-flat shadow-2xl border-2 border-white/60 dark:border-white/10 z-20 bg-slate-900 ${

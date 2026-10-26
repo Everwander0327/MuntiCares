@@ -182,10 +182,15 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
     internal.consecutiveOffRoute = 0;
   }, [destLat, destLng, destVersion]);
 
+  const provLat = provider?.lat;
+  const provLng = provider?.lng;
+  const provAcc = provider?.accuracy;
+
   // Route fetching and off-route evaluation
   useEffect(() => {
-    if (provider?.lat == null || provider?.lng == null || !hasDestination || !storeKey) return;
+    if (provLat == null || provLng == null || !hasDestination || !storeKey) return;
 
+    const provPos = { lat: provLat, lng: provLng };
     const internal = internalRef.current;
     const now = Date.now();
 
@@ -196,8 +201,8 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
     if (!internal.preparedRoute) {
       shouldFetch = true;
     } else {
-      const offRouteDist = distanceToPolyline(provider, internal.preparedRoute.coords);
-      const accuracyAwareThreshold = Math.max(100, (provider.accuracy || 30) * 1.5);
+      const offRouteDist = distanceToPolyline(provPos, internal.preparedRoute.coords);
+      const accuracyAwareThreshold = Math.max(100, (provAcc || 30) * 1.5);
 
       if (offRouteDist > accuracyAwareThreshold) {
         internal.consecutiveOffRoute += 1;
@@ -214,7 +219,7 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
     const myToken = ++internal.token;
     internal.busy = true;
 
-    getRoute(provider, { lat: destLat, lng: destLng })
+    getRoute(provPos, { lat: destLat, lng: destLng })
       .then((next) => {
         if (myToken !== internal.token) return;
         internal.lastFetchAt = Date.now();
@@ -229,7 +234,7 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
       .finally(() => {
         if (myToken === internal.token) internal.busy = false;
       });
-  }, [provider?.lat, provider?.lng, hasDestination, storeKey, destLat, destLng]);
+  }, [provLat, provLng, provAcc, hasDestination, storeKey, destLat, destLng]);
 
   // Calculate projected distance, duration, and monotonic progress
   useEffect(() => {
@@ -245,21 +250,22 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
       }
     };
 
-    if (provider?.lat == null || !hasDestination || !storeKey) {
+    if (provLat == null || !hasDestination || !storeKey) {
       notifyOrSet({ route: null, distance: null, duration: null, source: 'estimate' });
       return;
     }
 
+    const provPos = { lat: provLat, lng: provLng };
     const internal = internalRef.current;
-    const straight = haversine(provider, { lat: destLat, lng: destLng });
+    const straight = haversine(provPos, { lat: destLat, lng: destLng });
     let distance = null;
     let duration = null;
     let source = 'estimate';
 
     if (internal.preparedRoute) {
-      const projection = projectOnPreparedRoute(provider, internal.preparedRoute, internal.lastIndex);
+      const projection = projectOnPreparedRoute(provPos, internal.preparedRoute, internal.lastIndex);
 
-      if (projection && projection.total > 0 && projection.offRoute <= Math.max(150, (provider.accuracy || 30) * 2)) {
+      if (projection && projection.total > 0 && projection.offRoute <= Math.max(150, (provAcc || 30) * 2)) {
         source = 'route';
         internal.lastIndex = projection.index;
 
@@ -290,7 +296,7 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
       duration,
       source,
     });
-  }, [provider?.lat, provider?.lng, provider?.accuracy, hasDestination, storeKey, destLat, destLng]);
+  }, [provLat, provLng, provAcc, hasDestination, storeKey, destLat, destLng]);
 
   return state;
 }

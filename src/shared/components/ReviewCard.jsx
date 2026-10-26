@@ -1,4 +1,3 @@
-import React from 'react';
 import { Star, ShieldCheck, Calendar, Quote } from 'lucide-react';
 
 /**

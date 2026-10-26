@@ -104,14 +104,23 @@ a,
   -webkit-tap-highlight-color: transparent !important;
 }
 
-/* Theme 4 Focus Ring (3px outline, high visibility against sky blue) */
+/* Focus ring — single tokenized indicator, visible on every interactive element */
+:root {
+  --focus-ring: #2F6FB5;
+}
+
+html.dark {
+  --focus-ring: #8CBDF0;
+}
+
 :focus-visible {
-  outline: 3px solid #7C3AED !important;
+  outline: 3px solid var(--focus-ring) !important;
   outline-offset: 2px !important;
 }
 
-.dark :focus-visible {
-  outline: 3px solid #C9B6FF !important;
+/* Reserve space for the fixed cookie banner so the onboarding CTA stays reachable */
+html[data-cookie-banner='visible'] .onboarding-footer {
+  padding-bottom: calc(var(--cookie-banner-height, 96px) + 2rem);
 }
 
 
@@ -428,18 +437,6 @@ select:focus {
 .dark .search-bare:focus {
   border-color: rgba(255, 255, 255, 0.1) !important;
   box-shadow: none !important;
-}
-
-/* Remove ring/outline/shadow on focus-visible for all interactive elements except neu-inset/neu-input */
-button:focus-visible,
-a:focus-visible,
-[tabindex]:focus-visible,
-select:focus-visible,
-input:not(.neu-inset):not(.neu-input):focus-visible,
-textarea:not(.neu-inset):not(.neu-input):focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-  border-radius: inherit;
 }
 
 /* Skeleton loading animation */

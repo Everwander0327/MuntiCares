@@ -361,6 +361,7 @@ const NotificationBell = () => {
         const newlyAdded = activeNotifs.filter(
           n => !seenToastIds.has(n.id) && !prevNotifsRef.current.items.some(pn => pn.id === n.id)
         );
+        if (newlyAdded.length > 0) playChime();
         newlyAdded.forEach(notif => {
           seenToastIds.add(notif.id);
           toast(`${notif.title}: ${notif.message}`, { id: `bell-${notif.id}` });

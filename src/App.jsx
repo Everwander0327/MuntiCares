@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 import { NeumorphicToast, ErrorBoundary, CookieConsent } from '@/shared/feedback';
 import { unlockAudio } from '@/lib/audio';
-import { useTheme } from '@/contexts/ThemeContext';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { CallProvider } from '@/contexts/CallContext';
 import { IncomingCallOverlay } from '@/features/chat';
@@ -24,6 +24,7 @@ import { AuthPage } from '@/features/auth';
 
 // Dashboard pages (lazy — only loaded after login)
 const PatientDashboard = lazy(() => import('@/features/patient/pages/Dashboard'));
+const PatientOnboarding = lazy(() => import('@/features/patient/pages/Onboarding'));
 const PatientProviders = lazy(() => import('@/features/patient/pages/Providers'));
 const PatientConsent = lazy(() => import('@/features/patient/pages/Consent'));
 const PatientRequests = lazy(() => import('@/features/patient/pages/Requests'));
@@ -48,7 +49,7 @@ const AdminAnnouncements = lazy(() => import('@/features/admin/pages/Announcemen
 
 function AppContent() {
   const location = useLocation();
-  const { dark } = useTheme();
+
   const auth = useAuth();
   const user = auth?.user;
 
@@ -68,6 +69,9 @@ function AppContent() {
       <IncomingCallOverlay />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname.split('/')[1] || 'public'}>
+          {/* Standalone Onboarding Route (No Landing Navbar/Footer) */}
+          <Route path="/onboarding" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientOnboarding isPreview={true} /></Suspense></ErrorBoundary>} />
+
           {/* Public Routes */}
           <Route path="/" element={<MainLayout />}>
             <Route index element={<AnimatedPage><LandingPage /></AnimatedPage>} />
@@ -77,6 +81,7 @@ function AppContent() {
 
           {/* Dashboard Routes with Persistent Shell (Top Bar & Bottom Nav stay mounted) */}
           <Route path="/patient" element={<ProtectedRoute allowedRole="patient" />}>
+            <Route path="onboarding" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientOnboarding /></Suspense></ErrorBoundary>} />
             <Route element={<DashboardLayout role="patient" />}>
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientDashboard /></Suspense></ErrorBoundary>} />

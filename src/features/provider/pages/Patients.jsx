@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   MessageSquare, Search, CheckCircle, FileText, User, 
-  ChevronLeft, ChevronRight, Sparkles, Filter, CheckCircle2,
-  Calendar, Clock, ShieldCheck, MapPin, ExternalLink, X
+  ChevronLeft, ChevronRight,
+  Calendar, Clock, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -363,7 +363,7 @@ const ProviderPatients = () => {
                       </p>
                       {p.notes && p.notes.trim() ? (
                         <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic line-clamp-3">
-                          "{p.notes}"
+                          &ldquo;{p.notes}&rdquo;
                         </p>
                       ) : (
                         <p className="text-xs text-slate-400 dark:text-slate-500 italic">

@@ -12,7 +12,7 @@ import { getSignedUrl } from '@/lib/supabaseHelpers';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { ProfilePhotoUpload, FhirExportModal } from '@/shared/components';
 import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
-import { LocationPicker } from '@/features/tracking/components';
+import PermanentAddressSection from '@/features/patient/components/PermanentAddressSection';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -155,11 +155,14 @@ const PatientProfile = () => {
         is_profile_complete: isComplete,
       };
 
-      if (addressChanged) {
+      if (homeCoords?.lat != null && homeCoords?.lng != null) {
+        patientPayload.latitude = homeCoords.lat;
+        patientPayload.longitude = homeCoords.lng;
+        patientPayload.geocoded_at = new Date().toISOString();
+      } else if (addressChanged) {
         patientPayload.latitude = null;
         patientPayload.longitude = null;
         patientPayload.geocoded_at = null;
-        setHomeCoords(null);
       }
 
       const { error } = await supabase
@@ -839,25 +842,14 @@ const PatientProfile = () => {
                         />
                       </div>
 
-                      <div className="space-y-1.5 md:col-span-2">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Home Address</label>
-                        <textarea name="address" required value={profile.address}
-                          onChange={e => setProfile({...profile, address: e.target.value})}
-                          placeholder="Complete home address in Muntinlupa..." rows={3}
-                          className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5 md:col-span-2">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">
-                          Pin Your Home on the Map {homeCoords ? <span className="text-emerald-600 dark:text-emerald-400">· Saved</span> : <span className="text-amber-600 dark:text-amber-400">· Recommended</span>}
-                        </label>
-                        <p className="text-3xs text-slate-500 ml-1">Used for accurate live tracking and ETA when your provider is on the way.</p>
-                        <LocationPicker
-                          userId={user?.id}
-                          address={profile.address}
-                          initial={homeCoords}
-                          onSaved={setHomeCoords}
+                      <div className="md:col-span-2">
+                        <PermanentAddressSection
+                          initialAddress={profile.address}
+                          initialCoords={homeCoords}
+                          onChange={({ address, coords }) => {
+                            setProfile((prev) => ({ ...prev, address }));
+                            if (coords) setHomeCoords(coords);
+                          }}
                         />
                       </div>
 
