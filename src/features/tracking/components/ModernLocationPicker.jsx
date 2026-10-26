@@ -12,16 +12,63 @@ import { reverseGeocode } from '../services/geocoding';
 const STYLE_LIGHT = 'https://tiles.openfreemap.org/styles/liberty';
 const STYLE_DARK = 'https://tiles.openfreemap.org/styles/dark';
 
-// ArcGIS basemap styles (satellite imagery + terrain relief). The key is
-// domain-restricted and ships in the bundle, so these options only appear when
-// a key is configured.
+// ArcGIS basemap styles (satellite imagery + terrain relief). Uses the
+// vector Basemap Styles v2 endpoint when VITE_ARCGIS_API_KEY is configured,
+// and falls back to keyless Esri World Imagery + Labels / World Topo Map
+// MapLibre style definitions when the env var is omitted in deployment.
 const ARCGIS_API_KEY = import.meta.env.VITE_ARCGIS_API_KEY;
+const FALLBACK_STYLES = {
+  satellite: {
+    version: 8,
+    sources: {
+      'esri-imagery': {
+        type: 'raster',
+        tiles: [
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        ],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution: '&copy; Esri, Maxar, Earthstar Geographics',
+      },
+      'esri-labels': {
+        type: 'raster',
+        tiles: [
+          'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        ],
+        tileSize: 256,
+        maxzoom: 19,
+      },
+    },
+    layers: [
+      { id: 'esri-imagery-layer', type: 'raster', source: 'esri-imagery' },
+      { id: 'esri-labels-layer', type: 'raster', source: 'esri-labels' },
+    ],
+  },
+  terrain: {
+    version: 8,
+    sources: {
+      'esri-terrain': {
+        type: 'raster',
+        tiles: [
+          'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+        ],
+        tileSize: 256,
+        maxzoom: 19,
+        attribution: '&copy; Esri, HERE, Garmin, Intermap, USGS',
+      },
+    },
+    layers: [
+      { id: 'esri-terrain-layer', type: 'raster', source: 'esri-terrain' },
+    ],
+  },
+};
+
 const ARCGIS_STYLES = ARCGIS_API_KEY
   ? {
       satellite: `https://basemapstyles-api.arcgis.com/arcgis/rest/services/styles/v2/styles/arcgis/imagery?token=${ARCGIS_API_KEY}`,
       terrain: `https://basemapstyles-api.arcgis.com/arcgis/rest/services/styles/v2/styles/arcgis/terrain?token=${ARCGIS_API_KEY}`,
     }
-  : null;
+  : FALLBACK_STYLES;
 
 const BASEMAPS = [
   { id: 'streets', label: 'Street', icon: MapIcon },
@@ -119,6 +166,10 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       const failed = pendingBasemapRef.current;
       if (!failed) return;
       pendingBasemapRef.current = null;
+      if (ARCGIS_API_KEY && FALLBACK_STYLES[failed]) {
+        map.setStyle(FALLBACK_STYLES[failed]);
+        return;
+      }
       setBasemap('streets');
       toast.error(
         `${failed === 'terrain' ? 'Terrain' : 'Satellite'} imagery failed to load; switched back to the street map.`
