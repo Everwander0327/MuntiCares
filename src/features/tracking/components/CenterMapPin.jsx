@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react';
  * Custom MuntiCares stationary center-screen pin:
  * - Floating clinical-blue squircle badge with a Home Roof + Heart emblem
  * - Tapered precision stem whose tip is anchored at the exact map center (50%, 50%)
- * - Pulsing ground radar ring when locked; contracts and lifts smoothly while panning
+ * - Pulsing ground radar ring centered via wrapper so `animate-ping` scales from true center
  */
 export default function CenterMapPin({ isPanning, addressPreview, loading }) {
   return (
@@ -13,24 +13,25 @@ export default function CenterMapPin({ isPanning, addressPreview, loading }) {
       className="pointer-events-none absolute inset-0 z-[500] select-none"
       aria-hidden="true"
     >
-      {/* Pulsing Ground Radar Ring — active when stationary at destination */}
-      <div
-        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#2F6FB5]/50 dark:border-[#8CBDF0]/50 bg-[#2F6FB5]/15 transition-all duration-300 ${
-          isPanning
-            ? 'w-3 h-3 opacity-40 scale-75'
-            : 'w-9 h-9 opacity-100 scale-100 animate-ping'
-        }`}
-        style={{ animationDuration: '2.2s' }}
-      />
+      {/* Ground Radar Anchor Wrapper — keeps translate(-50%, -50%) isolated from animate-ping scale() */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+        {/* Pulsing Ground Radar Ring */}
+        {!isPanning && (
+          <span
+            className="absolute w-8 h-8 rounded-full border border-[#2F6FB5]/55 dark:border-[#8CBDF0]/55 bg-[#2F6FB5]/15 animate-ping"
+            style={{ animationDuration: '2.2s' }}
+          />
+        )}
 
-      {/* Secondary Outer Target Halo */}
-      <div
-        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all duration-200 ${
-          isPanning
-            ? 'w-5 h-5 border-[#2F6FB5]/70 dark:border-[#8CBDF0]/80 bg-[#2F6FB5]/10 scale-90'
-            : 'w-7 h-7 border-[#2F6FB5]/35 dark:border-[#8CBDF0]/40 bg-[#2F6FB5]/10 scale-100'
-        }`}
-      />
+        {/* Secondary Target Halo */}
+        <span
+          className={`rounded-full border transition-all duration-200 ${
+            isPanning
+              ? 'w-5 h-5 border-[#2F6FB5]/70 dark:border-[#8CBDF0]/80 bg-[#2F6FB5]/10 scale-90'
+              : 'w-7 h-7 border-[#2F6FB5]/35 dark:border-[#8CBDF0]/40 bg-[#2F6FB5]/10 scale-100'
+          }`}
+        />
+      </div>
 
       {/* Dynamic Ground Shadow — centered on the true map center */}
       <div
@@ -55,20 +56,11 @@ export default function CenterMapPin({ isPanning, addressPreview, loading }) {
               <span className="truncate">Locating care address…</span>
             </>
           ) : (
-            <>
-              <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  isPanning
-                    ? 'bg-amber-400 animate-pulse'
-                    : 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]'
-                }`}
-              />
-              <span className="truncate">
-                {isPanning
-                  ? 'Release map to lock care location'
-                  : addressPreview || 'Drag map to set care visit location'}
-              </span>
-            </>
+            <span className="truncate">
+              {isPanning
+                ? 'Release map to lock care location'
+                : addressPreview || 'Drag map to set care visit location'}
+            </span>
           )}
         </div>
 
