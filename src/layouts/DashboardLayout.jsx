@@ -31,13 +31,13 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
     className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative overflow-hidden ${
       active 
         ? 'neu-btn-primary font-bold shadow-md' 
-        : 'text-[#52657A] dark:text-[#A5B6C8] hover:text-link dark:hover:text-[#8CBDF0]'
+        : 'text-txt-secondary dark:text-txt-darkSecondary hover:text-link dark:hover:text-[#8CBDF0]'
     }`}
   >
     <span className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0 ${
       active 
         ? '!bg-white/20 dark:!bg-[#08182A]/15 shadow-inner border border-white/30 dark:border-black/10 backdrop-blur-sm' 
-        : 'neu-flat-sm text-[#52657A] dark:text-[#A5B6C8] group-hover:text-link dark:group-hover:text-[#8CBDF0] group-hover:scale-105'
+        : 'neu-flat-sm text-txt-secondary dark:text-txt-darkSecondary group-hover:text-link dark:group-hover:text-[#8CBDF0] group-hover:scale-105'
     }`}>
       {React.cloneElement(icon, { className: 'w-4 h-4' })}
     </span>
@@ -547,10 +547,10 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     await logout();
                     navigate('/login');
                   }}
-                  className="neu-btn flex items-center gap-3 px-3.5 py-3 rounded-2xl text-[#52657A] dark:text-[#A5B6C8] hover:text-[#BC3030] dark:hover:text-[#F4918B] transition-all w-full group"
+                  className="neu-btn flex items-center gap-3 px-3.5 py-3 rounded-2xl text-txt-secondary dark:text-txt-darkSecondary hover:text-[#BC3030] dark:hover:text-[#F4918B] transition-all w-full group"
                 >
                   <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]">
-                    <LogOut className="w-4 h-4 text-[#52657A] dark:text-[#A5B6C8] group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]" />
+                    <LogOut className="w-4 h-4 text-txt-secondary dark:text-txt-darkSecondary group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]" />
                   </div>
                   <span className="font-bold text-xs">Logout</span>
                 </button>
@@ -604,7 +604,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 <p className="text-xs sm:text-base md:text-lg font-display font-black text-[#17283B] dark:text-[#E6EEF6] truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
                   Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
                 </p>
-                <p className="text-xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] font-medium truncate">
+                <p className="text-xs sm:text-xs text-txt-secondary dark:text-txt-darkSecondary font-medium truncate">
                   {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
               </div>

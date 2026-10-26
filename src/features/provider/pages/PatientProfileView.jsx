@@ -249,13 +249,13 @@ const PatientProfileView = () => {
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             >
               {/* Header Banner */}
-              <div className="h-24 sm:h-28 md:h-32 bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 relative">
+              <div className="h-24 sm:h-28 md:h-32 bg-gradient-to-br from-ink via-primary-800 to-primary-700 relative">
                 <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, white 1.5px, transparent 1.5px)', backgroundSize: '18px 18px' }} />
               </div>
 
               {/* Avatar */}
               <div className="px-4 sm:px-8 -mt-12 sm:-mt-14 md:-mt-16 relative z-10">
-                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full border-4 border-[#ebf1f8] dark:border-[#172236] shadow-xl mx-auto overflow-hidden bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center neu-btn p-1">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full border-4 border-surface-shell shadow-xl mx-auto overflow-hidden bg-gradient-to-br from-surface-subtle to-primary-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center neu-btn p-1">
                   {patient.avatar_url ? (
                     <img src={patient.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
                   ) : (

@@ -241,7 +241,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
                   <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
                 </div>
                 <div 
-                  className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#172236] transition-colors ${
+                  className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-surface-shell transition-colors ${
                     isUserOnline(conv.id) ? 'bg-emerald-500' : 'bg-slate-400'
                   }`} 
                   title={isUserOnline(conv.id) ? 'Online' : 'Offline'}

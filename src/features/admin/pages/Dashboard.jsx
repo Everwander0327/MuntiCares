@@ -46,7 +46,7 @@ const StatCard = ({ label, value, colorClass, borderAccent, subtitle }) => {
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
-      <div className="neu-flat px-4 py-2.5 rounded-2xl border border-white/80 dark:border-white/10 shadow-xl bg-[#ebf1f8]/95 dark:bg-[#172236]/95 backdrop-blur-md z-50">
+      <div className="neu-flat px-4 py-2.5 rounded-2xl border border-white/80 dark:border-white/10 shadow-xl bg-surface-shell/95 backdrop-blur-md z-50">
         <p className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-1">{label}</p>
         {payload.map((p, i) => (
           <div key={i} className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
@@ -129,8 +129,8 @@ const AdminDashboard = () => {
         });
 
         setPieChartData([
-          { name: 'Patients', value: patientCount || 0, color: '#1E6FBF' },
-          { name: 'Providers', value: providerCount || 0, color: '#38bdf8' },
+          { name: 'Patients', value: patientCount || 0, color: 'var(--chart-1)' },
+          { name: 'Providers', value: providerCount || 0, color: 'var(--chart-4)' },
         ]);
 
         const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -308,17 +308,17 @@ const AdminDashboard = () => {
                   <defs>
                     {/* Neumorphic 3D Bar Gradient */}
                     <linearGradient id="neuBarGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.95} />
-                      <stop offset="60%" stopColor="#1E6FBF" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#0e3a6c" stopOpacity={0.85} />
+                      <stop offset="0%" stopColor="var(--chart-4)" stopOpacity={0.95} />
+                      <stop offset="60%" stopColor="var(--chart-1)" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="var(--chart-deep)" stopOpacity={0.85} />
                     </linearGradient>
                     <filter id="neuBarGlow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#1E6FBF" floodOpacity="0.35" />
+                      <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="var(--chart-1)" floodOpacity="0.35" />
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12, fontWeight: 700 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12, fontWeight: 700 }} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(30, 111, 191, 0.05)', radius: 12 }} />
                   <Bar dataKey="requests" fill="url(#neuBarGrad)" radius={[12, 12, 6, 6]} filter="url(#neuBarGlow)" />
                 </BarChart>
@@ -340,12 +340,12 @@ const AdminDashboard = () => {
                 <PieChart>
                   <defs>
                     <linearGradient id="patientPieGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#2563eb" />
-                      <stop offset="100%" stopColor="#1E6FBF" />
+                      <stop offset="0%" stopColor="var(--chart-2)" />
+                      <stop offset="100%" stopColor="var(--chart-1)" />
                     </linearGradient>
                     <linearGradient id="providerPieGrad" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#38bdf8" />
-                      <stop offset="100%" stopColor="#0ea5e9" />
+                      <stop offset="0%" stopColor="var(--chart-4)" />
+                      <stop offset="100%" stopColor="var(--chart-2)" />
                     </linearGradient>
                     <filter id="neuPieShadow" x="-20%" y="-20%" width="140%" height="140%">
                       <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#17283B" floodOpacity="0.18" />
@@ -446,56 +446,56 @@ const AdminDashboard = () => {
                 <defs>
                   {/* Patients Area Gradient */}
                   <linearGradient id="patientAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1E6FBF" stopOpacity={0.45} />
-                    <stop offset="100%" stopColor="#1E6FBF" stopOpacity={0.0} />
+                    <stop offset="0%" stopColor="var(--chart-1)" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity={0.0} />
                   </linearGradient>
                   {/* Providers Area Gradient */}
                   <linearGradient id="providerAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.0} />
+                    <stop offset="0%" stopColor="var(--chart-4)" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="var(--chart-4)" stopOpacity={0.0} />
                   </linearGradient>
                   {/* Total Area Gradient */}
                   <linearGradient id="totalAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10B981" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity={0.0} />
+                    <stop offset="0%" stopColor="var(--chart-5)" stopOpacity={0.4} />
+                    <stop offset="100%" stopColor="var(--chart-5)" stopOpacity={0.0} />
                   </linearGradient>
                   <filter id="neuLineGlow" x="-10%" y="-10%" width="120%" height="120%">
                     <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#17283B" floodOpacity="0.25" />
                   </filter>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12, fontWeight: 700 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-tertiary)', fontSize: 12, fontWeight: 700 }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area 
                   type="monotone" 
                   dataKey="patients" 
-                  stroke="#1E6FBF" 
+                  stroke="var(--chart-1)"
                   strokeWidth={3} 
                   fillOpacity={1} 
                   fill="url(#patientAreaGrad)" 
                   name="Patients" 
-                  dot={{ r: 3, fill: '#1E6FBF', stroke: '#fff', strokeWidth: 1.5 }}
+                  dot={{ r: 3, fill: 'var(--chart-1)', stroke: '#fff', strokeWidth: 1.5 }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="providers" 
-                  stroke="#38bdf8" 
+                  stroke="var(--chart-4)"
                   strokeWidth={3} 
                   fillOpacity={1} 
                   fill="url(#providerAreaGrad)" 
                   name="Providers" 
-                  dot={{ r: 3, fill: '#38bdf8', stroke: '#fff', strokeWidth: 1.5 }}
+                  dot={{ r: 3, fill: 'var(--chart-4)', stroke: '#fff', strokeWidth: 1.5 }}
                 />
                 <Area 
                   type="monotone" 
                   dataKey="total" 
-                  stroke="#10B981" 
+                  stroke="var(--chart-5)"
                   strokeWidth={3.5} 
                   fillOpacity={1} 
                   fill="url(#totalAreaGrad)" 
                   name="Total Users" 
-                  dot={{ r: 3.5, fill: '#10B981', stroke: '#fff', strokeWidth: 2 }}
+                  dot={{ r: 3.5, fill: 'var(--chart-5)', stroke: '#fff', strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>

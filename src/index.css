@@ -34,7 +34,7 @@ html {
 }
 
 body {
-  @apply font-sans bg-[#F4F8FC] text-[#17283B] dark:bg-[#0E1620] dark:text-[#E6EEF6];
+  @apply font-sans bg-surface-page text-ink dark:text-[#E6EEF6];
   font-family: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -111,12 +111,28 @@ a,
   --text-tertiary: #5A6B7F;
   --text-link: #2F6FB5;
   --focus-ring: #2F6FB5;
+  /* RGB channel triplets so Tailwind opacity modifiers (bg-surface-shell/95) work. */
+  --surface-page: 244 248 252;
+  --surface-shell: 235 241 248;
+  --surface-subtle: 233 241 249;
+  --surface-border: 210 224 238;
+  /* Chart series: blues derived from primary, green from the success role. */
+  --chart-1: #2F6FB5;
+  --chart-2: #4D8FD8;
+  --chart-3: #8CBDF0;
+  --chart-4: #38BDF8;
+  --chart-5: #2C7A55;
+  --chart-deep: #183049;
 }
 
 html.dark {
   --text-tertiary: #A5B6C8;
   --text-link: #8CBDF0;
   --focus-ring: #8CBDF0;
+  --surface-page: 14 22 32;
+  --surface-shell: 23 34 54;
+  --surface-subtle: 31 45 62;
+  --surface-border: 45 63 84;
 }
 
 /* MapLibre paints its attribution on its own white control chrome,
@@ -1279,7 +1295,7 @@ select:focus {
    Tokens are scoped with --trk-* so the rest of the product is untouched.
    ========================================================================== */
 :root {
-  --trk-font: 'Inter', 'Atkinson Hyperlegible Next', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --trk-font: 'Atkinson Hyperlegible Next', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --trk-accent: #2f6fb5;
   --trk-accent-strong: #255a94;
   --trk-accent-soft: #e8f1fa;

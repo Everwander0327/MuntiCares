@@ -698,7 +698,7 @@ const AdminRequests = () => {
                 className="fixed bottom-20 lg:bottom-8 inset-x-0 z-[60] flex justify-center px-3 sm:px-4 pointer-events-none"
                 style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
               >
-                <div className="neu-flat px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/90 dark:border-white/10 shadow-2xl bg-[#ebf1f8]/95 dark:bg-[#172236]/95 backdrop-blur-2xl flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 pointer-events-auto max-w-[94vw]">
+                <div className="neu-flat px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/90 dark:border-white/10 shadow-2xl bg-surface-shell/95 backdrop-blur-2xl flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 pointer-events-auto max-w-[94vw]">
                   {/* Count Badge & Select All Toggle */}
                   <div className="flex items-center gap-1.5 sm:gap-2 pr-2.5 sm:pr-3.5 border-r border-slate-300 dark:border-slate-700 shrink-0">
                     <span className="w-6 h-6 rounded-full bg-primary text-white font-display font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
@@ -806,14 +806,14 @@ const AdminRequests = () => {
               onClick={() => setSelectedRequest(null)}
             >
               <motion.div
-                className="neu-flat rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl bg-[#ebf1f8] dark:bg-[#172236] transform-gpu will-change-transform"
+                className="neu-flat rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl bg-surface-shell transform-gpu will-change-transform"
                 initial={{ scale: 0.96, opacity: 0, y: 10 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                 onClick={e => e.stopPropagation()}
               >
                 {/* Modal Header */}
-                <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-[#ebf1f8] dark:bg-[#172236] z-10">
+                <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-surface-shell z-10">
                   <div>
                     <DialogPrimitive.Title asChild>
                       <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Request Dossier</h2>
@@ -990,7 +990,7 @@ const AdminRequests = () => {
                 </div>
 
                 {/* Modal Footer - Expanded full width button */}
-                <div className="p-4 sm:p-5 border-t border-white/60 dark:border-white/5 bg-[#ebf1f8]/60 dark:bg-[#172236]/60">
+                <div className="p-4 sm:p-5 border-t border-white/60 dark:border-white/5 bg-surface-shell/60">
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedRequest(null)}

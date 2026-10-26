@@ -117,7 +117,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
             exit={{ opacity: 0, y: 30 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full sm:max-w-3xl h-[92dvh] sm:h-[82vh] max-h-[92dvh] sm:max-h-[82vh] neu-flat bg-[#ebf1f8] dark:bg-[#172236] rounded-t-[2.25rem] sm:rounded-[2.25rem] flex flex-col overflow-hidden z-[10000] border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            className="relative w-full sm:max-w-3xl h-[92dvh] sm:h-[82vh] max-h-[92dvh] sm:max-h-[82vh] neu-flat bg-surface-shell rounded-t-[2.25rem] sm:rounded-[2.25rem] flex flex-col overflow-hidden z-[10000] border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           >
             {/* Mobile Drag Indicator Bar */}
             <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mt-2.5 sm:hidden shrink-0" />

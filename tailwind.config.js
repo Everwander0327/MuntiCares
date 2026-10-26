@@ -40,11 +40,23 @@ export default {
         },
         surface: {
           DEFAULT: "#FFFFFF",
+          // Theme-aware surfaces; values live in index.css so light/dark swap
+          // without a paired dark: class at every call site.
+          page: "rgb(var(--surface-page) / <alpha-value>)",
+          shell: "rgb(var(--surface-shell) / <alpha-value>)",
+          subtle: "rgb(var(--surface-subtle) / <alpha-value>)",
+          border: "rgb(var(--surface-border) / <alpha-value>)",
           alt: "#E9F1F9",
-          border: "#D2E0EE",
           dark: "#16212E",
           darkAlt: "#1F2D3E",
           darkBorder: "#2D3F54",
+        },
+        chart: {
+          1: "var(--chart-1)",
+          2: "var(--chart-2)",
+          3: "var(--chart-3)",
+          4: "var(--chart-4)",
+          5: "var(--chart-5)",
         },
         txt: {
           primary: "#17283B",
@@ -71,8 +83,8 @@ export default {
           darkSoft: "#3C1B1A",
         },
         focusRing: {
-          DEFAULT: "#7C3AED",
-          dark: "#C9B6FF",
+          DEFAULT: "#2F6FB5",
+          dark: "#8CBDF0",
         },
         secondary: "#F4F8FC",
         ink: "#17283B",

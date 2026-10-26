@@ -414,7 +414,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.96 }}
             transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-            className="absolute inset-0 z-[100] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col select-text"
+            className="absolute inset-0 z-[100] bg-surface-shell flex flex-col select-text"
           >
             {/* Connecting Screen */}
             {callStatus === 'connecting' && (
@@ -491,7 +491,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             {/* Connected Call Screen */}
             <div className={`absolute inset-0 flex flex-col ${callStatus === 'connected' ? 'z-0' : 'z-[-1] opacity-0 pointer-events-none'}`}>
               {/* Header Bar */}
-              <div className="flex items-center justify-between px-5 py-3.5 bg-[#ebf1f8] dark:bg-[#172236] neu-flat border-b border-white/60 dark:border-white/10 shrink-0 z-10 shadow-sm">
+              <div className="flex items-center justify-between px-5 py-3.5 bg-surface-shell neu-flat border-b border-white/60 dark:border-white/10 shrink-0 z-10 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-link">
                     {callType === 'audio' ? <Phone className="w-4 h-4" /> : <Video className="w-4 h-4" />}
@@ -553,7 +553,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
                 {/* Audio Screen / Remote Camera Off Placeholder */}
                 {(!hasRemoteVideo || callType === 'audio') && (
-                  <div className="flex-1 flex flex-col items-center justify-center px-6 relative w-full bg-[#ebf1f8] dark:bg-[#172236] z-[5]">
+                  <div className="flex-1 flex flex-col items-center justify-center px-6 relative w-full bg-surface-shell z-[5]">
                     <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center mb-6">
                       <motion.div
                         className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
@@ -626,7 +626,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               </div>
 
               {/* Bottom Controls Bar */}
-              <div className="px-6 py-4 bg-[#ebf1f8] dark:bg-[#172236] neu-flat border-t border-white/60 dark:border-white/10 flex items-center justify-center gap-3 sm:gap-4 shrink-0 z-10 shadow-lg">
+              <div className="px-6 py-4 bg-surface-shell neu-flat border-t border-white/60 dark:border-white/10 flex items-center justify-center gap-3 sm:gap-4 shrink-0 z-10 shadow-lg">
                 <button
                   type="button"
                   onClick={toggleMute}
@@ -770,7 +770,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               )}
             </div>
             <div 
-              className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-[#172236] transition-colors duration-300 ${
+              className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-surface-shell transition-colors duration-300 ${
                 isUserOnline(otherUser.id) ? 'bg-emerald-500' : 'bg-slate-400'
               }`} 
               title={isUserOnline(otherUser.id) ? 'Online' : 'Offline'}

@@ -492,9 +492,9 @@ const PatientDashboard = () => {
           <div className="lg:col-span-5 neu-flat rounded-2xl sm:rounded-[2.25rem] p-5 sm:p-6 flex flex-col justify-start gap-5">
             <div>
               {/* Horizontal Stats Row on Top: Light & Airy Semantic Hierarchy */}
-              <div className="mb-4 pb-4 border-b border-[#D2E0EE] dark:border-[#2D3F54]">
+              <div className="mb-4 pb-4 border-b border-surface-border">
                 <div className="flex items-center justify-between mb-2.5">
-                  <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-[#52657A] dark:text-[#A5B6C8]">
+                  <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-txt-secondary dark:text-txt-darkSecondary">
                     Request Status
                   </h4>
                   <Link
@@ -542,10 +542,10 @@ const PatientDashboard = () => {
                     </span>
                   </Link>
                 ) : (
-                  <div className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-[#E9F1F9]/60 dark:bg-[#183049]/40 border border-[#D2E0EE]/60 dark:border-white/5 text-[#52657A]">
+                  <div className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-surface-subtle/60 dark:bg-primary-800/40 border border-surface-border/60 dark:border-white/5 text-txt-secondary">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#A5B6C8] shrink-0" />
-                      <p className="text-sm font-semibold text-[#52657A] dark:text-[#A5B6C8] truncate">
+                      <p className="text-sm font-semibold text-txt-secondary dark:text-txt-darkSecondary truncate">
                         No active or upcoming visits scheduled today
                       </p>
                     </div>
@@ -607,9 +607,9 @@ const PatientDashboard = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#C4623F] dark:group-hover:text-[#F2A98E] transition-colors">Find a Provider</span>
-                    <span className="block text-xs text-[#52657A] dark:text-[#A5B6C8] truncate">Browse verified caregivers</span>
+                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate">Browse verified caregivers</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-[#52657A] group-hover:text-[#C4623F] dark:group-hover:text-[#F2A98E] group-hover:translate-x-1 transition-all shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-txt-secondary group-hover:text-[#C4623F] dark:group-hover:text-[#F2A98E] group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
 
                 <Link
@@ -621,16 +621,16 @@ const PatientDashboard = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] transition-colors">View Requests</span>
-                    <span className="block text-xs text-[#52657A] dark:text-[#A5B6C8] truncate">Track appointments status</span>
+                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate">Track appointments status</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-[#52657A] group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] group-hover:translate-x-1 transition-all shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-txt-secondary group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
 
                 <Link
                   to="/patient/messages"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#2F6FB5] dark:hover:border-[#8CBDF0]"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#E9F1F9] dark:bg-[#1F2D3E] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#D2E0EE] dark:border-[#2D3F54] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-sm relative">
+                  <div className="w-9 h-9 rounded-xl bg-surface-subtle text-[#2F6FB5] dark:text-[#8CBDF0] border border-surface-border flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-sm relative">
                     <MessageCircle className="w-4 h-4" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#BC3030] text-white rounded-full text-xs font-extrabold flex items-center justify-center shadow-sm">
@@ -642,9 +642,9 @@ const PatientDashboard = () => {
                     <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] transition-colors">
                       Messages {unreadCount > 0 && `(${unreadCount})`}
                     </span>
-                    <span className="block text-xs text-[#52657A] dark:text-[#A5B6C8] truncate">Direct chat with providers</span>
+                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate">Direct chat with providers</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-[#52657A] group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] group-hover:translate-x-1 transition-all shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-txt-secondary group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
               </div>
             </div>
@@ -702,7 +702,7 @@ const PatientDashboard = () => {
                         )}
                       </Link>
                       <div className="min-w-0">
-                        <div className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-nano font-extrabold uppercase tracking-wider text-[#52657A] dark:text-[#A5B6C8] mb-1">
+                        <div className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-nano font-extrabold uppercase tracking-wider text-txt-secondary dark:text-txt-darkSecondary mb-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#2C7A55] dark:bg-[#7DD3A3] animate-ping" />
                           Active Home Care Visit
                         </div>
@@ -752,7 +752,7 @@ const PatientDashboard = () => {
                   </div>
 
                   {/* Visit Time and Date Neumorphic Raised Chips */}
-                  <div className="flex flex-wrap items-center gap-2.5 text-xs text-[#52657A] dark:text-[#A5B6C8]">
+                  <div className="flex flex-wrap items-center gap-2.5 text-xs text-txt-secondary dark:text-txt-darkSecondary">
                     <div className="neu-flat-sm px-3.5 py-1.5 rounded-xl flex items-center gap-2 font-semibold">
                       <Calendar className="w-3.5 h-3.5 text-link" />
                       <span>{activeVisit.date}</span>
@@ -781,7 +781,7 @@ const PatientDashboard = () => {
                                 ? 'neu-flat-sm bg-[#E1F3EA] dark:bg-[#14301F] text-[#2C7A55] dark:text-[#7DD3A3] font-bold border border-[#2C7A55]/30' 
                                 : isCurrent 
                                   ? 'neu-btn-primary text-white scale-110 shadow-lg' 
-                                  : 'neu-flat-sm text-[#52657A] dark:text-[#A5B6C8] opacity-90'
+                                  : 'neu-flat-sm text-txt-secondary dark:text-txt-darkSecondary opacity-90'
                             }`}>
                               {isPassed ? <CheckCircle2 className="w-4 h-4 text-[#2C7A55] dark:text-[#7DD3A3]" /> : STEP_ICONS[i]}
                             </div>
@@ -793,7 +793,7 @@ const PatientDashboard = () => {
                     <div className="flex items-center justify-between px-1">
                       {STEP_LABELS.map((label, i) => (
                         <span key={label} className={`text-nano font-extrabold uppercase tracking-wider text-center transition-colors ${
-                          i <= currentStep ? 'text-link dark:text-[#8CBDF0] font-bold' : 'text-[#52657A]/60 dark:text-[#A5B6C8]/60'
+                          i <= currentStep ? 'text-link dark:text-[#8CBDF0] font-bold' : 'text-txt-secondary/60 dark:text-[#A5B6C8]/60'
                         }`}>
                           {label}
                         </span>
@@ -815,12 +815,12 @@ const PatientDashboard = () => {
 
         {/* Recent Requests Section with Neumorphic Table / List (Compact layout) */}
         <section className="neu-flat rounded-2xl sm:rounded-[2.25rem] p-3.5 sm:p-6 overflow-hidden">
-          <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-[#D2E0EE] dark:border-[#2D3F54]">
+          <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-surface-border">
             <div>
               <h2 className="font-display font-extrabold text-base sm:text-lg text-[#17283B] dark:text-[#E6EEF6]">
                 Recent Requests
               </h2>
-              <p className="text-xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] mt-0.5">
+              <p className="text-xs sm:text-xs text-txt-secondary dark:text-txt-darkSecondary mt-0.5">
                 Showing {Math.min(requests.length, 5)} of {requests.length} records
               </p>
             </div>
@@ -852,7 +852,7 @@ const PatientDashboard = () => {
                       <p className="font-bold text-xs sm:text-sm text-[#17283B] dark:text-[#E6EEF6] group-hover:text-link transition-colors truncate">
                         {req.provider}
                       </p>
-                      <p className="text-xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] truncate mt-0.5">
+                      <p className="text-xs sm:text-xs text-txt-secondary dark:text-txt-darkSecondary truncate mt-0.5">
                         {req.service} &bull; {req.date} {req.time ? `(${req.time})` : ''}
                       </p>
                     </div>
@@ -866,7 +866,7 @@ const PatientDashboard = () => {
                         ? 'text-[#9C5A06] dark:text-[#F1BD6B] border border-[#9C5A06]/30 dark:border-[#F1BD6B]/30 bg-[#FFF1D6] dark:bg-[#34260E]'
                         : ['Cancelled', 'Rejected'].includes(req.status)
                         ? 'text-[#BC3030] dark:text-[#F4918B] border border-[#BC3030]/30 dark:border-[#F4918B]/30 bg-[#FCE8E6] dark:bg-[#3C1B1A]'
-                        : 'text-[#52657A] dark:text-[#A5B6C8] border border-[#D2E0EE] dark:border-[#2D3F54] bg-[#E9F1F9] dark:bg-[#1F2D3E]'
+                        : 'text-txt-secondary dark:text-txt-darkSecondary border border-surface-border bg-surface-subtle'
                     }`}>
                       {req.status}
                     </span>
@@ -880,7 +880,7 @@ const PatientDashboard = () => {
                 <FileText className="w-5 h-5" />
               </div>
               <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-sm">No Requests Yet</p>
-              <p className="text-xs text-[#52657A] dark:text-[#A5B6C8] mt-1 max-w-xs mx-auto">
+              <p className="text-xs text-txt-secondary dark:text-txt-darkSecondary mt-1 max-w-xs mx-auto">
                 Find a certified provider in your area to book your first home healthcare visit.
               </p>
               <Link

@@ -51,7 +51,7 @@ const IncomingCallOverlay = () => {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 24, stiffness: 260 }}
-            className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] rounded-[2.5rem] p-7 sm:p-8 max-w-xs w-full mx-5 shadow-2xl border border-white/80 dark:border-white/10 text-center select-text"
+            className="neu-flat bg-surface-shell rounded-[2.5rem] p-7 sm:p-8 max-w-xs w-full mx-5 shadow-2xl border border-white/80 dark:border-white/10 text-center select-text"
           >
             <div className="relative w-28 h-28 mx-auto mb-5">
               <motion.div
@@ -127,7 +127,7 @@ const IncomingCallOverlay = () => {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
             transition={{ type: 'spring', damping: 22, stiffness: 260 }}
-            className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] rounded-[2.25rem] p-7 max-w-xs w-full mx-5 shadow-2xl border border-white/80 dark:border-white/10 text-center select-text"
+            className="neu-flat bg-surface-shell rounded-[2.25rem] p-7 max-w-xs w-full mx-5 shadow-2xl border border-white/80 dark:border-white/10 text-center select-text"
           >
             <div className="w-16 h-16 mx-auto mb-3.5 rounded-2xl neu-flat flex items-center justify-center text-tertiary">
               <PhoneOff className="w-7 h-7" />

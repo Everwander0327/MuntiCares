@@ -47,7 +47,7 @@ const FeatureCard = ({ feature }) => (
             height="500"
             className="h-full w-full object-cover object-center opacity-100 contrast-105 saturate-110 transition-transform duration-500 ease-out group-hover:scale-105"
           />
-          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#ebf1f8] via-[#ebf1f8]/30 to-transparent dark:from-[#172236] dark:via-[#172236]/30 dark:to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-surface-shell via-surface-shell/30 to-transparent" />
         </div>
       )}
       <div className="p-6 md:p-8 flex-1 flex flex-col justify-between">

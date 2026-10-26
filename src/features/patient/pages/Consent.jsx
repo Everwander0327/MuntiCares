@@ -520,7 +520,7 @@ const PatientConsent = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                   onClick={(e) => e.stopPropagation()}
-                  className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-lg rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 space-y-4 shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                  className="neu-flat bg-surface-shell w-full sm:max-w-lg rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 space-y-4 shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
                 >
                   {/* Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5">
@@ -646,7 +646,7 @@ const PatientConsent = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                   onClick={(e) => e.stopPropagation()}
-                  className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-4 sm:p-6 md:p-7 space-y-3.5 h-[80vh] sm:h-[560px] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                  className="neu-flat bg-surface-shell w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-4 sm:p-6 md:p-7 space-y-3.5 h-[80vh] sm:h-[560px] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
                 >
                   {/* Modal Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5 shrink-0">

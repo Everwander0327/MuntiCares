@@ -42,7 +42,7 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option",
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.16, ease: "easeOut" }}
-            className="neu-flat absolute left-0 right-0 sm:left-auto sm:right-0 top-full mt-2 z-50 bg-[#ebf1f8] dark:bg-[#172236] rounded-2xl border border-white/80 dark:border-white/10 shadow-2xl p-1.5 min-w-[150px] w-full"
+            className="neu-flat absolute left-0 right-0 sm:left-auto sm:right-0 top-full mt-2 z-50 bg-surface-shell rounded-2xl border border-white/80 dark:border-white/10 shadow-2xl p-1.5 min-w-[150px] w-full"
           >
             {options.map((option) => {
               const isChecked = option.value === value;

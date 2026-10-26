@@ -80,7 +80,7 @@ const NeumorphicToast = ({ t }) => {
                 },
               }
         }
-        className="neu-flat bg-[#ebf1f8]/95 dark:bg-[#172236]/95 backdrop-blur-md rounded-full shadow-2xl border border-white/80 dark:border-white/10 ring-1 ring-black/5 dark:ring-white/5 overflow-hidden relative flex items-center h-11 sm:h-12 px-1"
+        className="neu-flat bg-surface-shell/95 backdrop-blur-md rounded-full shadow-2xl border border-white/80 dark:border-white/10 ring-1 ring-black/5 dark:ring-white/5 overflow-hidden relative flex items-center h-11 sm:h-12 px-1"
       >
         {/* The Unrolled Mat (Text Layer) */}
         <motion.div

@@ -32,38 +32,38 @@ const getStatusStyle = (status) => {
     case 'On The Way':
     case 'Arrived':
       return {
-        badge: 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] border border-[#2C7A55]/30 dark:border-[#7DD3A3]/30 bg-[#E1F3EA] dark:bg-[#14301F] font-black',
+        badge: 'neu-flat-sm text-success dark:text-success-dark border border-success/30 dark:border-success-dark/30 bg-success-soft dark:bg-success-darkSoft font-black',
         icon: Sparkles,
-        dot: 'bg-[#2C7A55] dark:bg-[#7DD3A3]',
+        dot: 'bg-success dark:bg-success-dark',
         ping: true,
       };
     case 'Completed':
       return {
-        badge: 'neu-flat-sm text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#2F6FB5]/30 dark:border-[#8CBDF0]/30 bg-[#DDEBF8] dark:bg-[#183049] font-black',
+        badge: 'neu-flat-sm text-primary dark:text-primary-400 border border-primary/30 dark:border-primary-400/30 bg-primary-soft dark:bg-primary-800 font-black',
         icon: CheckCircle2,
-        dot: 'bg-[#2F6FB5] dark:bg-[#8CBDF0]',
+        dot: 'bg-primary dark:bg-primary-400',
         ping: false,
       };
     case 'Pending':
       return {
-        badge: 'neu-flat-sm text-[#9C5A06] dark:text-[#F1BD6B] border border-[#9C5A06]/30 dark:border-[#F1BD6B]/30 bg-[#FFF1D6] dark:bg-[#34260E] font-black',
+        badge: 'neu-flat-sm text-warning dark:text-warning-dark border border-warning/30 dark:border-warning-dark/30 bg-warning-soft dark:bg-warning-darkSoft font-black',
         icon: Clock,
-        dot: 'bg-[#9C5A06] dark:bg-[#F1BD6B]',
+        dot: 'bg-warning dark:bg-warning-dark',
         ping: false,
       };
     case 'Cancelled':
       return {
-        badge: 'neu-flat-sm text-[#52657A] dark:text-[#A5B6C8] border border-[#D2E0EE] dark:border-[#2D3F54] bg-[#E9F1F9] dark:bg-[#1F2D3E] font-bold',
+        badge: 'neu-flat-sm text-txt-secondary dark:text-txt-darkSecondary border border-surface-border bg-surface-subtle font-bold',
         icon: XCircle,
-        dot: 'bg-[#52657A] dark:bg-[#A5B6C8]',
+        dot: 'bg-txt-secondary dark:bg-txt-darkSecondary',
         ping: false,
       };
     case 'Rejected':
     default:
       return {
-        badge: 'neu-flat-sm text-[#BC3030] dark:text-[#F4918B] border border-[#BC3030]/30 dark:border-[#F4918B]/30 bg-[#FCE8E6] dark:bg-[#3C1B1A] font-black',
+        badge: 'neu-flat-sm text-danger dark:text-danger-dark border border-danger/30 dark:border-danger-dark/30 bg-danger-soft dark:bg-danger-darkSoft font-black',
         icon: AlertCircle,
-        dot: 'bg-[#BC3030] dark:bg-[#F4918B]',
+        dot: 'bg-danger dark:bg-danger-dark',
         ping: false,
       };
   }
@@ -147,8 +147,8 @@ const RequestCard = ({
         </div>
 
         {/* Middle Meta Details (Clean Flat Style) */}
-        <div className="py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 text-xs bg-[#E9F1F9] dark:bg-[#1F2D3E] border border-[#D2E0EE] dark:border-[#2D3F54]">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[#52657A] dark:text-[#A5B6C8] font-medium text-xs sm:text-xs">
+        <div className="py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 text-xs bg-surface-subtle border border-surface-border">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-txt-secondary dark:text-txt-darkSecondary font-medium text-xs sm:text-xs">
             <span className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-link shrink-0" />
               <span>{date}</span>

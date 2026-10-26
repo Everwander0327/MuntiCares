@@ -890,7 +890,7 @@ const PatientProviders = () => {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -4 }}
                           transition={{ duration: 0.15 }}
-                          className="absolute left-0 right-0 top-full mt-1.5 bg-[#ebf1f8] dark:bg-[#172236] rounded-2xl p-1.5 z-40 shadow-xl border border-white/60 dark:border-white/10 space-y-1 max-h-56 overflow-y-auto"
+                          className="absolute left-0 right-0 top-full mt-1.5 bg-surface-shell rounded-2xl p-1.5 z-40 shadow-xl border border-white/60 dark:border-white/10 space-y-1 max-h-56 overflow-y-auto"
                         >
                           {(selectedProvider.services?.length > 0 ? selectedProvider.services : ['General Care']).map(s => {
                             const isSelected = watchedService === s;
@@ -993,7 +993,7 @@ const PatientProviders = () => {
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -4 }}
                               transition={{ duration: 0.15 }}
-                              className="absolute left-0 right-0 top-full mt-1.5 bg-[#ebf1f8] dark:bg-[#172236] rounded-2xl p-1.5 z-40 shadow-xl border border-white/60 dark:border-white/10 space-y-1 max-h-56 overflow-y-auto"
+                              className="absolute left-0 right-0 top-full mt-1.5 bg-surface-shell rounded-2xl p-1.5 z-40 shadow-xl border border-white/60 dark:border-white/10 space-y-1 max-h-56 overflow-y-auto"
                             >
                               {availableSlots.length === 0 ? (
                                 <div className="p-3 text-center text-xs text-tertiary">
@@ -1248,7 +1248,7 @@ const PatientProviders = () => {
             event.preventDefault();
             sheetTriggerRef.current.focus();
           }}
-          className={`sm:max-w-lg md:max-w-3xl lg:max-w-4xl sm:mx-auto sm:bottom-4 rounded-t-[2.5rem] sm:rounded-[2.5rem] md:inset-0 md:m-auto h-[80dvh] min-h-[460px] sm:h-[82vh] md:min-h-[540px] max-h-[88vh] flex flex-col overflow-hidden p-0 bg-[#ebf1f8] dark:bg-[#172236] border-0 shadow-2xl transform-gpu will-change-transform ${selectedProvider ? 'opacity-0 pointer-events-none' : ''}`}
+          className={`sm:max-w-lg md:max-w-3xl lg:max-w-4xl sm:mx-auto sm:bottom-4 rounded-t-[2.5rem] sm:rounded-[2.5rem] md:inset-0 md:m-auto h-[80dvh] min-h-[460px] sm:h-[82vh] md:min-h-[540px] max-h-[88vh] flex flex-col overflow-hidden p-0 bg-surface-shell border-0 shadow-2xl transform-gpu will-change-transform ${selectedProvider ? 'opacity-0 pointer-events-none' : ''}`}
         >
           <SheetTitle className="sr-only">{viewingProvider?.full_name || 'Provider Profile'}</SheetTitle>
           <SheetDescription className="sr-only">View provider details, trust score, and reviews</SheetDescription>

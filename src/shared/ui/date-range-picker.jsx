@@ -63,7 +63,7 @@ const DateRangePicker = ({ startDate, endDate, onChange, className = '' }) => {
       </button>
 
       {isOpen && (
-        <div className="neu-flat fixed inset-x-4 top-auto mt-2 sm:absolute sm:inset-x-auto sm:right-0 sm:left-auto sm:top-full z-50 bg-[#ebf1f8] dark:bg-[#172236] rounded-3xl border border-white/80 dark:border-white/10 shadow-2xl p-4 sm:p-5 sm:w-96 w-auto">
+        <div className="neu-flat fixed inset-x-4 top-auto mt-2 sm:absolute sm:inset-x-auto sm:right-0 sm:left-auto sm:top-full z-50 bg-surface-shell rounded-3xl border border-white/80 dark:border-white/10 shadow-2xl p-4 sm:p-5 sm:w-96 w-auto">
           <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-widest mb-3">Quick select</p>
           <div className="grid grid-cols-2 gap-2 mb-4">
             {presets.map((preset) => (

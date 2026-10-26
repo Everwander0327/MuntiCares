@@ -388,7 +388,7 @@ const AdminAnnouncements = () => {
               onClick={() => setSelectedAnnouncement(null)}
             >
               <motion.div
-                className="neu-flat rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl bg-[#ebf1f8] dark:bg-[#172236] transform-gpu will-change-transform"
+                className="neu-flat rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl bg-surface-shell transform-gpu will-change-transform"
                 initial={{ scale: 0.96, opacity: 0, y: 10 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.96, opacity: 0, y: 10 }}
@@ -396,7 +396,7 @@ const AdminAnnouncements = () => {
                 onClick={e => e.stopPropagation()}
               >
                 {/* Modal Header */}
-                <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-[#ebf1f8] dark:bg-[#172236] z-10">
+                <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-surface-shell z-10">
                   <div>
                     <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Announcement Record</h2>
                     <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">Municipal Broadcast Archive</p>
@@ -425,7 +425,7 @@ const AdminAnnouncements = () => {
                 </div>
 
                 {/* Modal Footer - Expanded full width button */}
-                <div className="p-4 sm:p-5 border-t border-white/60 dark:border-white/5 bg-[#ebf1f8]/60 dark:bg-[#172236]/60 flex items-center gap-2">
+                <div className="p-4 sm:p-5 border-t border-white/60 dark:border-white/5 bg-surface-shell/60 flex items-center gap-2">
                   <motion.button
                     whileTap={{ scale: 0.96 }}
                     onClick={() => handleDelete(selectedAnnouncement.id)}
