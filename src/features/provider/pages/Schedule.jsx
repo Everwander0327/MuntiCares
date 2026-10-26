@@ -20,10 +20,10 @@ const STATUS_FLOW = {
 };
 
 const STATUS_BADGE = {
-  Accepted: 'neu-flat-sm text-blue-600 dark:text-blue-400 border border-blue-500/20',
-  'On The Way': 'neu-flat-sm text-amber-600 dark:text-amber-400 border border-amber-500/20',
-  Arrived: 'neu-flat-sm text-purple-600 dark:text-purple-400 border border-purple-500/20',
-  Completed: 'neu-flat-sm text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+  Accepted: 'neu-flat-sm text-link dark:text-primary-300 border border-blue-500/20',
+  'On The Way': 'neu-flat-sm text-warning dark:text-warning-dark border border-amber-500/20',
+  Arrived: 'neu-flat-sm text-link dark:text-primary-400 border border-primary-400/20',
+  Completed: 'neu-flat-sm text-success dark:text-success-dark border border-emerald-500/20',
 };
 
 const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
@@ -251,14 +251,14 @@ const ProviderSchedule = () => {
         >
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight truncate">Clinical Schedule</h1>
-            <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs font-semibold mt-0.5 truncate">Appointments & patient home visits</p>
+            <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs font-semibold mt-0.5 truncate">Appointments & patient home visits</p>
           </div>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={goToToday}
-            className="neu-btn shrink-0 text-primary font-bold text-xs px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm"
+            className="neu-btn shrink-0 text-link font-bold text-xs px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm"
           >
-            <CalendarDays className="w-4 h-4 text-primary shrink-0" />
+            <CalendarDays className="w-4 h-4 text-link shrink-0" />
             <span className="text-xs">Today</span>
           </motion.button>
         </motion.div>
@@ -275,7 +275,7 @@ const ProviderSchedule = () => {
             <div className="flex items-center justify-between mb-3.5 sm:mb-5">
               <button 
                 onClick={prevMonth} 
-                className="neu-btn p-2 rounded-xl transition-all cursor-pointer active:scale-95 text-slate-600 dark:text-slate-300"
+                className="neu-btn w-11 h-11 shrink-0 flex items-center justify-center rounded-xl transition-all cursor-pointer active:scale-95 text-slate-600 dark:text-slate-300"
                 title="Previous Month"
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -285,7 +285,7 @@ const ProviderSchedule = () => {
               </h3>
               <button 
                 onClick={nextMonth} 
-                className="neu-btn p-2 rounded-xl transition-all cursor-pointer active:scale-95 text-slate-600 dark:text-slate-300"
+                className="neu-btn w-11 h-11 shrink-0 flex items-center justify-center rounded-xl transition-all cursor-pointer active:scale-95 text-slate-600 dark:text-slate-300"
                 title="Next Month"
               >
                 <ChevronRight className="w-4 h-4" />
@@ -295,14 +295,14 @@ const ProviderSchedule = () => {
             {/* Day Names Row */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {DAYS.map(d => (
-                <div key={d} className="text-center text-3xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider py-1">
+                <div key={d} className="text-center text-2xs font-black text-tertiary dark:text-tertiary uppercase tracking-wider py-1">
                   {d}
                 </div>
               ))}
             </div>
 
             {/* Date Grid */}
-            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+            <div className="grid grid-cols-7 gap-1">
               {/* Empty cells for initial day offset */}
               {Array.from({ length: firstDay }).map((_, i) => (
                 <div key={`empty-${i}`} className="aspect-square" />
@@ -323,14 +323,14 @@ const ProviderSchedule = () => {
                       setSelectedDate(new Date(year, month, day));
                       setApptsPage(1);
                     }}
-                    className={`aspect-square rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-xs font-bold transition-all relative cursor-pointer
+                    className={`aspect-square min-h-11 min-w-11 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-xs font-bold transition-all relative cursor-pointer
                       ${selected 
-                        ? 'neu-pressed text-primary font-black shadow-inner ring-1 ring-primary/40' 
+                        ? 'neu-pressed text-link font-black shadow-inner ring-1 ring-primary/40' 
                         : today 
-                          ? 'neu-btn text-primary ring-2 ring-primary/40 font-black' 
+                          ? 'neu-btn text-link ring-2 ring-primary/40 font-black' 
                           : hasAppts 
                             ? 'neu-btn text-slate-800 dark:text-slate-100 font-extrabold'
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'}
+                            : 'text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-200'}
                     `}
                   >
                     <span>{day}</span>
@@ -344,7 +344,7 @@ const ProviderSchedule = () => {
             </div>
 
             {/* Legend */}
-            <div className="mt-4 pt-3.5 border-t border-slate-200/50 dark:border-white/5 flex flex-wrap gap-4 text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            <div className="mt-4 pt-3.5 border-t border-slate-200/50 dark:border-white/5 flex flex-wrap gap-4 text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-primary" /> Has Visits</span>
               <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full ring-2 ring-primary/40 bg-white" /> Today</span>
             </div>
@@ -364,11 +364,11 @@ const ProviderSchedule = () => {
                   <h3 className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight truncate">
                     {selectedDayLabel}
                   </h3>
-                  <span className={`text-3xs font-extrabold px-2.5 py-0.5 rounded-lg neu-btn uppercase tracking-wider shrink-0 ${selectedAppts.length > 0 ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+                  <span className={`text-2xs font-extrabold px-2.5 py-0.5 rounded-lg neu-btn uppercase tracking-wider shrink-0 ${selectedAppts.length > 0 ? 'text-link' : 'text-tertiary dark:text-tertiary'}`}>
                     {selectedAppts.length}
                   </span>
                 </div>
-                <p className="text-3xs sm:text-xs text-slate-400 mt-0.5 truncate">
+                <p className="text-sm text-tertiary mt-0.5 truncate">
                   {selectedAppts.length > 0 
                     ? `Showing ${((apptsPage - 1) * APPTS_PER_PAGE) + 1}–${Math.min(apptsPage * APPTS_PER_PAGE, selectedAppts.length)} of ${selectedAppts.length} visits`
                     : 'No visits scheduled for this date'}
@@ -382,19 +382,19 @@ const ProviderSchedule = () => {
                     type="button"
                     onClick={() => setApptsPage(p => Math.max(1, p - 1))}
                     disabled={apptsPage === 1}
-                    className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                    className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                     title="Previous visits"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <span className="text-3xs font-extrabold text-slate-500 px-1 select-none">
+                  <span className="text-xs font-extrabold text-tertiary px-1 select-none">
                     {apptsPage} / {Math.ceil(selectedAppts.length / APPTS_PER_PAGE)}
                   </span>
                   <button
                     type="button"
                     onClick={() => setApptsPage(p => Math.min(Math.ceil(selectedAppts.length / APPTS_PER_PAGE), p + 1))}
                     disabled={apptsPage >= Math.ceil(selectedAppts.length / APPTS_PER_PAGE)}
-                    className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                    className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                     title="Next visits"
                   >
                     <ChevronRight className="w-4 h-4" />
@@ -405,11 +405,11 @@ const ProviderSchedule = () => {
 
             {selectedAppts.length === 0 ? (
               <div className="text-center py-12 sm:py-16 my-auto">
-                <div className="w-14 h-14 neu-btn rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm text-slate-400">
-                  <Stethoscope className="w-6 h-6 text-primary" />
+                <div className="w-14 h-14 neu-btn rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm text-tertiary">
+                  <Stethoscope className="w-6 h-6 text-link" />
                 </div>
                 <p className="text-slate-800 dark:text-slate-200 font-extrabold text-sm sm:text-base">No Scheduled Visits</p>
-                <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                <p className="text-sm text-tertiary dark:text-tertiary mt-1 max-w-sm mx-auto">
                   You have no scheduled patient home visits recorded for this day.
                 </p>
               </div>
@@ -443,7 +443,7 @@ const ProviderSchedule = () => {
                                   ? i === currentStep && appt.status === 'Completed'
                                     ? 'bg-emerald-500'
                                     : i === currentStep && appt.status === 'Arrived'
-                                      ? 'bg-purple-500'
+                                      ? 'bg-primary'
                                       : i === currentStep && appt.status === 'On The Way'
                                         ? 'bg-amber-500'
                                         : 'bg-primary'
@@ -460,7 +460,7 @@ const ProviderSchedule = () => {
                               to={`/provider/patients/${appt.patientId}/profile`}
                               className="flex items-center gap-2.5 sm:gap-3 min-w-0 group"
                             >
-                              <div className="neu-flat-sm w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-primary font-black text-xs sm:text-sm shrink-0 p-0.5">
+                              <div className="neu-flat-sm w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-link font-black text-xs sm:text-sm shrink-0 p-0.5">
                                 {appt.avatarUrl ? (
                                   <img src={appt.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
                                 ) : (
@@ -468,23 +468,23 @@ const ProviderSchedule = () => {
                                 )}
                               </div>
                               <div className="min-w-0">
-                                <h4 className="font-display font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors text-xs sm:text-sm md:text-base truncate">{appt.patient}</h4>
-                                <p className="text-3xs sm:text-xs text-primary font-bold">{appt.service}</p>
+                                <h4 className="font-display font-extrabold text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors text-xs sm:text-sm md:text-base truncate">{appt.patient}</h4>
+                                <p className="text-xs sm:text-xs text-link font-bold">{appt.service}</p>
                               </div>
                             </Link>
-                            <span className={`text-3xs font-extrabold px-2.5 py-1 rounded-lg sm:rounded-xl uppercase tracking-wider shrink-0 ${STATUS_BADGE[appt.status] || 'neu-btn text-slate-500'}`}>
+                            <span className={`text-2xs font-extrabold px-2.5 py-1 rounded-lg sm:rounded-xl uppercase tracking-wider shrink-0 ${STATUS_BADGE[appt.status] || 'neu-btn text-tertiary'}`}>
                               {appt.status}
                             </span>
                           </div>
 
                           {/* Time & Location Details */}
-                          <div className="flex flex-wrap gap-x-3.5 gap-y-1 mb-3 text-3xs sm:text-xs text-slate-500 dark:text-slate-400">
+                          <div className="flex flex-wrap gap-x-3.5 gap-y-1 mb-3 text-sm text-tertiary dark:text-tertiary">
                             <div className="flex items-center gap-1.5 font-semibold">
-                              <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <Clock className="w-3.5 h-3.5 text-link shrink-0" />
                               <span>{appt.timeLabel}</span>
                             </div>
                             <div className="flex items-center gap-1.5 min-w-0 font-medium">
-                              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
                               <span className="truncate">{appt.address}</span>
                             </div>
                           </div>
@@ -492,8 +492,8 @@ const ProviderSchedule = () => {
                           {/* Patient Request Notes */}
                           {appt.notes && (
                             <div className="mb-3 p-2.5 sm:p-3 neu-inset rounded-xl">
-                              <p className="text-3xs font-extrabold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-0.5">Patient Note</p>
-                              <p className="text-3xs sm:text-xs text-slate-700 dark:text-slate-300 italic leading-relaxed">{'\u201C'}{appt.notes}{'\u201D'}</p>
+                              <p className="text-2xs font-extrabold text-warning dark:text-warning-dark uppercase tracking-wider mb-0.5">Patient Note</p>
+                              <p className="text-xs sm:text-xs text-slate-700 dark:text-slate-300 italic leading-relaxed">{'\u201C'}{appt.notes}{'\u201D'}</p>
                             </div>
                           )}
 
@@ -502,12 +502,12 @@ const ProviderSchedule = () => {
                             <div className="flex items-center gap-1 mb-1">
                               {STATUS_STEPS.map((step, i) => (
                                 <React.Fragment key={step}>
-                                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-3xs font-bold transition-all ${
+                                  <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                                     i < currentStep 
                                       ? 'bg-emerald-500 text-white shadow-sm' 
                                       : i === currentStep 
                                         ? 'bg-primary text-white shadow-sm' 
-                                        : 'neu-btn text-slate-400'
+                                        : 'neu-btn text-tertiary'
                                   }`}>
                                     {i < currentStep ? '✓' : i + 1}
                                   </div>
@@ -519,7 +519,7 @@ const ProviderSchedule = () => {
                             </div>
                             <div className="flex items-center justify-between px-0.5">
                               {STATUS_STEPS.map((step, i) => (
-                                <span key={step} className={`text-3xs font-extrabold uppercase tracking-wider ${i <= currentStep ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>
+                                <span key={step} className={`text-2xs font-extrabold uppercase tracking-wider ${i <= currentStep ? 'text-slate-700 dark:text-slate-200' : 'text-tertiary'}`}>
                                   {step === 'On The Way' ? 'On Route' : step}
                                 </span>
                               ))}
@@ -544,7 +544,7 @@ const ProviderSchedule = () => {
                               onClick={() => setModalPatient({ id: appt.patientId, name: appt.patient })}
                               className="neu-btn flex-1 flex items-center justify-center gap-1.5 sm:gap-2 font-bold py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm text-slate-700 dark:text-slate-200 cursor-pointer"
                             >
-                              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600" />
+                              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-success" />
                               <span>{statusAction ? 'Patient Record' : 'View Patient Record'}</span>
                             </motion.button>
                           </div>

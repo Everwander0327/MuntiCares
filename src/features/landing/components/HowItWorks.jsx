@@ -75,7 +75,7 @@ const HowItWorks = () => (
                     <div className="neu-btn-primary w-12 h-12 rounded-2xl flex items-center justify-center font-display font-black text-lg shadow-md text-white">
                       {step.number}
                     </div>
-                    <span className="neu-flat-sm text-[10px] uppercase font-black tracking-wider px-3 py-1 rounded-full text-primary dark:text-blue-300">
+                    <span className="neu-flat-sm text-[10px] uppercase font-black tracking-wider px-3 py-1 rounded-full text-link dark:text-primary-300">
                       {step.tag}
                     </span>
                   </div>
@@ -83,8 +83,8 @@ const HowItWorks = () => (
                   <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">{step.description}</p>
                 </div>
 
-                <div className="pt-4 border-t border-slate-200/50 dark:border-white/5 flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  <CheckCircle size={16} weight="fill" className="text-emerald-500 shrink-0" />
+                <div className="pt-4 border-t border-slate-200/50 dark:border-white/5 flex items-center gap-2 text-xs font-semibold text-tertiary dark:text-tertiary">
+                  <CheckCircle size={16} weight="fill" className="text-success shrink-0" />
                   <span>{step.detail}</span>
                 </div>
               </div>

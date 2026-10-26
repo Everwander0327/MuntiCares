@@ -15,10 +15,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const getTrustLevel = (score) => {
-  if (score >= 90) return { label: 'Highly Trusted', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' };
-  if (score >= 70) return { label: 'Trusted', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-500/10' };
-  if (score >= 40) return { label: 'Developing', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10' };
-  return { label: 'Needs Improvement', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-500/10' };
+  if (score >= 90) return { label: 'Highly Trusted', color: 'text-success dark:text-success-dark', bg: 'bg-emerald-500/10' };
+  if (score >= 70) return { label: 'Trusted', color: 'text-success dark:text-success-dark', bg: 'bg-green-500/10' };
+  if (score >= 40) return { label: 'Developing', color: 'text-warning dark:text-warning-dark', bg: 'bg-amber-500/10' };
+  return { label: 'Needs Improvement', color: 'text-danger dark:text-danger-dark', bg: 'bg-rose-500/10' };
 };
 
 const ProviderProfileView = () => {
@@ -152,22 +152,22 @@ const ProviderProfileView = () => {
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate('/patient/providers')}
-            className="neu-btn px-4 py-2.5 rounded-2xl inline-flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-primary transition-all cursor-pointer"
+            className="neu-btn px-4 py-2.5 rounded-2xl inline-flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-link transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Providers</span>
           </motion.button>
           
           <div className="flex items-center gap-2">
-            <span className={`neu-flat-sm inline-flex items-center px-3 py-1.5 rounded-full text-3xs font-extrabold uppercase tracking-wider ${
+            <span className={`neu-flat-sm inline-flex items-center px-3 py-1.5 rounded-full text-2xs font-extrabold uppercase tracking-wider ${
               isUserOnline(id) 
-                ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10' 
-                : 'text-slate-500 dark:text-slate-400'
+                ? 'text-success dark:text-success-dark border border-emerald-500/30 bg-emerald-500/10' 
+                : 'text-tertiary dark:text-tertiary'
             }`}>
               {isUserOnline(id) ? 'Active Online' : 'Offline'}
             </span>
             {provider.professional_id_status === 'verified' && (
-              <span className="neu-flat-sm hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-3xs font-extrabold text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10">
+              <span className="neu-flat-sm hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-success dark:text-success-dark border border-emerald-500/30 bg-emerald-500/10">
                 <ShieldCheck className="w-3.5 h-3.5" /> Verified Practitioner
               </span>
             )}
@@ -195,7 +195,7 @@ const ProviderProfileView = () => {
                   {provider.avatar_url ? (
                     <img src={provider.avatar_url} alt={provider.full_name} className="w-full h-full object-cover rounded-[14px]" />
                   ) : (
-                    <div className="w-full h-full rounded-[14px] bg-primary/10 flex items-center justify-center text-2xl font-black text-primary">
+                    <div className="w-full h-full rounded-[14px] bg-primary/10 flex items-center justify-center text-2xl font-black text-link">
                       {provider.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'}
                     </div>
                   )}
@@ -206,14 +206,14 @@ const ProviderProfileView = () => {
                   {provider.full_name}
                 </h1>
                 
-                <div className="flex items-center gap-1.5 mt-1 text-amber-500">
+                <div className="flex items-center gap-1.5 mt-1 text-warning">
                   <Star className="w-3.5 h-3.5 fill-current" />
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100 tabular-nums">
                     {(provider.rating || 0).toFixed(1)}
                   </span>
-                  <span className="text-3xs text-slate-400">({stats.review_count} reviews)</span>
-                  <span className="text-slate-300 dark:text-slate-600">•</span>
-                  <span className={`text-3xs font-extrabold ${trustLevel.color}`}>
+                  <span className="text-xs text-tertiary">({stats.review_count} reviews)</span>
+                  <span className="text-tertiary">•</span>
+                  <span className={`text-xs font-extrabold ${trustLevel.color}`}>
                     {trustLevel.label}
                   </span>
                 </div>
@@ -224,16 +224,16 @@ const ProviderProfileView = () => {
                 {/* 3 Metric Chips */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="neu-flat-sm p-2 rounded-xl text-center">
-                    <p className="text-3xs uppercase font-bold text-slate-400">Rating</p>
+                    <p className="text-2xs uppercase font-bold text-tertiary">Rating</p>
                     <p className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">{(provider.rating || 0).toFixed(1)} ★</p>
                   </div>
                   <div className="neu-flat-sm p-2 rounded-xl text-center">
-                    <p className="text-3xs uppercase font-bold text-slate-400">Services</p>
+                    <p className="text-2xs uppercase font-bold text-tertiary">Services</p>
                     <p className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">{servicesList.length}</p>
                   </div>
                   <div className="neu-flat-sm p-2 rounded-xl text-center">
-                    <p className="text-3xs uppercase font-bold text-slate-400">Status</p>
-                    <p className={`text-3xs font-black mt-1 capitalize ${isUserOnline(id) ? 'text-emerald-500' : 'text-slate-400'}`}>
+                    <p className="text-2xs uppercase font-bold text-tertiary">Status</p>
+                    <p className={`text-xs font-black mt-1 capitalize ${isUserOnline(id) ? 'text-success' : 'text-tertiary'}`}>
                       {isUserOnline(id) ? 'Active' : 'Offline'}
                     </p>
                   </div>
@@ -243,8 +243,8 @@ const ProviderProfileView = () => {
                 <div className="neu-flat-sm p-3 rounded-2xl">
                   <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-1.5">
-                      <Shield className="w-3 h-3 text-primary" />
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Trust Score</span>
+                      <Shield className="w-3 h-3 text-link" />
+                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
                     </div>
                     <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{provider.trust_score || 0}/100</span>
                   </div>
@@ -261,16 +261,16 @@ const ProviderProfileView = () => {
                 {/* Compact Info Badges */}
                 <div className="neu-flat-sm p-3 rounded-2xl space-y-2 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400 flex items-center gap-1.5 text-2xs">
-                      <MapPin className="w-3 h-3 text-primary shrink-0" /> Location
+                    <span className="text-tertiary flex items-center gap-1.5 text-xs">
+                      <MapPin className="w-3 h-3 text-link shrink-0" /> Location
                     </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-2xs truncate max-w-[150px]">{provider.location || 'Muntinlupa City'}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-xs truncate max-w-[150px]">{provider.location || 'Muntinlupa City'}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-400 flex items-center gap-1.5 text-2xs">
-                      <Calendar className="w-3 h-3 text-primary shrink-0" /> Member Since
+                    <span className="text-tertiary flex items-center gap-1.5 text-xs">
+                      <Calendar className="w-3 h-3 text-link shrink-0" /> Member Since
                     </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-2xs">
+                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-xs">
                       {new Date(provider.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
                     </span>
                   </div>
@@ -282,9 +282,9 @@ const ProviderProfileView = () => {
                     <motion.button
                       whileTap={{ scale: 0.98 }}
                       onClick={() => navigate('/patient/requests')}
-                      className="w-full py-3 rounded-2xl neu-btn font-bold text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                      className="w-full py-3 rounded-2xl neu-btn font-bold text-xs text-success dark:text-success-dark flex items-center justify-center gap-2 shadow-md cursor-pointer"
                     >
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <CheckCircle2 className="w-4 h-4 text-success" />
                       <span>{activeBooking.status === 'Pending' ? 'Request Pending — View' : 'Ongoing Visit — Track Live'}</span>
                     </motion.button>
                   ) : (
@@ -300,7 +300,7 @@ const ProviderProfileView = () => {
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={() => navigate(`/patient/messages?provider=${id}&name=${encodeURIComponent(provider.full_name || '')}`)}
-                    className="w-full py-2.5 rounded-2xl neu-btn font-bold text-xs text-primary flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2.5 rounded-2xl neu-btn font-bold text-xs text-link flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <MessageCircle className="w-4 h-4" />
                     <span>Send Direct Message</span>
@@ -325,9 +325,9 @@ const ProviderProfileView = () => {
                   <h2 className="font-display text-sm md:text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
                     About Practitioner
                   </h2>
-                  <p className="text-3xs text-slate-400 mt-0.5">Licensed Healthcare Practitioner • Muntinlupa Health Network</p>
+                  <p className="text-sm text-tertiary mt-0.5">Licensed Healthcare Practitioner • Muntinlupa Health Network</p>
                 </div>
-                <span className="text-3xs font-extrabold px-3 py-1 rounded-full bg-primary/10 text-primary">
+                <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-primary/10 text-link">
                   Official Provider
                 </span>
               </div>
@@ -336,7 +336,7 @@ const ProviderProfileView = () => {
               <div className="neu-flat-sm p-4 md:p-5 rounded-2xl space-y-4">
                 {/* Bio Statement */}
                 <div>
-                  <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 mb-1">Professional Bio</p>
+                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mb-1">Professional Bio</p>
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                     {provider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa.'}
                   </p>
@@ -345,16 +345,16 @@ const ProviderProfileView = () => {
                 {/* Detail Columns with Border Dividers */}
                 <div className="pt-3.5 border-t border-slate-200/60 dark:border-white/5 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/60 dark:divide-white/5 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-0">
                   <div className="sm:pr-4">
-                    <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Practice Hours</p>
+                    <p className="text-2xs uppercase font-extrabold text-tertiary tracking-wider">Practice Hours</p>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">Mon – Sat • 9AM – 5PM</p>
-                    <p className="text-3xs text-slate-400 mt-0.5">Walk-ins & appointments</p>
+                    <p className="text-sm text-tertiary mt-0.5">Walk-ins & appointments</p>
                   </div>
                   <div className="pt-3 sm:pt-0 sm:pl-4">
-                    <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Contact Direct</p>
+                    <p className="text-2xs uppercase font-extrabold text-tertiary tracking-wider">Contact Direct</p>
                     <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1 truncate" title={provider.email}>
                       {provider.email}
                     </p>
-                    <p className="text-3xs text-slate-400 mt-0.5">{provider.phone || 'Verified on platform'}</p>
+                    <p className="text-sm text-tertiary mt-0.5">{provider.phone || 'Verified on platform'}</p>
                   </div>
                 </div>
               </div>
@@ -372,13 +372,13 @@ const ProviderProfileView = () => {
                   <h2 className="font-display text-sm md:text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
                     Offered Services ({servicesList.length})
                   </h2>
-                  <p className="text-3xs text-slate-400 mt-0.5">Click any service to book directly</p>
+                  <p className="text-sm text-tertiary mt-0.5">Click any service to book directly</p>
                 </div>
                 {servicesList.length > 4 && (
                   <button
                     type="button"
                     onClick={() => setShowAllServices(!showAllServices)}
-                    className="neu-btn px-3 py-1.5 rounded-xl text-3xs font-extrabold text-primary flex items-center gap-1 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                    className="neu-btn px-3 py-1.5 rounded-xl text-xs font-extrabold text-link flex items-center gap-1 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                   >
                     {showAllServices ? (
                       <>Show Less <ChevronUp className="w-3 h-3" /></>
@@ -409,13 +409,13 @@ const ProviderProfileView = () => {
                     className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                   >
                     <div className="min-w-0 pr-2">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">{s}</p>
-                      <p className="text-3xs text-slate-400">Available for appointment</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-link transition-colors truncate">{s}</p>
+                      <p className="text-xs text-tertiary">Available for appointment</p>
                     </div>
                   </button>
                 ))}
                 {servicesList.length === 0 && (
-                  <p className="text-xs text-slate-400 italic py-3 col-span-2 text-center">General consultation service only.</p>
+                  <p className="text-xs text-tertiary italic py-3 col-span-2 text-center">General consultation service only.</p>
                 )}
               </div>
             </motion.div>
@@ -432,31 +432,31 @@ const ProviderProfileView = () => {
                   <h2 className="font-display text-sm md:text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
                     Performance Statistics
                   </h2>
-                  <p className="text-3xs text-slate-400 mt-0.5">Verified track record on MuntiCares</p>
+                  <p className="text-sm text-tertiary mt-0.5">Verified track record on MuntiCares</p>
                 </div>
-                <Activity className="w-4 h-4 text-primary" />
+                <Activity className="w-4 h-4 text-link" />
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="neu-flat-sm p-3 rounded-2xl text-center">
-                  <Users className="w-4 h-4 text-primary mx-auto mb-1" />
+                  <Users className="w-4 h-4 text-link mx-auto mb-1" />
                   <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{stats.unique_patients}</p>
-                  <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">Patients Served</p>
+                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mt-0.5">Patients Served</p>
                 </div>
                 <div className="neu-flat-sm p-3 rounded-2xl text-center">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                  <CheckCircle2 className="w-4 h-4 text-success mx-auto mb-1" />
                   <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{stats.completed_requests}</p>
-                  <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">Completed Visits</p>
+                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mt-0.5">Completed Visits</p>
                 </div>
                 <div className="neu-flat-sm p-3 rounded-2xl text-center">
                   <Star className="w-4 h-4 text-amber-400 mx-auto mb-1" />
                   <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{stats.review_count}</p>
-                  <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">Total Reviews</p>
+                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mt-0.5">Total Reviews</p>
                 </div>
                 <div className="neu-flat-sm p-3 rounded-2xl text-center">
-                  <Clock className="w-4 h-4 text-blue-500 mx-auto mb-1" />
+                  <Clock className="w-4 h-4 text-link mx-auto mb-1" />
                   <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{completionRate}%</p>
-                  <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">Completion Rate</p>
+                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mt-0.5">Completion Rate</p>
                 </div>
               </div>
             </motion.div>
@@ -473,16 +473,16 @@ const ProviderProfileView = () => {
                   <h2 className="font-display text-sm md:text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
                     Patient Reviews
                   </h2>
-                  <p className="text-3xs text-slate-400 mt-0.5">Feedback from verified appointments</p>
+                  <p className="text-sm text-tertiary mt-0.5">Feedback from verified appointments</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <div className="flex items-center text-amber-500">
+                  <div className="flex items-center text-warning">
                     <Star className="w-4 h-4 fill-current" />
                   </div>
                   <span className="font-display text-base font-black text-slate-900 dark:text-white">
                     {(provider.rating || 0).toFixed(1)}
                   </span>
-                  <span className="text-3xs text-slate-400">({reviews.length})</span>
+                  <span className="text-xs text-tertiary">({reviews.length})</span>
                 </div>
               </div>
 

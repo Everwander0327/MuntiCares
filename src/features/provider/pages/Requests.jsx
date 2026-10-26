@@ -31,13 +31,13 @@ const getStatusBadge = (status) => {
   switch (status) {
     case 'Completed':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 shadow-xs">
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-success dark:text-success-dark bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 shadow-sm">
           Completed
         </span>
       );
     case 'Pending':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 shadow-xs">
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-warning dark:text-warning-dark bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 shadow-sm">
           Pending
         </span>
       );
@@ -45,25 +45,25 @@ const getStatusBadge = (status) => {
     case 'On The Way':
     case 'Arrived':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30 shadow-xs">
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-link dark:text-primary-300 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30 shadow-sm">
           {status}
         </span>
       );
     case 'Rejected':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 shadow-xs">
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-danger dark:text-danger-dark bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 shadow-sm">
           Rejected
         </span>
       );
     case 'Cancelled':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/50 dark:border-white/10 shadow-xs">
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/50 dark:border-white/10 shadow-sm">
           Cancelled
         </span>
       );
     default:
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-slate-500 bg-slate-200/50">
+        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-tertiary bg-slate-200/50">
           {status}
         </span>
       );
@@ -293,7 +293,7 @@ const ProviderRequests = () => {
               <h1 className="font-display font-extrabold tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
                 Incoming & Active Requests
               </h1>
-              <p className="text-3xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 max-w-xl">
+              <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 sm:mt-1 max-w-xl">
                 Review bookings, update home visits, and coordinate patient consultations across Muntinlupa.
               </p>
             </div>
@@ -303,56 +303,56 @@ const ProviderRequests = () => {
               <button
                 type="button"
                 onClick={() => setFilter(filter === 'Pending' ? 'All' : 'Pending')}
-                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   filter === 'Pending'
-                    ? 'neu-pressed text-amber-600 dark:text-amber-400 border border-amber-500/40 bg-amber-500/15'
-                    : 'neu-btn text-amber-600 dark:text-amber-400 hover:text-amber-700'
+                    ? 'neu-pressed text-warning dark:text-warning-dark border border-amber-500/40 bg-amber-500/15'
+                    : 'neu-btn text-warning dark:text-warning-dark hover:text-warning'
                 }`}
                 title="Filter Pending requests"
               >
-                <Clock className="w-3 h-3 text-amber-500 shrink-0" />
+                <Clock className="w-3 h-3 text-warning shrink-0" />
                 <span>{stats.pending} Pending</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setFilter(filter === 'Active' ? 'All' : 'Active')}
-                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   filter === 'Active'
-                    ? 'neu-pressed text-blue-600 dark:text-blue-400 border border-blue-500/40 bg-blue-500/15'
-                    : 'neu-btn text-blue-600 dark:text-blue-400 hover:text-blue-700'
+                    ? 'neu-pressed text-link dark:text-primary-300 border border-blue-500/40 bg-blue-500/15'
+                    : 'neu-btn text-link dark:text-primary-300 hover:text-blue-700'
                 }`}
                 title="Filter Active / In-progress visits"
               >
-                <Navigation className="w-3 h-3 text-blue-500 shrink-0" />
+                <Navigation className="w-3 h-3 text-link shrink-0" />
                 <span>{stats.active} Active</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setFilter(filter === 'Completed' ? 'All' : 'Completed')}
-                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   filter === 'Completed'
-                    ? 'neu-pressed text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 bg-emerald-500/15'
-                    : 'neu-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-700'
+                    ? 'neu-pressed text-success dark:text-success-dark border border-emerald-500/40 bg-emerald-500/15'
+                    : 'neu-btn text-success dark:text-success-dark hover:text-success'
                 }`}
                 title="Filter Completed visits"
               >
-                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
                 <span>{stats.completed} Completed</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setFilter(filter === 'History' ? 'All' : 'History')}
-                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                   filter === 'History'
                     ? 'neu-pressed text-slate-600 dark:text-slate-300 border border-slate-500/40 bg-slate-500/15'
                     : 'neu-btn text-slate-600 dark:text-slate-300 hover:text-slate-800'
                 }`}
                 title="Filter History (Rejected, Cancelled, Completed)"
               >
-                <Filter className="w-3 h-3 text-slate-500 shrink-0" />
+                <Filter className="w-3 h-3 text-tertiary shrink-0" />
                 <span>{stats.history} History</span>
               </button>
 
@@ -360,7 +360,7 @@ const ProviderRequests = () => {
                 <button
                   type="button"
                   onClick={() => setFilter('All')}
-                  className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-full text-3xs font-extrabold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                  className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-extrabold text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1 shrink-0"
                   title="Clear filter and show all"
                 >
                   <X className="w-3 h-3" />
@@ -374,19 +374,20 @@ const ProviderRequests = () => {
           <div className="flex items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
             <div className="relative flex-1 min-w-0">
               <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[42px] sm:h-[50px] border border-slate-200/50 dark:border-white/5">
-                <Search className="w-4 h-4 text-primary ml-1.5 sm:ml-2 shrink-0" />
+                <Search className="w-4 h-4 text-link ml-1.5 sm:ml-2 shrink-0" />
                 <input
                   type="text"
+                  aria-label="Search requests by patient, service, or address"
                   placeholder="Search patient, service, address..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
                 />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1"
+                    className="p-1 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1"
                     title="Clear search"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -403,7 +404,7 @@ const ProviderRequests = () => {
             <h2 className="font-display font-extrabold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
               {filter === 'All' ? 'All Service Bookings' : `${filter} Requests`}
             </h2>
-            <p className="text-3xs sm:text-xs text-slate-500 mt-0.5">
+            <p className="text-sm text-tertiary mt-0.5">
               Showing {filteredRequests.length} {filteredRequests.length === 1 ? 'request' : 'requests'}
               {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
             </p>
@@ -416,19 +417,19 @@ const ProviderRequests = () => {
                 type="button"
                 onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
-                className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                 title="Previous page"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-              <span className="text-3xs font-extrabold text-slate-500 px-1 select-none">
+              <span className="text-xs font-extrabold text-tertiary px-1 select-none">
                 {currentPage} / {totalPages}
               </span>
               <button
                 type="button"
                 onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage >= totalPages}
-                className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                 title="Next page"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -459,7 +460,7 @@ const ProviderRequests = () => {
                       to={`/provider/patients/${req.patientId}/profile`}
                       className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 group"
                     >
-                      <div className="neu-flat-sm w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-primary font-black text-xs sm:text-base shrink-0 p-0.5">
+                      <div className="neu-flat-sm w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-link font-black text-xs sm:text-base shrink-0 p-0.5">
                         {req.avatarUrl ? (
                           <img src={req.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
                         ) : (
@@ -467,10 +468,10 @@ const ProviderRequests = () => {
                         )}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-display font-extrabold text-slate-900 dark:text-white group-hover:text-primary transition-colors text-xs sm:text-base truncate">
+                        <h3 className="font-display font-extrabold text-slate-900 dark:text-white group-hover:text-link transition-colors text-xs sm:text-base truncate">
                           {req.patient}
                         </h3>
-                        <p className="text-3xs sm:text-xs font-semibold text-primary truncate mt-0.5">
+                        <p className="text-xs sm:text-xs font-semibold text-link truncate mt-0.5">
                           {req.service}
                         </p>
                       </div>
@@ -480,7 +481,7 @@ const ProviderRequests = () => {
                       {/* Chat with Patient Button beside the status chip */}
                       <Link
                         to={`/provider/messages?partner=${req.patientId}&name=${encodeURIComponent(req.patient)}`}
-                        className="neu-btn p-1.5 sm:px-2.5 sm:py-1 rounded-xl text-3xs font-bold text-primary flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                        className="neu-btn min-h-11 px-2.5 rounded-xl text-xs font-bold text-link flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
                         title="Chat with Patient"
                       >
                         <MessageSquare className="w-3.5 h-3.5" />
@@ -493,19 +494,19 @@ const ProviderRequests = () => {
 
                   {/* Middle Meta Details: Date, Time, Location */}
                   <div className="py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-slate-600 dark:text-slate-300 font-medium text-3xs sm:text-xs w-full">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-slate-600 dark:text-slate-300 font-medium text-sm w-full">
                       <span className="flex items-center gap-1.5 shrink-0">
-                        <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <Calendar className="w-3.5 h-3.5 text-link shrink-0" />
                         <span>{req.date}</span>
                       </span>
                       {req.time && (
                         <span className="flex items-center gap-1.5 shrink-0">
-                          <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <Clock className="w-3.5 h-3.5 text-link shrink-0" />
                           <span>{req.time}</span>
                         </span>
                       )}
                       <span className="flex items-center gap-1.5 min-w-0">
-                        <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
                         <span className="truncate max-w-[170px] sm:max-w-none">{req.location}</span>
                       </span>
                     </div>
@@ -513,7 +514,7 @@ const ProviderRequests = () => {
 
                   {/* Patient Notes (Sunken Inset Well) */}
                   <div className="neu-inset p-2.5 sm:p-3 rounded-xl border border-slate-200/40 dark:border-white/5 space-y-1">
-                    <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">
+                    <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
                       Patient Notes
                     </p>
                     {req.notes && req.notes.trim() ? (
@@ -521,7 +522,7 @@ const ProviderRequests = () => {
                         &ldquo;{req.notes}&rdquo;
                       </p>
                     ) : (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                      <p className="text-xs text-tertiary dark:text-tertiary italic">
                         No additional notes provided by patient.
                       </p>
                     )}
@@ -537,7 +538,7 @@ const ProviderRequests = () => {
                             type="button"
                             disabled={!!actionStates[req.id]}
                             onClick={() => handleAction(req.id, 'accepted', req.patient)}
-                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-1.5"
+                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-1.5"
                           >
                             <Check className="w-3.5 h-3.5" />
                             <span>Accept</span>
@@ -546,7 +547,7 @@ const ProviderRequests = () => {
                             type="button"
                             disabled={!!actionStates[req.id]}
                             onClick={() => handleAction(req.id, 'rejected', req.patient)}
-                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-rose-500 hover:bg-rose-500 hover:text-white transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-1.5"
+                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-danger hover:bg-rose-500 hover:text-white transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-1.5"
                           >
                             <X className="w-3.5 h-3.5" />
                             <span>Decline</span>

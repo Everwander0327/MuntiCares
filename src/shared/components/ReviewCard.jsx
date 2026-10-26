@@ -62,7 +62,7 @@ const ReviewCard = ({
                 className="w-full h-full object-cover rounded-[10px] sm:rounded-xl"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-black text-xs sm:text-sm flex items-center justify-center rounded-[10px] sm:rounded-xl">
+              <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/10 text-link font-black text-xs sm:text-sm flex items-center justify-center rounded-[10px] sm:rounded-xl">
                 {getInitials(patientName)}
               </div>
             )}
@@ -73,12 +73,12 @@ const ReviewCard = ({
               {patientName}
             </h4>
             <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-              <span className="inline-flex items-center gap-1 text-3xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <span className="inline-flex items-center gap-1 text-xs font-extrabold text-success dark:text-success-dark bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
                 <ShieldCheck className="w-3 h-3 stroke-[2.5]" />
                 <span>Verified Visit</span>
               </span>
               {formattedDate && (
-                <span className="text-3xs text-slate-400 dark:text-slate-500 flex items-center gap-0.5">
+                <span className="text-xs text-tertiary dark:text-tertiary flex items-center gap-0.5">
                   <Calendar className="w-2.5 h-2.5" />
                   {formattedDate}
                 </span>
@@ -96,12 +96,12 @@ const ReviewCard = ({
                 className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
                   star <= rating
                     ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
-                    : 'text-slate-300 dark:text-slate-600 fill-none'
+                    : 'text-tertiary fill-none'
                 }`}
               />
             ))}
           </div>
-          <span className="text-3xs sm:text-xs font-black text-amber-600 dark:text-amber-400">
+          <span className="text-xs sm:text-xs font-black text-warning dark:text-warning-dark">
             {rating.toFixed(1)}
           </span>
         </div>
@@ -110,13 +110,13 @@ const ReviewCard = ({
       {/* Review Body */}
       {cleanComment ? (
         <div className="neu-inset p-3 sm:p-3.5 rounded-xl sm:rounded-2xl relative">
-          <Quote className="w-3.5 h-3.5 text-primary/30 absolute top-2.5 right-3 pointer-events-none" />
-          <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-medium italic pr-4">
+          <Quote className="w-3.5 h-3.5 text-link/30 absolute top-2.5 right-3 pointer-events-none" />
+          <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed font-medium italic pr-4">
             “{cleanComment}”
           </p>
         </div>
       ) : (
-        <p className="text-3xs sm:text-xs text-slate-400 dark:text-slate-500 italic pl-1">
+        <p className="text-sm text-tertiary dark:text-tertiary italic pl-1">
           Rated {rating} out of 5 stars with no additional comments.
         </p>
       )}

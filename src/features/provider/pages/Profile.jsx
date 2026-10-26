@@ -21,10 +21,10 @@ const calculateTrustScore = (data) => {
 };
 
 const getTrustLevel = (score) => {
-  if (score >= 90) return { label: 'Highly Trusted', color: 'text-emerald-600 dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-900/50' };
-  if (score >= 70) return { label: 'Trusted', color: 'text-green-600 dark:text-green-300', bg: 'bg-green-50 dark:bg-green-900/30', border: 'border-green-200 dark:border-green-900/50' };
-  if (score >= 40) return { label: 'Developing', color: 'text-amber-600 dark:text-amber-300', bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-900/50' };
-  return { label: 'Needs Improvement', color: 'text-red-600 dark:text-red-300', bg: 'bg-red-50 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-900/50' };
+  if (score >= 90) return { label: 'Highly Trusted', color: 'text-success dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-900/50' };
+  if (score >= 70) return { label: 'Trusted', color: 'text-success dark:text-green-300', bg: 'bg-green-50 dark:bg-green-900/30', border: 'border-green-200 dark:border-green-900/50' };
+  if (score >= 40) return { label: 'Developing', color: 'text-warning dark:text-warning-dark', bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-900/50' };
+  return { label: 'Needs Improvement', color: 'text-danger dark:text-danger-dark', bg: 'bg-red-50 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-900/50' };
 };
 
 const ProviderProfile = () => {
@@ -208,7 +208,7 @@ const ProviderProfile = () => {
           <h1 className="font-display font-black tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
             Provider Profile
           </h1>
-          <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+          <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 font-medium">
             Manage your credentials, professional bio, services offered, and trust score.
           </p>
         </div>
@@ -220,12 +220,12 @@ const ProviderProfile = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-amber-500 shrink-0">
+            <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-warning shrink-0">
               <Award className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="text-amber-800 dark:text-amber-300 font-extrabold text-xs sm:text-base">Profile Incomplete</h3>
-              <p className="text-amber-700/80 dark:text-amber-200/70 text-3xs sm:text-xs mt-0.5 leading-relaxed">
+              <h3 className="text-amber-800 dark:text-warning-dark font-extrabold text-xs sm:text-base">Profile Incomplete</h3>
+              <p className="text-warning dark:text-warning-dark text-xs sm:text-xs mt-0.5 leading-relaxed">
                 Please fill out your contact details and bio so you can be approved by an Admin and become visible to patients.
               </p>
             </div>
@@ -238,12 +238,12 @@ const ProviderProfile = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+            <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-link shrink-0">
               <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="text-blue-800 dark:text-blue-300 font-extrabold text-xs sm:text-base">Under Review</h3>
-              <p className="text-blue-700/80 dark:text-blue-200/70 text-3xs sm:text-xs mt-0.5 leading-relaxed">
+              <h3 className="text-blue-800 dark:text-primary-300 font-extrabold text-xs sm:text-base">Under Review</h3>
+              <p className="text-blue-700/80 dark:text-blue-200/70 text-xs sm:text-xs mt-0.5 leading-relaxed">
                 Your profile is currently under review by the municipal health office. You will appear to patients once approved.
               </p>
             </div>
@@ -277,19 +277,19 @@ const ProviderProfile = () => {
 
               <div className="px-4 sm:px-6 pt-2.5 sm:pt-3 pb-5 sm:pb-7 text-center">
                 <h2 className="text-base sm:text-xl font-black text-slate-900 dark:text-slate-100 truncate">{profile.full_name}</h2>
-                <p className="text-primary text-xs font-bold mt-0.5 truncate">{profile.bio || 'Healthcare Professional'}</p>
+                <p className="text-link text-xs font-bold mt-0.5 truncate">{profile.bio || 'Healthcare Professional'}</p>
 
                 <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 mt-2.5 sm:mt-3">
-                  <span className="neu-flat-sm px-2.5 py-1 text-primary font-black text-3xs uppercase tracking-widest rounded-full">
+                  <span className="neu-flat-sm px-2.5 py-1 text-link font-black text-2xs uppercase tracking-widest rounded-full">
                     Healthcare Provider
                   </span>
                   {profile.is_approved ? (
-                    <span className="neu-flat-sm px-2.5 py-1 text-emerald-600 dark:text-emerald-400 font-black text-3xs uppercase tracking-widest rounded-full flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3 text-emerald-500" /> Approved
+                    <span className="neu-flat-sm px-2.5 py-1 text-success dark:text-success-dark font-black text-2xs uppercase tracking-widest rounded-full flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3 text-success" /> Approved
                     </span>
                   ) : profile.is_profile_complete ? (
-                    <span className="neu-flat-sm px-2.5 py-1 text-amber-600 dark:text-amber-400 font-black text-3xs uppercase tracking-widest rounded-full flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-amber-500" /> In Review
+                    <span className="neu-flat-sm px-2.5 py-1 text-warning dark:text-warning-dark font-black text-2xs uppercase tracking-widest rounded-full flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-warning" /> In Review
                     </span>
                   ) : null}
                 </div>
@@ -305,7 +305,7 @@ const ProviderProfile = () => {
                 {/* Quick Info - Unified Neumorphic Inset */}
                 <div className="mt-4 sm:mt-5 neu-inset p-3 sm:p-4 rounded-2xl text-left space-y-2 sm:space-y-2.5">
                   <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                    <span className="text-3xs uppercase font-extrabold text-slate-400">Email</span>
+                    <span className="text-2xs uppercase font-extrabold text-tertiary">Email</span>
                     <span className="truncate font-semibold max-w-[62%] text-right">{profile.email}</span>
                   </div>
 
@@ -313,7 +313,7 @@ const ProviderProfile = () => {
                     <>
                       <div className="border-t border-slate-200/50 dark:border-white/5" />
                       <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                        <span className="text-3xs uppercase font-extrabold text-slate-400">Phone</span>
+                        <span className="text-2xs uppercase font-extrabold text-tertiary">Phone</span>
                         <span className="font-semibold">{profile.phone}</span>
                       </div>
                     </>
@@ -323,7 +323,7 @@ const ProviderProfile = () => {
                     <>
                       <div className="border-t border-slate-200/50 dark:border-white/5" />
                       <div className="flex items-start justify-between gap-2.5 text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                        <span className="text-3xs uppercase font-extrabold text-slate-400 shrink-0 pt-0.5">Location</span>
+                        <span className="text-2xs uppercase font-extrabold text-tertiary shrink-0 pt-0.5">Location</span>
                         <span className="font-semibold text-right leading-relaxed max-w-[65%] break-words">{profile.location}</span>
                       </div>
                     </>
@@ -331,7 +331,7 @@ const ProviderProfile = () => {
 
                   <div className="border-t border-slate-200/50 dark:border-white/5" />
                   <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                    <span className="text-3xs uppercase font-extrabold text-slate-400">Joined</span>
+                    <span className="text-2xs uppercase font-extrabold text-tertiary">Joined</span>
                     <span className="font-semibold">{profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}</span>
                   </div>
                 </div>
@@ -341,7 +341,7 @@ const ProviderProfile = () => {
                   <motion.button
                     whileTap={{ scale: 0.96 }}
                     onClick={handleLogout}
-                    className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-rose-500 dark:text-rose-400 hover:text-rose-600 transition-all text-xs cursor-pointer active:scale-95"
+                    className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-danger dark:text-danger-dark hover:text-danger transition-all text-xs cursor-pointer active:scale-95"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Sign Out</span>
@@ -369,13 +369,13 @@ const ProviderProfile = () => {
                     <Tabs.Trigger
                       key={tab.value}
                       value={tab.value}
-                      className={`flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-3xs sm:text-sm font-bold transition-all whitespace-nowrap flex-1 cursor-pointer select-none ${
+                      className={`flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap flex-1 cursor-pointer select-none ${
                         activeTab === tab.value
-                          ? 'neu-pressed text-primary font-black shadow-inner'
-                          : 'neu-btn text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                          ? 'neu-pressed text-link font-black shadow-inner'
+                          : 'neu-btn text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                       }`}
                     >
-                      <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.value ? 'text-primary' : 'text-slate-400'}`} />
+                      <tab.icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${activeTab === tab.value ? 'text-link' : 'text-tertiary'}`} />
                       <span>{tab.label}</span>
                     </Tabs.Trigger>
                   ))}
@@ -387,13 +387,13 @@ const ProviderProfile = () => {
                     <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Professional Details</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Your bio and location displayed during patient booking</p>
+                        <p className="text-tertiary dark:text-tertiary text-sm mt-0.5">Your bio and location displayed during patient booking</p>
                       </div>
                       {!editingOverview ? (
                         <motion.button
                           whileTap={{ scale: 0.96 }}
                           onClick={() => { setEditingOverview(true); setEditForm(profile); }}
-                          className="neu-btn px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-primary flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                          className="neu-btn px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-link flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                         >
                           <Save className="w-4 h-4" />
                           Edit Profile
@@ -403,7 +403,7 @@ const ProviderProfile = () => {
                           <motion.button
                             whileTap={{ scale: 0.96 }}
                             onClick={() => { setEditingOverview(false); setEditForm(profile); }}
-                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl font-bold text-xs text-slate-500 hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
+                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl font-bold text-xs text-tertiary hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
                           >
                             Cancel
                           </motion.button>
@@ -411,7 +411,7 @@ const ProviderProfile = () => {
                             whileTap={{ scale: 0.96 }}
                             onClick={handleSaveOverview}
                             disabled={saving}
-                            className="neu-btn px-4 sm:px-5 py-2 rounded-xl font-bold text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
+                            className="neu-btn px-4 sm:px-5 py-2 rounded-xl font-bold text-xs text-success dark:text-success-dark flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
                           >
                             <Save className="w-3.5 h-3.5" />
                             {saving ? 'Saving...' : 'Save Changes'}
@@ -422,9 +422,10 @@ const ProviderProfile = () => {
 
                     <div className="p-4 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
                       <div>
-                        <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Bio / Professional Title</p>
+                        <label htmlFor="provider-bio" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Bio / Professional Title</label>
                         {editingOverview ? (
                           <input
+                            id="provider-bio"
                             type="text" 
                             name="bio"
                             value={editForm.bio}
@@ -441,11 +442,12 @@ const ProviderProfile = () => {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5">
                         <div>
-                          <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Phone Number</p>
+                          <label htmlFor="provider-phone" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Phone Number</label>
                           {editingOverview ? (
                             <div className="relative">
-                              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                              <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary pointer-events-none" />
                               <input
+                                id="provider-phone"
                                 type="text" 
                                 name="phone"
                                 value={editForm.phone}
@@ -456,18 +458,19 @@ const ProviderProfile = () => {
                             </div>
                           ) : (
                             <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
-                              <Phone className="w-4 h-4 text-primary shrink-0" />
+                              <Phone className="w-4 h-4 text-link shrink-0" />
                               <span>{profile.phone || 'Not provided'}</span>
                             </div>
                           )}
                         </div>
 
                         <div>
-                          <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Service Location / Area</p>
+                          <label htmlFor="provider-location" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Service Location / Area</label>
                           {editingOverview ? (
                             <div className="relative">
-                              <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                              <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary pointer-events-none" />
                               <input
+                                id="provider-location"
                                 type="text" 
                                 name="location"
                                 value={editForm.location}
@@ -478,16 +481,16 @@ const ProviderProfile = () => {
                             </div>
                           ) : (
                             <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
-                              <MapPin className="w-4 h-4 text-primary shrink-0" />
+                              <MapPin className="w-4 h-4 text-link shrink-0" />
                               <span>{profile.location || 'No location set'}</span>
                             </div>
                           )}
                         </div>
 
                         <div>
-                          <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Email (Read Only)</p>
+                          <p className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5">Email (Read Only)</p>
                           <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
-                            <Mail className="w-4 h-4 text-slate-400 shrink-0" />
+                            <Mail className="w-4 h-4 text-tertiary shrink-0" />
                             <span className="truncate">{profile.email}</span>
                           </div>
                         </div>
@@ -502,13 +505,13 @@ const ProviderProfile = () => {
                     <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Specializations & Services</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">List of medical and healthcare services you deliver</p>
+                        <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">List of medical and healthcare services you deliver</p>
                       </div>
                       {!editingSpecializations ? (
                         <motion.button
                           whileTap={{ scale: 0.96 }}
                           onClick={() => setEditingSpecializations(true)}
-                          className="neu-btn px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-primary flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
+                          className="neu-btn px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-link flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                         >
                           <Save className="w-4 h-4" />
                           Edit Specializations
@@ -518,7 +521,7 @@ const ProviderProfile = () => {
                           <motion.button
                             whileTap={{ scale: 0.96 }}
                             onClick={() => { setEditingSpecializations(false); setServicesInput((profile.services || []).join(', ')); }}
-                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl font-bold text-xs text-slate-500 hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
+                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl font-bold text-xs text-tertiary hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
                           >
                             Cancel
                           </motion.button>
@@ -526,7 +529,7 @@ const ProviderProfile = () => {
                             whileTap={{ scale: 0.96 }}
                             onClick={handleSaveSpecializations}
                             disabled={saving}
-                            className="neu-btn px-4 sm:px-5 py-2 rounded-xl font-bold text-xs text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
+                            className="neu-btn px-4 sm:px-5 py-2 rounded-xl font-bold text-xs text-success dark:text-success-dark flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
                           >
                             <Save className="w-3.5 h-3.5" />
                             {saving ? 'Saving...' : 'Save'}
@@ -539,8 +542,9 @@ const ProviderProfile = () => {
                       {editingSpecializations ? (
                         <div className="space-y-3.5 sm:space-y-4">
                           <div>
-                            <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-1.5">Comma-Separated Services</p>
+                            <label htmlFor="provider-services" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Comma-Separated Services</label>
                             <textarea
+                              id="provider-services"
                               name="services"
                               value={servicesInput}
                               onChange={e => setServicesInput(e.target.value)}
@@ -550,7 +554,7 @@ const ProviderProfile = () => {
                           </div>
 
                           <div>
-                            <p className="text-3xs uppercase font-extrabold text-slate-400 dark:text-slate-500 mb-2">Suggested Services to Add:</p>
+                            <p className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-2">Suggested Services to Add:</p>
                             <div className="flex flex-wrap gap-1.5 sm:gap-2">
                               {['Wound Care', 'Elderly Care', 'Post-Surgery Recovery', 'Physical Therapy', 'Vital Signs Monitoring', 'Medication Administration', 'Dementia Care', 'Stroke Rehab']
                                 .filter(s => !(servicesInput || '').toLowerCase().includes(s.toLowerCase()))
@@ -564,7 +568,7 @@ const ProviderProfile = () => {
                                       const newServices = curr ? `${curr.replace(/,\s*$/, '')}, ${s}` : s;
                                       setServicesInput(newServices);
                                     }}
-                                    className="neu-btn px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-3xs sm:text-xs font-bold text-primary cursor-pointer active:scale-95"
+                                    className="neu-btn px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-xs font-bold text-link cursor-pointer active:scale-95"
                                   >
                                     + {s}
                                   </motion.button>
@@ -578,7 +582,7 @@ const ProviderProfile = () => {
                             profile.services.map((s, i) => (
                               <motion.span
                                 key={i}
-                                className="neu-btn px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-3xs sm:text-sm font-extrabold text-primary shadow-sm"
+                                className="neu-btn px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-extrabold text-link shadow-sm"
                                 initial={{ opacity: 0, scale: 0.9 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 transition={{ delay: 0.05 + i * 0.04 }}
@@ -588,7 +592,7 @@ const ProviderProfile = () => {
                             ))
                           ) : (
                             <div className="neu-inset p-3.5 sm:p-4 rounded-xl text-center w-full">
-                              <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm">
+                              <p className="text-tertiary dark:text-tertiary text-xs sm:text-sm">
                                 No specializations added yet. Click &ldquo;Edit Specializations&rdquo; to add services you provide.
                               </p>
                             </div>
@@ -604,7 +608,7 @@ const ProviderProfile = () => {
                   <div className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden">
                     <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/50 dark:border-white/5">
                       <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Trust Score Breakdown</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Calculated based on credentials, verification status, and profile completion</p>
+                      <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Calculated based on credentials, verification status, and profile completion</p>
                     </div>
 
                     <div className="p-4 sm:p-6 md:p-7">
@@ -617,12 +621,12 @@ const ProviderProfile = () => {
                         ].map((item, i) => (
                           <div key={i} className="flex items-center justify-between py-1 border-b border-slate-200/40 dark:border-white/5 last:border-0">
                             <div className="flex items-center gap-2 sm:gap-2.5">
-                              <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center ${item.met ? 'bg-emerald-500 text-white shadow-sm' : 'neu-pressed text-slate-400'}`}>
+                              <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center ${item.met ? 'bg-emerald-500 text-white shadow-sm' : 'neu-pressed text-tertiary'}`}>
                                 {item.met ? <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> : <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />}
                               </div>
-                              <span className="text-3xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label}</span>
+                              <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label}</span>
                             </div>
-                            <span className={`text-3xs sm:text-xs font-black ${item.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                            <span className={`text-xs sm:text-xs font-black ${item.met ? 'text-success dark:text-success-dark' : 'text-tertiary'}`}>
                               +{item.points} pts
                             </span>
                           </div>
@@ -632,7 +636,7 @@ const ProviderProfile = () => {
                       <div className="mt-3.5 sm:mt-5 neu-flat p-3.5 sm:p-5 rounded-2xl flex items-center justify-between">
                         <div>
                           <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 block">Total Calculated Score</span>
-                          <span className="text-3xs uppercase tracking-wider font-bold text-slate-400">Level: {trustLevel.label}</span>
+                          <span className="text-2xs uppercase tracking-wider font-bold text-tertiary">Level: {trustLevel.label}</span>
                         </div>
                         <div className="text-right">
                           <span className={`text-lg sm:text-2xl font-black ${trustLevel.color}`}>

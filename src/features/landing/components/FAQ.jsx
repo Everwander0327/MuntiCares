@@ -35,7 +35,7 @@ const FAQItem = ({ faq, isOpen, onClick }) => (
       aria-expanded={isOpen}
     >
       <span className="font-semibold text-slate-900 dark:text-slate-100 text-base md:text-lg">{faq.q}</span>
-      <span className={`w-11 h-11 rounded-full bg-black/[0.04] dark:bg-white/[0.06] ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-center shrink-0 transition-transform duration-700 ease-fluid ${isOpen ? 'rotate-180 bg-primary text-white' : 'text-primary'}`}>
+      <span className={`w-11 h-11 rounded-full bg-black/[0.04] dark:bg-white/[0.06] ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-center shrink-0 transition-transform duration-700 ease-fluid ${isOpen ? 'rotate-180 bg-primary text-white' : 'text-link'}`}>
         <CaretDown size={16} weight="light" />
       </span>
     </button>
@@ -75,7 +75,7 @@ const FAQ = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.8, ease: FLUID }}
         >
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary ring-1 ring-primary/20 mb-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-link ring-1 ring-primary/20 mb-2">
             <Question size={22} weight="light" />
           </div>
           <h2 id="faq-heading" className="font-display text-3xl md:text-5xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">Frequently asked questions</h2>

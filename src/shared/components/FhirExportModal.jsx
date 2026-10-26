@@ -96,10 +96,10 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden">
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-slate-950/70 sm:backdrop-blur-sm z-[9999]"
+            className="fixed inset-0 bg-slate-950/70 sm:backdrop-blur-sm z-[60]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -129,7 +129,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   FHIR R4 Export
                 </h2>
                 {patientName && (
-                  <p className="text-2xs text-slate-500 dark:text-slate-400 mt-0.5 truncate font-semibold">
+                  <p className="text-xs text-tertiary dark:text-tertiary mt-0.5 truncate font-semibold">
                     {patientName}
                   </p>
                 )}
@@ -138,7 +138,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
               <button
                 type="button"
                 onClick={handleClose}
-                className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer active:scale-95"
+                className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-tertiary hover:text-danger dark:text-tertiary dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer active:scale-95"
                 title="Close modal"
               >
                 <X className="w-4 h-4" />
@@ -149,13 +149,13 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
             <div className="flex-1 min-h-0 p-3 sm:p-5 overflow-hidden flex flex-col">
               <div 
                 tabIndex={0}
-                className="neu-inset rounded-2xl sm:rounded-3xl p-3 sm:p-4 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain select-text font-mono text-[11px] sm:text-xs leading-relaxed outline-none focus:outline-none"
+                className="neu-inset rounded-2xl sm:rounded-3xl p-3 sm:p-4 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain select-text font-mono text-xs leading-relaxed outline-none focus:outline-none"
                 style={{ 
                   WebkitOverflowScrolling: 'touch',
                   contain: 'content'
                 }}
               >
-                <pre className="text-slate-800 dark:text-slate-200 font-mono whitespace-pre-wrap break-words [word-break:break-word] text-[11px] sm:text-xs leading-relaxed">
+                <pre className="text-slate-800 dark:text-slate-200 font-mono whitespace-pre-wrap break-words [word-break:break-word] text-xs leading-relaxed">
                   {json || '// No data available'}
                 </pre>
               </div>
@@ -168,16 +168,16 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   <button
                     type="button"
                     onClick={handleCopy}
-                    className="neu-btn px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-bold text-2xs sm:text-xs text-slate-700 dark:text-slate-200 hover:text-primary transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                    className="neu-btn px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-xs text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500 stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <Check className="w-3.5 h-3.5 text-success stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copied ? 'Copied!' : 'Copy'}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={handleDownload}
-                    className="neu-btn px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-bold text-2xs sm:text-xs text-slate-700 dark:text-slate-200 hover:text-primary transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                    className="neu-btn px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-xs text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download</span>
@@ -188,7 +188,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   type="button"
                   onClick={handleUpload}
                   disabled={uploading}
-                  className="neu-btn-primary px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-extrabold text-2xs sm:text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer active:scale-95 shadow-md w-full sm:w-auto"
+                  className="neu-btn-primary px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-extrabold text-xs sm:text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer active:scale-95 shadow-md w-full sm:w-auto"
                 >
                   {uploading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -207,26 +207,26 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   className={`neu-flat p-2.5 sm:p-3 rounded-2xl text-xs flex items-start gap-2.5 border ${
                     uploadResult.success
                       ? 'border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                      : 'border-rose-500/30 text-rose-800 dark:text-rose-300'
+                      : 'border-rose-500/30 text-rose-800 dark:text-danger-dark'
                   }`}
                 >
                   {uploadResult.success ? (
-                    <div className="neu-flat-sm w-6 h-6 rounded-lg flex items-center justify-center text-emerald-500 shrink-0 mt-0.5">
+                    <div className="neu-flat-sm w-6 h-6 rounded-lg flex items-center justify-center text-success shrink-0 mt-0.5">
                       <Globe className="w-3.5 h-3.5" />
                     </div>
                   ) : (
-                    <div className="neu-flat-sm w-6 h-6 rounded-lg flex items-center justify-center text-rose-500 shrink-0 mt-0.5">
+                    <div className="neu-flat-sm w-6 h-6 rounded-lg flex items-center justify-center text-danger shrink-0 mt-0.5">
                       <X className="w-3.5 h-3.5" />
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="font-extrabold text-2xs sm:text-xs leading-snug">{uploadResult.message}</p>
+                    <p className="font-extrabold text-xs sm:text-xs leading-snug">{uploadResult.message}</p>
                     {uploadResult.success && uploadResult.url && (
                       <a
                         href={uploadResult.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-3xs underline mt-0.5 block font-mono text-primary hover:text-primary-600 transition-colors break-all"
+                        className="text-xs underline mt-0.5 block font-mono text-link hover:text-primary-600 transition-colors break-all"
                       >
                         {uploadResult.url}
                       </a>
@@ -235,7 +235,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   <button
                     type="button"
                     onClick={() => setUploadResult(null)}
-                    className="neu-btn w-6 h-6 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
+                    className="neu-btn w-6 h-6 rounded-lg flex items-center justify-center text-tertiary hover:text-danger transition-colors shrink-0 cursor-pointer"
                   >
                     <X className="w-3 h-3" />
                   </button>

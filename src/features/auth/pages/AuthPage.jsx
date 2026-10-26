@@ -54,7 +54,7 @@ const strengthColors = ['', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-
 const _TabButton = ({ active, label, onClick }) => (
   <button
     onClick={onClick}
-    className={`relative px-4 md:px-8 py-1.5 md:py-3 text-sm md:text-lg font-semibold transition-all duration-700 ease-fluid ${active ? 'text-primary' : 'text-slate-700 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300'
+    className={`relative px-4 md:px-8 py-1.5 md:py-3 text-sm md:text-lg font-semibold transition-all duration-700 ease-fluid ${active ? 'text-link' : 'text-slate-700 dark:text-tertiary hover:text-slate-900 dark:hover:text-slate-300'
       }`}
   >
     {label}
@@ -72,7 +72,7 @@ const PasswordToggle = ({ show, onToggle }) => (
   <button
     type="button"
     onClick={onToggle}
-    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
+    className="-mr-2 flex h-11 w-11 items-center justify-center rounded-xl text-tertiary transition-colors hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
     tabIndex={-1}
     aria-label={show ? 'Hide password' : 'Show password'}
   >
@@ -228,7 +228,7 @@ const AuthPage = () => {
         >
           <div className="text-center mb-6">
             <h3 className="font-display text-lg font-semibold text-slate-900 dark:text-slate-100">Set Your Password</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-sm text-tertiary dark:text-tertiary mt-1">
               First-time login for<br />
               <span className="font-semibold text-slate-700 dark:text-slate-300">{pendingSetPassword}</span>
             </p>
@@ -237,6 +237,7 @@ const AuthPage = () => {
             <FormInput
               label="New Password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
               placeholder="••••••••"
               icon={Lock}
               className="!py-2.5"
@@ -245,7 +246,7 @@ const AuthPage = () => {
               {...setPasswordForm.register('password')}
             />
             {error && (
-              <div className="bg-red-500/10 text-red-500 dark:text-red-300 p-3 rounded-[1.25rem] text-xs font-medium text-center ring-1 ring-red-500/20">{error}</div>
+              <div className="bg-danger/10 text-danger dark:text-danger-dark p-3 rounded-[1.25rem] text-xs font-medium text-center ring-1 ring-red-500/20">{error}</div>
             )}
             <motion.button
               type="submit"
@@ -259,7 +260,7 @@ const AuthPage = () => {
             <button
               type="button"
               onClick={() => { setPendingSetPassword(null); setError(''); }}
-              className="w-full text-xs text-slate-400 hover:text-slate-600 font-medium transition-colors"
+              className="w-full text-xs text-tertiary hover:text-slate-600 font-medium transition-colors"
             >
               Use a different account
             </button>
@@ -281,6 +282,7 @@ const AuthPage = () => {
             <FormInput
               label="Email Address"
               type="email"
+              autoComplete="email"
               placeholder="juan.delacruz@example.com"
               icon={Mail}
               className="!py-2.5"
@@ -291,6 +293,7 @@ const AuthPage = () => {
             <FormInput
               label="Password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               placeholder="••••••••"
               icon={Lock}
               className="!py-2.5"
@@ -304,14 +307,14 @@ const AuthPage = () => {
               <button
                 type="button"
                 onClick={() => toast('Password reset coming soon')}
-                className="text-xs text-primary font-bold hover:underline transition-all cursor-pointer"
+                className="text-xs text-link font-bold hover:underline transition-all cursor-pointer"
               >
                 Forgot Password?
               </button>
             </div>
 
             {error && (
-              <div className="bg-red-500/10 text-red-500 dark:text-red-300 p-3 rounded-[1.25rem] text-xs font-medium text-center ring-1 ring-red-500/20">
+              <div className="bg-danger/10 text-danger dark:text-danger-dark p-3 rounded-[1.25rem] text-xs font-medium text-center ring-1 ring-red-500/20">
                 {error}
               </div>
             )}
@@ -368,6 +371,7 @@ const AuthPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <FormInput
                 label="Full Name"
+                autoComplete="name"
                 placeholder="Juan Dela Cruz"
                 icon={User}
                 className="!py-2"
@@ -377,6 +381,7 @@ const AuthPage = () => {
               <FormInput
                 label="Email Address"
                 type="email"
+                autoComplete="email"
                 placeholder="juan@example.com"
                 icon={Mail}
                 className="!py-2"
@@ -388,6 +393,7 @@ const AuthPage = () => {
               <FormInput
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 placeholder="••••••••"
                 icon={Lock}
                 className="!py-2"
@@ -398,6 +404,7 @@ const AuthPage = () => {
               <FormInput
                 label="Confirm Password"
                 type={showConfirmPassword ? 'text' : 'password'}
+                autoComplete="new-password"
                 placeholder="••••••••"
                 icon={ShieldCheck}
                 className="!py-2"
@@ -429,7 +436,7 @@ const AuthPage = () => {
 
 
           {error && (
-            <div className="bg-red-500/10 text-red-500 dark:text-red-300 p-3 rounded-[1.25rem] text-sm font-medium text-center ring-1 ring-red-500/20">
+            <div className="bg-danger/10 text-danger dark:text-danger-dark p-3 rounded-[1.25rem] text-sm font-medium text-center ring-1 ring-red-500/20">
               {error}
             </div>
           )}
@@ -469,7 +476,7 @@ const AuthPage = () => {
           <h1 className="font-display font-black text-slate-900 dark:text-white w-full tracking-tight text-xl sm:text-2xl md:text-3xl">
             {mode === 'login' ? 'Welcome back' : 'Create an Account'}
           </h1>
-          <p className="mt-0.5 sm:mt-1 text-2xs sm:text-xs md:text-[13px] font-medium text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 sm:mt-1 text-sm font-medium text-tertiary dark:text-tertiary">
             {mode === 'login' ? 'Sign in to access your healthcare portal.' : 'Register to connect with verified home care.'}
           </p>
         </div>
@@ -487,8 +494,8 @@ const AuthPage = () => {
                   type="button"
                   onClick={() => { setMode('login'); setError(''); }}
                   className={`flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none ${mode === 'login'
-                      ? 'neu-flat text-primary font-black shadow-xs'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'neu-flat text-link font-black shadow-sm'
+                      : 'text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                 >
                   Login
@@ -497,8 +504,8 @@ const AuthPage = () => {
                   type="button"
                   onClick={() => { setMode('register'); setError(''); }}
                   className={`flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 cursor-pointer select-none ${mode === 'register'
-                      ? 'neu-flat text-primary font-black shadow-xs'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'neu-flat text-link font-black shadow-sm'
+                      : 'text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                 >
                   Register
@@ -512,7 +519,7 @@ const AuthPage = () => {
 
             {!pendingSetPassword && mode === 'login' && (
               <div className="pt-4">
-                <Link to="/register" className="group flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-primary hover:text-primary-700 transition-colors">
+                <Link to="/register" className="group flex items-center justify-center gap-1.5 text-xs sm:text-sm font-bold text-link hover:text-primary-700 transition-colors">
                   New here? Create an account
                   <ArrowUpRight size={14} weight="bold" className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </Link>

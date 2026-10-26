@@ -8,7 +8,7 @@ const ProtectedRoute = ({ allowedRole }) => {
   // Wait for auth to initialize to prevent flicker / incorrect redirects
   if (!authInitialized) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[100dvh] flex items-center justify-center">
         <div className="flex items-center gap-3">
           <div className="w-6 h-6 rounded-full border-4 border-primary border-t-transparent animate-spin" />
           <div className="text-slate-600">Loading...</div>

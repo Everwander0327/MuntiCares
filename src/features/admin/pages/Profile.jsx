@@ -23,7 +23,7 @@ const QuickStat = ({ label, value, icon, colorClass }) => {
       <p className="text-xl sm:text-3xl font-display font-black text-slate-900 dark:text-white" ref={ref}>
         {count}
       </p>
-      <p className="text-2xs sm:text-xs text-slate-500 font-extrabold uppercase tracking-wider mt-0.5 dark:text-slate-400">
+      <p className="text-2xs sm:text-xs text-tertiary font-extrabold uppercase tracking-wider mt-0.5 dark:text-tertiary">
         {label}
       </p>
     </div>
@@ -156,7 +156,7 @@ const AdminProfile = () => {
           <h1 className="text-xl sm:text-2xl font-display font-black tracking-tight text-slate-900 dark:text-white">
             System Admin Profile
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-tertiary dark:text-tertiary mt-1">
             Manage your administrative credentials, oversee platform telemetry, and system statistics
           </p>
         </motion.div>
@@ -184,15 +184,15 @@ const AdminProfile = () => {
                   <h2 className="text-lg sm:text-xl font-display font-black text-slate-900 dark:text-white">
                     {profile.full_name}
                   </h2>
-                  <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-xs sm:text-sm font-medium text-tertiary dark:text-tertiary mt-0.5">
                     {profile.email}
                   </p>
                 </div>
 
                 {/* Role Pill */}
                 <div className="mt-3">
-                  <span className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-primary">
-                    <Shield className="w-3.5 h-3.5 text-primary" />
+                  <span className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-link">
+                    <Shield className="w-3.5 h-3.5 text-link" />
                     System Administrator
                   </span>
                 </div>
@@ -201,17 +201,17 @@ const AdminProfile = () => {
               {/* Inset Account Info Details */}
               <div className="neu-inset p-4 rounded-2xl space-y-3 text-xs">
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider text-3xs">Role Level:</span>
-                  <span className="font-black text-primary">Super Administrator</span>
+                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">Role Level:</span>
+                  <span className="font-black text-link">Super Administrator</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider text-3xs">Joined Platform:</span>
+                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">Joined Platform:</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-200">
                     {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider text-3xs">Jurisdiction:</span>
+                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">Jurisdiction:</span>
                   <span className="font-bold text-slate-800 dark:text-slate-100">Muntinlupa City</span>
                 </div>
               </div>
@@ -221,7 +221,7 @@ const AdminProfile = () => {
                 <motion.button
                   whileTap={{ scale: 0.96 }}
                   onClick={handleLogout}
-                  className="w-full neu-btn py-3 rounded-2xl font-black text-xs sm:text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-all flex items-center justify-center gap-2"
+                  className="w-full neu-btn py-3 rounded-2xl font-black text-xs sm:text-sm text-danger dark:text-danger-dark hover:bg-rose-500/10 transition-all flex items-center justify-center gap-2"
                 >
                   <LogOut className="w-4 h-4" />
                   <span>Sign Out of Admin Console</span>
@@ -245,8 +245,8 @@ const AdminProfile = () => {
                   onClick={() => setActiveTab('overview')}
                   className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
                     activeTab === 'overview'
-                      ? 'neu-inset text-primary'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'neu-inset text-link'
+                      : 'text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
                   <User className="w-4 h-4" />
@@ -257,8 +257,8 @@ const AdminProfile = () => {
                   onClick={() => setActiveTab('system')}
                   className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
                     activeTab === 'system'
-                      ? 'neu-inset text-primary'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      ? 'neu-inset text-link'
+                      : 'text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
                   <BarChart3 className="w-4 h-4" />
@@ -277,17 +277,18 @@ const AdminProfile = () => {
                     <h3 className="text-base sm:text-lg font-display font-black text-slate-900 dark:text-white">
                       Profile Information
                     </h3>
-                    <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                    <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">
                       Personalize your identity as seen on audits
                     </p>
                   </div>
 
                   <form onSubmit={handleSaveProfile} className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-3xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      <label htmlFor="admin-full-name" className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">
                         Admin Full Name
                       </label>
                       <input
+                        id="admin-full-name"
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
@@ -297,12 +298,12 @@ const AdminProfile = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-3xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      <label className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">
                         Email Address (Read-only)
                       </label>
-                      <div className="neu-inset rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center justify-between cursor-not-allowed">
+                      <div className="neu-inset rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-tertiary dark:text-tertiary flex items-center justify-between cursor-not-allowed">
                         <span className="truncate">{profile.email}</span>
-                        <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <Lock className="w-3.5 h-3.5 text-tertiary shrink-0" />
                       </div>
                     </div>
 
@@ -332,7 +333,7 @@ const AdminProfile = () => {
                     <h3 className="text-base sm:text-lg font-display font-black text-slate-900 dark:text-white">
                       Platform Statistics
                     </h3>
-                    <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                    <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">
                       Live entity metrics across the Muntinlupa network
                     </p>
                   </div>
@@ -342,19 +343,19 @@ const AdminProfile = () => {
                       label="Patients" 
                       value={stats.patients} 
                       icon={<Users />} 
-                      colorClass="text-primary" 
+                      colorClass="text-link" 
                     />
                     <QuickStat 
                       label="Providers" 
                       value={stats.providers} 
                       icon={<Briefcase />} 
-                      colorClass="text-purple-600 dark:text-purple-400" 
+                      colorClass="text-link dark:text-primary-400" 
                     />
                     <QuickStat 
                       label="Requests" 
                       value={stats.requests} 
                       icon={<FileText />} 
-                      colorClass="text-amber-500" 
+                      colorClass="text-warning dark:text-warning-dark" 
                     />
                   </div>
                 </motion.div>

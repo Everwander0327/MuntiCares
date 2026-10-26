@@ -79,7 +79,7 @@ const CookieConsent = () => {
               </button>
               <button
                 onClick={accept}
-                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                className="p-2 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                 aria-label="Dismiss"
               >
                 <X className="w-4 h-4" />

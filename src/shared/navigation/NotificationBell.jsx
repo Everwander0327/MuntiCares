@@ -27,15 +27,15 @@ const playChime = () => {
 
 const getNotifIcon = (type) => {
   switch (type) {
-    case 'request_accepted': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-    case 'request_rejected': return <XCircle className="w-4 h-4 text-red-500" />;
-    case 'status_on_the_way': return <Navigation className="w-4 h-4 text-amber-500" />;
-    case 'status_arrived': return <CheckCircle2 className="w-4 h-4 text-purple-500" />;
-    case 'status_completed': return <Star className="w-4 h-4 text-green-500" />;
-    case 'new_request': return <FileText className="w-4 h-4 text-blue-500" />;
-    case 'new_message': return <MessageCircle className="w-4 h-4 text-primary" />;
-    case 'request_cancelled': return <XCircle className="w-4 h-4 text-slate-400" />;
-    default: return <Bell className="w-4 h-4 text-slate-400" />;
+    case 'request_accepted': return <CheckCircle2 className="w-4 h-4 text-success" />;
+    case 'request_rejected': return <XCircle className="w-4 h-4 text-danger" />;
+    case 'status_on_the_way': return <Navigation className="w-4 h-4 text-warning" />;
+    case 'status_arrived': return <CheckCircle2 className="w-4 h-4 text-link" />;
+    case 'status_completed': return <Star className="w-4 h-4 text-success" />;
+    case 'new_request': return <FileText className="w-4 h-4 text-link" />;
+    case 'new_message': return <MessageCircle className="w-4 h-4 text-link" />;
+    case 'request_cancelled': return <XCircle className="w-4 h-4 text-tertiary" />;
+    default: return <Bell className="w-4 h-4 text-tertiary" />;
   }
 };
 
@@ -519,12 +519,12 @@ const NotificationBell = () => {
         }}
         aria-expanded={isOpen}
         aria-haspopup="true"
-        className="neu-btn w-11 h-11 text-slate-600 dark:text-slate-300 hover:text-primary transition-all relative rounded-2xl flex items-center justify-center cursor-pointer"
+        className="neu-btn w-11 h-11 text-slate-600 dark:text-slate-300 hover:text-link transition-all relative rounded-2xl flex items-center justify-center cursor-pointer"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
           <motion.span
-            className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-red-500 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-3xs font-extrabold text-white px-1 shadow-sm"
+            className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-danger rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs font-extrabold text-white px-1 shadow-sm"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             key={unreadCount}
@@ -565,7 +565,7 @@ const NotificationBell = () => {
                   <button
                     type="button"
                     onClick={markAllAsRead}
-                    className="neu-btn px-2.5 py-1 rounded-xl text-3xs font-extrabold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary cursor-pointer active:scale-95"
+                    className="neu-btn px-2.5 py-1 rounded-xl text-xs font-extrabold text-tertiary hover:text-link dark:text-tertiary dark:hover:text-link cursor-pointer active:scale-95"
                     title="Mark all notifications as read"
                   >
                     Mark all read
@@ -575,7 +575,7 @@ const NotificationBell = () => {
                   <button
                     type="button"
                     onClick={clearAllNotifications}
-                    className="neu-btn px-2.5 py-1 rounded-xl text-3xs font-extrabold text-slate-500 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400 cursor-pointer active:scale-95"
+                    className="neu-btn px-2.5 py-1 rounded-xl text-xs font-extrabold text-tertiary hover:text-danger dark:text-tertiary dark:hover:text-red-400 cursor-pointer active:scale-95"
                     title="Clear all notifications"
                   >
                     Clear all
@@ -643,8 +643,8 @@ const NotificationBell = () => {
                             </p>
                             {isUnread && <span className="w-2 h-2 bg-primary rounded-full shrink-0 shadow-sm animate-pulse" />}
                           </div>
-                          <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{notif.message}</p>
-                          <p className="text-3xs text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1 font-semibold">
+                          <p className="text-sm text-tertiary dark:text-tertiary truncate mt-0.5">{notif.message}</p>
+                          <p className="text-xs text-tertiary dark:text-tertiary mt-1 flex items-center gap-1 font-semibold">
                             <Clock className="w-3 h-3" />
                             {timeAgo(notif.time)}
                           </p>
@@ -660,21 +660,21 @@ const NotificationBell = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 text-emerald-500">
+                  <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 text-success">
                     <CheckCircle2 className="w-6 h-6" />
                   </div>
                   <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-extrabold">You&apos;re all caught up!</p>
-                  <p className="text-3xs sm:text-xs text-slate-400 mt-1">No notifications at the moment.</p>
+                  <p className="text-sm text-tertiary mt-1">No notifications at the moment.</p>
                 </motion.div>
               )}
             </div>
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="px-5 py-2.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-3xs text-slate-400 dark:text-slate-500 font-bold">
+              <div className="px-5 py-2.5 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-xs text-tertiary dark:text-tertiary font-bold">
                 <span>{notifications.length} notification{notifications.length > 1 ? 's' : ''}</span>
                 {unreadCount > 0 && (
-                  <span className="text-primary font-extrabold">{unreadCount} unread</span>
+                  <span className="text-link font-extrabold">{unreadCount} unread</span>
                 )}
               </div>
             )}

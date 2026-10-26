@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   MessageSquare, Search, CheckCircle, FileText, User, 
@@ -146,7 +146,10 @@ const ProviderPatients = () => {
     }
   };
 
-  const handleOpenRecord = (patientId, patientName) => {
+  const recordTriggerRef = useRef(null);
+
+  const handleOpenRecord = (patientId, patientName, triggerEl = null) => {
+    recordTriggerRef.current = triggerEl;
     setSelectedPatient({ id: patientId, name: patientName });
     setIsModalOpen(true);
   };
@@ -175,7 +178,7 @@ const ProviderPatients = () => {
               <h1 className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-slate-900 dark:text-white">
                 My Patients
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+              <p className="text-sm text-tertiary dark:text-tertiary mt-1 max-w-xl">
                 Manage your active consultations, review medical charts, and access patient health records.
               </p>
             </div>
@@ -185,9 +188,9 @@ const ProviderPatients = () => {
               <button
                 type="button"
                 onClick={() => setStatusFilter(statusFilter === 'Active' ? 'All' : 'Active')}
-                className={`neu-btn px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-3xs sm:text-xs font-bold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 ${
+                className={`neu-btn px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-xs font-bold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 ${
                   statusFilter === 'Active' 
-                    ? 'neu-pressed text-emerald-600 dark:text-emerald-400' 
+                    ? 'neu-pressed text-success dark:text-success-dark' 
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
                 title="Filter Active consultations"
@@ -197,9 +200,9 @@ const ProviderPatients = () => {
               <button
                 type="button"
                 onClick={() => setStatusFilter(statusFilter === 'Completed' ? 'All' : 'Completed')}
-                className={`neu-btn px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-3xs sm:text-xs font-bold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 ${
+                className={`neu-btn px-3 sm:px-4 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-xs font-bold transition-all flex items-center gap-1.5 sm:gap-2 cursor-pointer shrink-0 ${
                   statusFilter === 'Completed' 
-                    ? 'neu-pressed text-blue-600 dark:text-blue-400' 
+                    ? 'neu-pressed text-link dark:text-primary-300' 
                     : 'text-slate-600 dark:text-slate-300'
                 }`}
                 title="Filter Completed visits"
@@ -210,7 +213,7 @@ const ProviderPatients = () => {
                 <button
                   type="button"
                   onClick={() => setStatusFilter('All')}
-                  className="neu-btn px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-3xs sm:text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                  className="neu-btn px-2.5 sm:px-3 py-1.5 sm:py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-xs font-bold text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1 shrink-0"
                   title="Clear filter and show all"
                 >
                   <X className="w-3 h-3" />
@@ -225,9 +228,10 @@ const ProviderPatients = () => {
             {/* Search Input (Sunken Well with prominent Lucide Search icon) */}
             <div className="relative flex-1 min-w-0 max-w-md">
               <div className="neu-inset rounded-xl sm:rounded-2xl flex items-center px-2.5 sm:px-3 py-2 sm:py-2.5 gap-2 sm:gap-2.5 border border-slate-200/50 dark:border-white/5">
-                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary shrink-0" />
+                <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-link shrink-0" />
                 <input
                   type="text"
+                  aria-label="Search patients by name or service"
                   placeholder="Search patient, service..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -237,7 +241,7 @@ const ProviderPatients = () => {
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5 shrink-0"
+                    className="text-tertiary hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5 shrink-0"
                     title="Clear search"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -253,19 +257,19 @@ const ProviderPatients = () => {
                   type="button"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage <= 1}
-                  className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                  className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                   title="Previous page"
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-3xs font-extrabold text-slate-500 px-0.5 sm:px-1 select-none whitespace-nowrap">
+                <span className="text-xs font-extrabold text-tertiary px-0.5 sm:px-1 select-none whitespace-nowrap">
                   {currentPage} / {totalPages}
                 </span>
                 <button
                   type="button"
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage >= totalPages}
-                  className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                  className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                   title="Next page"
                 >
                   <ChevronRight className="w-3.5 h-3.5" />
@@ -302,7 +306,7 @@ const ProviderPatients = () => {
                     {/* Top Bar: Avatar + Name + Service + Status Chip & Chat */}
                     <div className="flex items-start justify-between gap-2.5 sm:gap-3">
                       <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                        <div className="neu-flat-sm w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-primary font-black text-xs sm:text-base shrink-0 p-0.5">
+                        <div className="neu-flat-sm w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-link font-black text-xs sm:text-base shrink-0 p-0.5">
                           {p.avatarUrl ? (
                             <img src={p.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
                           ) : (
@@ -313,7 +317,7 @@ const ProviderPatients = () => {
                           <h3 className="font-display font-extrabold text-slate-900 dark:text-white text-xs sm:text-base truncate">
                             {p.name}
                           </h3>
-                          <p className="text-3xs sm:text-xs font-semibold text-primary truncate mt-0.5">
+                          <p className="text-xs sm:text-xs font-semibold text-link truncate mt-0.5">
                             {p.service}
                           </p>
                         </div>
@@ -323,7 +327,7 @@ const ProviderPatients = () => {
                         {/* Chat Button */}
                         <Link
                           to={`/provider/messages?partner=${p.patientId}&name=${encodeURIComponent(p.name)}`}
-                          className="neu-btn p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-primary hover:text-primary-600 transition-all flex items-center justify-center cursor-pointer"
+                          className="neu-btn h-11 w-11 rounded-lg sm:rounded-xl text-link hover:text-primary-600 transition-all flex items-center justify-center cursor-pointer"
                           title="Chat with Patient"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
@@ -331,10 +335,10 @@ const ProviderPatients = () => {
 
                         {/* Status Chip (Neumorphic without dot) */}
                         <span
-                          className={`neu-flat-sm text-3xs font-extrabold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl uppercase tracking-wider ${
+                          className={`neu-flat-sm text-2xs font-extrabold px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl uppercase tracking-wider ${
                             p.status === 'Active'
-                              ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                              : 'text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                              ? 'text-success dark:text-success-dark border border-emerald-500/20'
+                              : 'text-link dark:text-primary-300 border border-blue-500/20'
                           }`}
                         >
                           {p.rawStatus}
@@ -343,14 +347,14 @@ const ProviderPatients = () => {
                     </div>
 
                     {/* Meta Details: Visit Date & Time */}
-                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-3xs sm:text-xs text-slate-600 dark:text-slate-300">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 text-xs sm:text-xs text-slate-600 dark:text-slate-300">
                       <div className="neu-flat-sm px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl flex items-center gap-1.5 font-semibold">
-                        <Calendar className="w-3 h-3 text-primary" />
+                        <Calendar className="w-3 h-3 text-link" />
                         <span>{p.date}</span>
                       </div>
                       {p.time && (
                         <div className="neu-flat-sm px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl flex items-center gap-1.5 font-semibold">
-                          <Clock className="w-3 h-3 text-primary" />
+                          <Clock className="w-3 h-3 text-link" />
                           <span>{p.time}</span>
                         </div>
                       )}
@@ -358,7 +362,7 @@ const ProviderPatients = () => {
 
                     {/* Patient Booking Note (Sunken Inset Well with Fallback) */}
                     <div className="neu-inset p-2.5 sm:p-3 rounded-xl border border-slate-200/40 dark:border-white/5 space-y-1">
-                      <p className="text-3xs font-extrabold uppercase tracking-wider text-primary">
+                      <p className="text-2xs font-extrabold uppercase tracking-wider text-link">
                         Patient Booking Note
                       </p>
                       {p.notes && p.notes.trim() ? (
@@ -366,7 +370,7 @@ const ProviderPatients = () => {
                           &ldquo;{p.notes}&rdquo;
                         </p>
                       ) : (
-                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                        <p className="text-sm text-tertiary dark:text-tertiary italic">
                           No additional booking notes provided by patient.
                         </p>
                       )}
@@ -378,8 +382,8 @@ const ProviderPatients = () => {
                         {/* Medical Chart Modal Trigger */}
                         <button
                           type="button"
-                          onClick={() => handleOpenRecord(p.patientId, p.name)}
-                          className="neu-btn px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-3xs sm:text-xs font-bold text-primary transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 sm:flex-initial"
+                          onClick={(event) => handleOpenRecord(p.patientId, p.name, event.currentTarget)}
+                          className="neu-btn px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-xs font-bold text-link transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 sm:flex-initial"
                           title="Open Medical Record & Chart"
                         >
                           <FileText className="w-3.5 h-3.5" />
@@ -390,7 +394,7 @@ const ProviderPatients = () => {
                         <button
                           type="button"
                           onClick={() => navigate(`/provider/patients/${p.patientId}/profile`)}
-                          className="neu-btn px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-3xs sm:text-xs font-bold text-slate-700 dark:text-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 sm:flex-initial"
+                          className="neu-btn px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs sm:text-xs font-bold text-slate-700 dark:text-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 sm:flex-initial"
                           title="View Full Patient Profile"
                         >
                           <User className="w-3.5 h-3.5" />
@@ -404,7 +408,7 @@ const ProviderPatients = () => {
                           type="button"
                           disabled={updatingId === p.requestId}
                           onClick={() => handleMarkCompleted(p.requestId, p.name)}
-                          className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-3xs sm:text-xs font-bold text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 w-full sm:w-auto"
+                          className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs sm:text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 w-full sm:w-auto"
                           title="Mark Consultation as Completed"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
@@ -439,6 +443,7 @@ const ProviderPatients = () => {
           onClose={() => setIsModalOpen(false)}
           patientId={selectedPatient.id}
           patientName={selectedPatient.name}
+          triggerRef={recordTriggerRef}
         />
       )}
     </DashboardLayout>

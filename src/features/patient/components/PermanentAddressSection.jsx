@@ -100,14 +100,14 @@ export default function PermanentAddressSection({
         <label className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 block">
           Permanent Home & Visit Address
         </label>
-        <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 mt-0.5">
+        <p className="text-sm text-tertiary dark:text-tertiary mt-0.5">
           Saved to your profile. All future home visits default to this location unless changed at booking.
         </p>
       </div>
 
       {/* Step 1: Search Street / Landmark */}
       <div className="space-y-1.5">
-        <label className="text-3xs font-semibold uppercase tracking-wider text-slate-400 ml-1">
+        <label className="text-2xs font-semibold uppercase tracking-wider text-tertiary ml-1">
           Search Street, Subdivision, or Barangay
         </label>
         <AddressAutocomplete
@@ -119,11 +119,11 @@ export default function PermanentAddressSection({
       {/* Step 2: 3D Vector Map with Center-Fixed Pin */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between ml-1">
-          <label className="text-3xs font-semibold uppercase tracking-wider text-slate-400">
+          <label className="text-2xs font-semibold uppercase tracking-wider text-tertiary">
             Pin Location on Map
           </label>
           {coords && (
-            <span className="text-3xs font-medium text-slate-500 dark:text-slate-400">
+            <span className="text-xs font-medium text-tertiary dark:text-tertiary">
               {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
             </span>
           )}
@@ -141,10 +141,11 @@ export default function PermanentAddressSection({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Base Street / House */}
           <div className="space-y-1 sm:col-span-2">
-            <span className="text-3xs font-medium text-slate-600 dark:text-slate-300 ml-1">
+            <label htmlFor="address-street" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 ml-1">
               Street & Barangay
-            </span>
+            </label>
             <input
+              id="address-street"
               type="text"
               value={baseAddress}
               onChange={handleFieldChange(setBaseAddress, 'base')}
@@ -155,10 +156,11 @@ export default function PermanentAddressSection({
 
           {/* Unit / Floor */}
           <div className="space-y-1">
-            <span className="text-3xs font-medium text-slate-600 dark:text-slate-300 ml-1">
+            <label htmlFor="address-unit" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 ml-1">
               House / Unit / Lot No.
-            </span>
+            </label>
             <input
+              id="address-unit"
               type="text"
               value={unitFloor}
               onChange={handleFieldChange(setUnitFloor, 'unit')}
@@ -169,10 +171,11 @@ export default function PermanentAddressSection({
 
           {/* Subdivision / Gate */}
           <div className="space-y-1">
-            <span className="text-3xs font-medium text-slate-600 dark:text-slate-300 ml-1">
+            <label htmlFor="address-subdivision" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 ml-1">
               Subdivision or Village
-            </span>
+            </label>
             <input
+              id="address-subdivision"
               type="text"
               value={subdivisionGate}
               onChange={handleFieldChange(setSubdivisionGate, 'sub')}
@@ -183,10 +186,11 @@ export default function PermanentAddressSection({
 
           {/* Gate & Arrival Instructions */}
           <div className="space-y-1 sm:col-span-2">
-            <span className="text-3xs font-medium text-slate-600 dark:text-slate-300 ml-1">
+            <label htmlFor="address-arrival-notes" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 ml-1">
               Gate / Landmark Notes for Provider
-            </span>
+            </label>
             <textarea
+              id="address-arrival-notes"
               rows={2}
               value={arrivalInstructions}
               onChange={handleFieldChange(setArrivalInstructions, 'instr')}

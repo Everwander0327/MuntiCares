@@ -180,7 +180,7 @@ export default function VisitDestinationModal({
             {/* Modal Header */}
             <div className="mc-modal__head shrink-0 border-b border-slate-200/60 dark:border-white/10 px-5 py-4">
               <div className="min-w-0 flex-1">
-                <p className="text-3xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                <p className="text-2xs font-semibold uppercase tracking-widest text-tertiary dark:text-tertiary">
                   {step === 'pin' ? '01 / 02 · Pin Location' : '02 / 02 · Arrival Details'}
                 </p>
                 <h2 id="visit-destination-title" className="mc-title text-base sm:text-lg mt-0.5">
@@ -226,11 +226,11 @@ export default function VisitDestinationModal({
                   {/* Pinned Location Card */}
                   <div className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
                     <div className="min-w-0 flex-1 flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-link shrink-0 mt-0.5">
                         <MapPin className="w-4 h-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">
+                        <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
                           Pinned Location
                         </p>
                         <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
@@ -242,7 +242,7 @@ export default function VisitDestinationModal({
                     <button
                       type="button"
                       onClick={() => handleFinalSave(true)}
-                      className="text-2xs font-bold text-slate-500 hover:text-primary dark:text-slate-400 underline shrink-0 px-2"
+                      className="text-xs font-bold text-tertiary hover:text-link dark:text-tertiary underline shrink-0 px-2"
                     >
                       Quick Save
                     </button>
@@ -259,9 +259,9 @@ export default function VisitDestinationModal({
                   {/* Pinned Location Mini Summary with "Adjust Pin" */}
                   <div className="p-3 rounded-xl bg-primary/5 dark:bg-primary/10 border border-primary/20 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1 flex items-center gap-2.5">
-                      <Navigation className="w-4 h-4 text-primary shrink-0" />
+                      <Navigation className="w-4 h-4 text-link shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-2xs font-extrabold text-primary dark:text-[#8CBDF0]">
+                        <p className="text-xs font-extrabold text-link dark:text-[#8CBDF0]">
                           GPS Pin Confirmed
                         </p>
                         <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
@@ -272,7 +272,7 @@ export default function VisitDestinationModal({
                     <button
                       type="button"
                       onClick={() => setStep('pin')}
-                      className="px-2.5 py-1 rounded-lg text-2xs font-extrabold bg-white dark:bg-slate-800 text-primary dark:text-[#8CBDF0] shadow-sm shrink-0 border border-slate-200/60 dark:border-white/10 hover:bg-slate-50"
+                      className="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-white dark:bg-slate-800 text-link dark:text-[#8CBDF0] shadow-sm shrink-0 border border-slate-200/60 dark:border-white/10 hover:bg-slate-50"
                     >
                       Adjust Pin
                     </button>
@@ -281,7 +281,7 @@ export default function VisitDestinationModal({
                   {/* House / Building / Lot */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 ml-1">
-                      <Home className="w-3.5 h-3.5 text-primary" />
+                      <Home className="w-3.5 h-3.5 text-link" />
                       House No. / Building Name
                     </label>
                     <input
@@ -296,7 +296,7 @@ export default function VisitDestinationModal({
                   {/* Unit / Floor / Room */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 ml-1">
-                      <Building className="w-3.5 h-3.5 text-primary" />
+                      <Building className="w-3.5 h-3.5 text-link" />
                       Unit / Floor / Apt (Optional)
                     </label>
                     <input
@@ -311,7 +311,7 @@ export default function VisitDestinationModal({
                   {/* Subdivision / Compound / Security Gate */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 ml-1">
-                      <MapPin className="w-3.5 h-3.5 text-primary" />
+                      <MapPin className="w-3.5 h-3.5 text-link" />
                       Subdivision, Village, or Gate Access
                     </label>
                     <input
@@ -326,7 +326,7 @@ export default function VisitDestinationModal({
                   {/* Arrival Notes & Instructions for Healthcare Worker */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 ml-1">
-                      <FileText className="w-3.5 h-3.5 text-primary" />
+                      <FileText className="w-3.5 h-3.5 text-link" />
                       Arrival & Gate Instructions for Provider
                     </label>
                     <textarea
@@ -341,7 +341,7 @@ export default function VisitDestinationModal({
               )}
 
               {error && (
-                <div className="mc-note mc-note--problem flex items-center gap-2 p-3 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 text-xs" role="alert">
+                <div className="mc-note mc-note--problem flex items-center gap-2 p-3 rounded-xl bg-danger/10 text-danger dark:text-danger-dark border border-red-500/20 text-xs" role="alert">
                   <AlertTriangle className="w-4 h-4 shrink-0" />
                   <span>{error}</span>
                 </div>

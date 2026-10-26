@@ -33,23 +33,23 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           whileTap={{ scale: 0.94 }}
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="neu-btn p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="neu-btn w-11 h-11 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-link disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           title="Previous Page"
         >
           <ChevronLeft className="w-4 h-4" />
         </motion.button>
         {getVisiblePages().map((page, i) =>
           page === '...' ? (
-            <span key={`ellipsis-${i}`} className="px-2 text-slate-400 dark:text-slate-500 text-xs font-black">...</span>
+            <span key={`ellipsis-${i}`} className="px-2 text-tertiary dark:text-tertiary text-xs font-black">...</span>
           ) : (
             <motion.button
               key={page}
               whileTap={{ scale: 0.94 }}
               onClick={() => onPageChange(page)}
-              className={`min-w-[36px] h-9 px-3 rounded-xl text-xs font-black transition-all ${
+              className={`min-w-11 h-11 px-3 rounded-xl text-xs font-black transition-all ${
                 currentPage === page
-                  ? 'neu-inset text-primary ring-2 ring-primary/30 bg-primary/10 shadow-inner'
-                  : 'neu-btn text-slate-700 dark:text-slate-200 hover:text-primary'
+                  ? 'neu-inset text-link ring-2 ring-primary/30 bg-primary/10 shadow-inner'
+                  : 'neu-btn text-slate-700 dark:text-slate-200 hover:text-link'
               }`}
             >
               {page}
@@ -60,7 +60,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           whileTap={{ scale: 0.94 }}
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="neu-btn p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="neu-btn w-11 h-11 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-link disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           title="Next Page"
         >
           <ChevronRight className="w-4 h-4" />

@@ -329,7 +329,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
             onClick={() => setMenuOpen((open) => !open)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 shadow-md border border-slate-200/70 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-all hover:scale-105 active:scale-95"
+            className="w-11 h-11 rounded-full bg-white dark:bg-slate-800 shadow-md border border-slate-200/70 dark:border-white/10 flex items-center justify-center text-slate-700 dark:text-slate-200 transition-all hover:scale-105 active:scale-95"
             title="Change base map"
             aria-label="Change base map"
           >
@@ -356,7 +356,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
                     }}
                     className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs font-semibold transition-colors ${
                       active
-                        ? 'bg-primary/10 text-primary dark:bg-primary-400/15 dark:text-primary-400'
+                        ? 'bg-primary/10 text-link dark:bg-primary-400/15 dark:text-primary-400'
                         : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                     }`}
                   >
@@ -375,7 +375,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
           type="button"
           onClick={handleLocateMe}
           disabled={locatingGps}
-          className="w-10 h-10 rounded-full bg-white dark:bg-slate-800 shadow-md border border-slate-200/70 dark:border-white/10 flex items-center justify-center text-primary dark:text-[#8CBDF0] hover:scale-105 active:scale-95 transition-all"
+          className="w-11 h-11 rounded-full bg-white dark:bg-slate-800 shadow-md border border-slate-200/70 dark:border-white/10 flex items-center justify-center text-link dark:text-[#8CBDF0] hover:scale-105 active:scale-95 transition-all"
           title="Use my current GPS location"
           aria-label="Use my current GPS location"
         >
@@ -394,7 +394,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
               userMovedRef.current = true;
               mapRef.current?.zoomIn();
             }}
-            className="w-9 h-9 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="w-11 h-11 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             title="Zoom in"
             aria-label="Zoom in"
           >
@@ -406,7 +406,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
               userMovedRef.current = true;
               mapRef.current?.zoomOut();
             }}
-            className="w-9 h-9 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="w-11 h-11 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             title="Zoom out"
             aria-label="Zoom out"
           >

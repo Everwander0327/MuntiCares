@@ -182,7 +182,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
               <div className="text-center">
                 <DialogTitle>Manage Appointment</DialogTitle>
                 <DialogDescription className="mt-1">
-                  with <span className="font-bold text-primary">{request.providerName}</span> on {request.date}
+                  with <span className="font-bold text-link">{request.providerName}</span> on {request.date}
                 </DialogDescription>
               </div>
             </DialogHeader>
@@ -193,11 +193,11 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                 className="flex items-center gap-4 p-5 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/20 border border-blue-100 rounded-2xl transition-all text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center shadow-sm dark:shadow-slate-900/50 group-hover:shadow-md transition-shadow">
-                  <CalendarClock className="w-6 h-6 text-primary" />
+                  <CalendarClock className="w-6 h-6 text-link" />
                 </div>
                 <div>
                   <p className="font-bold text-slate-900 dark:text-slate-100">Reschedule</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Change the date or time of this visit</p>
+                  <p className="text-xs text-tertiary dark:text-tertiary">Change the date or time of this visit</p>
                 </div>
               </button>
 
@@ -206,11 +206,11 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                 className="flex items-center gap-4 p-5 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/20 border border-red-100 rounded-2xl transition-all text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
                 <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-xl flex items-center justify-center shadow-sm dark:shadow-slate-900/50 group-hover:shadow-md transition-shadow">
-                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                  <AlertTriangle className="w-6 h-6 text-danger" />
                 </div>
                 <div>
                   <p className="font-bold text-slate-900 dark:text-slate-100">Cancel Request</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Withdraw this appointment entirely</p>
+                  <p className="text-xs text-tertiary dark:text-tertiary">Withdraw this appointment entirely</p>
                 </div>
               </button>
             </div>
@@ -220,14 +220,14 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         {/* Step indicator for cancel/reschedule */}
         {mode !== 'choose' && (
           <div className="flex items-center gap-2 mb-6 px-1">
-            <button onClick={() => setMode('choose')} className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded">
-              <div className="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300 flex items-center justify-center text-xs font-bold">
+            <button onClick={() => setMode('choose')} className="flex items-center gap-2 text-link hover:text-link/80 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded">
+              <div className="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 text-success dark:text-green-300 flex items-center justify-center text-xs font-bold">
                 ✓
               </div>
               <span className="text-xs font-semibold">Choose Action</span>
             </button>
             <div className="flex-1 h-0.5 rounded-full bg-green-200" />
-            <div className="flex items-center gap-2 text-primary">
+            <div className="flex items-center gap-2 text-link">
               <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold">
                 {mode === 'cancel' ? '!' : '2'}
               </div>
@@ -248,7 +248,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
             </DialogHeader>
 
             <div className="space-y-3">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Reason for cancelling</label>
+              <label htmlFor="cancel-reason-other" className="text-xs font-bold uppercase tracking-wider text-tertiary dark:text-tertiary">Reason for cancelling</label>
               <div className="flex flex-wrap gap-2">
                 {CANCEL_REASONS.map(reason => (
                   <button
@@ -260,8 +260,8 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                       selectedReason === reason
-                        ? 'bg-red-500 text-white border-red-500 shadow-sm'
-                        : 'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300 hover:text-red-600'
+                        ? 'bg-danger text-white border-red-500 shadow-sm'
+                        : 'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-red-300 hover:text-danger'
                     }`}
                   >
                     {reason}
@@ -270,6 +270,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
               </div>
               {selectedReason === 'Other' && (
                 <textarea
+                  id="cancel-reason-other"
                   value={cancelReason}
                   onChange={e => setCancelReason(e.target.value)}
                   placeholder="Let the provider know why you're cancelling..."
@@ -303,10 +304,11 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                <label htmlFor="reschedule-date" className="text-xs font-bold uppercase tracking-wider text-tertiary dark:text-tertiary flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" /> New Date
                 </label>
                 <input
+                  id="reschedule-date"
                   type="date"
                   required
                   min={new Date().toLocaleDateString('en-CA')}
@@ -319,15 +321,15 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-tertiary dark:text-tertiary flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5" /> New Time Slot
                 </label>
                 {!newDate ? (
-                  <p className="text-sm text-slate-400 dark:text-slate-500 ml-1">Select a date to see available slots.</p>
+                  <p className="text-sm text-tertiary dark:text-tertiary ml-1">Select a date to see available slots.</p>
                 ) : loadingSlots ? (
-                  <p className="text-sm text-slate-400 dark:text-slate-500 ml-1">Checking availability...</p>
+                  <p className="text-sm text-tertiary dark:text-tertiary ml-1">Checking availability...</p>
                 ) : availableSlots.length === 0 ? (
-                  <p className="text-sm text-slate-400 dark:text-slate-500 ml-1">No available slots for this date.</p>
+                  <p className="text-sm text-tertiary dark:text-tertiary ml-1">No available slots for this date.</p>
                 ) : (
                   <div className="grid grid-cols-3 gap-2">
                     {availableSlots.map(slot => (
@@ -340,8 +342,8 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                           newTime === slot.time
                               ? 'bg-primary text-white border-primary shadow-md shadow-primary/20'
                               : slot.available
-                                ? 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:border-primary hover:text-primary'
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-slate-500 border-slate-100 dark:border-slate-700 cursor-not-allowed line-through'
+                                ? 'bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:border-primary hover:text-link'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-300 dark:text-tertiary border-slate-100 dark:border-slate-700 cursor-not-allowed line-through'
                         }`}
                       >
                         {new Date(`2000-01-01T${slot.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}

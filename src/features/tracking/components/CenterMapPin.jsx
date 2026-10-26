@@ -44,7 +44,7 @@ export default function CenterMapPin({ isPanning, addressPreview, loading }) {
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center">
         {/* Floating Address Pill above beacon */}
         <div
-          className={`mb-2 max-w-[80vw] sm:max-w-md px-3 py-1.5 rounded-full text-2xs font-semibold shadow-lg backdrop-blur-md transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+          className={`mb-2 max-w-[80vw] sm:max-w-md px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg backdrop-blur-md transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
             isPanning
               ? 'scale-95 -translate-y-1 opacity-85 bg-slate-900/90 text-white border border-white/15'
               : 'scale-100 translate-y-0 opacity-100 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-white/15'

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Search, Star, MapPin, Home, X, Calendar, FileText, CheckCircle2, Shield, ShieldCheck, SlidersHorizontal, Check, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -54,6 +54,8 @@ const PatientProviders = () => {
   
   // Booking & Viewing Modal State
   const [selectedProvider, setSelectedProvider] = useState(null);
+  const bookingTriggerRef = React.useRef(null);
+  const sheetTriggerRef = React.useRef(null);
   const [viewingProvider, setViewingProvider] = useState(null);
   const [providerReviews, setProviderReviews] = useState([]);
   const [sheetTab, setSheetTab] = useState('overview');
@@ -331,7 +333,8 @@ const PatientProviders = () => {
     });
   }, [providers, searchTerm, sortBy]);
 
-  const openBookingModal = (provider, presetService) => {
+  const openBookingModal = (provider, presetService, triggerEl = null) => {
+    bookingTriggerRef.current = triggerEl;
     const existingStatus = activeRequestsMap[provider.id];
     if (requested.includes(provider.id) || existingStatus) {
       toast(
@@ -555,7 +558,7 @@ const PatientProviders = () => {
             <h1 className="font-display font-extrabold tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white">
               Find a Healthcare Provider
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+            <p className="text-sm text-tertiary dark:text-tertiary mt-1 max-w-xl">
               Connect with {sortedProviders.length} certified medical practitioners, nurses, and caregivers across Muntinlupa.
             </p>
           </div>
@@ -566,7 +569,7 @@ const PatientProviders = () => {
             <div className="relative flex-1 min-w-0" ref={searchRef}>
               <label htmlFor="provider-search" className="sr-only">Search providers or services</label>
               <div className="neu-inset p-1.5 sm:p-2.5 rounded-2xl flex items-center gap-2 sm:gap-3 h-[48px] sm:h-[52px]">
-                <Search className="w-4 h-4 text-primary ml-2 shrink-0" />
+                <Search className="w-4 h-4 text-link ml-2 shrink-0" />
                 <input
                   id="provider-search"
                   type="text"
@@ -574,13 +577,13 @@ const PatientProviders = () => {
                   autoComplete="off"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
                 />
                 {searchTerm && (
                   <button
                     onMouseDown={(e) => { e.preventDefault(); setSearchTerm(''); }}
                     aria-label="Clear search"
-                    className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors shrink-0 mr-1"
+                    className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-tertiary hover:text-danger transition-colors shrink-0 mr-1"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -594,7 +597,7 @@ const PatientProviders = () => {
                 type="button"
                 onClick={() => setShowSortMenu(prev => !prev)}
                 className={`neu-btn w-12 h-12 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center transition-all cursor-pointer relative outline-none select-none ${
-                  showSortMenu ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+                  showSortMenu ? 'text-link' : 'text-slate-600 dark:text-slate-300 hover:text-link'
                 }`}
                 aria-label="Filter and Sort options"
                 title={`Sort by: ${sortOptions.find(o => o.value === sortBy)?.label || 'Filter'}`}
@@ -616,8 +619,8 @@ const PatientProviders = () => {
                     className="absolute right-0 top-full mt-2 w-52 sm:w-56 neu-flat rounded-2xl p-2 z-50 shadow-2xl border border-white/60 dark:border-white/10"
                   >
                     <div className="px-3 py-2 border-b border-slate-200/60 dark:border-white/5 mb-1 flex items-center justify-between">
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Sort Providers</span>
-                      <span className="text-3xs text-primary font-bold">
+                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Sort Providers</span>
+                      <span className="text-xs text-link font-bold">
                         {sortOptions.find(o => o.value === sortBy)?.label}
                       </span>
                     </div>
@@ -634,12 +637,12 @@ const PatientProviders = () => {
                             }}
                             className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
                               active
-                                ? 'neu-flat-sm text-primary font-bold shadow-sm'
+                                ? 'neu-flat-sm text-link font-bold shadow-sm'
                                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
                             }`}
                           >
                             <span>{opt.label}</span>
-                            {active && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                            {active && <Check className="w-3.5 h-3.5 text-link shrink-0" />}
                           </button>
                         );
                       })}
@@ -667,7 +670,7 @@ const PatientProviders = () => {
                   {/* Avatar + Name + Rating */}
                   <div className="flex items-center gap-3.5 mb-4">
                     <div className="relative shrink-0">
-                      <div className="neu-flat-sm w-16 h-16 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-lg font-bold text-primary overflow-hidden p-0.5 aspect-square">
+                      <div className="neu-flat-sm w-16 h-16 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-lg font-bold text-link overflow-hidden p-0.5 aspect-square">
                         {p.avatar_url ? (
                           <img src={p.avatar_url} alt={`${p.full_name} photo`} className="w-full h-full object-cover rounded-[14px]" loading="lazy" />
                         ) : (
@@ -683,8 +686,8 @@ const PatientProviders = () => {
                           {p.full_name}
                         </h3>
                         {p.professional_id_status === 'verified' && (
-                          <span className="text-primary shrink-0" title="Verified License">
-                            <ShieldCheck className="w-4 h-4 text-primary" />
+                          <span className="text-link shrink-0" title="Verified License">
+                            <ShieldCheck className="w-4 h-4 text-link" />
                           </span>
                         )}
                       </div>
@@ -694,7 +697,7 @@ const PatientProviders = () => {
                           <Star key={i} className={`w-3.5 h-3.5 ${i < Math.floor(p.rating || 0) ? 'fill-current' : 'text-slate-300 dark:text-slate-700'}`} />
                         ))}
                         <span className="text-slate-700 dark:text-slate-200 text-xs font-bold tabular-nums ml-1">{(p.rating || 0).toFixed(1)}</span>
-                        <span className={`text-3xs font-semibold ml-1.5 ${isUserOnline(p.id) ? 'text-emerald-500 font-bold' : 'text-slate-400'}`}>
+                        <span className={`text-xs font-semibold ml-1.5 ${isUserOnline(p.id) ? 'text-success font-bold' : 'text-tertiary'}`}>
                           • {isUserOnline(p.id) ? 'Online' : 'Offline'}
                         </span>
                       </div>
@@ -704,7 +707,7 @@ const PatientProviders = () => {
                   {/* Trust Score Bar */}
                   <div className="mb-3.5 px-0.5">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Trust Score</span>
+                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
                       <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{p.trust_score}/100</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -720,26 +723,26 @@ const PatientProviders = () => {
                   {/* Service Tags */}
                   <div className="flex flex-wrap gap-1.5 mb-4">
                     {(p.services || []).slice(0, 2).map((s, i) => (
-                      <span key={i} className="neu-flat-sm px-2.5 py-1 rounded-xl text-3xs font-bold text-slate-700 dark:text-slate-300">
+                      <span key={i} className="neu-flat-sm px-2.5 py-1 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300">
                         {s}
                       </span>
                     ))}
                     {(p.services || []).length > 2 && (
-                      <span className="neu-flat-sm px-2 py-1 text-slate-400 dark:text-slate-500 rounded-xl text-3xs font-bold">
+                      <span className="neu-flat-sm px-2 py-1 text-tertiary dark:text-tertiary rounded-xl text-xs font-bold">
                         +{p.services.length - 2} more
                       </span>
                     )}
                     {(!p.services || p.services.length === 0) && (
-                      <span className="neu-flat-sm px-2.5 py-1 text-slate-400 rounded-xl text-3xs font-medium">
+                      <span className="neu-flat-sm px-2.5 py-1 text-tertiary rounded-xl text-xs font-medium">
                         General Consultation
                       </span>
                     )}
                   </div>
 
                   {/* Location */}
-                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-5">
+                  <div className="flex items-center justify-between text-xs text-tertiary dark:text-tertiary mb-5">
                     <span className="flex items-center gap-1.5 min-w-0 truncate">
-                      <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
                       <span className="truncate">{p.location || 'Muntinlupa City'}</span>
                     </span>
                   </div>
@@ -747,16 +750,19 @@ const PatientProviders = () => {
 
                 {/* Tactile Neumorphic Action Button */}
                 <button
-                  onClick={() => setViewingProvider(p)}
+                  onClick={(event) => {
+                    sheetTriggerRef.current = event.currentTarget;
+                    setViewingProvider(p);
+                  }}
                   className={`w-full py-3.5 rounded-2xl text-xs sm:text-sm font-bold transition-transform active:scale-[0.98] flex items-center justify-center gap-2 ${
                     requested.includes(p.id)
-                      ? 'neu-btn text-emerald-600 dark:text-emerald-400'
+                      ? 'neu-btn text-success dark:text-success-dark'
                       : 'neu-btn-primary shadow-sm'
                   }`}
                 >
                   {requested.includes(p.id) ? (
                     <>
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                      <CheckCircle2 className="w-4 h-4 text-success" />
                       <span>{getBookingButtonLabel(p.id) || 'Request Sent'}</span>
                     </>
                   ) : (
@@ -775,14 +781,29 @@ const PatientProviders = () => {
       </div>
 
       {/* Booking Modal */}
-      {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
-          {selectedProvider && (
+      <DialogPrimitive.Root
+        open={!!selectedProvider}
+        onOpenChange={(open) => { if (!open) setSelectedProvider(null); }}
+      >
+        {selectedProvider && (
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/70 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content
+            asChild
+            aria-modal="true"
+            onCloseAutoFocus={(event) => {
+              if (!bookingTriggerRef.current) return;
+              event.preventDefault();
+              bookingTriggerRef.current.focus();
+            }}
+            onInteractOutside={(event) => {
+              if (bookingStep !== 'form') event.preventDefault();
+            }}
+          >
             <motion.div 
-              className="fixed inset-0 bg-slate-950/70 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4"
+              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
               transition={{ duration: 0.16 }}
               onClick={() => {
                 if (bookingStep === 'form') setSelectedProvider(null);
@@ -792,40 +813,48 @@ const PatientProviders = () => {
                 className="neu-flat rounded-t-[2.25rem] sm:rounded-[2.25rem] w-full max-w-lg p-5 sm:p-7 pb-[max(1.5rem,env(safe-area-inset-bottom))] relative max-h-[92dvh] overflow-y-auto no-scrollbar transform-gpu will-change-transform shadow-2xl border-t sm:border border-white/60 dark:border-white/10"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 50 }}
                 transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                 onClick={e => e.stopPropagation()}
               >
+                <DialogPrimitive.Close
+                  aria-label="Close"
+                  className="absolute right-3 top-3 w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-tertiary dark:text-tertiary hover:bg-slate-200/60 dark:hover:bg-white/10 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </DialogPrimitive.Close>
+
                 {/* Mobile drag handle indicator */}
                 <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-700 sm:hidden" aria-hidden="true" />
 
                 <div className="mb-3 text-center">
-                  <h2 className="text-base sm:text-xl md:text-2xl font-display font-extrabold text-slate-900 dark:text-white">
-                    {bookingStep === 'form' ? 'Book Appointment' : 'Confirm Booking'}
-                  </h2>
-                  <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    with <span className="font-extrabold text-primary">{selectedProvider.full_name}</span>
+                  <DialogPrimitive.Title asChild>
+                    <h2 className="text-base sm:text-xl md:text-2xl font-display font-extrabold text-slate-900 dark:text-white">
+                      {bookingStep === 'form' ? 'Book Appointment' : 'Confirm Booking'}
+                    </h2>
+                  </DialogPrimitive.Title>
+                  <p className="text-sm text-tertiary dark:text-tertiary mt-0.5">
+                    with <span className="font-extrabold text-link">{selectedProvider.full_name}</span>
                   </p>
                 </div>
 
               {/* Step Progress */}
               <div className="flex items-center gap-2 mb-3.5 px-1">
-                <div className={`flex items-center gap-1.5 text-xs font-bold ${bookingStep === 'form' ? 'text-primary' : 'text-emerald-500'}`}>
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-3xs font-black ${
-                    bookingStep === 'confirm' ? 'neu-btn text-emerald-500' : 'neu-btn-primary'
+                <div className={`flex items-center gap-1.5 text-xs font-bold ${bookingStep === 'form' ? 'text-link' : 'text-success'}`}>
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black ${
+                    bookingStep === 'confirm' ? 'neu-btn text-success' : 'neu-btn-primary'
                   }`}>
                     {bookingStep === 'confirm' ? '✓' : '1'}
                   </div>
-                  <span className="text-2xs sm:text-xs">Details</span>
+                  <span className="text-xs sm:text-xs">Details</span>
                 </div>
                 <div className={`flex-1 h-0.5 rounded-full ${bookingStep === 'confirm' ? 'bg-emerald-500/40' : 'bg-slate-200 dark:bg-slate-800'}`} />
-                <div className={`flex items-center gap-1.5 text-xs font-bold ${bookingStep === 'confirm' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-3xs font-black ${
-                    bookingStep === 'confirm' ? 'neu-btn-primary' : 'neu-flat-sm text-slate-400 dark:text-slate-500'
+                <div className={`flex items-center gap-1.5 text-xs font-bold ${bookingStep === 'confirm' ? 'text-link' : 'text-tertiary dark:text-tertiary'}`}>
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs font-black ${
+                    bookingStep === 'confirm' ? 'neu-btn-primary' : 'neu-flat-sm text-tertiary dark:text-tertiary'
                   }`}>
                     2
                   </div>
-                  <span className="text-2xs sm:text-xs">Confirm</span>
+                  <span className="text-xs sm:text-xs">Confirm</span>
                 </div>
               </div>
 
@@ -850,7 +879,7 @@ const PatientProviders = () => {
                           {watchedService || 'Select a service...'}
                         </span>
                       </div>
-                      <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${openServiceMenu ? 'rotate-180 text-primary' : ''}`} />
+                      <ChevronDown className={`w-4 h-4 text-tertiary transition-transform duration-200 shrink-0 ${openServiceMenu ? 'rotate-180 text-link' : ''}`} />
                     </button>
 
                     {/* Custom Dropdown List */}
@@ -889,7 +918,7 @@ const PatientProviders = () => {
                     </AnimatePresence>
 
                     {errors.service && (
-                      <p className="text-xs font-medium text-red-500 ml-1">{errors.service.message}</p>
+                      <p className="text-xs font-medium text-danger ml-1">{errors.service.message}</p>
                     )}
                   </div>
 
@@ -899,19 +928,19 @@ const PatientProviders = () => {
                       2. Appointment Date
                     </label>
                     <div className="neu-flat-sm rounded-xl p-3 flex items-center gap-3">
-                      <Calendar className="w-5 h-5 text-primary shrink-0" />
+                      <Calendar className="w-5 h-5 text-link shrink-0" />
                       <input
                         id="booking-date"
                         type="date"
                         min={new Date().toLocaleDateString('en-CA')}
                         {...register('date', { onChange: () => { setValue('time', ''); setOpenTimeMenu(false); } })}
                         className={`w-full bg-transparent text-sm font-semibold text-slate-900 dark:text-white outline-none cursor-pointer ${
-                          errors.date ? 'text-red-500' : ''
+                          errors.date ? 'text-danger' : ''
                         }`}
                       />
                     </div>
                     {errors.date && (
-                      <p className="text-xs font-medium text-red-500 ml-1">{errors.date.message}</p>
+                      <p className="text-xs font-medium text-danger ml-1">{errors.date.message}</p>
                     )}
                   </div>
 
@@ -923,12 +952,12 @@ const PatientProviders = () => {
                     
                     {!watchedDate ? (
                       <div className="neu-flat-sm p-3.5 rounded-xl text-center">
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Please select an appointment date first.</p>
+                        <p className="text-xs text-tertiary dark:text-tertiary">Please select an appointment date first.</p>
                       </div>
                     ) : loadingSlots ? (
                       <div className="neu-flat-sm p-3.5 rounded-xl text-center flex items-center justify-center gap-2">
-                        <Clock className="w-4 h-4 text-primary animate-spin" />
-                        <p className="text-xs font-medium text-primary">Loading available times...</p>
+                        <Clock className="w-4 h-4 text-link animate-spin" />
+                        <p className="text-xs font-medium text-link">Loading available times...</p>
                       </div>
                     ) : (
                       <>
@@ -941,7 +970,7 @@ const PatientProviders = () => {
                           className="w-full neu-flat-sm rounded-xl p-3 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none"
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <Clock className="w-4 h-4 text-primary shrink-0" />
+                            <Clock className="w-4 h-4 text-link shrink-0" />
                             <span className="text-sm font-bold text-slate-900 dark:text-white truncate">
                               {watchedTime ? (
                                 new Date(`2000-01-01T${watchedTime}:00`).toLocaleTimeString('en-US', {
@@ -949,11 +978,11 @@ const PatientProviders = () => {
                                   minute: '2-digit',
                                 })
                               ) : (
-                                <span className="text-slate-400 font-normal">Choose time slot...</span>
+                                <span className="text-tertiary font-normal">Choose time slot...</span>
                               )}
                             </span>
                           </div>
-                          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${openTimeMenu ? 'rotate-180 text-primary' : ''}`} />
+                          <ChevronDown className={`w-4 h-4 text-tertiary transition-transform duration-200 shrink-0 ${openTimeMenu ? 'rotate-180 text-link' : ''}`} />
                         </button>
 
                         {/* Custom Dropdown List for Times */}
@@ -967,7 +996,7 @@ const PatientProviders = () => {
                               className="absolute left-0 right-0 top-full mt-1.5 bg-[#ebf1f8] dark:bg-[#172236] rounded-2xl p-1.5 z-40 shadow-xl border border-white/60 dark:border-white/10 space-y-1 max-h-56 overflow-y-auto"
                             >
                               {availableSlots.length === 0 ? (
-                                <div className="p-3 text-center text-xs text-slate-400">
+                                <div className="p-3 text-center text-xs text-tertiary">
                                   No available slots on this date.
                                 </div>
                               ) : (
@@ -989,14 +1018,14 @@ const PatientProviders = () => {
                                       }}
                                       className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between transition-colors outline-none select-none ${
                                         !slot.available
-                                          ? 'opacity-40 cursor-not-allowed text-slate-400 line-through'
+                                          ? 'opacity-40 cursor-not-allowed text-tertiary line-through'
                                           : isSelected
                                             ? 'bg-primary text-white font-bold cursor-pointer'
                                             : 'text-slate-800 dark:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 cursor-pointer'
                                       }`}
                                     >
                                       <span className="text-xs font-semibold">{timeLabel}</span>
-                                      <span className={`text-2xs font-bold ${isSelected ? 'text-white' : slot.available ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                      <span className={`text-xs font-bold ${isSelected ? 'text-white' : slot.available ? 'text-success' : 'text-tertiary'}`}>
                                         {slot.available ? 'Available' : 'Booked'}
                                       </span>
                                     </button>
@@ -1010,7 +1039,7 @@ const PatientProviders = () => {
                     )}
 
                     {errors.time && (
-                      <p className="text-xs font-medium text-red-500 ml-1">{errors.time.message}</p>
+                      <p className="text-xs font-medium text-danger ml-1">{errors.time.message}</p>
                     )}
                   </div>
 
@@ -1021,7 +1050,7 @@ const PatientProviders = () => {
                       <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                         4. Visit Location
                       </label>
-                      <span className="text-3xs font-semibold text-slate-500 dark:text-slate-400">
+                      <span className="text-xs font-semibold text-tertiary dark:text-tertiary">
                         {visitDestination?.source === 'booking' ? 'Custom visit location' : 'Saved address'}
                       </span>
                     </div>
@@ -1030,20 +1059,20 @@ const PatientProviders = () => {
                       onClick={() => setDestinationModalOpen(true)}
                       className="w-full neu-flat-sm rounded-xl p-3 flex items-center gap-3 text-left transition-all cursor-pointer outline-none select-none hover:border-primary/30"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-primary dark:text-[#8CBDF0] shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-link dark:text-[#8CBDF0] shrink-0">
                         <Home className="w-5 h-5" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                           {visitDestination?.address || patientHome?.address || 'Set visit location'}
                         </p>
-                        <p className="text-3xs text-slate-500 dark:text-slate-400 font-semibold truncate mt-0.5">
+                        <p className="text-xs text-tertiary dark:text-tertiary font-semibold truncate mt-0.5">
                           {visitDestination?.lat
                             ? `GPS Pin Confirmed (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)}) · Tap to change`
                             : 'Tap to set address & gate directions'}
                         </p>
                       </div>
-                      <span className="text-2xs font-extrabold text-primary dark:text-[#8CBDF0] shrink-0 px-2 py-1 rounded-lg bg-primary/5">
+                      <span className="text-xs font-extrabold text-link dark:text-[#8CBDF0] shrink-0 px-2 py-1 rounded-lg bg-primary/5">
                         Change
                       </span>
                     </button>
@@ -1051,14 +1080,14 @@ const PatientProviders = () => {
 
                   {/* Notes / Message */}
                   <div className="space-y-1">
-                    <label className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 ml-1">Message or Instructions (Optional)</label>
+                    <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary ml-1">Message or Instructions (Optional)</label>
                     <div className="neu-inset p-2 rounded-xl flex items-start border border-slate-300/40 dark:border-white/5 transition-all">
-                      <FileText className="w-3.5 h-3.5 text-slate-400 ml-1 mt-1.5 shrink-0" />
+                      <FileText className="w-3.5 h-3.5 text-tertiary ml-1 mt-1.5 shrink-0" />
                       <textarea
                         {...register('notes')}
                         placeholder="Specific symptoms or gate notes..."
                         rows={2}
-                        className="w-full bg-transparent px-2 py-0.5 text-xs font-medium text-slate-800 dark:text-slate-100 outline-none resize-none placeholder:text-slate-400"
+                        className="w-full bg-transparent px-2 py-0.5 text-xs font-medium text-slate-800 dark:text-slate-100 outline-none resize-none placeholder:text-tertiary"
                       />
                     </div>
                   </div>
@@ -1069,14 +1098,14 @@ const PatientProviders = () => {
                       type="checkbox"
                       id="consent"
                       {...register('consent')}
-                      className="w-4 h-4 rounded text-primary mt-0.5 cursor-pointer shrink-0"
+                      className="w-4 h-4 rounded text-link mt-0.5 cursor-pointer shrink-0"
                     />
-                    <label htmlFor="consent" className="text-3xs sm:text-xs text-slate-600 dark:text-slate-300 leading-snug cursor-pointer select-none">
+                    <label htmlFor="consent" className="text-xs sm:text-xs text-slate-600 dark:text-slate-300 leading-snug cursor-pointer select-none">
                       I consent to sharing my medical profile & address with <span className="font-bold text-slate-900 dark:text-white">{selectedProvider.full_name}</span> for this home care visit.
                     </label>
                   </div>
                   {errors.consent && (
-                    <p className="text-3xs font-semibold text-red-500 ml-1">{errors.consent.message}</p>
+                    <p className="text-xs font-semibold text-danger ml-1">{errors.consent.message}</p>
                   )}
 
                   <div className="pt-1 grid grid-cols-2 gap-2.5">
@@ -1105,7 +1134,7 @@ const PatientProviders = () => {
                 <div className="space-y-5">
                   <div className="neu-flat-sm p-5 rounded-2xl space-y-4">
                     <div className="flex items-center gap-3 pb-3 border-b border-slate-200/60 dark:border-white/5">
-                      <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center text-primary font-bold overflow-hidden p-0.5 shrink-0 aspect-square">
+                      <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center text-link font-bold overflow-hidden p-0.5 shrink-0 aspect-square">
                         {selectedProvider.avatar_url ? (
                           <img 
                             src={selectedProvider.avatar_url} 
@@ -1124,12 +1153,12 @@ const PatientProviders = () => {
                             {selectedProvider.full_name}
                           </p>
                           {selectedProvider.professional_id_status === 'verified' && (
-                            <span className="text-primary shrink-0" title="Verified License">
-                              <ShieldCheck className="w-3.5 h-3.5 text-primary" />
+                            <span className="text-link shrink-0" title="Verified License">
+                              <ShieldCheck className="w-3.5 h-3.5 text-link" />
                             </span>
                           )}
                         </div>
-                        <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                        <p className="text-sm text-tertiary dark:text-tertiary truncate mt-0.5">
                           {selectedProvider.specialty || selectedProvider.services?.[0] || 'Healthcare Practitioner'} • {selectedProvider.location || 'Muntinlupa City'}
                         </p>
                       </div>
@@ -1137,28 +1166,28 @@ const PatientProviders = () => {
 
                     <div className="grid grid-cols-2 gap-3 text-xs sm:text-sm">
                       <div>
-                        <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Service</span>
+                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">Service</span>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">{vals.service}</p>
                       </div>
                       <div>
-                        <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Date</span>
+                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">Date</span>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
                           {new Date(vals.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                         </p>
                       </div>
                       <div>
-                        <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Time</span>
+                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">Time</span>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
                           {new Date(`2000-01-01T${vals.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                         </p>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Visit Location</span>
+                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">Visit Location</span>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 leading-snug">
                           {visitDestination?.address || 'Not confirmed'}
                         </p>
                         {visitDestination && (
-                          <p className="text-3xs font-semibold text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
+                          <p className="text-xs font-semibold text-tertiary dark:text-tertiary tabular-nums mt-0.5">
                             {visitDestination.lat.toFixed(5)}, {visitDestination.lng.toFixed(5)}
                           </p>
                         )}
@@ -1167,13 +1196,13 @@ const PatientProviders = () => {
 
                     {vals.notes && (
                       <div className="pt-3 border-t border-slate-200/60 dark:border-white/5">
-                        <span className="text-3xs uppercase font-extrabold tracking-wider text-slate-400">Notes</span>
+                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">Notes</span>
                         <p className="text-xs text-slate-600 dark:text-slate-300 italic mt-0.5">“{vals.notes}”</p>
                       </div>
                     )}
 
-                    <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 flex items-center gap-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                    <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 flex items-center gap-2 text-xs font-semibold text-success dark:text-success-dark">
+                      <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
                       <span>Data sharing consent verified</span>
                     </div>
                   </div>
@@ -1205,16 +1234,21 @@ const PatientProviders = () => {
                 );
               })()}
             </motion.div>
-          </motion.div>
+            </motion.div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
         )}
-      </AnimatePresence>,
-      document.body
-    )}
+      </DialogPrimitive.Root>
       {/* Provider Details Sheet */}
       <Sheet open={!!viewingProvider} onOpenChange={(open) => { if (!open) setViewingProvider(null); }}>
         <SheetContent 
           side="bottom"
-          className="sm:max-w-lg md:max-w-3xl lg:max-w-4xl sm:mx-auto sm:bottom-4 rounded-t-[2.5rem] sm:rounded-[2.5rem] md:inset-0 md:m-auto h-[80dvh] min-h-[460px] sm:h-[82vh] md:min-h-[540px] max-h-[88vh] flex flex-col overflow-hidden p-0 [&>button:last-child]:hidden bg-[#ebf1f8] dark:bg-[#172236] border-0 shadow-2xl transform-gpu will-change-transform"
+          onCloseAutoFocus={(event) => {
+            if (!sheetTriggerRef.current) return;
+            event.preventDefault();
+            sheetTriggerRef.current.focus();
+          }}
+          className={`sm:max-w-lg md:max-w-3xl lg:max-w-4xl sm:mx-auto sm:bottom-4 rounded-t-[2.5rem] sm:rounded-[2.5rem] md:inset-0 md:m-auto h-[80dvh] min-h-[460px] sm:h-[82vh] md:min-h-[540px] max-h-[88vh] flex flex-col overflow-hidden p-0 bg-[#ebf1f8] dark:bg-[#172236] border-0 shadow-2xl transform-gpu will-change-transform ${selectedProvider ? 'opacity-0 pointer-events-none' : ''}`}
         >
           <SheetTitle className="sr-only">{viewingProvider?.full_name || 'Provider Profile'}</SheetTitle>
           <SheetDescription className="sr-only">View provider details, trust score, and reviews</SheetDescription>
@@ -1232,7 +1266,7 @@ const PatientProviders = () => {
               <div className="px-5 md:px-6 -mt-9 md:-mt-11 relative z-10 shrink-0">
                 <div className="flex gap-3.5">
                   <div className="relative shrink-0">
-                    <div className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-2xl neu-flat flex items-center justify-center text-xl font-black text-primary overflow-hidden p-0.5 ring-4 ring-white dark:ring-slate-900 shadow-md aspect-square">
+                    <div className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-2xl neu-flat flex items-center justify-center text-xl font-black text-link overflow-hidden p-0.5 ring-4 ring-white dark:ring-slate-900 shadow-md aspect-square">
                       {viewingProvider.avatar_url ? (
                         <img src={viewingProvider.avatar_url} alt={`${viewingProvider.full_name} photo`} className="w-full h-full object-cover rounded-[14px]" />
                       ) : (
@@ -1247,20 +1281,20 @@ const PatientProviders = () => {
                         {viewingProvider.full_name}
                       </h2>
                       {viewingProvider.professional_id_status === 'verified' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-3xs font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10">
-                          <ShieldCheck className="w-3 h-3 text-emerald-500" /> Verified
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-extrabold text-success dark:text-success-dark bg-emerald-500/10">
+                          <ShieldCheck className="w-3 h-3 text-success" /> Verified
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 mt-1.5">
-                      <div className="flex items-center text-amber-500">
+                      <div className="flex items-center text-warning">
                         <Star className="w-3.5 h-3.5 fill-current" />
                       </div>
                       <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">
                         {(viewingProvider.rating || 0).toFixed(1)}
                       </span>
-                      <span className="text-2xs text-slate-400">({providerReviews.length} reviews)</span>
-                      <span className={`text-3xs font-semibold ml-1 ${isUserOnline(viewingProvider.id) ? 'text-emerald-500 font-bold' : 'text-slate-400'}`}>
+                      <span className="text-xs text-tertiary">({providerReviews.length} reviews)</span>
+                      <span className={`text-xs font-semibold ml-1 ${isUserOnline(viewingProvider.id) ? 'text-success font-bold' : 'text-tertiary'}`}>
                         • {isUserOnline(viewingProvider.id) ? 'Online' : 'Offline'}
                       </span>
                     </div>
@@ -1269,8 +1303,8 @@ const PatientProviders = () => {
 
                 {/* Location */}
                 <div className="mt-3.5 pt-3 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-3 text-xs">
-                  <p className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5 truncate">
-                    <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <p className="text-tertiary dark:text-tertiary flex items-center gap-1.5 truncate">
+                    <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
                     <span className="truncate">{viewingProvider.location || 'Muntinlupa City'}</span>
                   </p>
                 </div>
@@ -1280,7 +1314,7 @@ const PatientProviders = () => {
               <div className="hidden md:block px-6 mt-4 space-y-3.5">
                 {/* About Practitioner Bio */}
                 <div className="neu-flat-sm p-3.5 rounded-2xl">
-                  <p className="text-3xs uppercase font-extrabold tracking-wider text-slate-400 mb-1">About Practitioner</p>
+                  <p className="text-2xs uppercase font-extrabold tracking-wider text-tertiary mb-1">About Practitioner</p>
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                     {viewingProvider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa.'}
                   </p>
@@ -1289,16 +1323,16 @@ const PatientProviders = () => {
                 {/* 3 Metric chips: Rating, Services, Status */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="neu-flat-sm p-2.5 rounded-xl text-center">
-                    <p className="text-3xs uppercase font-bold text-slate-400">Rating</p>
+                    <p className="text-2xs uppercase font-bold text-tertiary">Rating</p>
                     <p className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">{(viewingProvider.rating || 0).toFixed(1)} ★</p>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl text-center">
-                    <p className="text-3xs uppercase font-bold text-slate-400">Services</p>
+                    <p className="text-2xs uppercase font-bold text-tertiary">Services</p>
                     <p className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">{(viewingProvider.services || []).length}</p>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl text-center">
-                    <p className="text-3xs uppercase font-bold text-slate-400">Status</p>
-                    <p className={`text-xs font-black mt-1 capitalize ${isUserOnline(viewingProvider.id) ? 'text-emerald-500' : 'text-slate-400'}`}>
+                    <p className="text-2xs uppercase font-bold text-tertiary">Status</p>
+                    <p className={`text-xs font-black mt-1 capitalize ${isUserOnline(viewingProvider.id) ? 'text-success' : 'text-tertiary'}`}>
                       {isUserOnline(viewingProvider.id) ? 'Active' : 'Offline'}
                     </p>
                   </div>
@@ -1308,8 +1342,8 @@ const PatientProviders = () => {
                 <div className="neu-flat-sm p-3 rounded-2xl">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
-                      <Shield className="w-3.5 h-3.5 text-primary" />
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Trust Score</span>
+                      <Shield className="w-3.5 h-3.5 text-link" />
+                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
                     </div>
                     <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{viewingProvider.trust_score}/100</span>
                   </div>
@@ -1327,14 +1361,13 @@ const PatientProviders = () => {
               {/* Desktop Sticky Booking Action */}
               <div className="hidden md:block px-6 mt-auto pt-4 pb-6 sticky bottom-0 border-t border-slate-200/60 dark:border-white/5 bg-slate-50/80 dark:bg-slate-900/80 backdrop-blur-sm">
                 <button
-                  onClick={() => {
-                    setViewingProvider(null);
-                    openBookingModal(viewingProvider);
+                  onClick={(event) => {
+                    openBookingModal(viewingProvider, undefined, event.currentTarget);
                   }}
                   disabled={requested.includes(viewingProvider.id)}
                   className={`w-full py-3.5 rounded-2xl text-xs font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shadow-md ${
                     requested.includes(viewingProvider.id)
-                      ? 'neu-btn text-emerald-600 dark:text-emerald-400 cursor-not-allowed'
+                      ? 'neu-btn text-success dark:text-success-dark cursor-not-allowed'
                       : 'neu-btn-primary'
                   }`}
                 >
@@ -1346,7 +1379,7 @@ const PatientProviders = () => {
                     setViewingProvider(null);
                     navigate(`/patient/providers/${viewingProvider.id}/profile`);
                   }}
-                  className="w-full py-2.5 mt-1 text-xs font-bold text-primary hover:underline text-center cursor-pointer"
+                  className="w-full py-2.5 mt-1 text-xs font-bold text-link hover:underline text-center cursor-pointer"
                 >
                   View Full Profile
                 </button>
@@ -1372,7 +1405,7 @@ const PatientProviders = () => {
                       className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer truncate outline-none select-none ${
                         sheetTab === t.v
                           ? 'bg-primary text-white shadow-md'
-                          : 'text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-white bg-transparent'
+                          : 'text-slate-600 dark:text-tertiary hover:text-link dark:hover:text-white bg-transparent'
                       }`}
                     >
                       {t.label}
@@ -1388,7 +1421,7 @@ const PatientProviders = () => {
                     {/* Mobile Trust Score */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Trust Score</span>
+                        <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
                         <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{viewingProvider.trust_score}/100</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -1402,7 +1435,7 @@ const PatientProviders = () => {
                     </div>
 
                     <div>
-                      <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 mb-1.5">About Healthcare Provider</p>
+                      <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mb-1.5">About Healthcare Provider</p>
                       <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                         {viewingProvider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa.'}
                       </p>
@@ -1410,21 +1443,21 @@ const PatientProviders = () => {
 
                     <div className="neu-flat-sm p-4 rounded-2xl space-y-2.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 font-medium">Primary Area</span>
+                        <span className="text-tertiary font-medium">Primary Area</span>
                         <span className="font-semibold text-slate-700 dark:text-slate-200">{viewingProvider.location || 'Muntinlupa City'}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 font-medium">Service Schedule</span>
+                        <span className="text-tertiary font-medium">Service Schedule</span>
                         <span className="font-semibold text-slate-700 dark:text-slate-200">
                           Mon – Sat • 9:00 AM – 5:00 PM
                         </span>
                       </div>
                       <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/5">
-                        <span className="text-slate-400 font-medium">Online Status</span>
-                        <span className={`neu-flat-sm inline-flex items-center px-2.5 py-1 rounded-xl text-3xs font-extrabold uppercase tracking-wider ${
+                        <span className="text-tertiary font-medium">Online Status</span>
+                        <span className={`neu-flat-sm inline-flex items-center px-2.5 py-1 rounded-xl text-2xs font-extrabold uppercase tracking-wider ${
                           isUserOnline(viewingProvider.id) 
-                            ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10' 
-                            : 'text-slate-500 dark:text-slate-400'
+                            ? 'text-success dark:text-success-dark border border-emerald-500/30 bg-emerald-500/10' 
+                            : 'text-tertiary dark:text-tertiary'
                         }`}>
                           {isUserOnline(viewingProvider.id) ? 'Active Online' : 'Offline'}
                         </span>
@@ -1435,22 +1468,21 @@ const PatientProviders = () => {
 
                 {sheetTab === 'services' && (
                   <div className="space-y-3">
-                    <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Available Medical Services</p>
+                    <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Available Medical Services</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {(viewingProvider.services || []).map((s, i) => (
                         <button
                           key={i}
-                          onClick={() => {
-                            setViewingProvider(null);
-                            openBookingModal(viewingProvider, s);
+                          onClick={(event) => {
+                            openBookingModal(viewingProvider, s, event.currentTarget);
                           }}
                           className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                         >
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">{s}</span>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-link transition-colors">{s}</span>
                         </button>
                       ))}
                       {(!viewingProvider.services || viewingProvider.services.length === 0) && (
-                        <p className="text-xs text-slate-400 italic py-2">General consultation only.</p>
+                        <p className="text-xs text-tertiary italic py-2">General consultation only.</p>
                       )}
                     </div>
                   </div>
@@ -1463,11 +1495,11 @@ const PatientProviders = () => {
                         {(viewingProvider.rating || 0).toFixed(1)}
                       </span>
                       <div>
-                        <div className="flex items-center text-amber-500">
+                        <div className="flex items-center text-warning">
                           <Star className="w-4 h-4 fill-current" />
                           <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Overall Rating</span>
                         </div>
-                        <p className="text-3xs text-slate-400">Based on {providerReviews.length} verified patient visits</p>
+                        <p className="text-xs text-tertiary">Based on {providerReviews.length} verified patient visits</p>
                       </div>
                     </div>
 
@@ -1478,7 +1510,7 @@ const PatientProviders = () => {
                         ))
                       ) : (
                         <div className="neu-flat-sm p-6 rounded-2xl text-center">
-                          <p className="text-xs text-slate-400">No written reviews yet for this provider.</p>
+                          <p className="text-xs text-tertiary">No written reviews yet for this provider.</p>
                         </div>
                       )}
                     </div>
@@ -1492,14 +1524,14 @@ const PatientProviders = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Practice & Consultation</h3>
-                    <span className="text-3xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">Muntinlupa Health Network</span>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-link">Muntinlupa Health Network</span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
                     <div className="neu-flat-sm p-4 rounded-2xl">
-                      <p className="text-3xs uppercase font-extrabold text-slate-400 tracking-wider">Practice Schedule</p>
+                      <p className="text-2xs uppercase font-extrabold text-tertiary tracking-wider">Practice Schedule</p>
                       <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1.5">Mon – Sat • 9:00 AM – 5:00 PM</p>
-                      <p className="text-3xs text-slate-400 mt-1">Walk-ins & scheduled appointments</p>
+                      <p className="text-xs text-tertiary mt-1">Walk-ins & scheduled appointments</p>
                     </div>
                   </div>
                 </div>
@@ -1511,13 +1543,13 @@ const PatientProviders = () => {
                       <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
                         Offered Services ({(viewingProvider.services || []).length})
                       </h3>
-                      <p className="text-3xs text-slate-400">Click any service to book directly</p>
+                      <p className="text-xs text-tertiary">Click any service to book directly</p>
                     </div>
                     {(viewingProvider.services || []).length > 4 && (
                       <button
                         type="button"
                         onClick={() => setShowAllServices(!showAllServices)}
-                        className="neu-btn px-3 py-1.5 rounded-xl text-3xs font-extrabold text-primary flex items-center gap-1 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
+                        className="neu-btn px-3 py-1.5 rounded-xl text-xs font-extrabold text-link flex items-center gap-1 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                       >
                         {showAllServices ? (
                           <>Show Less <ChevronUp className="w-3 h-3" /></>
@@ -1531,20 +1563,19 @@ const PatientProviders = () => {
                     {((viewingProvider.services || []).slice(0, showAllServices ? undefined : 4)).map((s, i) => (
                       <button
                         key={i}
-                        onClick={() => {
-                          setViewingProvider(null);
-                          openBookingModal(viewingProvider, s);
+                        onClick={(event) => {
+                          openBookingModal(viewingProvider, s, event.currentTarget);
                         }}
                         className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                       >
                         <div className="min-w-0 pr-2">
-                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors truncate">{s}</p>
-                          <p className="text-3xs text-slate-400">Available for booking</p>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-link transition-colors truncate">{s}</p>
+                          <p className="text-xs text-tertiary">Available for booking</p>
                         </div>
                       </button>
                     ))}
                     {(!viewingProvider.services || viewingProvider.services.length === 0) && (
-                      <p className="text-xs text-slate-400 italic py-2 col-span-2">General medical consultation only.</p>
+                      <p className="text-xs text-tertiary italic py-2 col-span-2">General medical consultation only.</p>
                     )}
                   </div>
                 </div>
@@ -1554,16 +1585,16 @@ const PatientProviders = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Patient Reviews</h3>
-                      <p className="text-3xs text-slate-400">Feedback from verified appointments</p>
+                      <p className="text-xs text-tertiary">Feedback from verified appointments</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center text-amber-500">
+                      <div className="flex items-center text-warning">
                         <Star className="w-4 h-4 fill-current" />
                       </div>
                       <span className="font-display text-base font-extrabold text-slate-900 dark:text-white">
                         {(viewingProvider.rating || 0).toFixed(1)}
                       </span>
-                      <span className="text-3xs text-slate-400">({providerReviews.length})</span>
+                      <span className="text-xs text-tertiary">({providerReviews.length})</span>
                     </div>
                   </div>
 
@@ -1574,7 +1605,7 @@ const PatientProviders = () => {
                       ))
                     ) : (
                       <div className="neu-inset p-5 rounded-2xl text-center border border-slate-200/50 dark:border-white/5">
-                        <p className="text-xs text-slate-400">No written reviews yet for this healthcare provider.</p>
+                        <p className="text-xs text-tertiary">No written reviews yet for this healthcare provider.</p>
                       </div>
                     )}
                   </div>
@@ -1584,14 +1615,13 @@ const PatientProviders = () => {
               {/* Mobile Sticky Booking Action Button */}
               <div className="shrink-0 mt-auto px-5 md:px-6 pt-3 pb-3 border-t border-slate-200/60 dark:border-white/5 md:hidden">
                 <button
-                  onClick={() => {
-                    setViewingProvider(null);
-                    openBookingModal(viewingProvider);
+                  onClick={(event) => {
+                    openBookingModal(viewingProvider, undefined, event.currentTarget);
                   }}
                   disabled={requested.includes(viewingProvider.id)}
                   className={`w-full py-3.5 rounded-2xl text-xs sm:text-sm font-bold transition-all active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer ${
                     requested.includes(viewingProvider.id)
-                      ? 'neu-btn text-emerald-600 dark:text-emerald-400 cursor-not-allowed'
+                      ? 'neu-btn text-success dark:text-success-dark cursor-not-allowed'
                       : 'neu-btn-primary shadow-md'
                   }`}
                 >
@@ -1603,7 +1633,7 @@ const PatientProviders = () => {
                     setViewingProvider(null);
                     navigate(`/patient/providers/${viewingProvider.id}/profile`);
                   }}
-                  className="w-full py-2 mt-0.5 text-xs font-bold text-primary hover:underline text-center cursor-pointer"
+                  className="w-full py-2 mt-0.5 text-xs font-bold text-link hover:underline text-center cursor-pointer"
                 >
                   View Full Profile
                 </button>

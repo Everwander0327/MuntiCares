@@ -12,6 +12,9 @@ export default {
         xs: '400px',
       },
       colors: {
+        // Theme-aware semantic text colors (see index.css for the values).
+        tertiary: 'var(--text-tertiary)',
+        link: 'var(--text-link)',
         primary: {
           DEFAULT: "#2F6FB5", // Primary button
           hover: "#255A94",   // Primary hover

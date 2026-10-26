@@ -30,7 +30,7 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option",
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown 
-          className={`w-3.5 h-3.5 text-primary shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          className={`w-3.5 h-3.5 text-link shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
         />
       </button>
 
@@ -56,12 +56,12 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option",
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all text-left ${
                     isChecked
-                      ? 'neu-inset text-primary font-black bg-primary/10'
-                      : 'text-slate-700 dark:text-slate-200 hover:text-primary hover:bg-primary/5'
+                      ? 'neu-inset text-link font-black bg-primary/10'
+                      : 'text-slate-700 dark:text-slate-200 hover:text-link hover:bg-primary/5'
                   }`}
                 >
                   <span className="truncate">{option.label}</span>
-                  {isChecked && <Check className="w-3.5 h-3.5 text-primary stroke-[3] shrink-0 ml-1.5" />}
+                  {isChecked && <Check className="w-3.5 h-3.5 text-link stroke-[3] shrink-0 ml-1.5" />}
                 </button>
               );
             })}

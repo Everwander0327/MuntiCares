@@ -25,6 +25,7 @@ const DialogContent = React.forwardRef(({ className, children, hideClose = false
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      aria-modal="true"
       className={cn(
         "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
         "bezel max-w-md w-full",
@@ -41,8 +42,11 @@ const DialogContent = React.forwardRef(({ className, children, hideClose = false
       <div className="bezel-inner p-8 shadow-soft">
       {children}
       {!hideClose && (
-        <DialogPrimitive.Close className="absolute right-6 top-6 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-700 ease-fluid outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0">
-          <X size={20} weight="light" className="text-slate-400 dark:text-slate-500" />
+        <DialogPrimitive.Close
+          aria-label="Close"
+          className="absolute right-4 top-4 w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+        >
+          <X size={20} weight="light" className="text-tertiary dark:text-tertiary" />
         </DialogPrimitive.Close>
       )}
       </div>
@@ -73,7 +77,7 @@ DialogTitle.displayName = DialogPrimitive.Title.displayName
 const DialogDescription = React.forwardRef(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-slate-500 dark:text-slate-400", className)}
+    className={cn("text-sm text-tertiary dark:text-tertiary", className)}
     {...props}
   />
 ))

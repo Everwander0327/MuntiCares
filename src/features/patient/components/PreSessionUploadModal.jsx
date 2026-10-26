@@ -70,8 +70,8 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
   };
 
   const getFileIcon = (file) => {
-    if (file.type.startsWith('image/')) return <Image className="w-4 h-4 text-primary shrink-0" />;
-    return <FileText className="w-4 h-4 text-primary shrink-0" />;
+    if (file.type.startsWith('image/')) return <Image className="w-4 h-4 text-link shrink-0" />;
+    return <FileText className="w-4 h-4 text-link shrink-0" />;
   };
 
   const formatFileSize = (bytes) => {
@@ -172,7 +172,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
     <AnimatePresence>
       {isOpen && request && (
         <motion.div
-          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -195,15 +195,15 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
               <h2 className="text-base sm:text-xl md:text-2xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
                 Pre-Session Information
               </h2>
-              <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400">
-                Help <span className="font-extrabold text-primary">{request.providerName}</span> prepare for your home visit
+              <p className="text-sm text-tertiary dark:text-tertiary">
+                Help <span className="font-extrabold text-link">{request.providerName}</span> prepare for your home visit
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
               {/* Preparation Checklist */}
               <div className="space-y-1.5">
-                <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Preparation Checklist</span>
+                <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Preparation Checklist</span>
                 <div className="neu-flat-sm p-3 sm:p-3.5 rounded-2xl space-y-1.5">
                   {CHECKLIST_ITEMS.map(item => {
                     const isChecked = !!checklist[item.key];
@@ -227,9 +227,9 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                               : 'neu-inset text-transparent'
                           }`}
                         >
-                          {isChecked && <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-600 dark:text-emerald-400" />}
+                          {isChecked && <Check className="w-3.5 h-3.5 stroke-[3] text-success dark:text-success-dark" />}
                         </div>
-                        <span className={`text-xs transition-colors ${isChecked ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-200 font-medium'}`}>
+                        <span className={`text-xs transition-colors ${isChecked ? 'text-tertiary dark:text-tertiary line-through' : 'text-slate-700 dark:text-slate-200 font-medium'}`}>
                           {item.label}
                         </span>
                       </button>
@@ -240,53 +240,57 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
 
               {/* Self-Measured Vitals */}
               <div className="space-y-1.5">
-                <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Self-Measured Vitals (Optional)</span>
+                <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Self-Measured Vitals (Optional)</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="space-y-1">
-                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400">BP (mmHg)</label>
+                    <label htmlFor="previsit-bp" className="text-xs font-bold text-tertiary dark:text-tertiary">BP (mmHg)</label>
                     <div className="neu-inset p-2 rounded-xl">
                       <input
+                        id="previsit-bp"
                         type="text"
                         placeholder="120/80"
                         value={vitals.bp}
                         onChange={e => setVitals({ ...vitals, bp: e.target.value })}
-                        className="w-full bg-transparent border-0 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400 placeholder:font-normal"
+                        className="w-full bg-transparent border-0 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-tertiary placeholder:font-normal"
                       />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400">Temp (°C)</label>
+                    <label htmlFor="previsit-temp" className="text-xs font-bold text-tertiary dark:text-tertiary">Temp (°C)</label>
                     <div className="neu-inset p-2 rounded-xl">
                       <input
+                        id="previsit-temp"
                         type="text"
                         placeholder="36.5"
                         value={vitals.temp}
                         onChange={e => setVitals({ ...vitals, temp: e.target.value })}
-                        className="w-full bg-transparent border-0 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400 placeholder:font-normal"
+                        className="w-full bg-transparent border-0 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-tertiary placeholder:font-normal"
                       />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400">Heart Rate</label>
+                    <label htmlFor="previsit-hr" className="text-xs font-bold text-tertiary dark:text-tertiary">Heart Rate</label>
                     <div className="neu-inset p-2 rounded-xl">
                       <input
+                        id="previsit-hr"
                         type="text"
                         placeholder="72 bpm"
                         value={vitals.hr}
                         onChange={e => setVitals({ ...vitals, hr: e.target.value })}
-                        className="w-full bg-transparent border-0 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400 placeholder:font-normal"
+                        className="w-full bg-transparent border-0 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-tertiary placeholder:font-normal"
                       />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400">Weight (kg)</label>
+                    <label htmlFor="previsit-weight" className="text-xs font-bold text-tertiary dark:text-tertiary">Weight (kg)</label>
                     <div className="neu-inset p-2 rounded-xl">
                       <input
+                        id="previsit-weight"
                         type="text"
                         placeholder="65 kg"
                         value={vitals.weight}
                         onChange={e => setVitals({ ...vitals, weight: e.target.value })}
-                        className="w-full bg-transparent border-0 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-slate-400 placeholder:font-normal"
+                        className="w-full bg-transparent border-0 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-tertiary placeholder:font-normal"
                       />
                     </div>
                   </div>
@@ -295,21 +299,22 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
 
               {/* Symptom Notes */}
               <div className="space-y-1">
-                <label className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Current Symptoms or Concerns</label>
+                <label htmlFor="previsit-symptoms" className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Current Symptoms or Concerns</label>
                 <div className="neu-inset p-2.5 rounded-xl">
                   <textarea
+                    id="previsit-symptoms"
                     value={symptomNotes}
                     onChange={e => setSymptomNotes(e.target.value)}
                     placeholder="Describe what you're experiencing — headache, fever, dizziness, etc..."
                     rows={2}
-                    className="w-full bg-transparent border-0 text-xs font-medium text-slate-800 dark:text-slate-100 outline-none resize-none placeholder:text-slate-400"
+                    className="w-full bg-transparent border-0 text-xs font-medium text-slate-800 dark:text-slate-100 outline-none resize-none placeholder:text-tertiary"
                   />
                 </div>
               </div>
 
               {/* File Upload */}
               <div className="space-y-1.5">
-                <label className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">
+                <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
                   Attach Photos / Documents (Max 5)
                 </label>
                 
@@ -328,11 +333,11 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                   disabled={files.length >= 5}
                   className="w-full neu-inset p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed group"
                 >
-                  <div className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-primary group-hover:scale-105 transition-transform">
+                  <div className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-link group-hover:scale-105 transition-transform">
                     <Upload className="w-4 h-4" />
                   </div>
                   <p className="text-xs text-slate-700 dark:text-slate-200 font-bold">Tap to upload photos or medical documents</p>
-                  <p className="text-3xs text-slate-400">JPG, PNG, PDF • Max 5 files</p>
+                  <p className="text-xs text-tertiary">JPG, PNG, PDF • Max 5 files</p>
                 </button>
 
                 {/* File Preview List */}
@@ -344,13 +349,13 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                           {getFileIcon(file)}
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{file.name}</p>
-                            <p className="text-3xs text-slate-400">{formatFileSize(file.size)}</p>
+                            <p className="text-xs text-tertiary">{formatFileSize(file.size)}</p>
                           </div>
                         </div>
                         <button
                           type="button"
                           onClick={() => removeFile(idx)}
-                          className="neu-btn p-1.5 rounded-lg text-slate-400 hover:text-red-500 transition-colors shrink-0 cursor-pointer"
+                          className="neu-btn p-1.5 rounded-lg text-tertiary hover:text-danger transition-colors shrink-0 cursor-pointer"
                           title="Remove file"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

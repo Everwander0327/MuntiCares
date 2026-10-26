@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { initialsAvatar } from '@/lib/avatar';
 import { MessageSquareWarning, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePresence } from '@/contexts/PresenceContext';
@@ -59,7 +60,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
             name: p.full_name || (isPatient ? 'Provider' : 'Patient'),
             email: p.email,
             avatar_url: p.avatar_url || '',
-            photoUrl: p.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.full_name || 'U')}&background=${isPatient ? 'F3E8FF&color=9333EA' : 'E0F2FE&color=2563EB'}`,
+            photoUrl: p.avatar_url || initialsAvatar(p.full_name, { background: isPatient ? 'DDEBF8' : 'E1F3EA', color: isPatient ? '2F6FB5' : '2C7A55' }),
           };
         });
 
@@ -189,22 +190,22 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   if (filtered.length === 0) {
     if (searchTerm && conversations.length > 0) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-16 px-4">
-          <div className="neu-flat-sm w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-slate-400">
+        <div className="flex-1 flex flex-col items-center justify-center text-tertiary dark:text-tertiary py-16 px-4">
+          <div className="neu-flat-sm w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-tertiary">
             <Search className="w-8 h-8" />
           </div>
           <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">No results found</h3>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 text-center">No conversations match {'\u201C'}{searchTerm}{'\u201D'}</p>
+          <p className="text-xs text-tertiary dark:text-tertiary mt-1 text-center">No conversations match {'\u201C'}{searchTerm}{'\u201D'}</p>
         </div>
       );
     }
     return (
-      <div className="flex-1 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 py-16 px-4">
-        <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-primary">
+      <div className="flex-1 flex flex-col items-center justify-center text-tertiary dark:text-tertiary py-16 px-4">
+        <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-link">
           <MessageSquareWarning className="w-8 h-8" />
         </div>
         <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">No conversations yet</h3>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs text-center">
+        <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-xs text-center">
           {user?.role === 'patient'
             ? 'Chat with providers once a request is accepted.'
             : 'Chat with patients once you accept their request.'}
@@ -250,11 +251,11 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className={`font-display font-extrabold text-sm sm:text-base truncate ${
-                    hasUnread ? 'text-primary' : 'text-slate-900 dark:text-white'
+                    hasUnread ? 'text-link' : 'text-slate-900 dark:text-white'
                   }`}>
                     {conv.name}
                   </p>
-                  <span className="text-3xs sm:text-2xs text-slate-400 dark:text-slate-500 shrink-0 font-bold tabular-nums">
+                  <span className="text-sm text-tertiary dark:text-tertiary shrink-0 font-bold tabular-nums">
                     {formatRelativeTime(conv.lastMessage?.created_at)}
                   </span>
                 </div>
@@ -264,20 +265,20 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
                     <p className={`text-xs sm:text-sm truncate ${
                       hasUnread 
                         ? 'text-slate-800 dark:text-slate-100 font-bold' 
-                        : 'text-slate-500 dark:text-slate-400 font-medium'
+                        : 'text-tertiary dark:text-tertiary font-medium'
                     }`}>
-                      {preview.isYou && <span className="text-slate-400 font-normal">You: </span>}
+                      {preview.isYou && <span className="text-tertiary font-normal">You: </span>}
                       {preview.text}
                     </p>
                   ) : (
-                    <p className="text-xs text-slate-400 italic">No messages yet</p>
+                    <p className="text-xs text-tertiary italic">No messages yet</p>
                   )}
                 </div>
               </div>
             </div>
 
             {hasUnread && (
-              <span className="min-w-[22px] h-[22px] bg-primary rounded-full flex items-center justify-center text-3xs font-black text-white px-1.5 shadow-sm shrink-0">
+              <span className="min-w-[22px] h-[22px] bg-primary rounded-full flex items-center justify-center text-xs font-black text-white px-1.5 shadow-sm shrink-0">
                 {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
               </span>
             )}

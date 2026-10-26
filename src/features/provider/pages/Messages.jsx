@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { initialsAvatar } from '@/lib/avatar';
 import { Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
@@ -84,7 +85,7 @@ const ProviderMessages = () => {
       setSelectedPartner({
         id: targetId,
         name: initialName,
-        photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(initialName)}&background=E0F2FE&color=2563EB`,
+        photoUrl: initialsAvatar(initialName, { background: 'E1F3EA', color: '2C7A55' }),
       });
       supabase
         .from('users')
@@ -98,14 +99,14 @@ const ProviderMessages = () => {
             name: resolvedName,
             photoUrl:
               partData?.avatar_url ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(resolvedName)}&background=E0F2FE&color=2563EB`,
+              initialsAvatar(resolvedName, { background: 'E1F3EA', color: '2C7A55' }),
           });
         })
         .catch(() => {
           setSelectedPartner({
             id: targetId,
             name: initialName,
-            photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(initialName)}&background=E0F2FE&color=2563EB`,
+            photoUrl: initialsAvatar(initialName, { background: 'E1F3EA', color: '2C7A55' }),
           });
         });
 
@@ -161,7 +162,7 @@ const ProviderMessages = () => {
                   <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
                     Messages
                   </h1>
-                  <p className="text-2xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 max-w-xl">
+                  <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 sm:mt-1 max-w-xl">
                     Chat in real-time or conduct teleconsultations with your registered patients.
                   </p>
                 </div>
@@ -169,19 +170,20 @@ const ProviderMessages = () => {
 
               {/* Neumorphic Inset Search Bar */}
               <div className="neu-inset p-1.5 sm:p-2 rounded-2xl flex items-center gap-2.5 h-[48px] sm:h-[52px]">
-                <Search className="w-4 h-4 text-primary ml-2 shrink-0" />
+                <Search className="w-4 h-4 text-link ml-2 shrink-0" />
                 <input
                   type="text"
+                  aria-label="Search patient conversations"
                   placeholder="Search patient, conversations..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
                 />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="neu-btn w-7 h-7 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors shrink-0 mr-1 cursor-pointer"
+                    className="neu-btn w-11 h-11 rounded-xl flex items-center justify-center text-tertiary hover:text-danger transition-colors shrink-0 mr-1 cursor-pointer"
                     title="Clear search"
                   >
                     <span className="text-xs font-bold leading-none">✕</span>
@@ -207,7 +209,7 @@ const ProviderMessages = () => {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.99 }}
               transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="fixed inset-0 z-[9999] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col w-screen h-[100dvh] max-h-[100dvh] overflow-hidden"
+              className="fixed inset-0 z-[60] bg-[#ebf1f8] dark:bg-[#172236] flex flex-col w-screen h-[100dvh] max-h-[100dvh] overflow-hidden"
             >
               <ChatWindow
                 currentUser={currentUserData}

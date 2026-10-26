@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Search, Ban, X, Check, Edit3, Download, ArrowUpDown, Calendar, CheckSquare, ShieldBan, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +24,7 @@ const AdminPatients = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const modalTriggerRef = useRef(null);
   const [patientHistory, setPatientHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [isEditingInModal, setIsEditingInModal] = useState(false);
@@ -102,7 +104,8 @@ const AdminPatients = () => {
     }
   };
 
-  const openPatientModal = (patient) => {
+  const openPatientModal = (patient, triggerEl = null) => {
+    modalTriggerRef.current = triggerEl;
     setSelectedPatient(patient);
     setIsEditingInModal(false);
     setModalEditName(patient.name);
@@ -286,12 +289,12 @@ const AdminPatients = () => {
 
   const SortableHeader = ({ label, sortKey: sk, className = '' }) => (
     <th
-      className={`px-6 py-4 font-semibold cursor-pointer hover:text-primary transition-colors select-none ${className}`}
+      className={`px-6 py-4 font-semibold cursor-pointer hover:text-link transition-colors select-none ${className}`}
       onClick={() => { handleSort(sk); setCurrentPage(1); }}
     >
       <span className="flex items-center gap-1">
         {label}
-        <ArrowUpDown className={`w-3 h-3 ${sortKey === sk ? 'text-primary' : 'opacity-30'}`} />
+        <ArrowUpDown className={`w-3 h-3 ${sortKey === sk ? 'text-link' : 'opacity-30'}`} />
         {getSortIndicator(sk)}
       </span>
     </th>
@@ -313,12 +316,12 @@ const AdminPatients = () => {
               <h1 className="text-xl sm:text-2xl font-display font-black tracking-tight text-slate-900 dark:text-white">
                 Manage Patients
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-sm text-tertiary dark:text-tertiary mt-0.5">
                 Overview and account administration of all registered residents in Muntinlupa
               </p>
             </div>
             <div className="hidden sm:flex items-center gap-2">
-              <span className="neu-flat-sm px-3 py-1 rounded-xl text-xs font-black text-primary">
+              <span className="neu-flat-sm px-3 py-1 rounded-xl text-xs font-black text-link">
                 {filteredPatients.length} {filteredPatients.length === 1 ? 'Resident' : 'Residents'}
               </span>
             </div>
@@ -328,13 +331,14 @@ const AdminPatients = () => {
           <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center gap-2.5 w-full">
             {/* Neumorphic Inset Search */}
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none z-10" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-link pointer-events-none z-10" />
               <input
                 type="text"
+                aria-label="Search patients by name or email"
                 placeholder="Search patients by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full neu-inset rounded-xl py-2.5 pl-10 pr-4 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[42px]"
+                className="w-full neu-inset rounded-xl py-2.5 pl-10 pr-4 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 placeholder:text-tertiary outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[42px]"
               />
             </div>
 
@@ -367,7 +371,7 @@ const AdminPatients = () => {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={handleExport}
-              className="neu-btn px-4 py-2 min-h-[42px] rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 hover:text-primary transition-all shrink-0 w-full sm:w-auto shadow-sm"
+              className="neu-btn px-4 py-2 min-h-[42px] rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 hover:text-link transition-all shrink-0 w-full sm:w-auto shadow-sm"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
@@ -410,12 +414,12 @@ const AdminPatients = () => {
                           className={`relative w-11 h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all shrink-0 overflow-hidden ${
                             isSelected 
                               ? 'neu-inset ring-2 ring-primary text-white bg-primary shadow-inner' 
-                              : 'neu-flat-sm text-primary hover:ring-1 hover:ring-primary/40'
+                              : 'neu-flat-sm text-link hover:ring-1 hover:ring-primary/40'
                           }`}
                           title={isSelected ? "Click to deselect" : "Click to select"}
                         >
                           {isSelected ? (
-                            <Check className="w-5 h-5 text-primary stroke-[3]" />
+                            <Check className="w-5 h-5 text-link stroke-[3]" />
                           ) : p.avatar_url ? (
                             <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -425,25 +429,25 @@ const AdminPatients = () => {
 
                         <div 
                           className="min-w-0 flex-1 cursor-pointer"
-                          onClick={() => openPatientModal(p)}
+                          onClick={(event) => openPatientModal(p, event.currentTarget)}
                         >
-                          <p className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-primary transition-colors">{p.name}</p>
-                          <p className="text-2xs text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5">{p.email}</p>
+                          <p className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-link transition-colors">{p.name}</p>
+                          <p className="text-xs text-tertiary dark:text-tertiary font-medium truncate mt-0.5">{p.email}</p>
                         </div>
                       </div>
 
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
-                        p.status === 'Active' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' : 'neu-flat-sm text-rose-600 dark:text-rose-400'
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider shrink-0 ${
+                        p.status === 'Active' ? 'neu-flat-sm text-success dark:text-success-dark' : 'neu-flat-sm text-danger dark:text-danger-dark'
                       }`}>
                         {p.status}
                       </span>
                     </div>
 
-                    <div className="neu-inset px-3 py-2 rounded-xl text-2xs text-slate-400 font-semibold flex items-center justify-between">
+                    <div className="neu-inset px-3 py-2 rounded-xl text-xs text-tertiary font-semibold flex items-center justify-between">
                       <span>Joined: <strong className="text-slate-700 dark:text-slate-300 font-bold">{p.joinDate}</strong></span>
                       <button
-                        onClick={() => openPatientModal(p)}
-                        className="text-primary font-bold hover:underline flex items-center gap-1 text-3xs uppercase tracking-wider"
+                        onClick={(event) => openPatientModal(p, event.currentTarget)}
+                        className="text-link font-bold hover:underline flex items-center gap-1 text-2xs uppercase tracking-wider"
                       >
                         Record Details →
                       </button>
@@ -453,7 +457,7 @@ const AdminPatients = () => {
                       <motion.button
                         whileTap={{ scale: 0.96 }}
                         className={`text-xs font-bold py-2.5 rounded-xl neu-btn transition-all text-center ${
-                          p.is_banned ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                          p.is_banned ? 'text-success dark:text-success-dark' : 'text-warning dark:text-warning-dark'
                         }`}
                         onClick={() => handleBan(p)}
                         disabled={actionLoading}
@@ -462,7 +466,7 @@ const AdminPatients = () => {
                       </motion.button>
                       <motion.button
                         whileTap={{ scale: 0.96 }}
-                        className="text-xs font-bold text-rose-600 dark:text-rose-400 neu-btn py-2.5 rounded-xl transition-all text-center"
+                        className="text-xs font-bold text-danger dark:text-danger-dark neu-btn py-2.5 rounded-xl transition-all text-center"
                         onClick={() => handleRemove(p)}
                         disabled={actionLoading}
                       >
@@ -477,11 +481,11 @@ const AdminPatients = () => {
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-white/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30 text-slate-400 dark:text-slate-500 text-3xs font-black uppercase tracking-wider">
+                <tr className="border-b border-white/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30 text-tertiary dark:text-tertiary text-2xs font-black uppercase tracking-wider">
                   <th className="px-6 py-4 w-12 text-center select-none">
-                    <span className="text-4xs font-mono opacity-60">SELECT</span>
+                    <span className="text-xs font-mono opacity-60">SELECT</span>
                   </th>
                   <SortableHeader label="Resident Patient" sortKey="name" />
                   <SortableHeader label="Email Address" sortKey="email" />
@@ -501,7 +505,8 @@ const AdminPatients = () => {
                     return (
                       <motion.tr
                         key={p.id}
-                        className={`transition-all group cursor-pointer ${
+                        tabIndex={0}
+                        className={`transition-all group cursor-pointer focus-visible:bg-primary/5 ${
                           isSelected 
                             ? 'bg-primary/[0.08] dark:bg-primary/[0.15]' 
                             : 'hover:bg-primary/5'
@@ -509,22 +514,31 @@ const AdminPatients = () => {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.15 + idx * 0.02 }}
-                        onClick={() => openPatientModal(p)}
+                        onClick={(event) => {
+                          event.currentTarget.focus();
+                          openPatientModal(p, event.currentTarget);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openPatientModal(p, event.currentTarget);
+                          }
+                        }}
                       >
                         {/* Interactive Avatar Selection Column */}
                         <td className="px-6 py-3.5 text-center" onClick={e => e.stopPropagation()}>
                           <motion.button
                             whileTap={{ scale: 0.9 }}
                             onClick={() => toggleSelect(p.id)}
-                            className={`w-9 h-9 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all overflow-hidden ${
+                            className={`w-11 h-11 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all overflow-hidden ${
                               isSelected
-                                ? 'neu-inset ring-2 ring-primary text-primary bg-primary/10'
-                                : 'neu-flat-sm text-primary hover:ring-2 hover:ring-primary/40'
+                                ? 'neu-inset ring-2 ring-primary text-link bg-primary/10'
+                                : 'neu-flat-sm text-link hover:ring-2 hover:ring-primary/40'
                             }`}
                             title={isSelected ? "Selected (Click to deselect)" : "Click avatar to select"}
                           >
                             {isSelected ? (
-                              <Check className="w-4 h-4 text-primary stroke-[3]" />
+                              <Check className="w-4 h-4 text-link stroke-[3]" />
                             ) : p.avatar_url ? (
                               <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
                             ) : (
@@ -534,20 +548,20 @@ const AdminPatients = () => {
                         </td>
 
                         <td className="px-6 py-3.5">
-                          <span className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors">
+                          <span className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors">
                             {p.name}
                           </span>
                         </td>
 
                         <td className="px-6 py-3.5">
-                          <span className="text-slate-500 dark:text-slate-400 font-medium">{p.email}</span>
+                          <span className="text-tertiary dark:text-tertiary font-medium">{p.email}</span>
                         </td>
 
-                        <td className="px-6 py-3.5 text-slate-400 font-mono text-2xs">{p.joinDate}</td>
+                        <td className="px-6 py-3.5 text-tertiary font-mono text-xs">{p.joinDate}</td>
 
                         <td className="px-6 py-3.5">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider ${
-                            p.status === 'Active' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' : 'neu-flat-sm text-rose-600 dark:text-rose-400'
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider ${
+                            p.status === 'Active' ? 'neu-flat-sm text-success dark:text-success-dark' : 'neu-flat-sm text-danger dark:text-danger-dark'
                           }`}>
                             {p.status}
                           </span>
@@ -557,10 +571,10 @@ const AdminPatients = () => {
                           <div className="flex justify-end gap-1.5">
                             <motion.button
                               whileTap={{ scale: 0.94 }}
-                              className={`p-2 rounded-xl neu-btn transition-all ${
+                              className={`h-11 w-11 flex items-center justify-center rounded-xl neu-btn transition-all ${
                                 p.is_banned
-                                  ? 'text-emerald-600 dark:text-emerald-400'
-                                  : 'text-amber-600 dark:text-amber-400'
+                                  ? 'text-success dark:text-success-dark'
+                                  : 'text-warning dark:text-warning-dark'
                               }`}
                               onClick={() => handleBan(p)}
                               disabled={actionLoading}
@@ -570,7 +584,7 @@ const AdminPatients = () => {
                             </motion.button>
                             <motion.button
                               whileTap={{ scale: 0.94 }}
-                              className="p-2 text-rose-600 dark:text-rose-400 rounded-xl neu-btn transition-all"
+                              className="h-11 w-11 flex items-center justify-center text-danger dark:text-danger-dark rounded-xl neu-btn transition-all"
                               onClick={() => handleRemove(p)}
                               disabled={actionLoading}
                               title="Remove Permanently"
@@ -605,7 +619,7 @@ const AdminPatients = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 70, scale: 0.92 }}
                 transition={{ type: "spring", stiffness: 420, damping: 30 }}
-                className="fixed bottom-20 lg:bottom-8 inset-x-0 z-[9999] flex justify-center px-3 sm:px-4 pointer-events-none"
+                className="fixed bottom-20 lg:bottom-8 inset-x-0 z-[60] flex justify-center px-3 sm:px-4 pointer-events-none"
                 style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
               >
                 <div className="neu-flat px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/90 dark:border-white/10 shadow-2xl bg-[#ebf1f8]/95 dark:bg-[#172236]/95 backdrop-blur-2xl flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 pointer-events-auto max-w-[94vw]">
@@ -620,7 +634,7 @@ const AdminPatients = () => {
                     <motion.button
                       whileTap={{ scale: 0.92 }}
                       onClick={toggleSelectAll}
-                      className="neu-btn px-2.5 py-1 rounded-full text-3xs font-extrabold text-primary flex items-center gap-1 hover:text-primary-focus transition-all ml-1"
+                      className="neu-btn px-2.5 py-1 rounded-full text-xs font-extrabold text-link flex items-center gap-1 hover:text-primary-focus transition-all ml-1"
                       title={selectedIds.size === filteredPatients.length ? "Deselect All Patients" : "Select All Filtered Patients"}
                     >
                       <CheckSquare className="w-3 h-3" />
@@ -634,7 +648,7 @@ const AdminPatients = () => {
                       whileTap={{ scale: 0.92 }}
                       onClick={handleBulkBan}
                       disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 transition-all shrink-0"
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-warning dark:text-warning-dark flex items-center gap-1.5 transition-all shrink-0"
                       title="Ban All Selected"
                     >
                       <ShieldBan className="w-3.5 h-3.5 shrink-0" />
@@ -645,7 +659,7 @@ const AdminPatients = () => {
                       whileTap={{ scale: 0.92 }}
                       onClick={handleBulkUnban}
                       disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 transition-all shrink-0"
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-success dark:text-success-dark flex items-center gap-1.5 transition-all shrink-0"
                       title="Unban All Selected"
                     >
                       <Check className="w-3.5 h-3.5 shrink-0" />
@@ -656,7 +670,7 @@ const AdminPatients = () => {
                       whileTap={{ scale: 0.92 }}
                       onClick={handleBulkDelete}
                       disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 transition-all shrink-0"
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-danger dark:text-danger-dark flex items-center gap-1.5 transition-all shrink-0"
                       title="Delete All Selected"
                     >
                       <Trash2 className="w-3.5 h-3.5 shrink-0" />
@@ -666,7 +680,7 @@ const AdminPatients = () => {
                     <motion.button
                       whileTap={{ scale: 0.92 }}
                       onClick={() => setSelectedIds(new Set())}
-                      className="neu-btn p-1.5 sm:p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all shrink-0 ml-0.5"
+                      className="neu-btn h-11 w-11 flex items-center justify-center rounded-full text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-all shrink-0 ml-0.5"
                       title="Clear Selection"
                     >
                       <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -681,14 +695,26 @@ const AdminPatients = () => {
       </div>
 
       {/* Neumorphic Patient Detail Modal Teleported to document.body */}
-      {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
-          {selectedPatient && (
+      <DialogPrimitive.Root
+        open={!!selectedPatient}
+        onOpenChange={(open) => { if (!open) setSelectedPatient(null); }}
+      >
+        {selectedPatient && (
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/75 sm:backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content
+            asChild
+            aria-modal="true"
+            onCloseAutoFocus={(event) => {
+              if (!modalTriggerRef.current) return;
+              event.preventDefault();
+              modalTriggerRef.current.focus();
+            }}
+          >
             <motion.div
-              className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 sm:backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-4 md:p-6"
+              className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={() => setSelectedPatient(null)}
             >
@@ -696,26 +722,35 @@ const AdminPatients = () => {
                 className="neu-flat rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl bg-[#ebf1f8] dark:bg-[#172236] transform-gpu will-change-transform"
                 initial={{ scale: 0.96, opacity: 0, y: 10 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.96, opacity: 0, y: 10 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                 onClick={e => e.stopPropagation()}
               >
                 {/* Modal Header */}
                 <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-[#ebf1f8] dark:bg-[#172236] z-10">
                   <div>
-                    <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Patient Record</h2>
-                    <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Profile & Booking Activity</p>
+                    <DialogPrimitive.Title asChild>
+                      <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Patient Record</h2>
+                    </DialogPrimitive.Title>
+                    <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">Profile & Booking Activity</p>
                   </div>
+                  <div className="flex items-center gap-1.5">
                   {!isEditingInModal && (
                     <motion.button
                       whileTap={{ scale: 0.94 }}
                       onClick={() => setIsEditingInModal(true)}
-                      className="neu-btn px-3 py-1.5 rounded-xl text-xs font-bold text-primary flex items-center gap-1.5 transition-all"
+                      className="neu-btn px-3 py-1.5 rounded-xl text-xs font-bold text-link flex items-center gap-1.5 transition-all"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
                       <span>Edit Info</span>
                     </motion.button>
                   )}
+                    <DialogPrimitive.Close
+                      aria-label="Close"
+                      className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-tertiary hover:text-slate-800 dark:hover:text-white shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </DialogPrimitive.Close>
+                  </div>
                 </div>
 
                 {/* Modal Scrollable Body */}
@@ -728,13 +763,14 @@ const AdminPatients = () => {
                       className="neu-inset p-4 sm:p-5 rounded-2xl space-y-3.5 border border-white/60 dark:border-white/5"
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-3xs font-black uppercase tracking-wider text-primary">Edit Resident Profile</span>
-                        <span className="text-3xs text-slate-400 font-medium">Changes update immediately</span>
+                        <span className="text-2xs font-black uppercase tracking-wider text-link">Edit Resident Profile</span>
+                        <span className="text-xs text-tertiary font-medium">Changes update immediately</span>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-3xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Full Name</label>
+                        <label htmlFor="admin-patient-name" className="text-2xs font-bold uppercase tracking-wider text-tertiary dark:text-tertiary">Full Name</label>
                         <input
+                          id="admin-patient-name"
                           type="text"
                           value={modalEditName}
                           onChange={(e) => setModalEditName(e.target.value)}
@@ -744,8 +780,9 @@ const AdminPatients = () => {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-3xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Email Address</label>
+                        <label htmlFor="admin-patient-email" className="text-2xs font-bold uppercase tracking-wider text-tertiary dark:text-tertiary">Email Address</label>
                         <input
+                          id="admin-patient-email"
                           type="email"
                           value={modalEditEmail}
                           onChange={(e) => setModalEditEmail(e.target.value)}
@@ -759,7 +796,7 @@ const AdminPatients = () => {
                           whileTap={{ scale: 0.96 }}
                           onClick={handleModalSave}
                           disabled={modalSaving}
-                          className="flex-1 neu-btn py-2.5 rounded-xl text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
+                          className="flex-1 neu-btn py-2.5 rounded-xl text-xs font-black text-success dark:text-success-dark flex items-center justify-center gap-1.5 transition-all disabled:opacity-50"
                         >
                           <Check className="w-4 h-4" />
                           <span>{modalSaving ? 'Saving...' : 'Save Changes'}</span>
@@ -771,7 +808,7 @@ const AdminPatients = () => {
                             setModalEditName(selectedPatient.name);
                             setModalEditEmail(selectedPatient.email);
                           }}
-                          className="px-4 py-2.5 neu-btn rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-all"
+                          className="px-4 py-2.5 neu-btn rounded-xl text-xs font-bold text-tertiary hover:text-slate-700 dark:hover:text-slate-200 transition-all"
                         >
                           Cancel
                         </motion.button>
@@ -779,7 +816,7 @@ const AdminPatients = () => {
                     </motion.div>
                   ) : (
                     <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-2xl neu-inset flex items-center justify-center text-xl font-black text-primary overflow-hidden shrink-0">
+                      <div className="w-16 h-16 rounded-2xl neu-inset flex items-center justify-center text-xl font-black text-link overflow-hidden shrink-0">
                         {selectedPatient.avatar_url ? (
                           <img src={selectedPatient.avatar_url} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -788,9 +825,9 @@ const AdminPatients = () => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="text-lg font-display font-black text-slate-900 dark:text-white truncate">{selectedPatient.name}</h3>
-                        <p className="text-slate-500 dark:text-slate-400 text-xs font-medium truncate">{selectedPatient.email}</p>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider mt-1.5 ${
-                          selectedPatient.status === 'Active' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' : 'neu-flat-sm text-rose-600 dark:text-rose-400'
+                        <p className="text-tertiary dark:text-tertiary text-xs font-medium truncate">{selectedPatient.email}</p>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider mt-1.5 ${
+                          selectedPatient.status === 'Active' ? 'neu-flat-sm text-success dark:text-success-dark' : 'neu-flat-sm text-danger dark:text-danger-dark'
                         }`}>
                           {selectedPatient.status}
                         </span>
@@ -799,17 +836,17 @@ const AdminPatients = () => {
                   )}
 
                   <div className="neu-flat-sm p-3.5 rounded-2xl flex items-center gap-2.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    <Calendar className="w-4 h-4 text-primary shrink-0" />
+                    <Calendar className="w-4 h-4 text-link shrink-0" />
                     <span>Member since: <strong className="text-slate-900 dark:text-white">{selectedPatient.joinDate}</strong></span>
                   </div>
 
                   {/* Service History */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-3xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider">
+                      <p className="text-2xs text-tertiary dark:text-tertiary font-black uppercase tracking-wider">
                         Service History
                       </p>
-                      <span className="neu-flat-sm px-2 py-0.5 rounded-md text-3xs font-extrabold text-primary">
+                      <span className="neu-flat-sm px-2 py-0.5 rounded-md text-xs font-extrabold text-link">
                         {patientHistory.length} Total
                       </span>
                     </div>
@@ -822,7 +859,7 @@ const AdminPatients = () => {
                       </div>
                     ) : patientHistory.length === 0 ? (
                       <div className="neu-inset rounded-2xl p-6 text-center">
-                        <p className="text-xs text-slate-400">No service requests recorded yet.</p>
+                        <p className="text-xs text-tertiary">No service requests recorded yet.</p>
                       </div>
                     ) : (
                       <div className="space-y-2.5">
@@ -830,18 +867,18 @@ const AdminPatients = () => {
                           <div key={req.id} className="flex items-center justify-between p-3.5 neu-flat-sm rounded-2xl">
                             <div className="min-w-0 flex-1">
                               <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">{req.service}</p>
-                              <p className="text-3xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                              <p className="text-xs text-tertiary dark:text-tertiary font-medium mt-0.5">
                                 {req.provider?.full_name || 'Provider'} • {(() => {
                                   const d = new Date(req.date || req.created_at);
                                   return !isNaN(d) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A';
                                 })()}
                               </p>
                             </div>
-                            <span className={`ml-3 inline-flex items-center px-2 py-0.5 rounded-lg text-3xs font-black uppercase tracking-wider shrink-0 ${
-                              req.status === 'Completed' ? 'text-emerald-600 dark:text-emerald-400' :
-                              req.status === 'Accepted' ? 'text-blue-600 dark:text-blue-400' :
-                              req.status === 'Pending' ? 'text-amber-600 dark:text-amber-400' :
-                              'text-rose-600 dark:text-rose-400'
+                            <span className={`ml-3 inline-flex items-center px-2 py-0.5 rounded-lg text-2xs font-black uppercase tracking-wider shrink-0 ${
+                              req.status === 'Completed' ? 'text-success dark:text-success-dark' :
+                              req.status === 'Accepted' ? 'text-link dark:text-primary-300' :
+                              req.status === 'Pending' ? 'text-warning dark:text-warning-dark' :
+                              'text-danger dark:text-danger-dark'
                             }`}>
                               {req.status}
                             </span>
@@ -860,17 +897,17 @@ const AdminPatients = () => {
                       setSelectedPatient(null);
                       setIsEditingInModal(false);
                     }}
-                    className="w-full neu-btn py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 hover:text-primary transition-all flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full neu-btn py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
                     Close Record
                   </motion.button>
                 </div>
               </motion.div>
             </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+        )}
+      </DialogPrimitive.Root>
     </DashboardLayout>
   );
 };

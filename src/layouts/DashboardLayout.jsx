@@ -31,21 +31,21 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
     className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative overflow-hidden ${
       active 
         ? 'neu-btn-primary font-bold shadow-md' 
-        : 'text-[#52657A] dark:text-[#A5B6C8] hover:text-primary dark:hover:text-[#8CBDF0]'
+        : 'text-[#52657A] dark:text-[#A5B6C8] hover:text-link dark:hover:text-[#8CBDF0]'
     }`}
   >
     <span className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0 ${
       active 
         ? '!bg-white/20 dark:!bg-[#08182A]/15 shadow-inner border border-white/30 dark:border-black/10 backdrop-blur-sm' 
-        : 'neu-flat-sm text-[#52657A] dark:text-[#A5B6C8] group-hover:text-primary dark:group-hover:text-[#8CBDF0] group-hover:scale-105'
+        : 'neu-flat-sm text-[#52657A] dark:text-[#A5B6C8] group-hover:text-link dark:group-hover:text-[#8CBDF0] group-hover:scale-105'
     }`}>
       {React.cloneElement(icon, { className: 'w-4 h-4' })}
     </span>
     <span className={`font-semibold text-sm flex-1 truncate ${active ? 'font-bold' : ''}`}>{label}</span>
     {badge > 0 && (
-      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-3xs font-extrabold px-1.5 shadow-sm ${
+      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-xs font-extrabold px-1.5 shadow-sm ${
         active 
-          ? 'bg-white dark:bg-[#08182A] text-primary dark:text-[#8CBDF0]' 
+          ? 'bg-white dark:bg-[#08182A] text-link dark:text-[#8CBDF0]' 
           : 'bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A]'
       }`}>
         {badge > 9 ? '9+' : badge}
@@ -402,7 +402,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
 
   return (
     <>
-      <div className="min-h-screen bg-[#F4F8FC] dark:bg-[#0E1620] flex overflow-hidden">
+      <div className="min-h-[100dvh] bg-[#F4F8FC] dark:bg-[#0E1620] flex overflow-hidden">
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {isSidebarOpen && (
@@ -445,7 +445,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     transition={{
                       layout: { duration: 0.42, ease: [0.25, 1, 0.5, 1] },
                     }}
-                    className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-primary cursor-pointer active:scale-95 transition-all shrink-0 shadow-sm group hover:text-primary-600"
+                    className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-link cursor-pointer active:scale-95 transition-all shrink-0 shadow-sm group hover:text-primary-600"
                     title="Collapse sidebar (click to toggle)"
                   >
                     <motion.div
@@ -457,17 +457,17 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                         rotate: { duration: isRollupCollapsing || isRollupExpanding ? 0.38 : 0.55, ease: [0.25, 1, 0.5, 1] },
                       }}
                     >
-                      <Heart className="w-5 h-5 text-primary fill-primary group-hover:scale-110 transition-transform duration-200" />
+                      <Heart className="w-5 h-5 text-link fill-primary group-hover:scale-110 transition-transform duration-200" />
                     </motion.div>
                   </motion.button>
                 ) : (
                   <div className="w-11 h-11" />
                 )}
                 <Link to="/" className="flex items-center">
-                  <span className="text-xl font-display font-extrabold text-primary tracking-tight">MuntiCares</span>
+                  <span className="text-xl font-display font-extrabold text-link tracking-tight">MuntiCares</span>
                 </Link>
               </div>
-              <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-slate-400 p-2 neu-btn rounded-xl transition-all">
+              <button onClick={() => setIsSidebarOpen(false)} aria-label="Close navigation menu" className="lg:hidden text-tertiary flex h-11 w-11 items-center justify-center neu-btn rounded-xl transition-all">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -484,7 +484,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               className="flex-1 flex flex-col min-h-0 p-1"
             >
               {/* Nav section label */}
-              <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-widest px-3 mb-2.5">Navigation</p>
+              <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2.5">Navigation</p>
 
               {/* Nav links with padding so shadows never cut off */}
               <nav className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden p-1 pr-1.5 -mr-1">
@@ -524,7 +524,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                   className="group flex items-center gap-3 px-3.5 py-3 neu-flat-sm hover:neu-flat rounded-2xl transition-all cursor-pointer active:scale-95 shadow-sm"
                   title="View Profile"
                 >
-                  <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-primary font-bold text-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-link font-bold text-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
                     {user.avatar_url ? (
                       <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
@@ -532,8 +532,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-sm truncate group-hover:text-primary dark:group-hover:text-[#8CBDF0] transition-colors">{user.name}</p>
-                    <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-primary dark:text-[#8CBDF0] text-3xs font-black rounded-full uppercase tracking-wider mt-0.5">
+                    <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-sm truncate group-hover:text-link dark:group-hover:text-[#8CBDF0] transition-colors">{user.name}</p>
+                    <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-link dark:text-[#8CBDF0] text-2xs font-black rounded-full uppercase tracking-wider mt-0.5">
                       {user.badge}
                     </span>
                   </div>
@@ -560,7 +560,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
         </motion.aside>
 
         {/* Main Content */}
-        <div className={`flex-1 flex flex-col min-w-0 h-screen lg:p-4 ${isDesktopCollapsed ? 'lg:pl-4' : 'lg:pl-4'} transition-all duration-500`}>
+        <div className={`flex-1 flex flex-col min-w-0 min-h-[100dvh] lg:p-4 ${isDesktopCollapsed ? 'lg:pl-4' : 'lg:pl-4'} transition-all duration-500`}>
           {/* Upper Panel Header - Raised Neumorphic Banner flush with body on mobile */}
           <header className="h-[72px] sm:h-[78px] lg:h-[76px] neu-flat rounded-none lg:rounded-[2.25rem] flex items-center justify-between px-4 sm:px-6 lg:px-7 shrink-0 mb-0 lg:mb-4 border-b border-white/50 dark:border-white/5 lg:border-0 transition-all">
             <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
@@ -569,9 +569,9 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 type="button"
                 onClick={() => setIsSidebarOpen(true)}
                 aria-label="Open navigation menu"
-                className="lg:hidden lg:pointer-events-none neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
+                className="lg:hidden lg:pointer-events-none neu-flat-sm w-11 h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-link shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
               >
-                <Heart className="w-4 h-4 text-primary fill-primary" />
+                <Heart className="w-4 h-4 text-link fill-primary" />
               </button>
 
               {/* When collapsed on desktop: The heart badge physically flies here from the sidebar while spinning! */}
@@ -586,7 +586,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                   transition={{
                     layout: { duration: 0.45, ease: [0.25, 1, 0.5, 1] },
                   }}
-                  className="hidden lg:flex neu-btn w-11 h-11 rounded-2xl items-center justify-center text-primary cursor-pointer shrink-0 shadow-md group hover:text-primary-600"
+                  className="hidden lg:flex neu-btn w-11 h-11 rounded-2xl items-center justify-center text-link cursor-pointer shrink-0 shadow-md group hover:text-primary-600"
                   title="Expand sidebar (click to expand)"
                 >
                   <motion.div
@@ -595,16 +595,16 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     whileHover={{ rotate: 360 }}
                     transition={{ duration: 0.55, ease: [0.25, 1, 0.5, 1] }}
                   >
-                    <Heart className="w-5 h-5 text-primary fill-primary group-hover:scale-110 transition-transform duration-200" />
+                    <Heart className="w-5 h-5 text-link fill-primary group-hover:scale-110 transition-transform duration-200" />
                   </motion.div>
                 </motion.button>
               )}
 
               <div className="min-w-0">
-                <h2 className="text-xs sm:text-base md:text-lg font-display font-black text-[#17283B] dark:text-[#E6EEF6] truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
+                <p className="text-xs sm:text-base md:text-lg font-display font-black text-[#17283B] dark:text-[#E6EEF6] truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
                   Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
-                </h2>
-                <p className="text-3xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] font-medium truncate">
+                </p>
+                <p className="text-xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] font-medium truncate">
                   {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
               </div>
@@ -615,7 +615,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               <NotificationBell />
               <Link 
                 to={`/${currentRole}/profile`} 
-                className="neu-btn w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-primary font-black shadow-sm shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden"
+                className="neu-btn w-11 h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-link font-black shadow-sm shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden"
                 title="Profile"
               >
                 {user.avatar_url ? (

@@ -51,28 +51,28 @@ const Navbar = () => {
           className="pointer-events-auto w-full max-w-4xl neu-flat rounded-full px-4 md:px-6 py-2.5 sm:py-3 flex justify-between items-center"
           aria-label="Primary navigation"
         >
-          <Link to="/" className="flex items-center gap-2.5 group shrink-0" aria-label="MuntiCares home">
+          <Link to="/" className="flex items-center gap-2.5 group shrink-0 min-h-11" aria-label="MuntiCares home">
             <motion.div
               className="neu-flat-sm p-2 rounded-2xl"
               whileHover={{ rotate: 12 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >
-              <Heart size={20} weight="fill" className="text-primary fill-primary" />
+              <Heart size={20} weight="fill" className="text-link fill-primary" />
             </motion.div>
-            <span className="font-display text-lg md:text-xl font-black text-primary tracking-tight">MuntiCares</span>
+            <span className="font-display text-lg md:text-xl font-black text-link tracking-tight">MuntiCares</span>
           </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
-            <div className="flex gap-6">
-              <Link to="/" className={`font-bold text-sm transition-all ${isActive('/') ? 'text-primary underline underline-offset-4 decoration-2' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`}>Home</Link>
-              <Link to="/patient/providers" className={`font-bold text-sm transition-all ${isActive('/patient/providers') ? 'text-primary underline underline-offset-4 decoration-2' : 'text-slate-600 dark:text-slate-300 hover:text-primary'}`}>Find Providers</Link>
-              <button type="button" onClick={scrollToFooter} className="cursor-pointer text-slate-600 dark:text-slate-300 hover:text-primary font-bold text-sm transition-all">About</button>
+            <div className="flex gap-3">
+              <Link to="/" className={`inline-flex items-center justify-center min-h-11 min-w-11 px-1 font-bold text-sm transition-all ${isActive('/') ? 'text-link underline underline-offset-4 decoration-2' : 'text-slate-600 dark:text-slate-300 hover:text-link'}`}>Home</Link>
+              <Link to="/patient/providers" className={`inline-flex items-center justify-center min-h-11 min-w-11 px-1 font-bold text-sm transition-all ${isActive('/patient/providers') ? 'text-link underline underline-offset-4 decoration-2' : 'text-slate-600 dark:text-slate-300 hover:text-link'}`}>Find Providers</Link>
+              <button type="button" onClick={scrollToFooter} className="inline-flex items-center justify-center min-h-11 min-w-11 px-1 cursor-pointer text-slate-600 dark:text-slate-300 hover:text-link font-bold text-sm transition-all">About</button>
             </div>
             <div className="flex items-center gap-3">
-              <ThemeToggle className="!w-10 !h-10 !rounded-2xl" />
+              <ThemeToggle className="!w-11 !h-11 !rounded-2xl" />
               {user ? (
-                <Link to={`/${user.role}/dashboard`} className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
+                <Link to={`/${user.role}/dashboard`} className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 min-h-11 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
                   Dashboard
                   <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
                     <ArrowUpRight size={14} weight="bold" className="text-white" />
@@ -80,8 +80,8 @@ const Navbar = () => {
                 </Link>
               ) : (
                 <>
-                  <Link to="/login" className="neu-btn font-bold text-xs sm:text-sm text-primary px-4 py-2 rounded-xl transition-all">Login</Link>
-                  <Link to="/register" className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
+                  <Link to="/login" className="neu-btn inline-flex items-center justify-center min-h-11 font-bold text-xs sm:text-sm text-link px-4 py-2 rounded-xl transition-all">Login</Link>
+                  <Link to="/register" className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 min-h-11 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
                     Get Started
                     <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
                       <ArrowUpRight size={14} weight="bold" className="text-white" />
@@ -94,11 +94,11 @@ const Navbar = () => {
 
           {/* Mobile hamburger button */}
           <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle className="!w-10 !h-10 !rounded-xl" />
+            <ThemeToggle className="!w-11 !h-11 !rounded-xl" />
             <button
               type="button"
               onClick={() => setIsMenuOpen((v) => !v)}
-              className="neu-btn relative w-10 h-10 rounded-xl flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-primary cursor-pointer active:scale-95 transition-all"
+              className="neu-btn relative w-11 h-11 rounded-xl flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-link cursor-pointer active:scale-95 transition-all"
               aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMenuOpen}
             >
@@ -131,7 +131,7 @@ const Navbar = () => {
                       onClick={scrollToFooter}
                       className="neu-btn w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-display text-lg font-bold text-slate-800 dark:text-slate-100 transition-all text-left cursor-pointer"
                     >
-                      <span className="text-primary">{link.icon}</span>
+                      <span className="text-link">{link.icon}</span>
                       {link.label}
                     </button>
                   ) : (
@@ -140,11 +140,11 @@ const Navbar = () => {
                       onClick={() => setIsMenuOpen(false)}
                       className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-display text-lg font-bold transition-all ${
                         isActive(link.to)
-                          ? 'neu-pressed text-primary font-black'
+                          ? 'neu-pressed text-link font-black'
                           : 'neu-btn text-slate-800 dark:text-slate-100'
                       }`}
                     >
-                      <span className="text-primary">{link.icon}</span>
+                      <span className="text-link">{link.icon}</span>
                       {link.label}
                     </Link>
                   )}
@@ -166,7 +166,7 @@ const Navbar = () => {
                     <Link
                       to="/login"
                       onClick={() => setIsMenuOpen(false)}
-                      className="neu-btn flex items-center justify-center gap-2.5 py-3 rounded-2xl font-bold text-sm text-primary transition-all cursor-pointer"
+                      className="neu-btn flex items-center justify-center gap-2.5 py-3 rounded-2xl font-bold text-sm text-link transition-all cursor-pointer"
                     >
                       <SignIn size={18} weight="bold" />
                       Login to Account

@@ -143,7 +143,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -166,9 +166,9 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
               <h2 className="text-lg sm:text-xl font-display font-black text-slate-900 dark:text-white tracking-tight">
                 Rate Your Care Session
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+              <p className="text-xs text-tertiary dark:text-tertiary max-w-sm mx-auto">
                 How was your experience with{' '}
-                <span className="font-extrabold text-primary">
+                <span className="font-extrabold text-link">
                   {request?.providerName || 'your healthcare provider'}
                 </span>
                 ?
@@ -178,8 +178,8 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Single Unified Star Rating */}
               <div className="neu-flat-sm p-4 sm:p-5 rounded-2xl sm:rounded-3xl space-y-2 text-center">
-                <span className="text-3xs sm:text-xs font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                  Select Your Rating <span className="text-rose-500">*</span>
+                <span className="text-2xs sm:text-xs font-extrabold uppercase tracking-widest text-tertiary dark:text-tertiary">
+                  Select Your Rating <span className="text-danger">*</span>
                 </span>
 
                 {/* Star Buttons */}
@@ -195,15 +195,15 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                         onMouseLeave={() => setHovered(0)}
                         className={`w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer ${
                           active
-                            ? 'neu-btn text-amber-500 scale-105'
-                            : 'neu-flat-sm text-slate-300 dark:text-slate-600 hover:text-slate-400'
+                            ? 'neu-btn text-warning scale-105'
+                            : 'neu-flat-sm text-tertiary hover:text-tertiary'
                         }`}
                         aria-label={`${star} star${star > 1 ? 's' : ''}`}
                       >
                         <Star
                           className={`w-6 h-6 transition-all ${
                             active
-                              ? 'fill-amber-400 text-amber-500 drop-shadow-sm'
+                              ? 'fill-amber-400 text-warning drop-shadow-sm'
                               : 'fill-none stroke-[1.8]'
                           }`}
                         />
@@ -214,11 +214,11 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
 
                 <div className="h-6 flex items-center justify-center">
                   {activeRating > 0 ? (
-                    <span className="text-xs font-black text-amber-600 dark:text-amber-400 neu-flat-sm px-3.5 py-1 rounded-full border border-amber-500/20">
+                    <span className="text-xs font-black text-warning dark:text-warning-dark neu-flat-sm px-3.5 py-1 rounded-full border border-amber-500/20">
                       {RATING_LABELS[activeRating]}
                     </span>
                   ) : (
-                    <span className="text-3xs text-slate-400 dark:text-slate-500 font-medium">
+                    <span className="text-xs text-tertiary dark:text-tertiary font-medium">
                       Tap a star to rate
                     </span>
                   )}
@@ -228,11 +228,11 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
               {/* Quick Compliments / Feedback Chips */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between px-1">
-                  <span className="text-3xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-primary" />
+                  <span className="text-2xs font-extrabold uppercase tracking-widest text-tertiary dark:text-tertiary flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-link" />
                     Quick Highlights
                   </span>
-                  <span className="text-3xs text-slate-400">Tap to add</span>
+                  <span className="text-xs text-tertiary">Tap to add</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {QUICK_TAGS.map((tag) => {
@@ -242,10 +242,10 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                         key={tag}
                         type="button"
                         onClick={() => handleTagClick(tag)}
-                        className={`px-2.5 py-1 rounded-xl text-3xs sm:text-xs font-bold transition-all cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-xl text-xs sm:text-xs font-bold transition-all cursor-pointer ${
                           isSelected
                             ? 'neu-btn-primary shadow-sm'
-                            : 'neu-flat-sm text-slate-600 dark:text-slate-300 hover:text-primary'
+                            : 'neu-flat-sm text-slate-600 dark:text-slate-300 hover:text-link'
                         }`}
                       >
                         {tag}
@@ -257,7 +257,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
 
               {/* Patient Written Comment */}
               <div className="space-y-1.5">
-                <label className="text-3xs font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-1">
+                <label className="text-2xs font-extrabold uppercase tracking-widest text-tertiary dark:text-tertiary px-1">
                   Your Feedback (Optional)
                 </label>
                 <div className="neu-inset rounded-2xl p-2.5 focus-within:ring-2 focus-within:ring-primary/40 transition-all">
@@ -285,7 +285,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                   disabled={submitting || rating === 0}
                   className={`px-4 py-3 rounded-2xl text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98] ${
                     rating === 0
-                      ? 'neu-flat-sm text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed'
+                      ? 'neu-flat-sm text-tertiary dark:text-slate-600 opacity-60 cursor-not-allowed'
                       : 'neu-btn-primary shadow-md'
                   }`}
                 >

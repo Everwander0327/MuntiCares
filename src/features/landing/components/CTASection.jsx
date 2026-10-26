@@ -24,7 +24,7 @@ const CTASection = () => (
               Join hundreds of families in Muntinlupa City who trust MuntiCares for their home healthcare needs.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/register" className="group inline-flex items-center justify-center gap-2 bg-white text-primary pl-6 pr-2 py-2.5 rounded-full font-bold text-base transition-all duration-300 hover:bg-blue-50 active:scale-[0.98] shadow-md">
+              <Link to="/register" className="group inline-flex items-center justify-center gap-2 bg-white text-link pl-6 pr-2 py-2.5 rounded-full font-bold text-base transition-all duration-300 hover:bg-blue-50 active:scale-[0.98] shadow-md">
                 Get Started Now
                 <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:scale-105">
                   <ArrowUpRight size={16} weight="bold" />

@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
@@ -7,7 +7,7 @@ import {
   History, Eye, Check, X, Clock, MoreHorizontal, FileText, Activity,
   Search, ShieldAlert, RefreshCw
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
@@ -76,7 +76,7 @@ const ProviderCard = ({
           {/* Tactile Provider Avatar */}
           <Link
             to={`/patient/providers/${providerId}/profile`}
-            className="neu-flat-sm w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-primary font-black text-xs sm:text-sm shrink-0 select-none aspect-square overflow-hidden hover:scale-105 transition-transform"
+            className="neu-flat-sm w-11 h-11 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-link font-black text-xs sm:text-sm shrink-0 select-none aspect-square overflow-hidden hover:scale-105 transition-transform"
           >
             {providerAvatarUrl ? (
               <img src={providerAvatarUrl} alt={providerName} className="w-full h-full object-cover" />
@@ -89,30 +89,30 @@ const ProviderCard = ({
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <Link
                 to={`/patient/providers/${providerId}/profile`}
-                className="font-extrabold text-slate-900 dark:text-white hover:text-primary dark:hover:text-primary-400 transition-colors text-sm sm:text-base md:text-lg truncate"
+                className="font-extrabold text-slate-900 dark:text-white hover:text-link dark:hover:text-primary-400 transition-colors text-sm sm:text-base md:text-lg truncate"
               >
                 {providerName}
               </Link>
-              <span className={`neu-flat-sm px-2.5 py-0.5 rounded-lg text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
+              <span className={`neu-flat-sm px-2.5 py-0.5 rounded-lg text-2xs font-extrabold uppercase tracking-wider shrink-0 ${
                 isEnabled 
-                  ? 'text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15' 
-                  : 'text-rose-600 dark:text-rose-400 border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15'
+                  ? 'text-success dark:text-success-dark border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/15' 
+                  : 'text-danger dark:text-danger-dark border border-rose-500/30 bg-rose-500/10 dark:bg-rose-500/15'
               }`}>
                 {isEnabled ? 'Active' : 'Paused'}
               </span>
             </div>
 
-            <p className="text-slate-600 dark:text-slate-400 text-xs sm:text-sm font-semibold truncate mt-0.5">
+            <p className="text-slate-600 dark:text-tertiary text-xs sm:text-sm font-semibold truncate mt-0.5">
               {service}
             </p>
 
-            <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-2xs sm:text-xs mt-0.5 sm:mt-1">
+            <div className="flex items-center gap-2 text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5 sm:mt-1">
               <span className="flex items-center gap-1 font-medium truncate">
-                <Calendar className="w-3 h-3 text-primary shrink-0" />
+                <Calendar className="w-3 h-3 text-link shrink-0" />
                 <span className="truncate">Last: {lastAccess || 'Never'}</span>
               </span>
-              <span className="text-slate-300 dark:text-slate-600">•</span>
-              <span className="font-medium text-slate-500 dark:text-slate-400 truncate">
+              <span className="text-tertiary">•</span>
+              <span className="font-medium text-tertiary dark:text-tertiary truncate">
                 {isEnabled ? `${activeCount}/3 permissions` : 'Access disabled'}
               </span>
             </div>
@@ -123,17 +123,17 @@ const ProviderCard = ({
         <div className="flex items-center justify-between sm:justify-end gap-2.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/40 dark:border-white/5 shrink-0">
           <button
             type="button"
-            onClick={onOpenPermissions}
-            className="neu-btn px-3.5 py-2 rounded-xl text-2xs sm:text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-700 dark:text-slate-200 hover:text-primary active:scale-[0.98]"
+            onClick={(event) => onOpenPermissions(event.currentTarget)}
+            className="neu-btn px-3.5 py-2 rounded-xl text-xs sm:text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer text-slate-700 dark:text-slate-200 hover:text-link active:scale-[0.98]"
             aria-label="Manage permissions"
           >
-            <MoreHorizontal className="w-3.5 h-3.5 text-primary" />
+            <MoreHorizontal className="w-3.5 h-3.5 text-link" />
             <span>Permissions</span>
           </button>
 
           {/* Tactile Neumorphic Pill Toggle */}
           <div className="flex items-center gap-2">
-            <span className="text-3xs sm:text-2xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 select-none">
+            <span className="text-2xs sm:text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary select-none">
               {isEnabled ? 'ON' : 'OFF'}
             </span>
             <button
@@ -142,7 +142,7 @@ const ProviderCard = ({
               disabled={loading}
               role="switch"
               aria-checked={isEnabled}
-              className={`w-14 h-8 rounded-full p-1 neu-inset relative flex items-center transition-all cursor-pointer select-none ${
+              className={`w-14 h-11 rounded-full p-1 neu-inset relative flex items-center transition-all cursor-pointer select-none ${
                 loading ? 'opacity-50 pointer-events-none' : ''
               }`}
             >
@@ -150,7 +150,7 @@ const ProviderCard = ({
                 className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
                   isEnabled 
                     ? 'neu-btn-primary' 
-                    : 'neu-flat-sm text-slate-400 dark:text-slate-500'
+                    : 'neu-flat-sm text-tertiary dark:text-tertiary'
                 }`}
                 animate={{ x: isEnabled ? 24 : 0 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 30 }}
@@ -175,6 +175,8 @@ const PatientConsent = () => {
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState(null);
   const [selectedPermProvider, setSelectedPermProvider] = useState(null);
+  const permTriggerRef = useRef(null);
+  const auditTriggerRef = useRef(null);
   const [consentHistory, setConsentHistory] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAuditModal, setShowAuditModal] = useState(false);
@@ -337,9 +339,9 @@ const PatientConsent = () => {
 
   const getActionBadge = (action) => {
     switch (action) {
-      case 'Granted': return 'neu-flat-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
-      case 'Revoked': return 'neu-flat-sm bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30';
-      case 'Updated': return 'neu-flat-sm bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30';
+      case 'Granted': return 'neu-flat-sm bg-emerald-500/10 text-success dark:text-success-dark border border-emerald-500/30';
+      case 'Revoked': return 'neu-flat-sm bg-rose-500/10 text-danger dark:text-danger-dark border border-rose-500/30';
+      case 'Updated': return 'neu-flat-sm bg-amber-500/10 text-warning dark:text-warning-dark border border-amber-500/30';
       default: return 'neu-flat-sm bg-slate-200/50 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
     }
   };
@@ -380,14 +382,14 @@ const PatientConsent = () => {
         <section className="neu-flat p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="neu-flat-sm w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black shrink-0 aspect-square">
+              <div className="neu-flat-sm w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-link font-black shrink-0 aspect-square">
                 <ShieldCheck className="w-5 h-5 sm:w-7 sm:h-7" />
               </div>
               <div className="min-w-0">
                 <h1 className="font-display font-extrabold tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white truncate">
                   Consent & Data Privacy
                 </h1>
-                <p className="text-3xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 font-medium truncate sm:whitespace-normal">
+                <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 sm:mt-1 font-medium truncate sm:whitespace-normal">
                   Review and govern medical record permissions granted to your healthcare providers in real time.
                 </p>
               </div>
@@ -396,11 +398,14 @@ const PatientConsent = () => {
             {/* Compact Neumorphic Audit Trail Trigger Button */}
             <button
               type="button"
-              onClick={() => setShowAuditModal(true)}
-              className="neu-btn w-full sm:w-auto px-4 py-2.5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200 hover:text-primary active:scale-[0.98]"
+              onClick={(event) => {
+                auditTriggerRef.current = event.currentTarget;
+                setShowAuditModal(true);
+              }}
+              className="neu-btn w-full sm:w-auto px-4 py-2.5 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200 hover:text-link active:scale-[0.98]"
               title="Open Access & Consent Audit Log"
             >
-              <History className="w-4 h-4 text-primary" />
+              <History className="w-4 h-4 text-link" />
               <span>Audit Trail</span>
             </button>
           </div>
@@ -408,19 +413,20 @@ const PatientConsent = () => {
           {/* Full Search Bar */}
           <div className="relative w-full">
             <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[44px] sm:h-[48px] border border-slate-200/50 dark:border-white/5">
-              <Search className="w-4 h-4 text-primary ml-1.5 sm:ml-2 shrink-0 pointer-events-none" />
+              <Search className="w-4 h-4 text-link ml-1.5 sm:ml-2 shrink-0 pointer-events-none" />
               <input
                 type="text"
+                aria-label="Search providers or services"
                 placeholder="Search providers or services..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+                className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
               />
               {searchQuery && (
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1 shrink-0"
+                  className="p-1 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1 shrink-0"
                   title="Clear search"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -433,8 +439,8 @@ const PatientConsent = () => {
         {/* Authorized Providers List */}
         <div className="space-y-3 sm:space-y-4">
           {loading ? (
-            <div className="neu-flat p-8 sm:p-10 rounded-2xl sm:rounded-[2rem] text-center text-slate-400 dark:text-slate-500 flex flex-col items-center justify-center gap-2">
-              <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-primary" />
+            <div className="neu-flat p-8 sm:p-10 rounded-2xl sm:rounded-[2rem] text-center text-tertiary dark:text-tertiary flex flex-col items-center justify-center gap-2">
+              <RefreshCw className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-link" />
               <p className="text-xs sm:text-sm font-bold">Loading consent records...</p>
             </div>
           ) : filteredConsents.length > 0 ? (
@@ -452,19 +458,22 @@ const PatientConsent = () => {
                   loading={togglingId === c.id}
                   onToggle={() => handleToggle(c.id, c.isEnabled, c.providerName, c.providerId)}
                   onPermChange={(key) => handlePermChange(c.providerId, c.providerName, key)}
-                  onOpenPermissions={() => setSelectedPermProvider(c)}
+                  onOpenPermissions={(triggerEl) => {
+                    permTriggerRef.current = triggerEl;
+                    setSelectedPermProvider(c);
+                  }}
                 />
               ))}
             </div>
           ) : (
             <div className="neu-flat p-6 sm:p-12 rounded-2xl sm:rounded-[2.25rem] text-center">
-              <div className="neu-flat-sm w-12 h-12 sm:w-16 sm:h-16 rounded-2xl mx-auto flex items-center justify-center text-slate-400 dark:text-slate-500 mb-2.5 sm:mb-3">
+              <div className="neu-flat-sm w-12 h-12 sm:w-16 sm:h-16 rounded-2xl mx-auto flex items-center justify-center text-tertiary dark:text-tertiary mb-2.5 sm:mb-3">
                 <ShieldAlert className="w-6 h-6 sm:w-8 sm:h-8 opacity-60" />
               </div>
               <h3 className="font-extrabold text-sm sm:text-lg text-slate-800 dark:text-white">
                 {searchQuery ? 'No matching providers found' : 'No Authorized Providers'}
               </h3>
-              <p className="text-2xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mt-1">
+              <p className="text-sm text-tertiary dark:text-tertiary max-w-md mx-auto mt-1">
                 {searchQuery 
                   ? `We couldn't find any provider matching "${searchQuery}". Clear your search to view all.`
                   : 'When you book a consultation or request care, the provider will appear here with granular permission controls.'}
@@ -473,7 +482,7 @@ const PatientConsent = () => {
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="mt-3.5 neu-btn px-4 py-2 rounded-xl text-xs font-bold text-primary cursor-pointer active:scale-[0.98]"
+                  className="mt-3.5 neu-btn px-4 py-2 rounded-xl text-xs font-bold text-link cursor-pointer active:scale-[0.98]"
                 >
                   Clear Search
                 </button>
@@ -483,21 +492,32 @@ const PatientConsent = () => {
         </div>
 
         {/* Modal: Granular Permissions Sheet (Zero page resizing!) */}
-        {typeof document !== 'undefined' && createPortal(
-          <AnimatePresence>
-            {selectedPermProvider && (
+        <DialogPrimitive.Root
+          open={!!selectedPermProvider}
+          onOpenChange={(open) => { if (!open) setSelectedPermProvider(null); }}
+        >
+          {selectedPermProvider && (
+          <DialogPrimitive.Portal>
+            <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/70 md:backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+            <DialogPrimitive.Content
+              asChild
+              aria-modal="true"
+              onCloseAutoFocus={(event) => {
+                if (!permTriggerRef.current) return;
+                event.preventDefault();
+                permTriggerRef.current.focus();
+              }}
+            >
               <motion.div
-                className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 md:backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
                 transition={{ duration: 0.16 }}
                 onClick={() => setSelectedPermProvider(null)}
               >
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 30 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                   onClick={(e) => e.stopPropagation()}
                   className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-lg rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 space-y-4 shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
@@ -505,30 +525,31 @@ const PatientConsent = () => {
                   {/* Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                      <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-link shrink-0">
                         <MoreHorizontal className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
-                          {selectedPermProvider.providerName}
-                        </h3>
-                        <p className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                        <DialogPrimitive.Title asChild>
+                          <h3 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
+                            {selectedPermProvider.providerName}
+                          </h3>
+                        </DialogPrimitive.Title>
+                        <p className="text-sm text-tertiary dark:text-tertiary truncate">
                           Configure data sharing categories
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedPermProvider(null)}
-                      className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95"
+                    <DialogPrimitive.Close
+                      aria-label="Close"
+                      className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-tertiary hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95"
                     >
                       <X className="w-4 h-4 stroke-[2.5]" />
-                    </button>
+                    </DialogPrimitive.Close>
                   </div>
 
                   {/* Status notice */}
                   {!selectedPermProvider.isEnabled && (
-                    <div className="neu-inset p-3 rounded-xl flex items-center gap-2 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+                    <div className="neu-inset p-3 rounded-xl flex items-center gap-2 text-warning dark:text-warning-dark text-xs font-semibold">
                       <ShieldAlert className="w-4 h-4 shrink-0" />
                       <span>Master toggle is OFF. Turn ON master access to enable sharing.</span>
                     </div>
@@ -555,7 +576,7 @@ const PatientConsent = () => {
                             <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
                               isChecked && isEnabled 
                                 ? 'neu-btn-primary text-white' 
-                                : 'neu-flat-sm text-slate-500 dark:text-slate-400'
+                                : 'neu-flat-sm text-tertiary dark:text-tertiary'
                             }`}>
                               <Icon className="w-4 h-4" />
                             </div>
@@ -563,7 +584,7 @@ const PatientConsent = () => {
                               <span className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 block truncate">
                                 {label}
                               </span>
-                              <span className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 block truncate font-medium">
+                              <span className="text-sm text-tertiary dark:text-tertiary block truncate font-medium">
                                 {desc}
                               </span>
                             </div>
@@ -591,27 +612,38 @@ const PatientConsent = () => {
                   </button>
                 </motion.div>
               </motion.div>
-            )}
-          </AnimatePresence>,
-          document.body
-        )}
+            </DialogPrimitive.Content>
+          </DialogPrimitive.Portal>
+          )}
+        </DialogPrimitive.Root>
 
         {/* Modal: Audit Trail - Lightweight 60fps Sheet with zero jitter */}
-        {typeof document !== 'undefined' && createPortal(
-          <AnimatePresence>
-            {showAuditModal && (
+        <DialogPrimitive.Root
+          open={showAuditModal}
+          onOpenChange={(open) => { if (!open) setShowAuditModal(false); }}
+        >
+          {showAuditModal && (
+          <DialogPrimitive.Portal>
+            <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/70 md:backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+            <DialogPrimitive.Content
+              asChild
+              aria-modal="true"
+              onCloseAutoFocus={(event) => {
+                if (!auditTriggerRef.current) return;
+                event.preventDefault();
+                auditTriggerRef.current.focus();
+              }}
+            >
               <motion.div 
-                className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 md:backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
                 transition={{ duration: 0.16 }}
                 onClick={() => setShowAuditModal(false)}
               >
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 30 }}
                   transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                   onClick={(e) => e.stopPropagation()}
                   className="neu-flat bg-[#ebf1f8] dark:bg-[#172236] w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-4 sm:p-6 md:p-7 space-y-3.5 h-[80vh] sm:h-[560px] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-white/60 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
@@ -619,26 +651,27 @@ const PatientConsent = () => {
                   {/* Modal Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-white/5 shrink-0">
                     <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                      <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                      <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-link shrink-0">
                         <History className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="font-extrabold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
-                          Audit Trail
-                        </h3>
-                        <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+                        <DialogPrimitive.Title asChild>
+                          <h3 className="font-extrabold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
+                            Audit Trail
+                          </h3>
+                        </DialogPrimitive.Title>
+                        <p className="text-sm text-tertiary dark:text-tertiary truncate">
                           Inspection records and permission history
                         </p>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setShowAuditModal(false)}
-                      className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95 shrink-0"
+                    <DialogPrimitive.Close
+                      aria-label="Close"
+                      className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-tertiary hover:text-slate-800 dark:hover:text-white cursor-pointer active:scale-95 shrink-0"
                     >
                       <X className="w-4 h-4 stroke-[2.5]" />
-                    </button>
+                    </DialogPrimitive.Close>
                   </div>
 
                   {/* Subtabs inside Modal */}
@@ -646,10 +679,10 @@ const PatientConsent = () => {
                     <button
                       type="button"
                       onClick={() => setAuditTab('history')}
-                      className={`flex-1 py-2 rounded-lg text-2xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      className={`flex-1 py-2 rounded-lg text-xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         auditTab === 'history'
                           ? 'neu-btn-primary shadow-sm'
-                          : 'text-slate-500 dark:text-slate-400'
+                          : 'text-tertiary dark:text-tertiary'
                       }`}
                     >
                       <History className="w-3.5 h-3.5 shrink-0" />
@@ -658,10 +691,10 @@ const PatientConsent = () => {
                     <button
                       type="button"
                       onClick={() => setAuditTab('access')}
-                      className={`flex-1 py-2 rounded-lg text-2xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                      className={`flex-1 py-2 rounded-lg text-xs sm:text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         auditTab === 'access'
                           ? 'neu-btn-primary shadow-sm'
-                          : 'text-slate-500 dark:text-slate-400'
+                          : 'text-tertiary dark:text-tertiary'
                       }`}
                     >
                       <Eye className="w-3.5 h-3.5 shrink-0" />
@@ -673,10 +706,10 @@ const PatientConsent = () => {
                   <div className="flex-1 overflow-y-auto space-y-2 pr-1 overscroll-contain no-scrollbar">
                     {auditTab === 'history' ? (
                       consentHistory.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
+                        <div className="h-full flex flex-col items-center justify-center text-center py-10 text-tertiary dark:text-tertiary">
                           <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
                           <p className="text-xs sm:text-sm font-bold">No permission changes logged yet</p>
-                          <p className="text-3xs text-slate-400 mt-0.5">Toggle a provider&apos;s access to see audit entries here.</p>
+                          <p className="text-xs text-tertiary mt-0.5">Toggle a provider&apos;s access to see audit entries here.</p>
                         </div>
                       ) : (
                         consentHistory.map((entry, idx) => (
@@ -686,8 +719,8 @@ const PatientConsent = () => {
                                 entry.action === 'Granted'
                                   ? 'neu-btn-primary text-white'
                                   : entry.action === 'Revoked'
-                                  ? 'neu-flat-sm text-rose-500'
-                                  : 'neu-flat-sm text-amber-500'
+                                  ? 'neu-flat-sm text-danger'
+                                  : 'neu-flat-sm text-warning'
                               }`}>
                                 {entry.action === 'Granted' ? <Check className="w-3 h-3 stroke-[3]" /> : entry.action === 'Revoked' ? <X className="w-3 h-3 stroke-[3]" /> : <Clock className="w-3 h-3" />}
                               </div>
@@ -696,16 +729,16 @@ const PatientConsent = () => {
                                   <span className="font-bold text-slate-900 dark:text-white text-xs truncate">
                                     {entry.providerName}
                                   </span>
-                                  <span className={`px-1.5 py-0.5 rounded text-3xs font-extrabold uppercase ${getActionBadge(entry.action)}`}>
+                                  <span className={`px-1.5 py-0.5 rounded text-2xs font-extrabold uppercase ${getActionBadge(entry.action)}`}>
                                     {entry.action}
                                   </span>
                                 </div>
-                                <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 truncate">
                                   {entry.details}
                                 </p>
                               </div>
                             </div>
-                            <span className="text-3xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
+                            <span className="text-xs font-semibold text-tertiary dark:text-tertiary shrink-0">
                               {formatTimestamp(entry.timestamp)}
                             </span>
                           </div>
@@ -713,23 +746,23 @@ const PatientConsent = () => {
                       )
                     ) : (
                       accessLogs.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center py-10 text-slate-400 dark:text-slate-500">
+                        <div className="h-full flex flex-col items-center justify-center text-center py-10 text-tertiary dark:text-tertiary">
                           <Eye className="w-8 h-8 mx-auto mb-2 opacity-40" />
                           <p className="text-xs sm:text-sm font-bold">No recorded provider file views</p>
-                          <p className="text-3xs text-slate-400 mt-0.5">When doctors view your medical profile, logs will appear here.</p>
+                          <p className="text-xs text-tertiary mt-0.5">When doctors view your medical profile, logs will appear here.</p>
                         </div>
                       ) : (
                         accessLogs.map((c) => (
                           <div key={c.id} className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-2.5">
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              <div className="neu-flat-sm w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-primary shrink-0">
+                              <div className="neu-flat-sm w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-link shrink-0">
                                 <Eye className="w-3 h-3" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <h5 className="font-bold text-slate-900 dark:text-white text-xs truncate">
                                   {c.providerName}
                                 </h5>
-                                <p className="text-3xs sm:text-2xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                <p className="text-sm text-tertiary dark:text-tertiary truncate mt-0.5">
                                   Inspected: {Object.entries(PERMISSION_LABELS)
                                     .filter(([k]) => c.permissions?.[k])
                                     .map(([, v]) => v)
@@ -737,7 +770,7 @@ const PatientConsent = () => {
                                 </p>
                               </div>
                             </div>
-                            <span className="text-3xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
+                            <span className="text-xs font-semibold text-tertiary dark:text-tertiary shrink-0">
                               {new Date(c.lastAccessRaw).toLocaleDateString('en-US', {
                                 month: 'short', 
                                 day: 'numeric', 
@@ -752,7 +785,7 @@ const PatientConsent = () => {
                   </div>
 
                   {/* Modal Footer */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-white/5 text-3xs text-slate-400 shrink-0">
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-white/5 text-xs text-tertiary shrink-0">
                     <span className="truncate">Stored locally</span>
                     {consentHistory.length > 0 && auditTab === 'history' && (
                       <button
@@ -762,7 +795,7 @@ const PatientConsent = () => {
                           setConsentHistory([]);
                           toast.success('Audit history cleared');
                         }}
-                        className="text-rose-500 hover:underline font-bold cursor-pointer shrink-0"
+                        className="text-danger hover:underline font-bold cursor-pointer shrink-0"
                       >
                         Clear log
                       </button>
@@ -770,10 +803,10 @@ const PatientConsent = () => {
                   </div>
                 </motion.div>
               </motion.div>
-            )}
-          </AnimatePresence>,
-          document.body
-        )}
+            </DialogPrimitive.Content>
+          </DialogPrimitive.Portal>
+          )}
+        </DialogPrimitive.Root>
 
       </div>
     </DashboardLayout>

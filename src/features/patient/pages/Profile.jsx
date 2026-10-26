@@ -628,7 +628,7 @@ const PatientProfile = () => {
           <h1 className="font-display font-black tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
             Patient Profile
           </h1>
-          <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5 font-medium">
+          <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 font-medium">
             Manage your personal information, medical history, and consultation records.
           </p>
         </div>
@@ -642,12 +642,12 @@ const PatientProfile = () => {
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-amber-500 shrink-0">
+                <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-warning shrink-0">
                   <Activity className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-amber-800 dark:text-amber-300 font-extrabold text-sm sm:text-base">Complete Your Profile</h3>
-                  <p className="text-amber-700/80 dark:text-amber-200/70 text-3xs sm:text-xs mt-0.5">Your address is required so providers know where to deliver home care services.</p>
+                  <h3 className="text-amber-800 dark:text-warning-dark font-extrabold text-sm sm:text-base">Complete Your Profile</h3>
+                  <p className="text-warning dark:text-warning-dark text-xs sm:text-xs mt-0.5">Your address is required so providers know where to deliver home care services.</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
@@ -659,7 +659,7 @@ const PatientProfile = () => {
                     transition={{ duration: 0.8, delay: 0.2 }}
                   />
                 </div>
-                <span className="text-amber-700 dark:text-amber-300 font-black text-xs sm:text-sm">{completionPercent}%</span>
+                <span className="text-warning dark:text-warning-dark font-black text-xs sm:text-sm">{completionPercent}%</span>
               </div>
             </div>
           </motion.div>
@@ -692,31 +692,31 @@ const PatientProfile = () => {
 
               <div className="px-5 sm:px-6 pt-3 pb-6 sm:pb-7 text-center">
                 <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 truncate">{profile.full_name}</h2>
-                <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold mt-0.5 truncate">{profile.email}</p>
+                <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5 truncate">{profile.email}</p>
                 
                 <div className="flex items-center justify-center gap-2 mt-3">
-                  <span className="neu-flat-sm px-3 py-1 text-primary font-black text-3xs uppercase tracking-widest rounded-full">
+                  <span className="neu-flat-sm px-3 py-1 text-link font-black text-2xs uppercase tracking-widest rounded-full">
                     Patient
                   </span>
                   {profile.is_profile_complete && (
-                    <span className="neu-flat-sm px-3 py-1 text-emerald-600 dark:text-emerald-400 font-black text-3xs uppercase tracking-widest rounded-full flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-500" /> Complete
+                    <span className="neu-flat-sm px-3 py-1 text-success dark:text-success-dark font-black text-2xs uppercase tracking-widest rounded-full flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-success" /> Complete
                     </span>
                   )}
                 </div>
 
                 {/* Quick Info - Unified Single Card */}
                 <div className="mt-5 neu-inset p-3.5 sm:p-4 rounded-2xl text-left space-y-2.5">
-                  <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                    <span className="text-3xs uppercase font-extrabold text-slate-400">Email</span>
+                  <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200">
+                    <span className="text-2xs uppercase font-extrabold text-tertiary">Email</span>
                     <span className="truncate font-semibold max-w-[65%] text-right">{profile.email}</span>
                   </div>
 
                   {profile.phone && (
                     <>
                       <div className="border-t border-slate-200/50 dark:border-white/5" />
-                      <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                        <span className="text-3xs uppercase font-extrabold text-slate-400">Phone</span>
+                      <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200">
+                        <span className="text-2xs uppercase font-extrabold text-tertiary">Phone</span>
                         <span className="font-semibold">{profile.phone}</span>
                       </div>
                     </>
@@ -725,29 +725,29 @@ const PatientProfile = () => {
                   {profile.address && (
                     <>
                       <div className="border-t border-slate-200/50 dark:border-white/5" />
-                      <div className="flex items-start justify-between gap-3 text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                        <span className="text-3xs uppercase font-extrabold text-slate-400 shrink-0 pt-0.5">Address</span>
+                      <div className="flex items-start justify-between gap-3 text-sm text-slate-700 dark:text-slate-200">
+                        <span className="text-2xs uppercase font-extrabold text-tertiary shrink-0 pt-0.5">Address</span>
                         <span className="font-semibold text-right leading-relaxed max-w-[70%] break-words">{profile.address}</span>
                       </div>
                     </>
                   )}
 
                   <div className="border-t border-slate-200/50 dark:border-white/5" />
-                  <div className="flex items-center justify-between text-xs sm:text-[13px] text-slate-700 dark:text-slate-200">
-                    <span className="text-3xs uppercase font-extrabold text-slate-400">Member Since</span>
+                  <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200">
+                    <span className="text-2xs uppercase font-extrabold text-tertiary">Member Since</span>
                     <span className="font-semibold">{profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}</span>
                   </div>
                 </div>
 
                 {/* Data Export Section */}
                 <div className="mt-6 pt-5 border-t border-slate-200/60 dark:border-white/5">
-                  <p className="text-3xs font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center mb-3">Health Data Export</p>
+                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-widest text-center mb-3">Health Data Export</p>
                   <div className="neu-inset p-2 rounded-2xl space-y-2">
                     <motion.button
                       whileTap={{ scale: 0.96 }}
                       onClick={generatePDF}
                       disabled={generatingPdf}
-                      className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-primary transition-all text-xs cursor-pointer disabled:opacity-50"
+                      className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-link transition-all text-xs cursor-pointer disabled:opacity-50"
                     >
                       {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                       <span>{generatingPdf ? 'Generating...' : 'Medical Summary (PDF)'}</span>
@@ -756,7 +756,7 @@ const PatientProfile = () => {
                       whileTap={{ scale: 0.96 }}
                       onClick={handleFhirExport}
                       disabled={fhirLoading}
-                      className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-emerald-600 dark:text-emerald-400 transition-all text-xs cursor-pointer disabled:opacity-50"
+                      className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-success dark:text-success-dark transition-all text-xs cursor-pointer disabled:opacity-50"
                     >
                       {fhirLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />}
                       <span>{fhirLoading ? 'Exporting...' : 'FHIR Record (JSON)'}</span>
@@ -769,7 +769,7 @@ const PatientProfile = () => {
                   <motion.button
                     whileTap={{ scale: 0.96 }}
                     onClick={handleLogout}
-                    className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-rose-500 dark:text-rose-400 hover:text-rose-600 transition-all text-xs cursor-pointer active:scale-95"
+                    className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-danger dark:text-danger-dark hover:text-danger transition-all text-xs cursor-pointer active:scale-95"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Sign Out</span>
@@ -798,13 +798,13 @@ const PatientProfile = () => {
                   <Tabs.Trigger
                     key={tab.value}
                     value={tab.value}
-                    className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-3 py-2 sm:py-2.5 rounded-xl text-3xs xs:text-2xs sm:text-xs md:text-sm font-bold transition-all truncate cursor-pointer select-none ${
+                    className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs xs:text-sm font-bold transition-all truncate cursor-pointer select-none ${
                       activeTab === tab.value
-                        ? 'neu-flat text-primary font-black shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                        ? 'neu-flat text-link font-black shadow-sm'
+                        : 'text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
-                    <tab.icon className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 ${activeTab === tab.value ? 'text-primary' : 'text-slate-400'}`} />
+                    <tab.icon className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 ${activeTab === tab.value ? 'text-link' : 'text-tertiary'}`} />
                     <span className="truncate">{tab.label}</span>
                   </Tabs.Trigger>
                 ))}
@@ -815,15 +815,16 @@ const PatientProfile = () => {
                 <form onSubmit={handleSave} className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
                   <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Personal Information</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Your contact details and medical notes.</p>
+                    <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Your contact details and medical notes.</p>
                   </div>
 
                   <div className="p-5 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
+                        <label htmlFor="profile-phone" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
                         <input 
-                          type="tel" name="phone" required
+                          id="profile-phone"
+                          type="tel" name="phone" required autoComplete="tel"
                           value={profile.phone}
                           onChange={e => setProfile({...profile, phone: e.target.value})}
                           placeholder="e.g., 09123456789"
@@ -832,8 +833,9 @@ const PatientProfile = () => {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
+                        <label htmlFor="profile-emergency-contact" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
                         <input 
+                          id="profile-emergency-contact"
                           type="text" name="emergency_contact" required
                           value={profile.emergency_contact}
                           onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
@@ -854,8 +856,8 @@ const PatientProfile = () => {
                       </div>
 
                       <div className="space-y-1.5 md:col-span-2">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">General Medical Notes</label>
-                        <textarea name="medical_notes" value={profile.medical_notes}
+                        <label htmlFor="profile-medical-notes" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">General Medical Notes</label>
+                        <textarea id="profile-medical-notes" name="medical_notes" value={profile.medical_notes}
                           onChange={e => setProfile({...profile, medical_notes: e.target.value})}
                           placeholder="Special needs, mobility notes, or care instructions..." rows={3}
                           className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
@@ -866,7 +868,7 @@ const PatientProfile = () => {
                     <div className="pt-4 border-t border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row justify-end items-center gap-2.5">
                       <motion.button whileTap={{ scale: 0.96 }} type="button"
                         onClick={() => setProfile({...profile, medical_notes: ''})}
-                        className="neu-btn px-5 py-2.5 text-slate-500 dark:text-slate-400 font-bold rounded-xl text-xs cursor-pointer w-full sm:w-auto"
+                        className="neu-btn px-5 py-2.5 text-tertiary dark:text-tertiary font-bold rounded-xl text-xs cursor-pointer w-full sm:w-auto"
                       >
                         Clear Notes
                       </motion.button>
@@ -886,7 +888,7 @@ const PatientProfile = () => {
                 <form onSubmit={handleSave} className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
                   <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Medical History</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Your allergies, chronic conditions, and past surgeries.</p>
+                    <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Your allergies, chronic conditions, and past surgeries.</p>
                   </div>
 
                   <div className="p-5 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
@@ -894,7 +896,7 @@ const PatientProfile = () => {
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Known Allergies</label>
-                        <span className="text-3xs font-extrabold text-rose-500 uppercase">Critical</span>
+                        <span className="text-2xs font-extrabold text-danger uppercase">Critical</span>
                       </div>
                       <textarea name="allergies" value={profile.allergies}
                         onChange={e => setProfile({...profile, allergies: e.target.value})}
@@ -905,7 +907,7 @@ const PatientProfile = () => {
                         {['No known allergies', 'Penicillin', 'Sulfa', 'Iodine', 'Latex', 'Peanuts'].filter(s => !(profile.allergies || '').toLowerCase().includes(s.toLowerCase())).map(s => (
                           <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
                             onClick={() => setProfile({...profile, allergies: ((profile.allergies || '').trim() ? `${profile.allergies.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="neu-btn px-2.5 py-1 text-rose-600 dark:text-rose-400 rounded-lg text-3xs font-bold cursor-pointer"
+                            className="neu-btn px-2.5 py-1 text-danger dark:text-danger-dark rounded-lg text-xs font-bold cursor-pointer"
                           >+ {s}</motion.button>
                         ))}
                       </div>
@@ -923,7 +925,7 @@ const PatientProfile = () => {
                         {['Diabetes', 'High Blood Pressure', 'Asthma', 'Heart Disease', 'Arthritis', 'None'].filter(s => !(profile.chronic_conditions || '').toLowerCase().includes(s.toLowerCase())).map(s => (
                           <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
                             onClick={() => setProfile({...profile, chronic_conditions: ((profile.chronic_conditions || '').trim() ? `${profile.chronic_conditions.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="neu-btn px-2.5 py-1 text-primary rounded-lg text-3xs font-bold cursor-pointer"
+                            className="neu-btn px-2.5 py-1 text-link rounded-lg text-xs font-bold cursor-pointer"
                           >+ {s}</motion.button>
                         ))}
                       </div>
@@ -941,7 +943,7 @@ const PatientProfile = () => {
                         {['Appendectomy', 'C-Section', 'Gallbladder Removal', 'Knee Surgery', 'Tonsillectomy', 'None'].filter(s => !(profile.past_surgeries || '').toLowerCase().includes(s.toLowerCase())).map(s => (
                           <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
                             onClick={() => setProfile({...profile, past_surgeries: ((profile.past_surgeries || '').trim() ? `${profile.past_surgeries.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="neu-btn px-2.5 py-1 text-indigo-600 dark:text-indigo-400 rounded-lg text-3xs font-bold cursor-pointer"
+                            className="neu-btn px-2.5 py-1 text-link dark:text-primary-400 rounded-lg text-xs font-bold cursor-pointer"
                           >+ {s}</motion.button>
                         ))}
                       </div>
@@ -965,13 +967,13 @@ const PatientProfile = () => {
                   <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Medical Documents</h3>
-                      <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Upload lab results, prescriptions, or imaging (Max 3MB)</p>
+                      <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Upload lab results, prescriptions, or imaging (Max 3MB)</p>
                     </div>
                     <div>
                       <input type="file" id="doc-upload" className="hidden" accept="image/jpeg, image/png, application/pdf"
                         onChange={handleFileUpload} disabled={uploading} />
                       <label htmlFor="doc-upload"
-                        className={`neu-btn px-4 py-2 text-primary font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all active:scale-95 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`neu-btn px-4 py-2 text-link font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all active:scale-95 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         <span>{uploading ? 'Uploading...' : 'Upload File'}</span>
@@ -981,9 +983,9 @@ const PatientProfile = () => {
 
                   {uploading && (
                     <div className="px-5 sm:px-7 py-3 neu-inset mx-5 sm:mx-7 my-4 rounded-xl">
-                      <div className="flex justify-between text-3xs text-slate-500 dark:text-slate-400 font-bold mb-1">
+                      <div className="flex justify-between text-xs text-tertiary dark:text-tertiary font-bold mb-1">
                         <span>Uploading document...</span>
-                        <span className="text-primary animate-pulse">Processing</span>
+                        <span className="text-link animate-pulse">Processing</span>
                       </div>
                       <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
                         <motion.div className="h-full bg-primary rounded-full"
@@ -1000,7 +1002,7 @@ const PatientProfile = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                         {documents.map((doc) => (
                           <div key={doc.id} className="neu-flat-sm p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center gap-3 select-text">
-                            <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                            <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-link shrink-0">
                               <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                             </div>
                             <div className="flex-1 min-w-0 pr-2">
@@ -1011,15 +1013,15 @@ const PatientProfile = () => {
                                   if (url) window.open(url, '_blank');
                                   else toast.error('Could not open document.');
                                 }}
-                                className="font-bold text-slate-800 dark:text-slate-100 hover:text-primary text-xs sm:text-sm truncate block text-left w-full cursor-pointer transition-colors"
+                                className="font-bold text-slate-800 dark:text-slate-100 hover:text-link text-xs sm:text-sm truncate block text-left w-full cursor-pointer transition-colors"
                                 title="Open Document"
                               >
                                 {doc.document_title}
                               </button>
-                              <p className="text-3xs text-slate-400 dark:text-slate-500 mt-0.5">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                              <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                             </div>
                             <motion.button whileTap={{ scale: 0.9 }} type="button"
-                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary transition-colors shrink-0 cursor-pointer"
+                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-tertiary hover:text-link transition-colors shrink-0 cursor-pointer"
                               title="Open Document"
                               onClick={async () => {
                                 const url = await getSignedUrl(doc.file_path, 3600);
@@ -1030,7 +1032,7 @@ const PatientProfile = () => {
                               <ExternalLink className="w-4 h-4" />
                             </motion.button>
                             <motion.button whileTap={{ scale: 0.9 }} type="button"
-                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors shrink-0 cursor-pointer"
+                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-tertiary hover:text-danger dark:hover:text-rose-400 transition-colors shrink-0 cursor-pointer"
                               title="Delete Document"
                               onClick={async () => {
                                 if(window.confirm('Delete this document?')) {
@@ -1062,17 +1064,17 @@ const PatientProfile = () => {
                 <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
                   <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Consultation & Visit History</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-3xs sm:text-xs mt-0.5">Past medical visits, vital signs, and provider clinical notes.</p>
+                    <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Past medical visits, vital signs, and provider clinical notes.</p>
                   </div>
 
                   <div className="p-5 sm:p-6 md:p-7">
                     {visitNotes.length === 0 ? (
                       <div className="text-center py-8">
-                        <div className="neu-flat-sm w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 text-slate-400">
+                        <div className="neu-flat-sm w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 text-tertiary">
                           <Activity className="w-6 h-6" />
                         </div>
                         <p className="text-slate-600 dark:text-slate-300 font-bold text-sm">No past visits recorded.</p>
-                        <p className="text-slate-400 text-3xs mt-1">Consultation summaries will appear here after provider appointments.</p>
+                        <p className="text-tertiary text-xs mt-1">Consultation summaries will appear here after provider appointments.</p>
                       </div>
                     ) : (
                       <div className="space-y-4 sm:space-y-5">
@@ -1081,13 +1083,13 @@ const PatientProfile = () => {
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 dark:border-white/5 pb-3">
                               <div>
                                 <p className="font-black text-slate-900 dark:text-slate-100 text-sm sm:text-base">Dr. {note.provider?.full_name || 'Healthcare Provider'}</p>
-                                <div className="flex items-center gap-1.5 text-3xs sm:text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                  <Calendar className="w-3.5 h-3.5 text-primary" />
+                                <div className="flex items-center gap-1.5 text-sm text-tertiary dark:text-tertiary mt-0.5">
+                                  <Calendar className="w-3.5 h-3.5 text-link" />
                                   <span>{new Date(note.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
                                 </div>
                               </div>
                               {note.services_rendered && (
-                                <span className="neu-flat-sm px-3 py-1 text-primary font-black text-3xs uppercase tracking-widest rounded-full self-start sm:self-auto">
+                                <span className="neu-flat-sm px-3 py-1 text-link font-black text-2xs uppercase tracking-widest rounded-full self-start sm:self-auto">
                                   {note.services_rendered}
                                 </span>
                               )}
@@ -1097,25 +1099,25 @@ const PatientProfile = () => {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                               {note.vitals_bp && (
                                 <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl text-center">
-                                  <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-wider">Blood Pressure</p>
+                                  <p className="text-2xs font-extrabold text-tertiary uppercase tracking-wider">Blood Pressure</p>
                                   <p className="font-black text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_bp}</p>
                                 </div>
                               )}
                               {note.vitals_temp && (
                                 <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl text-center">
-                                  <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-wider">Temperature</p>
+                                  <p className="text-2xs font-extrabold text-tertiary uppercase tracking-wider">Temperature</p>
                                   <p className="font-black text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_temp}°C</p>
                                 </div>
                               )}
                               {note.vitals_hr && (
                                 <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl text-center">
-                                  <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-wider">Heart Rate</p>
+                                  <p className="text-2xs font-extrabold text-tertiary uppercase tracking-wider">Heart Rate</p>
                                   <p className="font-black text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_hr} bpm</p>
                                 </div>
                               )}
                               {note.vitals_spo2 && (
                                 <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl text-center">
-                                  <p className="text-3xs font-extrabold text-slate-400 uppercase tracking-wider">Oxygen (SpO2)</p>
+                                  <p className="text-2xs font-extrabold text-tertiary uppercase tracking-wider">Oxygen (SpO2)</p>
                                   <p className="font-black text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_spo2}%</p>
                                 </div>
                               )}
@@ -1123,7 +1125,7 @@ const PatientProfile = () => {
 
                             {note.notes && (
                               <div className="neu-inset p-3 sm:p-4 rounded-xl">
-                                <p className="text-3xs font-black text-slate-400 uppercase tracking-wider mb-1">Clinical Notes</p>
+                                <p className="text-2xs font-black text-tertiary uppercase tracking-wider mb-1">Clinical Notes</p>
                                 <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">{note.notes}</p>
                               </div>
                             )}
@@ -1131,7 +1133,7 @@ const PatientProfile = () => {
                             {note.attachment_url && (
                               <motion.button whileTap={{ scale: 0.96 }} type="button"
                                 onClick={async () => { const url = await getSignedUrl(note.attachment_url, 3600); if (url) window.open(url, '_blank'); }}
-                                className="neu-btn px-3 py-1.5 rounded-lg inline-flex items-center gap-2 text-xs text-primary font-bold transition-all cursor-pointer"
+                                className="neu-btn px-3 py-1.5 rounded-lg inline-flex items-center gap-2 text-xs text-link font-bold transition-all cursor-pointer"
                               >
                                 <FileText className="w-3.5 h-3.5" />
                                 <span>View Attachment</span>

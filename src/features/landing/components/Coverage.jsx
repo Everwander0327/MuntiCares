@@ -36,7 +36,7 @@ const MarqueeRow = ({ items, reverse = false, label }) => (
                 </>
               ) : (
                 <>
-                  <span className="text-primary">{item.icon}</span>
+                  <span className="text-link">{item.icon}</span>
                   {item.label}
                 </>
               )}
@@ -80,10 +80,10 @@ const Coverage = () => (
           <MarqueeRow items={partners} reverse label="Care promises" />
         </motion.div>
         <motion.p
-          className="text-center text-slate-500 dark:text-slate-400 text-base pt-6"
+          className="text-center text-tertiary dark:text-tertiary text-base pt-6"
           variants={staggerItem}
         >
-          <span className="font-display font-semibold text-primary text-2xl">{barangays.length}</span> barangays covered and expanding
+          <span className="font-display font-semibold text-link text-2xl">{barangays.length}</span> barangays covered and expanding
         </motion.p>
       </motion.div>
     </div>

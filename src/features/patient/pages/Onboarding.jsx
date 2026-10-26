@@ -293,7 +293,7 @@ export default function Onboarding({ isPreview = false }) {
   if (loading) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-[var(--bg-main)]">
-        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+        <Loader2 className="w-6 h-6 text-link animate-spin" />
       </div>
     );
   }
@@ -333,9 +333,9 @@ export default function Onboarding({ isPreview = false }) {
               ) : (
                 <Link
                   to="/"
-                  className="inline-flex items-center gap-2 font-display text-base font-black text-primary tracking-tight"
+                  className="inline-flex items-center gap-2 font-display text-base font-black text-link tracking-tight"
                 >
-                  <Heart size={18} weight="fill" className="text-primary" />
+                  <Heart size={18} weight="fill" className="text-link" />
                   <span>MuntiCares</span>
                 </Link>
               )}
@@ -347,12 +347,12 @@ export default function Onboarding({ isPreview = false }) {
                   type="button"
                   onClick={() => handleFinish(true)}
                   disabled={saving}
-                  className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer"
+                  className="text-xs font-semibold text-tertiary hover:text-slate-900 dark:text-tertiary dark:hover:text-white transition-colors cursor-pointer"
                 >
                   Skip
                 </button>
               )}
-              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 tabular-nums">
+              <span className="text-xs font-medium text-tertiary dark:text-tertiary tabular-nums">
                 0{step} / 0{TOTAL_STEPS}
               </span>
             </div>
@@ -384,13 +384,13 @@ export default function Onboarding({ isPreview = false }) {
                 className="space-y-6"
               >
                 <div className="space-y-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-link">
                     Step 01
                   </p>
                   <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                     How can providers reach you?
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
                     Used by your assigned healthcare provider for visit coordination and emergencies.
                   </p>
                 </div>
@@ -417,10 +417,10 @@ export default function Onboarding({ isPreview = false }) {
                         clearError('phone');
                       }}
                       placeholder="0917 123 4567"
-                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all"
                     />
                     {errors.phone && (
-                      <p id="onboard-phone-error" className="text-xs font-medium text-red-600 dark:text-red-400">
+                      <p id="onboard-phone-error" className="text-xs font-medium text-danger dark:text-danger-dark">
                         {errors.phone}
                       </p>
                     )}
@@ -446,12 +446,12 @@ export default function Onboarding({ isPreview = false }) {
                         clearError('emergencyContactName');
                       }}
                       placeholder="Full name of family member or guardian"
-                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all"
                     />
                     {errors.emergencyContactName && (
                       <p
                         id="onboard-emergency-name-error"
-                        className="text-xs font-medium text-red-600 dark:text-red-400"
+                        className="text-xs font-medium text-danger dark:text-danger-dark"
                       >
                         {errors.emergencyContactName}
                       </p>
@@ -481,12 +481,12 @@ export default function Onboarding({ isPreview = false }) {
                         clearError('emergencyContactPhone');
                       }}
                       placeholder="0918 765 4321"
-                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all"
                     />
                     {errors.emergencyContactPhone && (
                       <p
                         id="onboard-emergency-phone-error"
-                        className="text-xs font-medium text-red-600 dark:text-red-400"
+                        className="text-xs font-medium text-danger dark:text-danger-dark"
                       >
                         {errors.emergencyContactPhone}
                       </p>
@@ -508,13 +508,13 @@ export default function Onboarding({ isPreview = false }) {
                 className="space-y-4"
               >
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-link">
                     Step 02
                   </p>
                   <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                     Pin your home location
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
                     Search your street or drag the map to place the pin right at your entrance.
                   </p>
                 </div>
@@ -533,13 +533,13 @@ export default function Onboarding({ isPreview = false }) {
                   />
 
                   <div className="flex items-start gap-2.5 pt-1 text-xs text-slate-600 dark:text-slate-300">
-                    <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <MapPin className="w-4 h-4 text-link shrink-0 mt-0.5" />
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">
                         {baseAddress || 'Move the map to select your street'}
                       </p>
                       {coords && (
-                        <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">
+                        <p className="text-xs text-tertiary mt-0.5 tabular-nums">
                           {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
                         </p>
                       )}
@@ -547,7 +547,7 @@ export default function Onboarding({ isPreview = false }) {
                   </div>
 
                   {errors.coords && (
-                    <p id="onboard-location-error" className="text-xs font-medium text-red-600 dark:text-red-400">
+                    <p id="onboard-location-error" className="text-xs font-medium text-danger dark:text-danger-dark">
                       {errors.coords}
                     </p>
                   )}
@@ -567,13 +567,13 @@ export default function Onboarding({ isPreview = false }) {
                 className="space-y-6"
               >
                 <div className="space-y-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-link">
                     Step 03
                   </p>
                   <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                     Add address details
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
                     Saved permanently to your profile so future home visits automatically go here.
                   </p>
                 </div>
@@ -581,7 +581,7 @@ export default function Onboarding({ isPreview = false }) {
                 <div className="space-y-4 pt-1">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-200/70 dark:border-white/10">
                     <div className="min-w-0 pr-3">
-                      <p className="text-2xs uppercase tracking-wider font-semibold text-slate-400">
+                      <p className="text-2xs uppercase tracking-wider font-semibold text-tertiary">
                         Pinned Location
                       </p>
                       <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate mt-0.5">
@@ -591,7 +591,7 @@ export default function Onboarding({ isPreview = false }) {
                     <button
                       type="button"
                       onClick={() => goToStep(2)}
-                      className="text-xs font-semibold text-primary hover:underline shrink-0 cursor-pointer"
+                      className="text-xs font-semibold text-link hover:underline shrink-0 cursor-pointer"
                     >
                       Adjust pin
                     </button>
@@ -616,10 +616,10 @@ export default function Onboarding({ isPreview = false }) {
                         clearError('street');
                       }}
                       placeholder="e.g. Sampaguita St., Brgy. Tunasan, Muntinlupa City"
-                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all"
                     />
                     {errors.street && (
-                      <p id="onboard-street-error" className="text-xs font-medium text-red-600 dark:text-red-400">
+                      <p id="onboard-street-error" className="text-xs font-medium text-danger dark:text-danger-dark">
                         {errors.street}
                       </p>
                     )}
@@ -639,7 +639,7 @@ export default function Onboarding({ isPreview = false }) {
                         value={unitFloor}
                         onChange={(e) => setUnitFloor(e.target.value)}
                         placeholder="e.g. Block 14 Lot 8"
-                        className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                        className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all"
                       />
                     </div>
 
@@ -656,7 +656,7 @@ export default function Onboarding({ isPreview = false }) {
                         value={subdivisionGate}
                         onChange={(e) => setSubdivisionGate(e.target.value)}
                         placeholder="e.g. Victoria Homes"
-                        className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                        className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -674,7 +674,7 @@ export default function Onboarding({ isPreview = false }) {
                       value={arrivalInstructions}
                       onChange={(e) => setArrivalInstructions(e.target.value)}
                       placeholder="e.g. White gate near the chapel, ring doorbell on the right"
-                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none resize-none transition-all"
+                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none resize-none transition-all"
                     />
                   </div>
                 </div>
@@ -693,13 +693,13 @@ export default function Onboarding({ isPreview = false }) {
                 className="space-y-6"
               >
                 <div className="space-y-1.5">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-primary">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-link">
                     Step 04 · Optional
                   </p>
                   <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
                     Any medical notes to share?
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
                     Help your care provider prepare before arriving. You can also update this anytime in your profile.
                   </p>
                 </div>
@@ -735,7 +735,7 @@ export default function Onboarding({ isPreview = false }) {
                       value={allergies}
                       onChange={(e) => setAllergies(e.target.value)}
                       placeholder="e.g. Penicillin, Aspirin, or leave blank"
-                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all"
                     />
                   </div>
 
@@ -752,7 +752,7 @@ export default function Onboarding({ isPreview = false }) {
                       value={medicalHistory}
                       onChange={(e) => setMedicalHistory(e.target.value)}
                       placeholder="e.g. Post-stroke recovery, needs wheelchair assistance"
-                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none resize-none transition-all"
+                      className="w-full neu-inset neu-input rounded-xl px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none resize-none transition-all"
                     />
                   </div>
                 </div>
@@ -791,7 +791,7 @@ export default function Onboarding({ isPreview = false }) {
                 type="button"
                 onClick={() => handleFinish(true)}
                 disabled={saving}
-                className="w-full py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                className="w-full py-2 text-xs font-semibold text-tertiary hover:text-slate-800 dark:text-tertiary dark:hover:text-slate-200 transition-colors cursor-pointer"
               >
                 Skip medical notes for now
               </button>
@@ -822,9 +822,9 @@ export default function Onboarding({ isPreview = false }) {
         {/* Top Brand Wordmark */}
         <div className="relative z-10 flex items-center gap-2.5">
           <div className="neu-flat-sm p-2 rounded-xl">
-            <Heart size={20} weight="fill" className="text-primary fill-primary" />
+            <Heart size={20} weight="fill" className="text-link fill-primary" />
           </div>
-          <span className="font-display text-xl font-black text-primary tracking-tight">
+          <span className="font-display text-xl font-black text-link tracking-tight">
             MuntiCares
           </span>
         </div>
@@ -846,7 +846,7 @@ export default function Onboarding({ isPreview = false }) {
         </div>
 
         {/* Bottom Subtle Caption */}
-        <div className="relative z-10 text-xs font-medium text-slate-500 dark:text-slate-400">
+        <div className="relative z-10 text-xs font-medium text-tertiary dark:text-tertiary">
           <span>Muntinlupa City Home Care Network</span>
         </div>
       </aside>

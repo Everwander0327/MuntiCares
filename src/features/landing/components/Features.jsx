@@ -7,21 +7,21 @@ const FLUID = [0.32, 0.72, 0, 1];
 
 const features = [
   {
-    icon: <CalendarBlank size={22} weight="light" className="text-primary" />,
+    icon: <CalendarBlank size={22} weight="light" className="text-link" />,
     title: 'Easy Booking',
     description: 'Book a professional provider in minutes with our streamlined scheduling system.',
     span: 'md:col-span-7',
     image: IMAGES.landing.featureBooking,
   },
   {
-    icon: <ShieldCheck size={22} weight="light" className="text-primary" />,
+    icon: <ShieldCheck size={22} weight="light" className="text-link" />,
     title: 'Verified Providers',
     description: 'All providers undergo rigorous background checks and credential verification.',
     span: 'md:col-span-5',
     image: IMAGES.landing.featureVerified,
   },
   {
-    icon: <LockKey size={22} weight="light" className="text-primary" />,
+    icon: <LockKey size={22} weight="light" className="text-link" />,
     title: 'Secure Health Data',
     description: 'You have full control over your information. We prioritize your privacy and security with granular consent and encrypted records.',
     span: 'md:col-span-12',
@@ -52,7 +52,7 @@ const FeatureCard = ({ feature }) => (
       )}
       <div className="p-6 md:p-8 flex-1 flex flex-col justify-between">
         <div>
-          <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-primary group-hover:scale-105 transition-transform duration-300">
+          <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mb-4 text-link group-hover:scale-105 transition-transform duration-300">
             <div className="card-icon-animate">
               {feature.icon}
             </div>

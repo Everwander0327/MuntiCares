@@ -27,11 +27,13 @@ const SheetContent = React.forwardRef(({ className, children, side = "bottom", .
     <SheetOverlay />
     <DialogPrimitive.Content
       ref={ref}
+      aria-modal="true"
       className={cn(
         "fixed z-50 gap-4 bg-white dark:bg-slate-800 shadow-xl transition-transform duration-250 ease-out will-change-transform transform-gpu",
         "data-[state=open]:animate-in data-[state=closed]:animate-out duration-200",
-        side === "top" && "inset-x-0 top-0 data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
-        side === "bottom" && "inset-x-0 bottom-0 rounded-t-[2rem] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+        "overflow-y-auto overscroll-contain",
+        side === "top" && "inset-x-0 top-0 max-h-[90dvh] data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
+        side === "bottom" && "inset-x-0 bottom-0 max-h-[90dvh] rounded-t-[2rem] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         side === "left" && "inset-y-0 left-0 h-full w-3/4 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
         side === "right" && "inset-y-0 right-0 h-full w-3/4 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
         className
@@ -39,8 +41,11 @@ const SheetContent = React.forwardRef(({ className, children, side = "bottom", .
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-6 top-6 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-all duration-700 ease-fluid outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0">
-        <X size={20} weight="light" className="text-slate-400 dark:text-slate-500" />
+      <DialogPrimitive.Close
+        aria-label="Close"
+        className="absolute right-4 top-4 w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+      >
+        <X size={20} weight="light" className="text-tertiary dark:text-tertiary" />
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </SheetPortal>
@@ -69,7 +74,7 @@ SheetTitle.displayName = DialogPrimitive.Title.displayName
 const SheetDescription = React.forwardRef(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-slate-500 dark:text-slate-400", className)}
+    className={cn("text-sm text-tertiary dark:text-tertiary", className)}
     {...props}
   />
 ))

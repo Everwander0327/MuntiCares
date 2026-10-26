@@ -147,12 +147,12 @@ const NeumorphicToast = ({ t }) => {
           }
           className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center shrink-0 z-20 ${
             isSuccess
-              ? 'text-emerald-500'
+              ? 'text-success'
               : isError
-              ? 'text-rose-500'
+              ? 'text-danger'
               : isLoading
-              ? 'text-primary'
-              : 'text-primary'
+              ? 'text-link'
+              : 'text-link'
           }`}
         >
           {isSuccess ? (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, ArrowRight, Pause, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import usePatientRequests from '@/hooks/usePatientRequests';
@@ -77,6 +77,17 @@ const PatientDashboard = () => {
   const dragStartXRef = useRef(0);
   const dragScrollLeftRef = useRef(0);
   const isInteractingRef = useRef(false);
+  const [carouselPaused, setCarouselPaused] = useState(false);
+  const [carouselHeld, setCarouselHeld] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduceMotion(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
 
   const scrollToSlide = (index) => {
     if (carouselTrackRef.current) {
@@ -128,8 +139,9 @@ const PatientDashboard = () => {
     }
   };
 
-  // Auto-advance carousel every 6 seconds when not interacting
+  // Auto-advance carousel every 6 seconds when not interacting (WCAG 2.2.2)
   useEffect(() => {
+    if (carouselPaused || carouselHeld || reduceMotion) return undefined;
     const timer = setInterval(() => {
       if (carouselTrackRef.current && !isInteractingRef.current && !isDraggingRef.current) {
         const nextSlide = (currentSlide + 1) % muntiHighlights.length;
@@ -137,7 +149,7 @@ const PatientDashboard = () => {
       }
     }, 6000);
     return () => clearInterval(timer);
-  }, [currentSlide]);
+  }, [currentSlide, carouselPaused, carouselHeld, reduceMotion]);
 
   // Use shared hook for requests + realtime
   const { requests: fetchedRequests, loading: requestsLoading, refetch } = usePatientRequests(user?.id || null);
@@ -346,7 +358,7 @@ const PatientDashboard = () => {
             animate={{ rotate: pullDistance >= 60 ? 180 : 0 }}
             className="w-9 h-9 neu-flat rounded-full flex items-center justify-center"
           >
-            <RefreshCw className={`w-4 h-4 text-primary ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-link ${refreshing ? 'animate-spin' : ''}`} />
           </motion.div>
         </div>
       )}
@@ -359,9 +371,18 @@ const PatientDashboard = () => {
         style={pullDistance > 0 ? { transform: `translateY(${pullDistance}px)`, transition: 'transform 0.1s ease-out' } : { transition: 'transform 0.3s ease-out' }}
       >
         {/* Top Section: Community Highlights Carousel (Left) and Quick Actions Card (Right) */}
+        <h1 className="sr-only">Dashboard</h1>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
           {/* Highlights Hero Card (lg:col-span-7) - Image completely covers the entire card */}
-          <section className="lg:col-span-7 neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden relative flex flex-col justify-between min-h-[380px] sm:min-h-[440px] lg:min-h-[480px]">
+          <section
+            className="lg:col-span-7 neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden relative flex flex-col justify-between min-h-[380px] sm:min-h-[440px] lg:min-h-[480px]"
+            onMouseEnter={() => setCarouselHeld(true)}
+            onMouseLeave={() => setCarouselHeld(false)}
+            onFocusCapture={() => setCarouselHeld(true)}
+            onBlurCapture={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setCarouselHeld(false);
+            }}
+          >
             {/* Full-Bleed Carousel Track - Image occupies 100% of the entire card */}
             <div className="absolute inset-0 z-0">
               <div
@@ -401,7 +422,7 @@ const PatientDashboard = () => {
                         <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
-                        <p className="text-2xs sm:text-xs md:text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
+                        <p className="text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
                           {slide.description}
                         </p>
                       </div>
@@ -414,7 +435,7 @@ const PatientDashboard = () => {
             {/* Overlaid Bottom Controls: Glassmorphic Dots + Compact Action Buttons */}
             <div className="relative z-10 p-4 sm:p-6 space-y-3 mt-auto">
               {/* Dots indicator inside the image */}
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center gap-2">
                 <div className="flex items-center gap-1.5 py-1">
                   {muntiHighlights.map((_, idx) => (
                     <button
@@ -433,20 +454,32 @@ const PatientDashboard = () => {
                     />
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCarouselPaused((paused) => !paused);
+                  }}
+                  aria-label={carouselPaused ? 'Play highlights slideshow' : 'Pause highlights slideshow'}
+                  aria-pressed={carouselPaused}
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] -my-3 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-sm text-white transition-colors"
+                >
+                  {carouselPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+                </button>
               </div>
 
               {/* Action Buttons: Soft Coral #C4623F (CTA / Find) + Soft Sky Blue #2F6FB5 (Requests) */}
               <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
                 <Link
                   to="/patient/providers"
-                  className="bg-[#C4623F] hover:bg-[#AA5233] dark:bg-[#F2A98E] dark:hover:bg-[#F6BEA9] text-white dark:text-[#2B1409] shadow-md border border-white/20 w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer"
+                  className="bg-[#A9502F] hover:bg-[#8F4327] dark:bg-[#F2A98E] dark:hover:bg-[#F6BEA9] text-white dark:text-[#2B1409] shadow-md border border-white/20 w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer"
                 >
                   <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                   <span className="truncate">Find Provider</span>
                 </Link>
                 <Link
                   to="/patient/requests"
-                  className="bg-[#2F6FB5]/90 hover:bg-[#255A94] dark:bg-[#8CBDF0] dark:hover:bg-[#AFD2F6] backdrop-blur-md border border-white/20 text-white dark:text-[#08182A] shadow-md w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer"
+                  className="bg-[#2F6FB5] hover:bg-[#255A94] dark:bg-[#8CBDF0] dark:hover:bg-[#AFD2F6] backdrop-blur-md border border-white/20 text-white dark:text-[#08182A] shadow-md w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer"
                 >
                   <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#DDEBF8] dark:text-[#08182A] shrink-0" />
                   <span className="truncate">View Requests</span>
@@ -466,7 +499,7 @@ const PatientDashboard = () => {
                   </h4>
                   <Link
                     to="/patient/requests"
-                    className="text-3xs font-bold text-primary hover:text-primary-600 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-0.5"
+                    className="text-xs font-bold text-link hover:text-primary-600 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-0.5"
                   >
                     View all &rarr;
                   </Link>
@@ -496,14 +529,14 @@ const PatientDashboard = () => {
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-3xs font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                      <p className="text-2xs font-extrabold uppercase tracking-wider text-success dark:text-emerald-300">
                         {activeVisit.status}
                       </p>
                       <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">
                         {activeVisit.provider} &bull; {activeVisit.service}
                       </p>
                     </div>
-                    <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-emerald-700 underline underline-offset-4 dark:text-emerald-300">
+                    <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-success underline underline-offset-4 dark:text-emerald-300">
                       {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track live' : (activeVisit.time || 'Today')}
                       <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                     </span>
@@ -512,13 +545,13 @@ const PatientDashboard = () => {
                   <div className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-[#E9F1F9]/60 dark:bg-[#183049]/40 border border-[#D2E0EE]/60 dark:border-white/5 text-[#52657A]">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#A5B6C8] shrink-0" />
-                      <p className="text-3xs sm:text-xs font-semibold text-[#52657A] dark:text-[#A5B6C8] truncate">
+                      <p className="text-sm font-semibold text-[#52657A] dark:text-[#A5B6C8] truncate">
                         No active or upcoming visits scheduled today
                       </p>
                     </div>
                     <Link
                       to="/patient/providers"
-                      className="text-3xs font-bold text-primary hover:underline shrink-0"
+                      className="text-xs font-bold text-link hover:underline shrink-0"
                     >
                       Book a visit
                     </Link>
@@ -531,7 +564,7 @@ const PatientDashboard = () => {
                     <p className="text-xl sm:text-2xl font-display font-black text-[#2F6FB5] dark:text-[#8CBDF0] leading-none">
                       {stats.active}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-[#2F6FB5]/90 dark:text-[#8CBDF0]/90 uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-primary-700 dark:text-link uppercase tracking-wider mt-1.5">
                       Active
                     </p>
                   </div>
@@ -541,7 +574,7 @@ const PatientDashboard = () => {
                     <p className="text-xl sm:text-2xl font-display font-black text-[#2C7A55] dark:text-[#7DD3A3] leading-none">
                       {stats.accepted}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-[#2C7A55]/90 dark:text-[#7DD3A3]/90 uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-success dark:text-success-dark uppercase tracking-wider mt-1.5">
                       Accepted
                     </p>
                   </div>
@@ -551,7 +584,7 @@ const PatientDashboard = () => {
                     <p className="text-xl sm:text-2xl font-display font-black text-[#9C5A06] dark:text-[#F1BD6B] leading-none">
                       {stats.pending}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-[#9C5A06]/90 dark:text-[#F1BD6B]/90 uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-warning dark:text-warning-dark uppercase tracking-wider mt-1.5">
                       Pending
                     </p>
                   </div>
@@ -569,12 +602,12 @@ const PatientDashboard = () => {
                   to="/patient/providers"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#C4623F] dark:hover:border-[#F2A98E]"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#FCEBE4] dark:bg-[#3B2219] text-[#C4623F] dark:text-[#F2A98E] border border-[#F8D4C7] dark:border-[#5C3325] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#C4623F] group-hover:text-white dark:group-hover:bg-[#F2A98E] dark:group-hover:text-[#2B1409] transition-all shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-[#FCEBE4] dark:bg-[#3B2219] text-[#C4623F] dark:text-[#F2A98E] border border-[#F8D4C7] dark:border-[#5C3325] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#C4623F] group-hover:text-white dark:group-hover:bg-[#F2A98E] dark:group-hover:text-[#2B1409] transition-all shadow-sm">
                     <Search className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#C4623F] dark:group-hover:text-[#F2A98E] transition-colors">Find a Provider</span>
-                    <span className="block text-[11px] text-[#52657A] dark:text-[#A5B6C8] truncate">Browse verified caregivers</span>
+                    <span className="block text-xs text-[#52657A] dark:text-[#A5B6C8] truncate">Browse verified caregivers</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-[#52657A] group-hover:text-[#C4623F] dark:group-hover:text-[#F2A98E] group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
@@ -583,12 +616,12 @@ const PatientDashboard = () => {
                   to="/patient/requests"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#2F6FB5] dark:hover:border-[#8CBDF0]"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#DDEBF8] dark:bg-[#183049] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#C5DCF2] dark:border-[#24466B] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-xs">
+                  <div className="w-9 h-9 rounded-xl bg-[#DDEBF8] dark:bg-[#183049] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#C5DCF2] dark:border-[#24466B] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-sm">
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] transition-colors">View Requests</span>
-                    <span className="block text-[11px] text-[#52657A] dark:text-[#A5B6C8] truncate">Track appointments status</span>
+                    <span className="block text-xs text-[#52657A] dark:text-[#A5B6C8] truncate">Track appointments status</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-[#52657A] group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
@@ -597,10 +630,10 @@ const PatientDashboard = () => {
                   to="/patient/messages"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#2F6FB5] dark:hover:border-[#8CBDF0]"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#E9F1F9] dark:bg-[#1F2D3E] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#D2E0EE] dark:border-[#2D3F54] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-xs relative">
+                  <div className="w-9 h-9 rounded-xl bg-[#E9F1F9] dark:bg-[#1F2D3E] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#D2E0EE] dark:border-[#2D3F54] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-sm relative">
                     <MessageCircle className="w-4 h-4" />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#BC3030] text-white rounded-full text-3xs font-extrabold flex items-center justify-center shadow-xs">
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#BC3030] text-white rounded-full text-xs font-extrabold flex items-center justify-center shadow-sm">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -609,7 +642,7 @@ const PatientDashboard = () => {
                     <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] transition-colors">
                       Messages {unreadCount > 0 && `(${unreadCount})`}
                     </span>
-                    <span className="block text-[11px] text-[#52657A] dark:text-[#A5B6C8] truncate">Direct chat with providers</span>
+                    <span className="block text-xs text-[#52657A] dark:text-[#A5B6C8] truncate">Direct chat with providers</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-[#52657A] group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
@@ -660,7 +693,7 @@ const PatientDashboard = () => {
                       <Link
                         to={activeVisit.providerId ? `/patient/providers/${activeVisit.providerId}/profile` : '#'}
                         title="View Provider Profile"
-                        className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black text-sm overflow-hidden shrink-0 hover:scale-105 transition-transform"
+                        className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-link font-black text-sm overflow-hidden shrink-0 hover:scale-105 transition-transform"
                       >
                         {activeVisit.providerAvatarUrl ? (
                           <img src={activeVisit.providerAvatarUrl} alt={activeVisit.provider} className="w-full h-full object-cover" />
@@ -675,7 +708,7 @@ const PatientDashboard = () => {
                         </div>
                         <Link
                           to={activeVisit.providerId ? `/patient/providers/${activeVisit.providerId}/profile` : '#'}
-                          className="text-lg sm:text-xl font-display font-extrabold text-[#17283B] dark:text-[#E6EEF6] hover:text-primary dark:hover:text-[#8CBDF0] transition-colors truncate block"
+                          className="text-lg sm:text-xl font-display font-extrabold text-[#17283B] dark:text-[#E6EEF6] hover:text-link dark:hover:text-[#8CBDF0] transition-colors truncate block"
                         >
                           {activeVisit.provider}
                         </Link>
@@ -693,7 +726,7 @@ const PatientDashboard = () => {
                             providerAvatarUrl: activeVisit.providerAvatarUrl,
                             service: activeVisit.service,
                           })}
-                          className="neu-btn min-h-[44px] px-3.5 py-2.5 rounded-2xl text-xs font-bold text-primary dark:text-[#8CBDF0] transition-all flex items-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
+                          className="neu-btn min-h-[44px] px-3.5 py-2.5 rounded-2xl text-xs font-bold text-link dark:text-[#8CBDF0] transition-all flex items-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
                           title="Open Live GPS Tracker"
                         >
                           <span className="relative flex h-2 w-2">
@@ -706,13 +739,13 @@ const PatientDashboard = () => {
                       )}
                       <Link 
                         to={`/patient/messages?provider=${activeVisit.providerId}`}
-                        className="neu-btn w-11 h-11 rounded-2xl text-primary transition-all flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0.5"
+                        className="neu-btn w-11 h-11 rounded-2xl text-link transition-all flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0.5"
                         title="Chat with Provider"
                         aria-label={`Chat with ${activeVisit.provider}`}
                       >
                         <MessageSquare className="w-4 h-4" />
                       </Link>
-                      <span className="neu-flat-sm text-xs font-bold text-primary px-4 py-2 rounded-2xl">
+                      <span className="neu-flat-sm text-xs font-bold text-link px-4 py-2 rounded-2xl">
                         {activeVisit.service}
                       </span>
                     </div>
@@ -721,12 +754,12 @@ const PatientDashboard = () => {
                   {/* Visit Time and Date Neumorphic Raised Chips */}
                   <div className="flex flex-wrap items-center gap-2.5 text-xs text-[#52657A] dark:text-[#A5B6C8]">
                     <div className="neu-flat-sm px-3.5 py-1.5 rounded-xl flex items-center gap-2 font-semibold">
-                      <Calendar className="w-3.5 h-3.5 text-primary" />
+                      <Calendar className="w-3.5 h-3.5 text-link" />
                       <span>{activeVisit.date}</span>
                     </div>
                     {activeVisit.time && (
                       <div className="neu-flat-sm px-3.5 py-1.5 rounded-xl flex items-center gap-2 font-semibold">
-                        <Clock className="w-3.5 h-3.5 text-primary" />
+                        <Clock className="w-3.5 h-3.5 text-link" />
                         <span>{activeVisit.time}</span>
                       </div>
                     )}
@@ -760,7 +793,7 @@ const PatientDashboard = () => {
                     <div className="flex items-center justify-between px-1">
                       {STEP_LABELS.map((label, i) => (
                         <span key={label} className={`text-nano font-extrabold uppercase tracking-wider text-center transition-colors ${
-                          i <= currentStep ? 'text-primary dark:text-[#8CBDF0] font-bold' : 'text-[#52657A]/60 dark:text-[#A5B6C8]/60'
+                          i <= currentStep ? 'text-link dark:text-[#8CBDF0] font-bold' : 'text-[#52657A]/60 dark:text-[#A5B6C8]/60'
                         }`}>
                           {label}
                         </span>
@@ -787,13 +820,13 @@ const PatientDashboard = () => {
               <h2 className="font-display font-extrabold text-base sm:text-lg text-[#17283B] dark:text-[#E6EEF6]">
                 Recent Requests
               </h2>
-              <p className="text-3xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] mt-0.5">
+              <p className="text-xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] mt-0.5">
                 Showing {Math.min(requests.length, 5)} of {requests.length} records
               </p>
             </div>
             <Link
               to="/patient/requests"
-              className="neu-btn px-3 py-1.5 rounded-xl text-3xs sm:text-xs font-bold text-primary inline-flex items-center gap-1 active:scale-95"
+              className="neu-btn px-3 py-1.5 rounded-xl text-xs sm:text-xs font-bold text-link inline-flex items-center gap-1 active:scale-95"
             >
               View All <ArrowRight className="w-3 h-3" />
             </Link>
@@ -808,7 +841,7 @@ const PatientDashboard = () => {
                   className="neu-flat-sm p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2.5 select-text hover:border-primary/30 transition-all group"
                 >
                   <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                    <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden flex items-center justify-center text-primary text-2xs sm:text-xs font-black shrink-0 p-0.5">
+                    <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden flex items-center justify-center text-link text-xs sm:text-xs font-black shrink-0 p-0.5">
                       {req.providerAvatarUrl ? (
                         <img src={req.providerAvatarUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                       ) : (
@@ -816,17 +849,17 @@ const PatientDashboard = () => {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-xs sm:text-sm text-[#17283B] dark:text-[#E6EEF6] group-hover:text-primary transition-colors truncate">
+                      <p className="font-bold text-xs sm:text-sm text-[#17283B] dark:text-[#E6EEF6] group-hover:text-link transition-colors truncate">
                         {req.provider}
                       </p>
-                      <p className="text-3xs sm:text-2xs text-[#52657A] dark:text-[#A5B6C8] truncate mt-0.5">
+                      <p className="text-xs sm:text-xs text-[#52657A] dark:text-[#A5B6C8] truncate mt-0.5">
                         {req.service} &bull; {req.date} {req.time ? `(${req.time})` : ''}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className={`neu-flat-sm text-3xs font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                    <span className={`neu-flat-sm text-2xs font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
                       ['Accepted', 'On The Way', 'Arrived', 'Completed'].includes(req.status)
                         ? 'text-[#2C7A55] dark:text-[#7DD3A3] border border-[#2C7A55]/30 dark:border-[#7DD3A3]/30 bg-[#E1F3EA] dark:bg-[#14301F]'
                         : req.status === 'Pending'
@@ -843,7 +876,7 @@ const PatientDashboard = () => {
             </div>
           ) : (
             <div className="neu-flat-sm p-8 rounded-2xl text-center">
-              <div className="neu-flat w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 text-primary">
+              <div className="neu-flat w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 text-link">
                 <FileText className="w-5 h-5" />
               </div>
               <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-sm">No Requests Yet</p>

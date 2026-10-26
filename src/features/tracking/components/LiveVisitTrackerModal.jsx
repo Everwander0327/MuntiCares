@@ -777,12 +777,12 @@ function DestinationRow({ address, canEdit, hasDestination, onChange }) {
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <p className="mc-kicker text-3xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <p className="mc-kicker text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary">
             Delivering care to
           </p>
         </div>
         {canEdit && (
-          <button type="button" onClick={onChange} className="mc-link text-2xs font-extrabold shrink-0">
+          <button type="button" onClick={onChange} className="mc-link text-xs font-extrabold shrink-0">
             {hasDestination ? 'Adjust' : 'Set location'}
           </button>
         )}
@@ -790,15 +790,15 @@ function DestinationRow({ address, canEdit, hasDestination, onChange }) {
 
       <div className="flex items-start gap-2.5">
         <span className="mc-avatar shrink-0 mt-0.5" aria-hidden="true">
-          <MapPin className="w-4 h-4 text-primary" />
+          <MapPin className="w-4 h-4 text-link" />
         </span>
         <div className="min-w-0 flex-1">
           <p className="mc-title text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
             {displayTitle}
           </p>
           {gateNotes && (
-            <p className="mt-1 text-3xs font-medium text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-200/50 dark:border-white/5">
-              <strong className="font-extrabold text-primary dark:text-[#8CBDF0]">Gate / Arrival:</strong> {gateNotes}
+            <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-200/50 dark:border-white/5">
+              <strong className="font-extrabold text-link dark:text-[#8CBDF0]">Gate / Arrival:</strong> {gateNotes}
             </p>
           )}
         </div>

@@ -92,7 +92,7 @@ const RequestCard = ({
                 title="View Provider Profile"
                 className="relative shrink-0 group"
               >
-                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black text-sm sm:text-base overflow-hidden aspect-square ring-2 ring-transparent group-hover:ring-primary/40 transition-all">
+                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-link font-black text-sm sm:text-base overflow-hidden aspect-square ring-2 ring-transparent group-hover:ring-primary/40 transition-all">
                   {providerAvatarUrl ? (
                     <img src={providerAvatarUrl} alt={provider} className="w-full h-full object-cover" />
                   ) : (
@@ -102,7 +102,7 @@ const RequestCard = ({
               </Link>
             ) : (
               <div className="relative shrink-0">
-                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-primary font-black text-sm sm:text-base overflow-hidden aspect-square">
+                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-link font-black text-sm sm:text-base overflow-hidden aspect-square">
                   {providerAvatarUrl ? (
                     <img src={providerAvatarUrl} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -115,7 +115,7 @@ const RequestCard = ({
               {providerId ? (
                 <Link
                   to={`/patient/providers/${providerId}/profile`}
-                  className="font-display font-extrabold text-slate-900 dark:text-white hover:text-primary dark:hover:text-[#8CBDF0] transition-colors text-sm sm:text-base truncate block"
+                  className="font-display font-extrabold text-slate-900 dark:text-white hover:text-link dark:hover:text-[#8CBDF0] transition-colors text-sm sm:text-base truncate block"
                 >
                   {provider}
                 </Link>
@@ -124,7 +124,7 @@ const RequestCard = ({
                   {provider}
                 </h3>
               )}
-              <p className="text-xs font-semibold text-primary truncate mt-0.5">
+              <p className="text-xs font-semibold text-link truncate mt-0.5">
                 {service}
               </p>
             </div>
@@ -132,7 +132,7 @@ const RequestCard = ({
 
           {/* Status Badge */}
           <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 sm:gap-3 shrink-0">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-3xs shadow-xs ${statusTheme.badge}`}>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs shadow-sm ${statusTheme.badge}`}>
               {statusTheme.ping ? (
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -148,14 +148,14 @@ const RequestCard = ({
 
         {/* Middle Meta Details (Clean Flat Style) */}
         <div className="py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 text-xs bg-[#E9F1F9] dark:bg-[#1F2D3E] border border-[#D2E0EE] dark:border-[#2D3F54]">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[#52657A] dark:text-[#A5B6C8] font-medium text-2xs sm:text-xs">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[#52657A] dark:text-[#A5B6C8] font-medium text-xs sm:text-xs">
             <span className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+              <Calendar className="w-3.5 h-3.5 text-link shrink-0" />
               <span>{date}</span>
             </span>
             {time && (
               <span className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
+                <Clock className="w-3.5 h-3.5 text-link shrink-0" />
                 <span>
                   {new Date(`2000-01-01T${time.slice(0, 5)}:00`).toLocaleTimeString('en-US', {
                     hour: 'numeric',
@@ -165,7 +165,7 @@ const RequestCard = ({
               </span>
             )}
             <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
+              <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
               <span className="truncate max-w-[130px] sm:max-w-none">{location || 'Muntinlupa City'}</span>
             </span>
           </div>
@@ -191,7 +191,7 @@ const RequestCard = ({
             <button
               type="button"
               onClick={() => onTrack({ id, providerId, patientId, provider, providerAvatarUrl, service })}
-              className="col-span-1 sm:col-span-1 min-h-[44px] justify-center px-3.5 py-2.5 sm:py-2 rounded-lg text-xs font-bold text-primary dark:text-[#8CBDF0] bg-white/70 dark:bg-white/[0.04] border border-primary/25 dark:border-[#8CBDF0]/25 flex items-center gap-1.5 cursor-pointer hover:bg-primary/5 dark:hover:bg-[#8CBDF0]/10 active:scale-[0.98] transition-colors order-1"
+              className="col-span-1 sm:col-span-1 min-h-[44px] justify-center px-3.5 py-2.5 sm:py-2 rounded-lg text-xs font-bold text-link dark:text-[#8CBDF0] bg-white/70 dark:bg-white/[0.04] border border-primary/25 dark:border-[#8CBDF0]/25 flex items-center gap-1.5 cursor-pointer hover:bg-primary/5 dark:hover:bg-[#8CBDF0]/10 active:scale-[0.98] transition-colors order-1"
             >
               <Navigation className="w-4 h-4 shrink-0" />
               <span className="truncate">Track live</span>
@@ -207,10 +207,10 @@ const RequestCard = ({
               className={`col-span-1 justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] order-2 ${
                 presessionSubmitted
                   ? 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] cursor-default opacity-90'
-                  : 'neu-btn text-primary dark:text-[#8CBDF0]'
+                  : 'neu-btn text-link dark:text-[#8CBDF0]'
               }`}
             >
-              <FileUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-primary dark:text-[#8CBDF0]'}`} />
+              <FileUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-link dark:text-[#8CBDF0]'}`} />
               <span className="truncate">{presessionSubmitted ? 'Submitted' : 'Pre-Session Info'}</span>
             </button>
           )}
@@ -235,7 +235,7 @@ const RequestCard = ({
               disabled={isRated}
               className={`col-span-2 sm:col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center transition-all cursor-pointer ${
                 isRated 
-                  ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400 cursor-default opacity-90' 
+                  ? 'neu-flat-sm text-success dark:text-success-dark cursor-default opacity-90' 
                   : 'neu-btn-primary shadow-sm'
               }`}
             >
@@ -392,7 +392,7 @@ const PatientRequests = () => {
               <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
                 My Service Requests
               </h1>
-              <p className="text-2xs sm:text-xs md:text-sm text-slate-500 dark:text-slate-400 mt-0.5 sm:mt-1 max-w-xl">
+              <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 sm:mt-1 max-w-xl">
                 Track, reschedule, and manage all your healthcare appointments in one place.
               </p>
             </div>
@@ -402,24 +402,24 @@ const PatientRequests = () => {
               <button
                 type="button"
                 onClick={() => setFilter(filter === 'Pending' ? 'All' : 'Pending')}
-                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
                   filter === 'Pending'
-                    ? 'neu-pressed text-amber-600 dark:text-amber-400 border border-amber-500/40 bg-amber-500/15'
-                    : 'neu-btn text-amber-600 dark:text-amber-400 hover:text-amber-700'
+                    ? 'neu-pressed text-warning dark:text-warning-dark border border-amber-500/40 bg-amber-500/15'
+                    : 'neu-btn text-warning dark:text-warning-dark hover:text-warning'
                 }`}
                 title="Filter Pending requests"
               >
-                <Clock className="w-3 h-3 text-amber-500 shrink-0" />
+                <Clock className="w-3 h-3 text-warning shrink-0" />
                 <span>{stats.pending} Pending</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setFilter(filter === 'Active' ? 'All' : 'Active')}
-                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
                   filter === 'Active'
-                    ? 'neu-pressed text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 bg-emerald-500/15'
-                    : 'neu-btn text-emerald-600 dark:text-emerald-400 hover:text-emerald-700'
+                    ? 'neu-pressed text-success dark:text-success-dark border border-emerald-500/40 bg-emerald-500/15'
+                    : 'neu-btn text-success dark:text-success-dark hover:text-success'
                 }`}
                 title="Filter Active / On Route requests"
               >
@@ -433,14 +433,14 @@ const PatientRequests = () => {
               <button
                 type="button"
                 onClick={() => setFilter(filter === 'Completed' ? 'All' : 'Completed')}
-                className={`px-3 py-1.5 rounded-full text-3xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
                   filter === 'Completed'
-                    ? 'neu-pressed text-blue-600 dark:text-blue-400 border border-blue-500/40 bg-blue-500/15'
-                    : 'neu-btn text-blue-600 dark:text-blue-400 hover:text-blue-700'
+                    ? 'neu-pressed text-link dark:text-primary-300 border border-blue-500/40 bg-blue-500/15'
+                    : 'neu-btn text-link dark:text-primary-300 hover:text-blue-700'
                 }`}
                 title="Filter Completed requests"
               >
-                <CheckCircle2 className="w-3 h-3 text-blue-500 shrink-0" />
+                <CheckCircle2 className="w-3 h-3 text-link shrink-0" />
                 <span>{stats.completed} Completed</span>
               </button>
 
@@ -448,7 +448,7 @@ const PatientRequests = () => {
                 <button
                   type="button"
                   onClick={() => setFilter('All')}
-                  className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-full text-3xs font-extrabold text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                  className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-extrabold text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1"
                   title="Clear filter and show all"
                 >
                   <X className="w-3 h-3" />
@@ -463,19 +463,20 @@ const PatientRequests = () => {
             {/* Sunken Search Box */}
             <div className="relative flex-1 min-w-0">
               <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[44px] sm:h-[52px] border border-slate-200/50 dark:border-white/5">
-                <Search className="w-4 h-4 text-primary ml-1.5 sm:ml-2 shrink-0" />
+                <Search className="w-4 h-4 text-link ml-1.5 sm:ml-2 shrink-0" />
                 <input
                   type="text"
+                  aria-label="Search requests by provider or service"
                   placeholder="Search provider, service..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
                 />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1"
+                    className="p-1 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1"
                     title="Clear search"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -490,7 +491,7 @@ const PatientRequests = () => {
                 type="button"
                 onClick={() => setShowFilterMenu(prev => !prev)}
                 className={`neu-btn h-[44px] sm:h-[52px] px-3 sm:px-4 rounded-xl sm:rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer relative outline-none select-none ${
-                  showFilterMenu ? 'text-primary' : 'text-slate-600 dark:text-slate-300 hover:text-primary'
+                  showFilterMenu ? 'text-link' : 'text-slate-600 dark:text-slate-300 hover:text-link'
                 }`}
                 title={`Filter by: ${filter === 'All' ? 'All Requests' : filter}`}
               >
@@ -498,7 +499,7 @@ const PatientRequests = () => {
                 <span className="text-xs font-bold hidden sm:inline">
                   {filter === 'All' ? 'All Requests' : filter}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                <ChevronDown className="w-3.5 h-3.5 text-tertiary" />
                 {filter !== 'All' && (
                   <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
                 )}
@@ -515,8 +516,8 @@ const PatientRequests = () => {
                     className="absolute right-0 top-full mt-2 w-52 sm:w-56 neu-flat rounded-2xl p-2 z-50 shadow-2xl border border-white/60 dark:border-white/10"
                   >
                     <div className="px-3 py-2 border-b border-slate-200/60 dark:border-white/5 mb-1 flex items-center justify-between">
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">Filter Status</span>
-                      <span className="text-3xs text-primary font-bold">{filter}</span>
+                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Filter Status</span>
+                      <span className="text-xs text-link font-bold">{filter}</span>
                     </div>
                     <div className="space-y-1">
                       {filters.map((f) => {
@@ -531,12 +532,12 @@ const PatientRequests = () => {
                             }}
                             className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
                               active
-                                ? 'neu-flat-sm text-primary font-bold shadow-sm'
+                                ? 'neu-flat-sm text-link font-bold shadow-sm'
                                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
                             }`}
                           >
                             <span>{f === 'All' ? 'All Requests' : f}</span>
-                            {active && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                            {active && <Check className="w-3.5 h-3.5 text-link shrink-0" />}
                           </button>
                         );
                       })}
@@ -593,7 +594,7 @@ const PatientRequests = () => {
         {/* Neumorphic Pagination Controls */}
         {filteredRequests.length > itemsPerPage && (
           <div className="neu-flat p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto pt-4">
-            <span className="text-2xs sm:text-xs text-slate-500 dark:text-slate-400 font-medium text-center sm:text-left">
+            <span className="text-sm text-tertiary dark:text-tertiary font-medium text-center sm:text-left">
               Showing <strong className="text-slate-800 dark:text-slate-200">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredRequests.length)}</strong> requests
             </span>
 
@@ -612,7 +613,7 @@ const PatientRequests = () => {
                 {visiblePages.map((pageNum, idx) => {
                   if (pageNum === '...') {
                     return (
-                      <span key={`ellipsis-${idx}`} className="w-5 sm:w-6 text-center text-xs text-slate-400 select-none">
+                      <span key={`ellipsis-${idx}`} className="w-5 sm:w-6 text-center text-xs text-tertiary select-none">
                         …
                       </span>
                     );
@@ -622,10 +623,10 @@ const PatientRequests = () => {
                       key={pageNum}
                       type="button"
                       onClick={() => handlePageChange(pageNum)}
-                      className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
+                      className={`w-11 h-11 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center ${
                         currentPage === pageNum
                           ? 'neu-btn-primary shadow-sm text-white'
-                          : 'neu-btn text-slate-600 dark:text-slate-400 hover:text-primary'
+                          : 'neu-btn text-slate-600 dark:text-tertiary hover:text-link'
                       }`}
                     >
                       {pageNum}

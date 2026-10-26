@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
@@ -25,6 +26,7 @@ const AdminRequests = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const modalTriggerRef = useRef(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -277,7 +279,7 @@ const AdminRequests = () => {
     switch (status) {
       case 'Completed':
         return (
-          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider text-success dark:text-success-dark">
             Completed
           </span>
         );
@@ -285,26 +287,26 @@ const AdminRequests = () => {
       case 'On The Way':
       case 'Arrived':
         return (
-          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider text-link dark:text-primary-300">
             {status}
           </span>
         );
       case 'Pending':
         return (
-          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider text-warning dark:text-warning-dark">
             Pending
           </span>
         );
       case 'Cancelled':
       case 'Rejected':
         return (
-          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider text-danger dark:text-danger-dark">
             {status}
           </span>
         );
       default:
         return (
-          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider text-slate-500">
+          <span className="neu-flat-sm inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider text-tertiary">
             {status}
           </span>
         );
@@ -317,12 +319,12 @@ const AdminRequests = () => {
 
   const SortableHeader = ({ label, sortKey: sk, className = '' }) => (
     <th
-      className={`px-6 py-4 font-black cursor-pointer hover:text-primary transition-colors select-none ${className}`}
+      className={`px-6 py-4 font-black cursor-pointer hover:text-link transition-colors select-none ${className}`}
       onClick={() => { handleSort(sk); setCurrentPage(1); }}
     >
       <span className="flex items-center gap-1.5">
         {label}
-        <ArrowUpDown className={`w-3 h-3 ${sortKey === sk ? 'text-primary' : 'opacity-30'}`} />
+        <ArrowUpDown className={`w-3 h-3 ${sortKey === sk ? 'text-link' : 'opacity-30'}`} />
         {getSortIndicator(sk)}
       </span>
     </th>
@@ -344,12 +346,12 @@ const AdminRequests = () => {
               <h1 className="text-xl sm:text-2xl font-display font-black tracking-tight text-slate-900 dark:text-white">
                 Platform Requests
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-sm text-tertiary dark:text-tertiary mt-0.5">
                 Audit and monitor all healthcare interactions and appointment bookings across Muntinlupa
               </p>
             </div>
             <div className="hidden sm:flex items-center gap-2">
-              <span className="neu-flat-sm px-3 py-1 rounded-xl text-xs font-black text-primary">
+              <span className="neu-flat-sm px-3 py-1 rounded-xl text-xs font-black text-link">
                 {filteredRequests.length} {filteredRequests.length === 1 ? 'Request' : 'Requests'}
               </span>
             </div>
@@ -359,13 +361,14 @@ const AdminRequests = () => {
           <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center gap-2.5 w-full">
             {/* Neumorphic Inset Search */}
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none z-10" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-link pointer-events-none z-10" />
               <input
                 type="text"
+                aria-label="Search requests by patient, provider, or ID"
                 placeholder="Search requests by patient, provider, or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full neu-inset rounded-xl py-2.5 pl-10 pr-4 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[42px]"
+                className="w-full neu-inset rounded-xl py-2.5 pl-10 pr-4 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 placeholder:text-tertiary outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[42px]"
               />
             </div>
 
@@ -403,7 +406,7 @@ const AdminRequests = () => {
             <motion.button
               whileTap={{ scale: 0.96 }}
               onClick={handleExport}
-              className="neu-btn px-4 py-2 min-h-[42px] rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 hover:text-primary transition-all shrink-0 w-full sm:w-auto shadow-sm"
+              className="neu-btn px-4 py-2 min-h-[42px] rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 hover:text-link transition-all shrink-0 w-full sm:w-auto shadow-sm"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
@@ -446,12 +449,12 @@ const AdminRequests = () => {
                           className={`relative w-11 h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all shrink-0 overflow-hidden ${
                             isSelected 
                               ? 'neu-inset ring-2 ring-primary text-white bg-primary shadow-inner' 
-                              : 'neu-flat-sm text-primary hover:ring-1 hover:ring-primary/40'
+                              : 'neu-flat-sm text-link hover:ring-1 hover:ring-primary/40'
                           }`}
                           title={isSelected ? "Click to deselect" : "Click to select"}
                         >
                           {isSelected ? (
-                            <Check className="w-5 h-5 text-primary stroke-[3]" />
+                            <Check className="w-5 h-5 text-link stroke-[3]" />
                           ) : r.patientAvatar ? (
                             <img src={r.patientAvatar} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -461,17 +464,20 @@ const AdminRequests = () => {
 
                         <div 
                           className="min-w-0 flex-1 cursor-pointer"
-                          onClick={() => setSelectedRequest(r)}
+                          onClick={(event) => {
+                            modalTriggerRef.current = event.currentTarget;
+                            setSelectedRequest(r);
+                          }}
                         >
                           <div className="flex items-center gap-1.5">
-                            <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-primary font-black text-3xs uppercase tracking-wider">
+                            <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-link font-black text-2xs uppercase tracking-wider">
                               {r.service}
                             </span>
                           </div>
-                          <p className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-primary transition-colors mt-0.5">
+                          <p className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-link transition-colors mt-0.5">
                             {r.patient}
                           </p>
-                          <p className="text-2xs text-slate-400 dark:text-slate-500 font-mono truncate">
+                          <p className="text-xs text-tertiary dark:text-tertiary font-mono truncate">
                             ID: {r.id.split('-')[0]}...
                           </p>
                         </div>
@@ -480,21 +486,24 @@ const AdminRequests = () => {
                       {getStatusBadge(r.status)}
                     </div>
 
-                    <div className="neu-inset px-3 py-2.5 rounded-xl text-2xs space-y-1">
+                    <div className="neu-inset px-3 py-2.5 rounded-xl text-xs space-y-1">
                       <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-3xs">Provider:</span>
+                        <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">Provider:</span>
                         <span className="font-bold truncate max-w-[200px]">{r.provider}</span>
                       </div>
                       <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                        <span className="text-slate-400 font-bold uppercase tracking-wider text-3xs">Scheduled:</span>
+                        <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">Scheduled:</span>
                         <span className="font-mono">{r.date} {r.time ? `• ${r.time}` : ''}</span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-1">
                       <button
-                        onClick={() => setSelectedRequest(r)}
-                        className="text-primary font-bold hover:underline flex items-center gap-1 text-3xs uppercase tracking-wider"
+                        onClick={(event) => {
+                          modalTriggerRef.current = event.currentTarget;
+                          setSelectedRequest(r);
+                        }}
+                        className="text-link font-bold hover:underline flex items-center gap-1 text-2xs uppercase tracking-wider"
                       >
                         Request Details →
                       </button>
@@ -504,7 +513,7 @@ const AdminRequests = () => {
                           <motion.button
                             whileTap={{ scale: 0.94 }}
                             onClick={() => handleUpdateStatus(r.id, 'Accepted')}
-                            className="neu-btn px-2.5 py-1 rounded-xl text-3xs font-extrabold text-blue-600 dark:text-blue-400"
+                            className="neu-btn px-2.5 py-1 rounded-xl text-xs font-extrabold text-link dark:text-primary-300"
                           >
                             Accept
                           </motion.button>
@@ -512,7 +521,7 @@ const AdminRequests = () => {
                         <motion.button
                           whileTap={{ scale: 0.94 }}
                           onClick={() => handleDeleteRequest(r.id)}
-                          className="neu-btn p-1.5 rounded-xl text-rose-600 dark:text-rose-400"
+                          className="neu-btn h-11 w-11 flex items-center justify-center rounded-xl text-danger dark:text-danger-dark"
                           title="Delete Request"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -527,11 +536,11 @@ const AdminRequests = () => {
 
           {/* Desktop Table View */}
           <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
-                <tr className="border-b border-white/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30 text-slate-400 dark:text-slate-500 text-3xs font-black uppercase tracking-wider">
+                <tr className="border-b border-white/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30 text-tertiary dark:text-tertiary text-2xs font-black uppercase tracking-wider">
                   <th className="px-6 py-4 w-12 text-center select-none">
-                    <span className="text-4xs font-mono opacity-60">SELECT</span>
+                    <span className="text-xs font-mono opacity-60">SELECT</span>
                   </th>
                   <th className="px-6 py-4 font-black">Request ID</th>
                   <SortableHeader label="Patient" sortKey="patient" />
@@ -553,7 +562,8 @@ const AdminRequests = () => {
                     return (
                       <motion.tr
                         key={r.id}
-                        className={`transition-all group cursor-pointer ${
+                        tabIndex={0}
+                        className={`transition-all group cursor-pointer focus-visible:bg-primary/5 ${
                           isSelected 
                             ? 'bg-primary/[0.08] dark:bg-primary/[0.15]' 
                             : 'hover:bg-primary/5'
@@ -561,22 +571,33 @@ const AdminRequests = () => {
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: 0.15 + idx * 0.02 }}
-                        onClick={() => setSelectedRequest(r)}
+                        onClick={(event) => {
+                          event.currentTarget.focus();
+                          modalTriggerRef.current = event.currentTarget;
+                          setSelectedRequest(r);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            modalTriggerRef.current = event.currentTarget;
+                            setSelectedRequest(r);
+                          }
+                        }}
                       >
                         {/* Interactive Avatar Selection Column */}
                         <td className="px-6 py-3.5 text-center" onClick={e => e.stopPropagation()}>
                           <motion.button
                             whileTap={{ scale: 0.9 }}
                             onClick={() => toggleSelect(r.id)}
-                            className={`w-9 h-9 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all overflow-hidden ${
+                            className={`w-11 h-11 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all overflow-hidden ${
                               isSelected
-                                ? 'neu-inset ring-2 ring-primary text-primary bg-primary/10'
-                                : 'neu-flat-sm text-primary hover:ring-2 hover:ring-primary/40'
+                                ? 'neu-inset ring-2 ring-primary text-link bg-primary/10'
+                                : 'neu-flat-sm text-link hover:ring-2 hover:ring-primary/40'
                             }`}
                             title={isSelected ? "Selected (Click to deselect)" : "Click avatar to select"}
                           >
                             {isSelected ? (
-                              <Check className="w-4 h-4 text-primary stroke-[3]" />
+                              <Check className="w-4 h-4 text-link stroke-[3]" />
                             ) : r.patientAvatar ? (
                               <img src={r.patientAvatar} alt="" className="w-full h-full object-cover" />
                             ) : (
@@ -585,16 +606,16 @@ const AdminRequests = () => {
                           </motion.button>
                         </td>
 
-                        <td className="px-6 py-3.5 font-mono text-2xs text-slate-400 dark:text-slate-500">
+                        <td className="px-6 py-3.5 font-mono text-xs text-tertiary dark:text-tertiary">
                           {r.id.split('-')[0]}...
                         </td>
 
                         <td className="px-6 py-3.5">
                           <div>
-                            <span className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors block">
+                            <span className="font-bold text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors block">
                               {r.patient}
                             </span>
-                            <span className="text-3xs text-slate-400 font-medium">
+                            <span className="text-sm text-tertiary font-medium">
                               {r.patientEmail}
                             </span>
                           </div>
@@ -605,14 +626,14 @@ const AdminRequests = () => {
                             <span className="font-bold text-slate-700 dark:text-slate-200 block">
                               {r.provider}
                             </span>
-                            <span className="text-3xs text-slate-400 font-medium">
+                            <span className="text-sm text-tertiary font-medium">
                               {r.providerEmail}
                             </span>
                           </div>
                         </td>
 
                         <td className="px-6 py-3.5">
-                          <span className="neu-flat-sm px-2.5 py-1 rounded-xl text-primary font-bold text-3xs inline-block">
+                          <span className="neu-flat-sm px-2.5 py-1 rounded-xl text-link font-bold text-xs inline-block">
                             {r.service}
                           </span>
                         </td>
@@ -621,23 +642,26 @@ const AdminRequests = () => {
                           {getStatusBadge(r.status)}
                         </td>
 
-                        <td className="px-6 py-3.5 font-mono text-2xs text-slate-600 dark:text-slate-300">
+                        <td className="px-6 py-3.5 font-mono text-xs text-slate-600 dark:text-slate-300">
                           <div>{r.date}</div>
-                          {r.time && <div className="text-3xs text-slate-400">{r.time}</div>}
+                          {r.time && <div className="text-xs text-tertiary">{r.time}</div>}
                         </td>
 
                         <td className="px-6 py-3.5 text-right" onClick={e => e.stopPropagation()}>
                           <div className="flex justify-end gap-1.5">
                             <motion.button
                               whileTap={{ scale: 0.94 }}
-                              className="neu-btn px-3 py-1.5 text-xs font-black rounded-xl text-primary hover:text-primary-focus transition-all"
-                              onClick={() => setSelectedRequest(r)}
+                              className="neu-btn px-3 py-1.5 text-xs font-black rounded-xl text-link hover:text-primary-focus transition-all"
+                              onClick={(event) => {
+                                modalTriggerRef.current = event.currentTarget;
+                                setSelectedRequest(r);
+                              }}
                             >
                               Details
                             </motion.button>
                             <motion.button
                               whileTap={{ scale: 0.94 }}
-                              className="neu-btn p-1.5 text-rose-600 dark:text-rose-400 rounded-xl transition-all"
+                              className="neu-btn h-11 w-11 flex items-center justify-center text-danger dark:text-danger-dark rounded-xl transition-all"
                               onClick={() => handleDeleteRequest(r.id)}
                               title="Delete Request"
                             >
@@ -671,7 +695,7 @@ const AdminRequests = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 70, scale: 0.92 }}
                 transition={{ type: "spring", stiffness: 420, damping: 30 }}
-                className="fixed bottom-20 lg:bottom-8 inset-x-0 z-[9999] flex justify-center px-3 sm:px-4 pointer-events-none"
+                className="fixed bottom-20 lg:bottom-8 inset-x-0 z-[60] flex justify-center px-3 sm:px-4 pointer-events-none"
                 style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
               >
                 <div className="neu-flat px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/90 dark:border-white/10 shadow-2xl bg-[#ebf1f8]/95 dark:bg-[#172236]/95 backdrop-blur-2xl flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 pointer-events-auto max-w-[94vw]">
@@ -686,7 +710,7 @@ const AdminRequests = () => {
                     <motion.button
                       whileTap={{ scale: 0.92 }}
                       onClick={toggleSelectAll}
-                      className="neu-btn px-2.5 py-1 rounded-full text-3xs font-extrabold text-primary flex items-center gap-1 hover:text-primary-focus transition-all ml-1"
+                      className="neu-btn px-2.5 py-1 rounded-full text-xs font-extrabold text-link flex items-center gap-1 hover:text-primary-focus transition-all ml-1"
                       title={selectedIds.size === filteredRequests.length ? "Deselect All Requests" : "Select All Filtered Requests"}
                     >
                       <CheckSquare className="w-3 h-3" />
@@ -700,7 +724,7 @@ const AdminRequests = () => {
                       whileTap={{ scale: 0.92 }}
                       onClick={() => handleBulkUpdateStatus('Accepted')}
                       disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 transition-all shrink-0"
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-link dark:text-primary-300 flex items-center gap-1.5 transition-all shrink-0"
                       title="Mark Selected as Accepted"
                     >
                       <Check className="w-3.5 h-3.5 shrink-0" />
@@ -711,7 +735,7 @@ const AdminRequests = () => {
                       whileTap={{ scale: 0.92 }}
                       onClick={() => handleBulkUpdateStatus('Completed')}
                       disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 transition-all shrink-0"
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-success dark:text-success-dark flex items-center gap-1.5 transition-all shrink-0"
                       title="Mark Selected as Completed"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
@@ -722,7 +746,7 @@ const AdminRequests = () => {
                       whileTap={{ scale: 0.92 }}
                       onClick={() => handleBulkUpdateStatus('Cancelled')}
                       disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 transition-all shrink-0"
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-warning dark:text-warning-dark flex items-center gap-1.5 transition-all shrink-0"
                       title="Mark Selected as Cancelled"
                     >
                       <AlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -733,7 +757,7 @@ const AdminRequests = () => {
                       whileTap={{ scale: 0.92 }}
                       onClick={handleBulkDelete}
                       disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1.5 transition-all shrink-0"
+                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-danger dark:text-danger-dark flex items-center gap-1.5 transition-all shrink-0"
                       title="Delete Selected Requests"
                     >
                       <Trash2 className="w-3.5 h-3.5 shrink-0" />
@@ -743,7 +767,7 @@ const AdminRequests = () => {
                     <motion.button
                       whileTap={{ scale: 0.92 }}
                       onClick={() => setSelectedIds(new Set())}
-                      className="neu-btn p-1.5 sm:p-2 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all shrink-0 ml-0.5"
+                      className="neu-btn h-11 w-11 flex items-center justify-center rounded-full text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-all shrink-0 ml-0.5"
                       title="Clear Selection"
                     >
                       <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -758,14 +782,26 @@ const AdminRequests = () => {
       </div>
 
       {/* Neumorphic Request Detail Modal Teleported to document.body */}
-      {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
-          {selectedRequest && (
+      <DialogPrimitive.Root
+        open={!!selectedRequest}
+        onOpenChange={(open) => { if (!open) setSelectedRequest(null); }}
+      >
+        {selectedRequest && (
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-900/60 dark:bg-black/75 sm:backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Content
+            asChild
+            aria-modal="true"
+            onCloseAutoFocus={(event) => {
+              if (!modalTriggerRef.current) return;
+              event.preventDefault();
+              modalTriggerRef.current.focus();
+            }}
+          >
             <motion.div
-              className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 sm:backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-4 md:p-6"
+              className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
               transition={{ duration: 0.18 }}
               onClick={() => setSelectedRequest(null)}
             >
@@ -773,18 +809,25 @@ const AdminRequests = () => {
                 className="neu-flat rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl bg-[#ebf1f8] dark:bg-[#172236] transform-gpu will-change-transform"
                 initial={{ scale: 0.96, opacity: 0, y: 10 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.96, opacity: 0, y: 10 }}
                 transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                 onClick={e => e.stopPropagation()}
               >
                 {/* Modal Header */}
                 <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-[#ebf1f8] dark:bg-[#172236] z-10">
                   <div>
-                    <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Request Dossier</h2>
-                    <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Interaction Audit & Dispatch Overview</p>
+                    <DialogPrimitive.Title asChild>
+                      <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Request Dossier</h2>
+                    </DialogPrimitive.Title>
+                    <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">Interaction Audit & Dispatch Overview</p>
                   </div>
-                  <div>
+                  <div className="flex items-center gap-2">
                     {getStatusBadge(selectedRequest.status)}
+                    <DialogPrimitive.Close
+                      aria-label="Close"
+                      className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-tertiary hover:text-slate-800 dark:hover:text-white shrink-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </DialogPrimitive.Close>
                   </div>
                 </div>
 
@@ -793,11 +836,11 @@ const AdminRequests = () => {
                   {/* Service & ID Header */}
                   <div className="neu-inset p-4 rounded-2xl flex items-center justify-between">
                     <div>
-                      <p className="text-3xs font-black uppercase tracking-wider text-slate-400">Service Program</p>
-                      <p className="text-sm font-black text-primary mt-0.5">{selectedRequest.service}</p>
+                      <p className="text-2xs font-black uppercase tracking-wider text-tertiary">Service Program</p>
+                      <p className="text-sm font-black text-link mt-0.5">{selectedRequest.service}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-3xs font-black uppercase tracking-wider text-slate-400">Request ID</p>
+                      <p className="text-2xs font-black uppercase tracking-wider text-tertiary">Request ID</p>
                       <p className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 mt-0.5">{selectedRequest.id.substring(0, 13)}...</p>
                     </div>
                   </div>
@@ -810,15 +853,15 @@ const AdminRequests = () => {
                       onClick={() => setSelectedRequest(null)}
                       className="neu-flat-sm p-3.5 rounded-2xl space-y-2 block hover:ring-1 hover:ring-primary/40 transition-all"
                     >
-                      <div className="flex items-center justify-between text-3xs font-black uppercase tracking-wider text-slate-400">
+                      <div className="flex items-center justify-between text-2xs font-black uppercase tracking-wider text-tertiary">
                         <div className="flex items-center gap-1.5">
-                          <User className="w-3.5 h-3.5 text-primary" />
+                          <User className="w-3.5 h-3.5 text-link" />
                           <span>Resident Patient</span>
                         </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-primary" />
+                        <ChevronRight className="w-3.5 h-3.5 text-link" />
                       </div>
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-xs font-black text-primary overflow-hidden shrink-0">
+                        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-xs font-black text-link overflow-hidden shrink-0">
                           {selectedRequest.patientAvatar ? (
                             <img src={selectedRequest.patientAvatar} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -827,7 +870,7 @@ const AdminRequests = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-xs text-slate-900 dark:text-white truncate">{selectedRequest.patient}</p>
-                          <p className="text-3xs text-slate-400 truncate">{selectedRequest.patientEmail || 'No email'}</p>
+                          <p className="text-xs text-tertiary truncate">{selectedRequest.patientEmail || 'No email'}</p>
                         </div>
                       </div>
                     </Link>
@@ -838,15 +881,15 @@ const AdminRequests = () => {
                       onClick={() => setSelectedRequest(null)}
                       className="neu-flat-sm p-3.5 rounded-2xl space-y-2 block hover:ring-1 hover:ring-primary/40 transition-all"
                     >
-                      <div className="flex items-center justify-between text-3xs font-black uppercase tracking-wider text-slate-400">
+                      <div className="flex items-center justify-between text-2xs font-black uppercase tracking-wider text-tertiary">
                         <div className="flex items-center gap-1.5">
-                          <Stethoscope className="w-3.5 h-3.5 text-primary" />
+                          <Stethoscope className="w-3.5 h-3.5 text-link" />
                           <span>Healthcare Provider</span>
                         </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-primary" />
+                        <ChevronRight className="w-3.5 h-3.5 text-link" />
                       </div>
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-xs font-black text-primary overflow-hidden shrink-0">
+                        <div className="w-9 h-9 rounded-xl neu-inset flex items-center justify-center text-xs font-black text-link overflow-hidden shrink-0">
                           {selectedRequest.providerAvatar ? (
                             <img src={selectedRequest.providerAvatar} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -855,7 +898,7 @@ const AdminRequests = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-xs text-slate-900 dark:text-white truncate">{selectedRequest.provider}</p>
-                          <p className="text-3xs text-slate-400 truncate">{selectedRequest.providerEmail || 'No email'}</p>
+                          <p className="text-xs text-tertiary truncate">{selectedRequest.providerEmail || 'No email'}</p>
                         </div>
                       </div>
                     </Link>
@@ -865,7 +908,7 @@ const AdminRequests = () => {
                   <div className="neu-flat-sm p-4 rounded-2xl space-y-3">
                     <div className="flex items-center justify-between text-xs font-semibold">
                       <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <Calendar className="w-4 h-4 text-primary shrink-0" />
+                        <Calendar className="w-4 h-4 text-link shrink-0" />
                         <span>Appointment Date:</span>
                       </div>
                       <span className="font-bold text-slate-900 dark:text-white font-mono">{selectedRequest.date}</span>
@@ -873,18 +916,18 @@ const AdminRequests = () => {
 
                     <div className="flex items-center justify-between text-xs font-semibold">
                       <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <Clock className="w-4 h-4 text-primary shrink-0" />
+                        <Clock className="w-4 h-4 text-link shrink-0" />
                         <span>Time Slot:</span>
                       </div>
                       <span className="font-bold text-slate-900 dark:text-white font-mono">{selectedRequest.time || 'Not specified'}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-xs font-semibold pt-2 border-t border-white/60 dark:border-white/5">
-                      <div className="flex items-center gap-2 text-slate-400">
+                      <div className="flex items-center gap-2 text-tertiary">
                         <FileText className="w-4 h-4 shrink-0" />
                         <span>Requested At:</span>
                       </div>
-                      <span className="text-2xs text-slate-400 font-mono">
+                      <span className="text-xs text-tertiary font-mono">
                         {new Date(selectedRequest.created_at).toLocaleString('en-US', {
                           month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
                         })}
@@ -895,7 +938,7 @@ const AdminRequests = () => {
                   {/* Patient Request Notes */}
                   {selectedRequest.notes && (
                     <div className="space-y-1.5">
-                      <p className="text-3xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider">
+                      <p className="text-2xs text-tertiary dark:text-tertiary font-black uppercase tracking-wider">
                         Patient Symptoms / Instructions
                       </p>
                       <div className="neu-inset p-3.5 rounded-2xl text-xs font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
@@ -906,7 +949,7 @@ const AdminRequests = () => {
 
                   {/* Administrative Action Controls */}
                   <div className="space-y-2 pt-2 border-t border-white/60 dark:border-white/5">
-                    <p className="text-3xs text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider">
+                    <p className="text-2xs text-tertiary dark:text-tertiary font-black uppercase tracking-wider">
                       Administrative Override Actions
                     </p>
                     <div className="grid grid-cols-2 gap-2">
@@ -914,7 +957,7 @@ const AdminRequests = () => {
                         whileTap={{ scale: 0.96 }}
                         onClick={() => handleUpdateStatus(selectedRequest.id, 'Accepted')}
                         disabled={actionLoading || selectedRequest.status === 'Accepted'}
-                        className="neu-btn py-2.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 transition-all disabled:opacity-40"
+                        className="neu-btn py-2.5 rounded-xl text-xs font-bold text-link dark:text-primary-300 transition-all disabled:opacity-40"
                       >
                         Set Accepted
                       </motion.button>
@@ -922,7 +965,7 @@ const AdminRequests = () => {
                         whileTap={{ scale: 0.96 }}
                         onClick={() => handleUpdateStatus(selectedRequest.id, 'Completed')}
                         disabled={actionLoading || selectedRequest.status === 'Completed'}
-                        className="neu-btn py-2.5 rounded-xl text-xs font-bold text-emerald-600 dark:text-emerald-400 transition-all disabled:opacity-40"
+                        className="neu-btn py-2.5 rounded-xl text-xs font-bold text-success dark:text-success-dark transition-all disabled:opacity-40"
                       >
                         Set Completed
                       </motion.button>
@@ -930,7 +973,7 @@ const AdminRequests = () => {
                         whileTap={{ scale: 0.96 }}
                         onClick={() => handleUpdateStatus(selectedRequest.id, 'Cancelled')}
                         disabled={actionLoading || selectedRequest.status === 'Cancelled'}
-                        className="neu-btn py-2.5 rounded-xl text-xs font-bold text-amber-600 dark:text-amber-400 transition-all disabled:opacity-40"
+                        className="neu-btn py-2.5 rounded-xl text-xs font-bold text-warning dark:text-warning-dark transition-all disabled:opacity-40"
                       >
                         Cancel Request
                       </motion.button>
@@ -938,7 +981,7 @@ const AdminRequests = () => {
                         whileTap={{ scale: 0.96 }}
                         onClick={() => handleDeleteRequest(selectedRequest.id)}
                         disabled={actionLoading}
-                        className="neu-btn py-2.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 transition-all disabled:opacity-40"
+                        className="neu-btn py-2.5 rounded-xl text-xs font-bold text-danger dark:text-danger-dark transition-all disabled:opacity-40"
                       >
                         Delete Record
                       </motion.button>
@@ -951,17 +994,17 @@ const AdminRequests = () => {
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedRequest(null)}
-                    className="w-full neu-btn py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 hover:text-primary transition-all flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full neu-btn py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
                     Close Dossier
                   </motion.button>
                 </div>
               </motion.div>
             </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
+        )}
+      </DialogPrimitive.Root>
     </DashboardLayout>
   );
 };

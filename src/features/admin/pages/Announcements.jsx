@@ -132,7 +132,7 @@ const AdminAnnouncements = () => {
             <h1 className="text-xl sm:text-2xl font-display font-black tracking-tight text-slate-900 dark:text-white">
               Public Broadcast Announcements
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-sm text-tertiary dark:text-tertiary mt-1">
               Publish real-time medical updates, outreach drives, and municipal healthcare bulletins
             </p>
           </div>
@@ -145,11 +145,11 @@ const AdminAnnouncements = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <Database className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <Database className="w-5 h-5 text-warning dark:text-warning-dark shrink-0 mt-0.5" />
             <div>
               <p className="font-bold text-slate-900 dark:text-white text-sm">Announcements table not initialized</p>
-              <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">
-                Run the SQL migration in <code className="neu-inset px-2 py-0.5 rounded-lg text-primary font-mono text-2xs">supabase-migration.sql</code> to create the announcements table.
+              <p className="text-tertiary dark:text-tertiary text-xs mt-1">
+                Run the SQL migration in <code className="neu-inset px-2 py-0.5 rounded-lg text-link font-mono text-xs">supabase-migration.sql</code> to create the announcements table.
               </p>
             </div>
           </motion.div>
@@ -167,7 +167,7 @@ const AdminAnnouncements = () => {
               <h2 className="text-base sm:text-lg font-display font-black text-slate-900 dark:text-white">
                 Compose Broadcast
               </h2>
-              <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+              <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">
                 Real-time dispatch system
               </p>
             </div>
@@ -175,7 +175,7 @@ const AdminAnnouncements = () => {
             <div className="space-y-4">
               {/* Target Audience Selector Pills */}
               <div className="space-y-2">
-                <label className="text-3xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <label className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">
                   Target Audience
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -190,18 +190,18 @@ const AdminAnnouncements = () => {
                         onClick={() => setTarget(opt.value)}
                         className={`p-3 rounded-2xl text-left transition-all ${
                           isSelected
-                            ? 'neu-inset ring-2 ring-primary text-primary font-bold shadow-inner'
+                            ? 'neu-inset ring-2 ring-primary text-link font-bold shadow-inner'
                             : 'neu-btn text-slate-600 dark:text-slate-300'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <Icon className={`w-4 h-4 ${isSelected ? 'text-primary' : 'text-slate-400'}`} />
-                          {isSelected && <Check className="w-3.5 h-3.5 text-primary stroke-[3]" />}
+                          <Icon className={`w-4 h-4 ${isSelected ? 'text-link' : 'text-tertiary'}`} />
+                          {isSelected && <Check className="w-3.5 h-3.5 text-link stroke-[3]" />}
                         </div>
                         <p className="font-bold text-xs mt-2 text-slate-900 dark:text-white">
                           {opt.label}
                         </p>
-                        <p className="text-3xs text-slate-400 dark:text-slate-500 line-clamp-1 mt-0.5">
+                        <p className="text-xs text-tertiary dark:text-tertiary line-clamp-1 mt-0.5">
                           {opt.desc}
                         </p>
                       </motion.button>
@@ -212,34 +212,36 @@ const AdminAnnouncements = () => {
 
               {/* Title Input */}
               <div className="space-y-2">
-                <label className="text-3xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                <label htmlFor="announcement-title" className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">
                   Announcement Title
                 </label>
                 <input
+                  id="announcement-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., Free Polio Vaccination Drive at City Hall"
-                  className="w-full neu-inset rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full neu-inset rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-tertiary outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
               </div>
 
               {/* Message Body Input */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-3xs font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  <label htmlFor="announcement-message" className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">
                     Broadcast Message Content
                   </label>
-                  <span className="text-3xs font-mono text-slate-400">
+                  <span className="text-xs font-mono text-tertiary">
                     {message.length} chars
                   </span>
                 </div>
                 <textarea
+                  id="announcement-message"
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Details of the announcement, schedules, guidelines, contact information..."
                   rows={5}
-                  className="w-full neu-inset rounded-xl p-4 text-xs sm:text-sm font-medium text-slate-900 dark:text-white placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none leading-relaxed"
+                  className="w-full neu-inset rounded-xl p-4 text-xs sm:text-sm font-medium text-slate-900 dark:text-white placeholder:text-tertiary outline-none focus:ring-2 focus:ring-primary/20 transition-all resize-none leading-relaxed"
                 />
               </div>
 
@@ -269,20 +271,21 @@ const AdminAnnouncements = () => {
                 <h2 className="text-sm sm:text-base font-display font-black text-slate-900 dark:text-white">
                   Sent History
                 </h2>
-                <span className="neu-flat-sm px-2.5 py-0.5 rounded-full text-3xs font-extrabold text-primary">
+                <span className="neu-flat-sm px-2.5 py-0.5 rounded-full text-xs font-extrabold text-link">
                   {filteredHistory.length} Total
                 </span>
               </div>
 
               {/* Inset Search Filter */}
               <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none z-10" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-link pointer-events-none z-10" />
                 <input
                   type="text"
+                  aria-label="Search announcements by title or content"
                   placeholder="Search announcements by title or content..."
                   value={historySearch}
                   onChange={(e) => setHistorySearch(e.target.value)}
-                  className="w-full neu-inset rounded-xl py-2.5 pl-10 pr-3 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[38px]"
+                  className="w-full neu-inset rounded-xl py-2.5 pl-10 pr-3 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder:text-tertiary outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[38px]"
                 />
               </div>
 
@@ -292,10 +295,10 @@ const AdminAnnouncements = () => {
                   <button
                     key={cat}
                     onClick={() => setHistoryFilter(cat)}
-                    className={`flex-1 py-1 px-2 rounded-xl text-3xs font-extrabold uppercase tracking-wider transition-all ${
+                    className={`flex-1 py-1 px-2 rounded-xl text-2xs font-extrabold uppercase tracking-wider transition-all ${
                       historyFilter === cat
-                        ? 'neu-inset text-primary font-black'
-                        : 'neu-btn text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                        ? 'neu-inset text-link font-black'
+                        : 'neu-btn text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
                     {cat}
@@ -327,10 +330,10 @@ const AdminAnnouncements = () => {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-3xs font-black uppercase tracking-wider text-primary">
+                          <span className="neu-flat-sm px-2 py-0.5 rounded-lg text-2xs font-black uppercase tracking-wider text-link">
                             {a.target_audience || 'All'}
                           </span>
-                          <span className="text-3xs font-mono text-slate-400">
+                          <span className="text-xs font-mono text-tertiary">
                             {new Date(a.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                         </div>
@@ -341,24 +344,24 @@ const AdminAnnouncements = () => {
 
                       <button
                         onClick={() => handleDelete(a.id)}
-                        className="neu-btn p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-xl transition-all shrink-0"
+                        className="neu-btn h-11 w-11 flex items-center justify-center text-tertiary hover:text-danger dark:hover:text-rose-400 rounded-xl transition-all shrink-0"
                         title="Delete Announcement"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    <p className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 leading-relaxed">
                       {a.message}
                     </p>
 
                     <div className="flex items-center justify-between pt-1 border-t border-white/60 dark:border-white/5">
-                      <span className="text-3xs text-slate-400 font-mono">
+                      <span className="text-xs text-tertiary font-mono">
                         {new Date(a.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                       </span>
                       <button
                         onClick={() => setSelectedAnnouncement(a)}
-                        className="text-primary font-bold hover:underline flex items-center gap-1 text-3xs uppercase tracking-wider"
+                        className="text-link font-bold hover:underline flex items-center gap-1 text-2xs uppercase tracking-wider"
                       >
                         <Eye className="w-3 h-3" />
                         <span>View Details</span>
@@ -377,7 +380,7 @@ const AdminAnnouncements = () => {
         <AnimatePresence>
           {selectedAnnouncement && (
             <motion.div
-              className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 sm:backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-4 md:p-6"
+              className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 sm:backdrop-blur-sm z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -396,9 +399,9 @@ const AdminAnnouncements = () => {
                 <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-[#ebf1f8] dark:bg-[#172236] z-10">
                   <div>
                     <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Announcement Record</h2>
-                    <p className="text-3xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Municipal Broadcast Archive</p>
+                    <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">Municipal Broadcast Archive</p>
                   </div>
-                  <span className="neu-flat-sm px-2.5 py-1 rounded-xl text-3xs font-extrabold uppercase tracking-wider text-primary">
+                  <span className="neu-flat-sm px-2.5 py-1 rounded-xl text-2xs font-extrabold uppercase tracking-wider text-link">
                     {selectedAnnouncement.target_audience || 'All'}
                   </span>
                 </div>
@@ -409,7 +412,7 @@ const AdminAnnouncements = () => {
                     <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
                       {selectedAnnouncement.title}
                     </h3>
-                    <p className="text-3xs font-mono text-slate-400 mt-1">
+                    <p className="text-xs font-mono text-tertiary mt-1">
                       Dispatched on {new Date(selectedAnnouncement.created_at).toLocaleString('en-US', {
                         month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
                       })}
@@ -426,7 +429,7 @@ const AdminAnnouncements = () => {
                   <motion.button
                     whileTap={{ scale: 0.96 }}
                     onClick={() => handleDelete(selectedAnnouncement.id)}
-                    className="neu-btn px-4 py-3 sm:py-3.5 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-all flex items-center justify-center gap-1.5"
+                    className="neu-btn px-4 py-3 sm:py-3.5 rounded-2xl text-xs font-bold text-danger dark:text-danger-dark hover:bg-rose-500/10 transition-all flex items-center justify-center gap-1.5"
                   >
                     <Trash2 className="w-4 h-4" />
                     <span>Delete</span>
@@ -434,7 +437,7 @@ const AdminAnnouncements = () => {
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedAnnouncement(null)}
-                    className="flex-1 neu-btn py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 hover:text-primary transition-all flex items-center justify-center gap-2 shadow-sm"
+                    className="flex-1 neu-btn py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
                     Close Record
                   </motion.button>

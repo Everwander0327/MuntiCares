@@ -147,7 +147,7 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
           {src ? (
             <img src={src} alt="Profile" className="w-full h-full object-cover" />
           ) : (
-            <span className="text-3xl md:text-4xl font-black text-primary">
+            <span className="text-3xl md:text-4xl font-black text-link">
               {fullName?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U'}
             </span>
           )}
@@ -168,7 +168,7 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
           type="button"
           onClick={() => setModalOpen(true)}
           disabled={uploading}
-          className="neu-btn absolute -bottom-1 -right-1 w-8 h-8 rounded-full flex items-center justify-center text-primary cursor-pointer shadow-md disabled:opacity-50"
+          className="neu-btn absolute -bottom-1 -right-1 w-11 h-11 rounded-full flex items-center justify-center text-link cursor-pointer shadow-md disabled:opacity-50"
           title="Choose 3D Avatar or Upload Photo"
         >
           <Camera className="w-4 h-4" />
@@ -188,7 +188,7 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
       {modalOpen && typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
           <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in"
             onClick={() => !uploading && setModalOpen(false)}
           >
             <motion.div
@@ -201,14 +201,14 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
               {/* Modal Header */}
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200/50 dark:border-white/5">
                 <div className="flex items-center gap-2.5">
-                  <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-primary">
-                    {isProvider ? <Stethoscope className="w-4 h-4 text-primary" /> : isAdmin ? <Shield className="w-4 h-4 text-primary" /> : <User className="w-4 h-4 text-primary" />}
+                  <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-link">
+                    {isProvider ? <Stethoscope className="w-4 h-4 text-link" /> : isAdmin ? <Shield className="w-4 h-4 text-link" /> : <User className="w-4 h-4 text-link" />}
                   </div>
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
                       {collectionTitle}
                     </h3>
-                    <p className="text-3xs sm:text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    <p className="text-sm text-tertiary dark:text-tertiary font-medium">
                       {collectionSubtitle}
                     </p>
                   </div>
@@ -216,7 +216,7 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="neu-btn p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+                  className="neu-btn p-2 rounded-xl text-tertiary hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -267,7 +267,7 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
                         <span className="font-extrabold text-xs text-slate-800 dark:text-slate-200 mt-2 truncate w-full text-center">
                           {avatar.name}
                         </span>
-                        <span className="text-3xs text-slate-400 font-medium truncate">
+                        <span className="text-xs text-tertiary font-medium truncate">
                           {avatar.role}
                         </span>
                       </motion.button>
@@ -280,18 +280,18 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
               <div className="pt-3 border-t border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div className="text-left w-full sm:w-auto">
                   <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Prefer your own photo?</p>
-                  <p className="text-3xs text-slate-400">JPG, PNG or WebP up to 2MB</p>
+                  <p className="text-xs text-tertiary">JPG, PNG or WebP up to 2MB</p>
                 </div>
                 <motion.button
                   whileTap={{ scale: 0.96 }}
                   type="button"
                   onClick={() => inputRef.current?.click()}
                   disabled={uploading}
-                  className="neu-btn px-4 py-2.5 rounded-xl font-extrabold text-xs text-primary flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto shadow-sm"
+                  className="neu-btn px-4 py-2.5 rounded-xl font-extrabold text-xs text-link flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto shadow-sm"
                 >
                   {uploading ? (
                     <>
-                      <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                      <Loader2 className="w-4 h-4 animate-spin text-link" />
                       <span>Saving...</span>
                     </>
                   ) : (

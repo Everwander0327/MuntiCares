@@ -8,35 +8,35 @@ const FLUID = [0.32, 0.72, 0, 1];
 
 const services = [
   {
-    icon: <Heart size={22} weight="light" className="text-primary" />,
+    icon: <Heart size={22} weight="light" className="text-link" />,
     title: 'Elderly Care',
     description: 'Compassionate, professional care for senior family members in the comfort of their homes.',
     span: 'md:col-span-7',
     image: IMAGES.landing.serviceElderly,
   },
   {
-    icon: <Stethoscope size={22} weight="light" className="text-primary" />,
+    icon: <Stethoscope size={22} weight="light" className="text-link" />,
     title: 'Post-Surgery Care',
     description: 'Recovery assistance after medical procedures, including wound care and mobility support.',
     span: 'md:col-span-5',
     image: IMAGES.landing.serviceRecovery,
   },
   {
-    icon: <Heartbeat size={22} weight="light" className="text-primary" />,
+    icon: <Heartbeat size={22} weight="light" className="text-link" />,
     title: 'Physical Therapy',
     description: 'In-home rehabilitation sessions tailored to your recovery goals and schedule.',
     span: 'md:col-span-4',
     image: IMAGES.landing.serviceTherapy,
   },
   {
-    icon: <UsersThree size={22} weight="light" className="text-primary" />,
+    icon: <UsersThree size={22} weight="light" className="text-link" />,
     title: 'Companion Care',
     description: 'Social support and daily companionship to improve quality of life and mental well-being.',
     span: 'md:col-span-4',
     image: IMAGES.landing.serviceCompanion,
   },
   {
-    icon: <Clock size={22} weight="light" className="text-primary" />,
+    icon: <Clock size={22} weight="light" className="text-link" />,
     title: 'Medication Management',
     description: 'Organized medication scheduling, reminders, and monitoring for peace of mind.',
     span: 'md:col-span-4',
@@ -72,20 +72,20 @@ const ServiceCard = ({ service }) => (
             </div>
           )}
           <div className="p-6 md:p-8">
-            <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mb-3 text-primary group-hover:scale-105 transition-transform duration-300">
+            <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mb-3 text-link group-hover:scale-105 transition-transform duration-300">
               <div className="card-icon-animate">
                 {service.icon}
               </div>
             </div>
             <h3 className="font-display text-base font-bold text-slate-900 dark:text-slate-100 mb-2 flex items-center justify-between">
               <span>{service.title}</span>
-              <ArrowUpRight size={16} weight="bold" className="text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <ArrowUpRight size={16} weight="bold" className="text-link opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </h3>
             <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">{service.description}</p>
           </div>
         </div>
         <div className="px-6 pb-6 md:px-8 md:pb-8 pt-0">
-          <span className="text-xs font-bold text-primary group-hover:underline inline-flex items-center gap-1">
+          <span className="text-xs font-bold text-link group-hover:underline inline-flex items-center gap-1">
             Find specialists
             <ArrowUpRight size={14} weight="bold" />
           </span>

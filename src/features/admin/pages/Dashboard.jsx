@@ -27,7 +27,7 @@ const StatCard = ({ label, value, colorClass, borderAccent, subtitle }) => {
       className={`neu-flat-sm rounded-2xl sm:rounded-[1.25rem] p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden transition-all border-l-4 ${borderAccent} bg-white/40 dark:bg-slate-900/30`}
     >
       <div>
-        <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm font-bold tracking-wide truncate">
+        <p className="text-tertiary dark:text-tertiary text-xs sm:text-sm font-bold tracking-wide truncate">
           {label}
         </p>
         <p className={`text-2xl sm:text-3xl md:text-4xl font-display font-black tracking-tight mt-1.5 leading-none ${colorClass}`} ref={ref}>
@@ -35,7 +35,7 @@ const StatCard = ({ label, value, colorClass, borderAccent, subtitle }) => {
         </p>
       </div>
       {subtitle && (
-        <p className="text-3xs text-slate-400 dark:text-slate-500 font-semibold mt-2.5 truncate">
+        <p className="text-xs text-tertiary dark:text-tertiary font-semibold mt-2.5 truncate">
           {subtitle}
         </p>
       )}
@@ -234,7 +234,7 @@ const AdminDashboard = () => {
               <h1 className="font-display font-black tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
                 Platform Analytics
               </h1>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-sm text-tertiary dark:text-tertiary mt-1">
                 Live overview of healthcare metrics, services, and community operations.
               </p>
             </div>
@@ -258,28 +258,28 @@ const AdminDashboard = () => {
             <StatCard 
               label="Total Patients" 
               value={stats.totalPatients} 
-              colorClass="text-primary" 
+              colorClass="text-link" 
               borderAccent="border-primary" 
               subtitle="Registered residents"
             />
             <StatCard 
               label="Total Providers" 
               value={stats.totalProviders} 
-              colorClass="text-sky-500" 
+              colorClass="text-primary-700 dark:text-primary-300" 
               borderAccent="border-sky-500" 
               subtitle="Healthcare pros"
             />
             <StatCard 
               label="Total Requests" 
               value={stats.totalRequests} 
-              colorClass="text-amber-500" 
+              colorClass="text-warning dark:text-warning-dark" 
               borderAccent="border-amber-500" 
               subtitle="All-time bookings"
             />
             <StatCard 
               label="Pending Approvals" 
               value={stats.pendingApprovals} 
-              colorClass="text-rose-500" 
+              colorClass="text-danger dark:text-danger-dark" 
               borderAccent="border-rose-500" 
               subtitle="Awaiting verification"
             />
@@ -298,7 +298,7 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">Requests Per Month</h3>
-                <p className="text-3xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Service booking volume</p>
+                <p className="text-xs text-tertiary dark:text-tertiary font-semibold mt-0.5">Service booking volume</p>
               </div>
             </div>
 
@@ -317,8 +317,8 @@ const AdminDashboard = () => {
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(30, 111, 191, 0.05)', radius: 12 }} />
                   <Bar dataKey="requests" fill="url(#neuBarGrad)" radius={[12, 12, 6, 6]} filter="url(#neuBarGlow)" />
                 </BarChart>
@@ -331,7 +331,7 @@ const AdminDashboard = () => {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">User Distribution</h3>
-                <p className="text-3xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Patients vs. Providers ratio</p>
+                <p className="text-xs text-tertiary dark:text-tertiary font-semibold mt-0.5">Patients vs. Providers ratio</p>
               </div>
             </div>
 
@@ -348,11 +348,11 @@ const AdminDashboard = () => {
                       <stop offset="100%" stopColor="#0ea5e9" />
                     </linearGradient>
                     <filter id="neuPieShadow" x="-20%" y="-20%" width="140%" height="140%">
-                      <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#000" floodOpacity="0.18" />
+                      <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="#17283B" floodOpacity="0.18" />
                     </filter>
                     {/* Filter for center hub disc */}
                     <filter id="hubShadow" x="-30%" y="-30%" width="160%" height="160%">
-                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.12" />
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#17283B" floodOpacity="0.12" />
                     </filter>
                   </defs>
 
@@ -395,7 +395,7 @@ const AdminDashboard = () => {
                               y={cy - 7}
                               textAnchor="middle"
                               dominantBaseline="central"
-                              className="fill-slate-400 dark:fill-slate-500 font-extrabold text-[9px] tracking-widest uppercase"
+                              className="fill-slate-400 dark:fill-slate-500 font-extrabold text-[10px] tracking-widest uppercase"
                             >
                               TOTAL
                             </text>
@@ -436,7 +436,7 @@ const AdminDashboard = () => {
           <div className="flex items-center justify-between mb-5">
             <div>
               <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">User Growth (12 Months)</h3>
-              <p className="text-3xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5">Community onboarding trajectory</p>
+              <p className="text-xs text-tertiary dark:text-tertiary font-semibold mt-0.5">Community onboarding trajectory</p>
             </div>
           </div>
 
@@ -460,12 +460,12 @@ const AdminDashboard = () => {
                     <stop offset="100%" stopColor="#10B981" stopOpacity={0.0} />
                   </linearGradient>
                   <filter id="neuLineGlow" x="-10%" y="-10%" width="120%" height="120%">
-                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.25" />
+                    <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#17283B" floodOpacity="0.25" />
                   </filter>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.12)" vertical={false} />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 700 }} />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 700 }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Area 
                   type="monotone" 
@@ -514,7 +514,7 @@ const AdminDashboard = () => {
           >
             <div className="flex items-center justify-between pb-4 border-b border-white/60 dark:border-white/5">
               <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">Recent Service Requests</h3>
-              <span className="text-3xs font-extrabold uppercase tracking-widest text-slate-400">Latest 5</span>
+              <span className="text-2xs font-extrabold uppercase tracking-widest text-tertiary">Latest 5</span>
             </div>
 
             {/* Mobile Cards */}
@@ -524,29 +524,29 @@ const AdminDashboard = () => {
                   <div className="flex justify-between items-start gap-2">
                     <div className="min-w-0">
                       <p className="font-extrabold text-xs text-slate-900 dark:text-white truncate">{act.user}</p>
-                      <p className="text-2xs text-slate-500 dark:text-slate-400 font-semibold truncate">{act.action}</p>
+                      <p className="text-xs text-tertiary dark:text-tertiary font-semibold truncate">{act.action}</p>
                     </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider shrink-0 ${
-                      act.status === 'Completed' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' :
-                      act.status === 'Accepted' ? 'neu-flat-sm text-blue-600 dark:text-blue-400' :
-                      act.status === 'Pending' ? 'neu-flat-sm text-amber-600 dark:text-amber-400' :
-                      'neu-flat-sm text-rose-600 dark:text-rose-400'
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider shrink-0 ${
+                      act.status === 'Completed' ? 'neu-flat-sm text-success dark:text-success-dark' :
+                      act.status === 'Accepted' ? 'neu-flat-sm text-link dark:text-primary-300' :
+                      act.status === 'Pending' ? 'neu-flat-sm text-warning dark:text-warning-dark' :
+                      'neu-flat-sm text-danger dark:text-danger-dark'
                     }`}>
                       {act.status}
                     </span>
                   </div>
-                  <p className="text-3xs text-slate-400 font-mono font-medium">{act.date}</p>
+                  <p className="text-xs text-tertiary font-mono font-medium">{act.date}</p>
                 </div>
               )) : (
-                <p className="text-xs text-slate-400 text-center py-8">No recent activity.</p>
+                <p className="text-xs text-tertiary text-center py-8">No recent activity.</p>
               )}
             </div>
 
             {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto mt-2">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200/60 dark:border-white/5 text-slate-400 dark:text-slate-500 text-3xs font-extrabold uppercase tracking-wider">
+                  <tr className="border-b border-slate-200/60 dark:border-white/5 text-tertiary dark:text-tertiary text-2xs font-extrabold uppercase tracking-wider">
                     <th className="py-3 px-2">Patient</th>
                     <th className="py-3 px-2">Action</th>
                     <th className="py-3 px-2">Date & Time</th>
@@ -558,13 +558,13 @@ const AdminDashboard = () => {
                     <tr key={idx} className="hover:bg-primary/5 transition-colors">
                       <td className="py-3 px-2 font-bold text-slate-800 dark:text-slate-100">{act.user}</td>
                       <td className="py-3 px-2 font-medium text-slate-600 dark:text-slate-300">{act.action}</td>
-                      <td className="py-3 px-2 font-mono text-3xs text-slate-400">{act.date}</td>
+                      <td className="py-3 px-2 font-mono text-xs text-tertiary">{act.date}</td>
                       <td className="py-3 px-2 text-right">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold uppercase tracking-wider ${
-                          act.status === 'Completed' ? 'neu-flat-sm text-emerald-600 dark:text-emerald-400' :
-                          act.status === 'Accepted' ? 'neu-flat-sm text-blue-600 dark:text-blue-400' :
-                          act.status === 'Pending' ? 'neu-flat-sm text-amber-600 dark:text-amber-400' :
-                          'neu-flat-sm text-rose-600 dark:text-rose-400'
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider ${
+                          act.status === 'Completed' ? 'neu-flat-sm text-success dark:text-success-dark' :
+                          act.status === 'Accepted' ? 'neu-flat-sm text-link dark:text-primary-300' :
+                          act.status === 'Pending' ? 'neu-flat-sm text-warning dark:text-warning-dark' :
+                          'neu-flat-sm text-danger dark:text-danger-dark'
                         }`}>
                           {act.status}
                         </span>
@@ -572,7 +572,7 @@ const AdminDashboard = () => {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="4" className="py-8 text-center text-slate-400">No recent activity.</td>
+                      <td colSpan="4" className="py-8 text-center text-tertiary">No recent activity.</td>
                     </tr>
                   )}
                 </tbody>
@@ -591,7 +591,7 @@ const AdminDashboard = () => {
               <h3 className="font-display font-bold text-sm sm:text-base text-slate-900 dark:text-white">
                 Top Rated Providers
               </h3>
-              <span className="text-3xs font-extrabold uppercase tracking-widest text-slate-400">Top 5</span>
+              <span className="text-2xs font-extrabold uppercase tracking-widest text-tertiary">Top 5</span>
             </div>
 
             {/* Mobile View */}
@@ -601,9 +601,9 @@ const AdminDashboard = () => {
                   <div className="flex justify-between items-start gap-2">
                     <div>
                       <p className="font-extrabold text-xs text-slate-900 dark:text-white">{p.name}</p>
-                      <p className="text-2xs text-slate-500 dark:text-slate-400 font-semibold">{p.services.slice(0, 2).join(', ')}</p>
+                      <p className="text-xs text-tertiary dark:text-tertiary font-semibold">{p.services.slice(0, 2).join(', ')}</p>
                     </div>
-                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg flex items-center gap-1 text-amber-500 font-black text-2xs">
+                    <span className="neu-flat-sm px-2 py-0.5 rounded-lg flex items-center gap-1 text-warning dark:text-warning-dark font-black text-xs">
                       ★ {Number(p.rating).toFixed(1)}
                     </span>
                   </div>
@@ -611,19 +611,19 @@ const AdminDashboard = () => {
                     <div className="neu-inset flex-1 h-2 rounded-full overflow-hidden p-0.5">
                       <div className="h-full rounded-full bg-primary" style={{ width: `${p.trust_score}%` }} />
                     </div>
-                    <span className="text-3xs font-bold font-mono text-slate-500 dark:text-slate-400">{p.trust_score}%</span>
+                    <span className="text-xs font-bold font-mono text-tertiary dark:text-tertiary">{p.trust_score}%</span>
                   </div>
                 </div>
               )) : (
-                <p className="text-xs text-slate-400 text-center py-8">No providers yet.</p>
+                <p className="text-xs text-tertiary text-center py-8">No providers yet.</p>
               )}
             </div>
 
             {/* Desktop Table */}
             <div className="hidden md:block overflow-x-auto mt-2">
-              <table className="w-full text-left border-collapse text-xs">
+              <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200/60 dark:border-white/5 text-slate-400 dark:text-slate-500 text-3xs font-extrabold uppercase tracking-wider">
+                  <tr className="border-b border-slate-200/60 dark:border-white/5 text-tertiary dark:text-tertiary text-2xs font-extrabold uppercase tracking-wider">
                     <th className="py-3 px-2">Provider</th>
                     <th className="py-3 px-2">Specialties</th>
                     <th className="py-3 px-2">Rating</th>
@@ -634,9 +634,9 @@ const AdminDashboard = () => {
                   {topProviders.length > 0 ? topProviders.map((p, idx) => (
                     <tr key={idx} className="hover:bg-primary/5 transition-colors">
                       <td className="py-3 px-2 font-bold text-slate-800 dark:text-slate-100">{p.name}</td>
-                      <td className="py-3 px-2 text-slate-600 dark:text-slate-300 font-medium text-2xs">{p.services.slice(0, 2).join(', ')}</td>
+                      <td className="py-3 px-2 text-slate-600 dark:text-slate-300 font-medium text-xs">{p.services.slice(0, 2).join(', ')}</td>
                       <td className="py-3 px-2">
-                        <span className="neu-flat-sm px-2 py-0.5 rounded-lg inline-flex items-center gap-1 text-amber-500 font-black text-2xs">
+                        <span className="neu-flat-sm px-2 py-0.5 rounded-lg inline-flex items-center gap-1 text-warning dark:text-warning-dark font-black text-xs">
                           ★ {Number(p.rating).toFixed(1)}
                         </span>
                       </td>
@@ -645,13 +645,13 @@ const AdminDashboard = () => {
                           <div className="neu-inset flex-1 h-2 rounded-full overflow-hidden p-0.5">
                             <div className="h-full rounded-full bg-primary" style={{ width: `${p.trust_score}%` }} />
                           </div>
-                          <span className="text-3xs font-mono font-bold text-slate-500 dark:text-slate-400">{p.trust_score}%</span>
+                          <span className="text-xs font-mono font-bold text-tertiary dark:text-tertiary">{p.trust_score}%</span>
                         </div>
                       </td>
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="4" className="py-8 text-center text-slate-400">No providers yet.</td>
+                      <td colSpan="4" className="py-8 text-center text-tertiary">No providers yet.</td>
                     </tr>
                   )}
                 </tbody>

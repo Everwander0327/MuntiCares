@@ -104,15 +104,30 @@ a,
   -webkit-tap-highlight-color: transparent !important;
 }
 
-/* Focus ring — single tokenized indicator, visible on every interactive element */
+/* Semantic text colors.
+   tertiary — de-emphasized copy (was #94A3B8, which failed 4.5:1 everywhere).
+   link — primary-colored text (icons/marks keep #2F6FB5, but text needs 4.5:1). */
 :root {
+  --text-tertiary: #5A6B7F;
+  --text-link: #2F6FB5;
   --focus-ring: #2F6FB5;
 }
 
 html.dark {
+  --text-tertiary: #A5B6C8;
+  --text-link: #8CBDF0;
   --focus-ring: #8CBDF0;
 }
 
+/* MapLibre paints its attribution on its own white control chrome,
+   so it needs the light-surface ink in both themes. */
+.maplibregl-ctrl-attrib,
+.maplibregl-ctrl-attrib-inner,
+.maplibregl-ctrl-attrib a {
+  color: #5A6B7F !important;
+}
+
+/* Focus ring — single tokenized indicator, visible on every interactive element */
 :focus-visible {
   outline: 3px solid var(--focus-ring) !important;
   outline-offset: 2px !important;
@@ -125,7 +140,7 @@ html[data-cookie-banner='visible'] .onboarding-footer {
 
 
 ::selection {
-  @apply bg-primary/15 text-primary;
+  @apply bg-primary/15 text-link;
 }
 
 /* Hide mobile bottom nav & prevent page background scrollbar when a modal is open */
@@ -305,7 +320,7 @@ button,
   }
 
   .btn-outline {
-    @apply relative overflow-hidden border border-primary/30 text-primary px-6 py-3 rounded-full font-semibold transition-all duration-700 ease-fluid hover:bg-primary hover:text-white hover:border-primary active:scale-[0.98] outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 inline-flex items-center justify-center gap-2;
+    @apply relative overflow-hidden border border-primary/30 text-link px-6 py-3 rounded-full font-semibold transition-all duration-700 ease-fluid hover:bg-primary hover:text-white hover:border-primary active:scale-[0.98] outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 inline-flex items-center justify-center gap-2;
   }
 
   .btn-outline::after {

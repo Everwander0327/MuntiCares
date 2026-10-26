@@ -64,7 +64,7 @@ const _StatItem = ({ label, value, icon, iconColor }) => {
         {React.cloneElement(icon, { className: `w-5 h-5 sm:w-6 sm:h-6 ${iconColor}` })}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold tracking-wide truncate">
+        <p className="text-tertiary dark:text-tertiary text-xs font-semibold tracking-wide truncate">
           {label}
         </p>
         <p className="text-xl sm:text-2xl md:text-3xl font-display font-extrabold text-slate-800 dark:text-slate-100 tracking-tight mt-0.5 leading-none" ref={ref}>
@@ -415,6 +415,7 @@ const ProviderDashboard = () => {
       <div className="space-y-4 sm:space-y-6 md:space-y-7 pb-10">
 
         {/* HERO ROW: CAROUSEL (7 cols) + QUICK ACTIONS (5 cols) */}
+        <h1 className="sr-only">Dashboard</h1>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
           
           {/* Hero Carousel (lg:col-span-7) */}
@@ -453,7 +454,7 @@ const ProviderDashboard = () => {
                         <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
-                        <p className="text-2xs sm:text-xs md:text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
+                        <p className="text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
                           {slide.description}
                         </p>
                       </div>
@@ -477,7 +478,7 @@ const ProviderDashboard = () => {
                       }}
                       aria-label={`Go to slide ${idx + 1}`}
                       className={`h-1 rounded-full transition-all duration-300 cursor-pointer ${
-                        currentSlide === idx ? 'w-3.5 bg-white shadow-xs' : 'w-1 bg-white/40 hover:bg-white/80'
+                        currentSlide === idx ? 'w-3.5 bg-white shadow-sm' : 'w-1 bg-white/40 hover:bg-white/80'
                       }`}
                     />
                   ))}
@@ -509,12 +510,12 @@ const ProviderDashboard = () => {
               {/* Horizontal Status Strip */}
               <div className="mb-4 pb-4 border-b border-slate-200/60 dark:border-white/5">
                 <div className="flex items-center justify-between mb-2.5">
-                  <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary">
                     Patient Requests
                   </h4>
                   <Link
                     to="/provider/requests"
-                    className="text-3xs font-bold text-primary hover:text-primary-600 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-0.5"
+                    className="text-xs font-bold text-link hover:text-primary-600 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-0.5"
                   >
                     View all &rarr;
                   </Link>
@@ -531,29 +532,29 @@ const ProviderDashboard = () => {
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                       </span>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-primary transition-colors">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-extrabold mr-1.5 uppercase tracking-wide text-3xs">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate group-hover:text-link transition-colors">
+                        <span className="text-success dark:text-success-dark font-extrabold mr-1.5 uppercase tracking-wide text-2xs">
                           {activeVisit.status}:
                         </span>
                         {activeVisit.patient} &bull; {activeVisit.service}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0 text-slate-400 group-hover:text-primary text-3xs font-semibold">
+                    <div className="flex items-center gap-1 shrink-0 text-tertiary group-hover:text-link text-xs font-semibold">
                       <span className="hidden sm:inline">{activeVisit.time || 'Today'}</span>
                       <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                     </div>
                   </Link>
                 ) : (
-                  <div className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/50 dark:border-white/5 text-slate-400">
+                  <div className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/50 dark:border-white/5 text-tertiary">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
-                      <p className="text-3xs sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-sm font-semibold text-tertiary dark:text-tertiary truncate">
                         No active or upcoming visits scheduled today
                       </p>
                     </div>
                     <Link
                       to="/provider/requests"
-                      className="text-3xs font-bold text-primary hover:underline shrink-0"
+                      className="text-xs font-bold text-link hover:underline shrink-0"
                     >
                       Check requests
                     </Link>
@@ -562,28 +563,28 @@ const ProviderDashboard = () => {
 
                 <div className="grid grid-cols-3 gap-2.5">
                   <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl neu-flat-sm select-text">
-                    <p className="text-xl sm:text-2xl font-display font-black text-blue-600 dark:text-blue-400 leading-none">
+                    <p className="text-xl sm:text-2xl font-display font-black text-link dark:text-primary-300 leading-none">
                       {stats.active}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-blue-600/80 dark:text-blue-400/80 uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-link dark:text-primary-300 uppercase tracking-wider mt-1.5">
                       Active
                     </p>
                   </div>
 
                   <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl neu-flat-sm select-text">
-                    <p className="text-xl sm:text-2xl font-display font-black text-amber-600 dark:text-amber-400 leading-none">
+                    <p className="text-xl sm:text-2xl font-display font-black text-warning dark:text-warning-dark leading-none">
                       {stats.pending}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-amber-600/80 dark:text-amber-400/80 uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-warning dark:text-warning-dark uppercase tracking-wider mt-1.5">
                       Pending
                     </p>
                   </div>
 
                   <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl neu-flat-sm select-text">
-                    <p className="text-xl sm:text-2xl font-display font-black text-emerald-600 dark:text-emerald-400 leading-none">
+                    <p className="text-xl sm:text-2xl font-display font-black text-success dark:text-success-dark leading-none">
                       {stats.completed}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-emerald-600/80 dark:text-emerald-400/80 uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-success dark:text-success-dark uppercase tracking-wider mt-1.5">
                       Done
                     </p>
                   </div>
@@ -602,38 +603,38 @@ const ProviderDashboard = () => {
                   to="/provider/schedule"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-slate-800 dark:text-slate-200"
                 >
-                  <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-primary shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-link shrink-0 group-hover:scale-105 transition-transform">
                     <Calendar className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-xs sm:text-[13px] font-bold">Today&apos;s Schedule</span>
-                    <span className="block text-[11px] text-slate-400 truncate">View calendar & bookings</span>
+                    <span className="block text-xs text-tertiary truncate">View calendar & bookings</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
 
                 <Link
                   to="/provider/requests"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-slate-800 dark:text-slate-200"
                 >
-                  <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-primary shrink-0 group-hover:scale-105 transition-transform">
+                  <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-link shrink-0 group-hover:scale-105 transition-transform">
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className="block text-xs sm:text-[13px] font-bold">Incoming Requests {stats.pending > 0 && `(${stats.pending})`}</span>
-                    <span className="block text-[11px] text-slate-400 truncate">Accept or decline visits</span>
+                    <span className="block text-xs text-tertiary truncate">Accept or decline visits</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
 
                 <Link
                   to="/provider/messages"
                   className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-slate-800 dark:text-slate-200"
                 >
-                  <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-primary shrink-0 group-hover:scale-105 transition-transform relative">
+                  <div className="neu-flat-sm w-9 h-9 rounded-xl flex items-center justify-center text-link shrink-0 group-hover:scale-105 transition-transform relative">
                     <MessageCircle className="w-4 h-4" />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-3xs font-extrabold flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white rounded-full text-xs font-extrabold flex items-center justify-center">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -642,9 +643,9 @@ const ProviderDashboard = () => {
                     <span className="block text-xs sm:text-[13px] font-bold">
                       Messages {unreadCount > 0 && `(${unreadCount})`}
                     </span>
-                    <span className="block text-[11px] text-slate-400 truncate">Chat with active patients</span>
+                    <span className="block text-xs text-tertiary truncate">Chat with active patients</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
               </div>
             </div>
@@ -659,7 +660,7 @@ const ProviderDashboard = () => {
               <h2 className="font-display font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
                 Recent Patient Requests
               </h2>
-              <p className="text-3xs sm:text-xs text-slate-500 mt-0.5">
+              <p className="text-sm text-tertiary mt-0.5">
                 {recentRequests.length > 0 
                   ? `Page ${requestsPage} of ${Math.ceil(recentRequests.length / REQUESTS_PER_PAGE)} (${recentRequests.length} total)` 
                   : 'No requests recorded'}
@@ -672,19 +673,19 @@ const ProviderDashboard = () => {
                   type="button"
                   onClick={() => setRequestsPage(p => Math.max(1, p - 1))}
                   disabled={requestsPage === 1}
-                  className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                  className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                   title="Previous page"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-3xs font-extrabold text-slate-500 px-1 select-none">
+                <span className="text-xs font-extrabold text-tertiary px-1 select-none">
                   {requestsPage} / {Math.ceil(recentRequests.length / REQUESTS_PER_PAGE)}
                 </span>
                 <button
                   type="button"
                   onClick={() => setRequestsPage(p => Math.min(Math.ceil(recentRequests.length / REQUESTS_PER_PAGE), p + 1))}
                   disabled={requestsPage >= Math.ceil(recentRequests.length / REQUESTS_PER_PAGE)}
-                  className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                  className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                   title="Next page"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -706,7 +707,7 @@ const ProviderDashboard = () => {
                     to={`/provider/patients/${req.patientId}/profile`}
                     className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 group"
                   >
-                    <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex items-center justify-center text-xs font-black text-primary shrink-0 p-0.5">
+                    <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex items-center justify-center text-xs font-black text-link shrink-0 p-0.5">
                       {req.patientAvatarUrl ? (
                         <img src={req.patientAvatarUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                       ) : (
@@ -714,11 +715,11 @@ const ProviderDashboard = () => {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors truncate">
+                      <p className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors truncate">
                         {req.patient}
                       </p>
-                      <div className="flex items-center gap-1.5 sm:gap-2 text-3xs sm:text-xs text-slate-500 dark:text-slate-400">
-                        <span className="font-semibold text-primary truncate max-w-[130px] sm:max-w-none">{req.service}</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 text-sm text-tertiary dark:text-tertiary">
+                        <span className="font-semibold text-link truncate max-w-[130px] sm:max-w-none">{req.service}</span>
                         <span>&bull;</span>
                         <span className="shrink-0">{req.date}</span>
                       </div>
@@ -728,32 +729,32 @@ const ProviderDashboard = () => {
                   <div className="flex items-center justify-between sm:justify-end gap-2 self-stretch sm:self-center pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200/40 dark:border-white/5">
                     {/* Clean Neumorphic Status Badges (No Dots) */}
                     {req.status === 'Completed' && (
-                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 shadow-xs">
+                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-success dark:text-success-dark bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 shadow-sm">
                         Completed
                       </span>
                     )}
                     {req.status === 'Pending' && (
-                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 shadow-xs">
+                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-warning dark:text-warning-dark bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 shadow-sm">
                         Pending
                       </span>
                     )}
                     {['Accepted', 'On The Way', 'Arrived'].includes(req.status) && (
-                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30 shadow-xs">
+                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-link dark:text-primary-300 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30 shadow-sm">
                         {req.status}
                       </span>
                     )}
                     {req.status === 'Rejected' && (
-                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-rose-600 dark:text-rose-400 bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 shadow-xs">
+                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-danger dark:text-danger-dark bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 shadow-sm">
                         Rejected
                       </span>
                     )}
                     {req.status === 'Cancelled' && (
-                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/50 dark:border-white/10 shadow-xs">
+                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/50 dark:border-white/10 shadow-sm">
                         Cancelled
                       </span>
                     )}
                     {!['Completed', 'Pending', 'Accepted', 'On The Way', 'Arrived', 'Rejected', 'Cancelled'].includes(req.status) && (
-                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-3xs font-extrabold uppercase tracking-wider text-slate-500 bg-slate-200/50">
+                      <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-tertiary bg-slate-200/50">
                         {req.status}
                       </span>
                     )}
@@ -764,7 +765,7 @@ const ProviderDashboard = () => {
                           type="button"
                           onClick={() => handleQuickAction(req.id, 'accepted')}
                           disabled={!!actionStates[req.id]}
-                          className="neu-btn px-2.5 py-1 rounded-lg text-3xs font-bold text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all cursor-pointer"
+                          className="neu-btn px-2.5 py-1 rounded-lg text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all cursor-pointer"
                         >
                           Accept
                         </button>
@@ -772,7 +773,7 @@ const ProviderDashboard = () => {
                           type="button"
                           onClick={() => handleQuickAction(req.id, 'rejected')}
                           disabled={!!actionStates[req.id]}
-                          className="neu-btn px-2.5 py-1 rounded-lg text-3xs font-bold text-red-500 hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+                          className="neu-btn px-2.5 py-1 rounded-lg text-xs font-bold text-danger hover:bg-danger hover:text-white transition-all cursor-pointer"
                         >
                           Decline
                         </button>
@@ -784,11 +785,11 @@ const ProviderDashboard = () => {
             </div>
           ) : (
             <div className="neu-flat-sm p-8 rounded-2xl text-center">
-              <div className="neu-flat w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 text-slate-400">
-                <FileText className="w-5 h-5 text-primary" />
+              <div className="neu-flat w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 text-tertiary">
+                <FileText className="w-5 h-5 text-link" />
               </div>
               <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">No Recent Requests</p>
-              <p className="text-3xs sm:text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+              <p className="text-sm text-tertiary mt-1 max-w-xs mx-auto">
                 No patient requests or visit bookings at the moment.
               </p>
             </div>
@@ -802,7 +803,7 @@ const ProviderDashboard = () => {
               <h3 className="font-display font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate">
                 Patient Reviews & Feedback
               </h3>
-              <p className="text-3xs sm:text-xs text-slate-400">
+              <p className="text-sm text-tertiary">
                 {reviews.length > 0
                   ? `Page ${reviewsPage} of ${Math.ceil(reviews.length / REVIEWS_PER_PAGE)} (${reviews.length} reviews)`
                   : 'Ratings submitted by verified patients'}
@@ -815,19 +816,19 @@ const ProviderDashboard = () => {
                   type="button"
                   onClick={() => setReviewsPage(p => Math.max(1, p - 1))}
                   disabled={reviewsPage === 1}
-                  className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                  className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                   title="Previous page"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-3xs font-extrabold text-slate-500 px-1 select-none">
+                <span className="text-xs font-extrabold text-tertiary px-1 select-none">
                   {reviewsPage} / {Math.ceil(reviews.length / REVIEWS_PER_PAGE)}
                 </span>
                 <button
                   type="button"
                   onClick={() => setReviewsPage(p => Math.min(Math.ceil(reviews.length / REVIEWS_PER_PAGE), p + 1))}
                   disabled={reviewsPage >= Math.ceil(reviews.length / REVIEWS_PER_PAGE)}
-                  className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                  className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                   title="Next page"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -847,9 +848,9 @@ const ProviderDashboard = () => {
               </div>
             ) : (
               <div className="neu-flat-sm p-6 sm:p-8 rounded-2xl text-center">
-                <Star className="w-8 h-8 text-slate-400 mx-auto mb-2 opacity-50" />
+                <Star className="w-8 h-8 text-tertiary mx-auto mb-2 opacity-50" />
                 <p className="text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-300">No patient reviews yet</p>
-                <p className="text-3xs text-slate-400 mt-0.5">Ratings and comments left by patients will display here.</p>
+                <p className="text-xs text-tertiary mt-0.5">Ratings and comments left by patients will display here.</p>
               </div>
             )}
           </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { 
   X, Activity, FileText, ClipboardList, Send, Loader2, ExternalLink, 
   Trash2, Paperclip, HeartPulse, ShieldAlert, AlertCircle, 
@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { EmptyState } from '@/shared/ui';
 import { motion } from 'framer-motion';
 
-const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
+const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRef = null }) => {
   const { user } = useAuth();
   const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('history');
@@ -126,22 +126,17 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
     return () => { clearInterval(interval); supabase.removeChannel(channel); };
   }, [isOpen, patientId, user]);
 
-  // Handle escape key
+  // Lock background scroll while the record is open
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen) onClose();
-    };
     if (isOpen) {
       document.body.classList.add('modal-open');
-      window.addEventListener('keydown', handleKeyDown);
     } else {
       document.body.classList.remove('modal-open');
     }
     return () => {
       document.body.classList.remove('modal-open');
-      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const logDataAccess = async () => {
     if (!user) return;
@@ -296,27 +291,36 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-hidden">
-      {/* Backdrop */}
-      <motion.div 
-        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[9999]"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      />
+  return (
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay asChild>
+        <motion.div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onClick={onClose}
+        />
+      </DialogPrimitive.Overlay>
 
       {/* Main Neumorphic Modal Dialog: Mobile Bottom Sheet + Desktop Centered Modal */}
-      <motion.div
-        role="dialog"
+      <DialogPrimitive.Content
+        asChild
         aria-modal="true"
-        aria-labelledby="record-modal-title"
+        onCloseAutoFocus={(event) => {
+          if (!triggerRef?.current) return;
+          event.preventDefault();
+          triggerRef.current.focus();
+        }}
+      >
+      <motion.div
         initial={{ opacity: 0, y: '100%' }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: '100%' }}
         transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className="relative w-full max-w-4xl h-[90vh] sm:h-[86vh] sm:max-h-[86vh] neu-flat rounded-t-[2rem] sm:rounded-[2.25rem] flex flex-col overflow-hidden z-[10000] border-t sm:border border-slate-200/50 dark:border-white/5 shadow-2xl"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-hidden pointer-events-none"
+      >
+      <motion.div
+        className="relative w-full max-w-4xl h-[90vh] sm:h-[86vh] sm:max-h-[86vh] neu-flat rounded-t-[2rem] sm:rounded-[2.25rem] flex flex-col overflow-hidden border-t sm:border border-slate-200/50 dark:border-white/5 shadow-2xl pointer-events-auto"
       >
         {/* Mobile Pull Indicator Bar */}
         <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mt-2.5 sm:hidden shrink-0" />
@@ -324,39 +328,39 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
         {/* Header Bar */}
         <div className="px-4 sm:px-6 py-3.5 sm:py-4.5 border-b border-slate-200/50 dark:border-white/5 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-primary font-bold shrink-0">
-              <HeartPulse className="w-5 h-5 text-primary" />
+            <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-link font-bold shrink-0">
+              <HeartPulse className="w-5 h-5 text-link" />
             </div>
             <div className="min-w-0">
-              <h2 id="record-modal-title" className="font-display font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
-                Clinical Chart & Record
-              </h2>
-              <p className="text-3xs sm:text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
-                Patient: <span className="text-primary font-bold">{patientName}</span>
+              <DialogPrimitive.Title asChild>
+                <h2 className="font-display font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
+                  Clinical Chart & Record
+                </h2>
+              </DialogPrimitive.Title>
+              <p className="text-xs sm:text-xs font-semibold text-tertiary dark:text-tertiary truncate">
+                Patient: <span className="text-link font-bold">{patientName}</span>
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer shrink-0"
-            title="Close modal"
+          <DialogPrimitive.Close
+            aria-label="Close"
+            className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer shrink-0"
           >
             <X className="w-4 h-4" />
-          </button>
+          </DialogPrimitive.Close>
         </div>
 
         {/* Content Body */}
         {consentBlocked ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 text-center my-auto">
-            <div className="neu-flat w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-4 text-rose-500">
+            <div className="neu-flat w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-4 text-danger">
               <ShieldAlert className="w-8 h-8" />
             </div>
             <h3 className="text-lg sm:text-xl font-display font-extrabold text-slate-900 dark:text-white mb-2">
               Data Access Revoked
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
+            <p className="text-sm text-tertiary dark:text-tertiary max-w-md mb-6 leading-relaxed">
               <span className="font-bold text-slate-800 dark:text-slate-200">{patientName}</span> has revoked consent for medical record sharing. You cannot view their clinical notes until permission is re-enabled in their consent settings.
             </p>
             <button
@@ -375,13 +379,13 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                 type="button"
                 disabled={grantedPermissions?.medical_history === false}
                 onClick={() => setActiveTab('history')}
-                className={`py-2 px-1 sm:px-3.5 rounded-xl text-3xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`py-2 px-1 sm:px-3.5 rounded-xl text-xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   activeTab === 'history'
-                    ? 'neu-pressed text-primary font-extrabold'
+                    ? 'neu-pressed text-link font-extrabold'
                     : 'neu-btn text-slate-600 dark:text-slate-300'
                 }`}
               >
-                <Activity className="w-3.5 h-3.5 text-primary shrink-0" />
+                <Activity className="w-3.5 h-3.5 text-link shrink-0" />
                 <span className="truncate">History</span>
               </button>
 
@@ -389,13 +393,13 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                 type="button"
                 disabled={grantedPermissions?.documents === false}
                 onClick={() => setActiveTab('documents')}
-                className={`py-2 px-1 sm:px-3.5 rounded-xl text-3xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`py-2 px-1 sm:px-3.5 rounded-xl text-xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   activeTab === 'documents'
-                    ? 'neu-pressed text-primary font-extrabold'
+                    ? 'neu-pressed text-link font-extrabold'
                     : 'neu-btn text-slate-600 dark:text-slate-300'
                 }`}
               >
-                <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                <FileText className="w-3.5 h-3.5 text-link shrink-0" />
                 <span className="truncate">Docs ({documents.length})</span>
               </button>
 
@@ -403,13 +407,13 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                 type="button"
                 disabled={grantedPermissions?.visit_notes === false}
                 onClick={() => setActiveTab('notes')}
-                className={`py-2 px-1 sm:px-3.5 rounded-xl text-3xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`py-2 px-1 sm:px-3.5 rounded-xl text-xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   activeTab === 'notes'
-                    ? 'neu-pressed text-primary font-extrabold'
+                    ? 'neu-pressed text-link font-extrabold'
                     : 'neu-btn text-slate-600 dark:text-slate-300'
                 }`}
               >
-                <ClipboardList className="w-3.5 h-3.5 text-primary shrink-0" />
+                <ClipboardList className="w-3.5 h-3.5 text-link shrink-0" />
                 <span className="truncate">Notes</span>
               </button>
             </div>
@@ -417,8 +421,8 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
             {/* Tab Contents Area */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
               {loading ? (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
+                <div className="flex flex-col items-center justify-center py-20 text-tertiary">
+                  <Loader2 className="w-8 h-8 animate-spin text-link mb-3" />
                   <p className="text-xs font-semibold">Loading patient records...</p>
                 </div>
               ) : (
@@ -428,9 +432,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                     <div className="space-y-4">
                       {grantedPermissions?.medical_history === false ? (
                         <div className="neu-inset p-8 rounded-2xl text-center">
-                          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                          <AlertCircle className="w-8 h-8 text-warning mx-auto mb-2" />
                           <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Medical History Restricted</p>
-                          <p className="text-xs text-slate-500 mt-1">Patient has not granted permission to view this section.</p>
+                          <p className="text-xs text-tertiary mt-1">Patient has not granted permission to view this section.</p>
                         </div>
                       ) : !history?.allergies && !history?.chronic_conditions && !history?.past_surgeries ? (
                         <div className="neu-inset p-8 rounded-2xl text-center">
@@ -445,7 +449,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                         <div className="space-y-4">
                           {/* Allergies Highlight Card */}
                           <div className="neu-flat rounded-2xl p-4 sm:p-5 border-l-4 border-rose-500 space-y-1">
-                            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-rose-500">
+                            <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-danger">
                               <AlertCircle className="w-4 h-4" />
                               <span>Known Allergies</span>
                             </div>
@@ -457,7 +461,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                           {/* Conditions & Surgeries Grid */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-2">
-                              <h4 className="font-display font-extrabold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              <h4 className="font-display font-extrabold text-xs uppercase tracking-wider text-tertiary dark:text-tertiary">
                                 Chronic Conditions
                               </h4>
                               <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
@@ -466,7 +470,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                             </div>
 
                             <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-2">
-                              <h4 className="font-display font-extrabold text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                              <h4 className="font-display font-extrabold text-xs uppercase tracking-wider text-tertiary dark:text-tertiary">
                                 Past Surgeries & Procedures
                               </h4>
                               <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
@@ -484,9 +488,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                     <div className="space-y-4">
                       {grantedPermissions?.documents === false ? (
                         <div className="neu-inset p-8 rounded-2xl text-center">
-                          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                          <AlertCircle className="w-8 h-8 text-warning mx-auto mb-2" />
                           <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Documents Restricted</p>
-                          <p className="text-xs text-slate-500 mt-1">Patient has not granted permission to view uploaded files.</p>
+                          <p className="text-xs text-tertiary mt-1">Patient has not granted permission to view uploaded files.</p>
                         </div>
                       ) : documents.length === 0 ? (
                         <div className="neu-inset p-8 rounded-2xl text-center">
@@ -505,14 +509,14 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                               className="neu-flat rounded-2xl p-4 flex items-center justify-between gap-3 group"
                             >
                               <div className="flex items-center gap-3 min-w-0">
-                                <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-primary shrink-0">
+                                <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-link shrink-0">
                                   <FileText className="w-5 h-5" />
                                 </div>
                                 <div className="min-w-0">
                                   <p className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                                     {doc.document_title}
                                   </p>
-                                  <p className="text-3xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                  <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">
                                     {new Date(doc.uploaded_at).toLocaleDateString()}
                                   </p>
                                 </div>
@@ -525,7 +529,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                   if (url) window.open(url, '_blank');
                                   else toast.error('Could not open file URL.');
                                 }}
-                                className="neu-btn p-2 rounded-xl text-primary hover:text-primary-600 transition-all cursor-pointer shrink-0"
+                                className="neu-btn p-2 rounded-xl text-link hover:text-primary-600 transition-all cursor-pointer shrink-0"
                                 title="Open Document in New Tab"
                               >
                                 <ExternalLink className="w-4 h-4" />
@@ -542,9 +546,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                     <div className="space-y-6">
                       {grantedPermissions?.visit_notes === false ? (
                         <div className="neu-inset p-8 rounded-2xl text-center">
-                          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+                          <AlertCircle className="w-8 h-8 text-warning mx-auto mb-2" />
                           <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Progress Notes Restricted</p>
-                          <p className="text-xs text-slate-500 mt-1">Patient has not granted permission to view clinical notes.</p>
+                          <p className="text-xs text-tertiary mt-1">Patient has not granted permission to view clinical notes.</p>
                         </div>
                       ) : (
                         <div className="space-y-6">
@@ -555,7 +559,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                               <h4 className="font-display font-extrabold text-sm text-slate-900 dark:text-white">
                                 Log Clinical Note & Vitals
                               </h4>
-                              <p className="text-3xs text-slate-500 mt-0.5">
+                              <p className="text-xs text-tertiary mt-0.5">
                                 Record biometrics, treatment given, and assessment.
                               </p>
                             </div>
@@ -563,13 +567,14 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                             <form onSubmit={handleSaveNote} className="space-y-3.5">
                               {/* Vital Signs */}
                               <div className="space-y-2">
-                                <p className="text-3xs font-extrabold uppercase tracking-wider text-slate-400">
+                                <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
                                   Vital Signs
                                 </p>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                                   <div>
-                                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">BP (mmHg)</label>
+                                    <label htmlFor="note-bp" className="text-xs font-bold text-tertiary dark:text-tertiary block mb-1">BP (mmHg)</label>
                                     <input
+                                      id="note-bp"
                                       type="text"
                                       placeholder="120/80"
                                       value={newNote.bp}
@@ -578,8 +583,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">Temp (°C)</label>
+                                    <label htmlFor="note-temp" className="text-xs font-bold text-tertiary dark:text-tertiary block mb-1">Temp (°C)</label>
                                     <input
+                                      id="note-temp"
                                       type="text"
                                       placeholder="36.5"
                                       value={newNote.temp}
@@ -588,8 +594,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">Heart Rate (bpm)</label>
+                                    <label htmlFor="note-hr" className="text-xs font-bold text-tertiary dark:text-tertiary block mb-1">Heart Rate (bpm)</label>
                                     <input
+                                      id="note-hr"
                                       type="number"
                                       placeholder="75"
                                       value={newNote.hr}
@@ -598,8 +605,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">Respiratory Rate (bpm)</label>
+                                    <label htmlFor="note-rr" className="text-xs font-bold text-tertiary dark:text-tertiary block mb-1">Respiratory Rate (bpm)</label>
                                     <input
+                                      id="note-rr"
                                       type="number"
                                       placeholder="18"
                                       value={newNote.rr}
@@ -608,8 +616,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">SpO2 (%)</label>
+                                    <label htmlFor="note-spo2" className="text-xs font-bold text-tertiary dark:text-tertiary block mb-1">SpO2 (%)</label>
                                     <input
+                                      id="note-spo2"
                                       type="number"
                                       placeholder="98"
                                       value={newNote.spo2}
@@ -618,8 +627,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-3xs font-bold text-slate-500 dark:text-slate-400 block mb-1">Pain Scale (0-10)</label>
+                                    <label htmlFor="note-pain" className="text-xs font-bold text-tertiary dark:text-tertiary block mb-1">Pain Scale (0-10)</label>
                                     <input
+                                      id="note-pain"
                                       type="number"
                                       min="0"
                                       max="10"
@@ -634,7 +644,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
                               {/* Services Rendered Selector */}
                               <div>
-                                <label className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 block mb-1.5">
+                                <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block mb-1.5">
                                   Services Rendered
                                 </label>
                                 <div className="flex flex-wrap gap-1.5">
@@ -645,9 +655,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                         key={service}
                                         type="button"
                                         onClick={() => toggleService(service)}
-                                        className={`px-2.5 py-1 rounded-lg text-3xs font-bold transition-all cursor-pointer ${
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                           isSelected
-                                            ? 'neu-pressed text-primary font-extrabold'
+                                            ? 'neu-pressed text-link font-extrabold'
                                             : 'neu-btn text-slate-600 dark:text-slate-300'
                                         }`}
                                       >
@@ -660,10 +670,11 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
                               {/* Clinical Note Textarea */}
                               <div>
-                                <label className="text-3xs font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                                  Assessment & Plan
+                                <label htmlFor="note-assessment" className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block mb-1">
+                                  Assessment &amp; Plan
                                 </label>
                                 <textarea
+                                  id="note-assessment"
                                   required
                                   rows={3}
                                   placeholder="Document patient evaluation, wound observations, or medications administered..."
@@ -696,9 +707,9 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                   <div className="flex items-center gap-1.5">
                                     <label
                                       htmlFor="provider-note-attachment"
-                                      className="neu-btn px-3 py-2 rounded-xl text-3xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5 cursor-pointer transition-all truncate flex-1 min-w-0"
+                                      className="neu-btn px-3 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center gap-1.5 cursor-pointer transition-all truncate flex-1 min-w-0"
                                     >
-                                      <Paperclip className="w-3.5 h-3.5 text-primary shrink-0" />
+                                      <Paperclip className="w-3.5 h-3.5 text-link shrink-0" />
                                       <span className="truncate">
                                         {newNote.file ? newNote.file.name : 'Attach Image/File (Max 2MB)'}
                                       </span>
@@ -710,7 +721,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                           setNewNote(n => ({ ...n, file: null }));
                                           if (fileInputRef.current) fileInputRef.current.value = '';
                                         }}
-                                        className="neu-btn p-2 rounded-xl text-slate-400 hover:text-rose-500 cursor-pointer shrink-0"
+                                        className="neu-btn p-2 rounded-xl text-tertiary hover:text-danger cursor-pointer shrink-0"
                                         title="Remove attachment"
                                       >
                                         <X className="w-3.5 h-3.5" />
@@ -748,7 +759,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                 <h4 className="font-display font-extrabold text-sm text-slate-900 dark:text-white">
                                   Historical Progress Notes
                                 </h4>
-                                <p className="text-3xs text-slate-500 mt-0.5">
+                                <p className="text-xs text-tertiary mt-0.5">
                                   Chronological record of medical consultations for this patient.
                                 </p>
                               </div>
@@ -762,19 +773,19 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                       type="button"
                                       disabled={notesPage <= 1}
                                       onClick={() => setNotesPage((p) => Math.max(1, p - 1))}
-                                      className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                                      className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                                       title="Previous notes"
                                     >
                                       <ChevronLeft className="w-3.5 h-3.5" />
                                     </button>
-                                    <span className="text-3xs font-extrabold text-slate-500 px-1 select-none whitespace-nowrap">
+                                    <span className="text-xs font-extrabold text-tertiary px-1 select-none whitespace-nowrap">
                                       {notesPage} / {totalNotesPages}
                                     </span>
                                     <button
                                       type="button"
                                       disabled={notesPage >= totalNotesPages}
                                       onClick={() => setNotesPage((p) => Math.min(totalNotesPages, p + 1))}
-                                      className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-primary transition-all cursor-pointer"
+                                      className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
                                       title="Next notes"
                                     >
                                       <ChevronRight className="w-3.5 h-3.5" />
@@ -807,7 +818,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                           <h5 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
                                             Dr. {note.provider?.full_name || 'Healthcare Provider'}
                                           </h5>
-                                          <p className="text-3xs text-slate-400 mt-0.5">
+                                          <p className="text-xs text-tertiary mt-0.5">
                                             {new Date(note.created_at).toLocaleString('en-US', {
                                               month: 'short',
                                               day: 'numeric',
@@ -822,7 +833,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                           <button
                                             type="button"
                                             onClick={() => handleDeleteNote(note.id, note.attachment_url)}
-                                            className="neu-btn p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                                            className="neu-btn p-1.5 rounded-lg text-tertiary hover:text-danger transition-colors cursor-pointer"
                                             title="Delete Note"
                                           >
                                             <Trash2 className="w-3.5 h-3.5" />
@@ -832,19 +843,19 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
                                       {/* Vitals Badges */}
                                       {(note.vitals_bp || note.vitals_temp || note.vitals_hr || note.vitals_spo2 || note.vitals_rr || note.pain_scale != null) && (
-                                        <div className="flex flex-wrap gap-1.5 text-3xs font-extrabold">
+                                        <div className="flex flex-wrap gap-1.5 text-xs font-extrabold">
                                           {note.vitals_bp && (
-                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-emerald-600 dark:text-emerald-400">
+                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-success dark:text-success-dark">
                                               BP: {note.vitals_bp}
                                             </span>
                                           )}
                                           {note.vitals_temp && (
-                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-amber-600 dark:text-amber-400">
+                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-warning dark:text-warning-dark">
                                               Temp: {note.vitals_temp}°C
                                             </span>
                                           )}
                                           {note.vitals_hr && (
-                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-rose-600 dark:text-rose-400">
+                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-danger dark:text-danger-dark">
                                               HR: {note.vitals_hr} bpm
                                             </span>
                                           )}
@@ -854,12 +865,12 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                             </span>
                                           )}
                                           {note.vitals_spo2 && (
-                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-blue-600 dark:text-blue-400">
+                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-link dark:text-primary-300">
                                               SpO2: {note.vitals_spo2}%
                                             </span>
                                           )}
                                           {note.pain_scale != null && (
-                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-purple-600 dark:text-purple-400">
+                                            <span className="neu-flat-sm px-2 py-0.5 rounded-md text-link dark:text-primary-400">
                                               Pain: {note.pain_scale}/10
                                             </span>
                                           )}
@@ -868,7 +879,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
 
                                       {/* Services Tag */}
                                       {note.services_rendered && (
-                                        <p className="text-3xs font-bold text-primary">
+                                        <p className="text-xs font-bold text-link">
                                           Services: <span className="font-medium text-slate-600 dark:text-slate-300">{note.services_rendered}</span>
                                         </p>
                                       )}
@@ -876,7 +887,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                       {/* Doctor's Assessment / Clinical Summary Note */}
                                       {note.notes && (
                                         <div className="neu-inset p-3 rounded-xl border border-slate-200/40 dark:border-white/5 space-y-1">
-                                          <p className="text-3xs font-extrabold uppercase tracking-wider text-primary">
+                                          <p className="text-2xs font-extrabold uppercase tracking-wider text-link">
                                             Doctor&apos;s Note
                                           </p>
                                           <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed italic whitespace-pre-wrap">
@@ -894,7 +905,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
                                             if (url) window.open(url, '_blank');
                                             else toast.error('Could not load attachment.');
                                           }}
-                                          className="neu-btn px-2.5 py-1.5 rounded-lg text-3xs font-bold text-primary flex items-center gap-1.5 cursor-pointer mt-1"
+                                          className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-link flex items-center gap-1.5 cursor-pointer mt-1"
                                         >
                                           <Paperclip className="w-3 h-3" />
                                           <span>View Attached Document</span>
@@ -915,8 +926,10 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName }) => {
           </div>
         )}
       </motion.div>
-    </div>,
-    document.body
+      </motion.div>
+      </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
 

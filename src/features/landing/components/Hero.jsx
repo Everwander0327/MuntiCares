@@ -68,7 +68,7 @@ const Hero = () => {
               <Link to="/register?role=provider" className="neu-btn group w-full sm:w-auto px-7 py-3.5 rounded-full font-bold text-sm inline-flex items-center justify-center gap-2 active:scale-[0.98] transition-all text-slate-800 dark:text-slate-100">
                 Register as Provider
                 <span className="w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:scale-105">
-                  <ArrowUpRight size={15} weight="bold" className="text-primary" />
+                  <ArrowUpRight size={15} weight="bold" className="text-link" />
                 </span>
               </Link>
             </div>

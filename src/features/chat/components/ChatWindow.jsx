@@ -392,13 +392,13 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
   const statusIcon = (msg) => {
     if (msg.status === 'error') {
-      return <AlertCircle className="w-3 h-3 text-rose-500" title="Failed to send" />;
+      return <AlertCircle className="w-3 h-3 text-danger" title="Failed to send" />;
     }
     if (typeof msg.id === 'string' && msg.id.startsWith('temp-')) {
-      return <Clock className="w-3 h-3 text-slate-400" />;
+      return <Clock className="w-3 h-3 text-tertiary" />;
     }
-    if (msg.is_read) return <CheckCheck className="w-3 h-3 text-blue-500" />;
-    return <Check className="w-3 h-3 text-slate-400" />;
+    if (msg.is_read) return <CheckCheck className="w-3 h-3 text-link" />;
+    return <Check className="w-3 h-3 text-tertiary" />;
   };
 
   return (
@@ -421,11 +421,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               <div className="flex-1 flex flex-col items-center justify-center px-6">
                 {webRtcError ? (
                   <div className="neu-flat p-8 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
-                    <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-rose-500">
+                    <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-danger">
                       <PhoneOff className="w-7 h-7" />
                     </div>
                     <h3 className="text-slate-900 dark:text-white text-lg font-display font-black">Connection Notice</h3>
-                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-2 max-w-xs mx-auto">{webRtcError}</p>
+                    <p className="text-tertiary dark:text-tertiary text-xs mt-2 max-w-xs mx-auto">{webRtcError}</p>
                     <button
                       type="button"
                       onClick={closeCallOverlay}
@@ -452,14 +452,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                         {otherUser?.photoUrl ? (
                           <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-full" />
                         ) : (
-                          <span className="text-2xl font-black text-primary">
+                          <span className="text-2xl font-black text-link">
                             {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-3xs font-extrabold text-primary uppercase tracking-widest mb-2">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-2xs font-extrabold text-link uppercase tracking-widest mb-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
                       {callType === 'audio' ? 'Connecting Voice Call' : 'Connecting Teleconsultation'}
                     </div>
@@ -468,8 +468,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       {otherUser?.name || 'Healthcare Provider'}
                     </h3>
                     
-                    <div className="flex items-center justify-center gap-2 mt-3 text-xs text-slate-500 dark:text-slate-400">
-                      <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" />
+                    <div className="flex items-center justify-center gap-2 mt-3 text-xs text-tertiary dark:text-tertiary">
+                      <Loader2 className="w-3.5 h-3.5 text-link animate-spin" />
                       <span>{callType === 'audio' ? 'Securing encrypted audio line...' : 'Securing direct P2P video stream...'}</span>
                     </div>
 
@@ -477,7 +477,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       <button
                         type="button"
                         onClick={() => { handleEndCall(true); closeCallOverlay(); }}
-                        className="neu-btn w-14 h-14 rounded-2xl flex items-center justify-center text-rose-500 hover:text-rose-600 transition-all active:scale-90 shadow-md cursor-pointer"
+                        className="neu-btn w-14 h-14 rounded-2xl flex items-center justify-center text-danger hover:text-danger transition-all active:scale-90 shadow-md cursor-pointer"
                         title="Cancel Call"
                       >
                         <PhoneOff className="w-6 h-6 stroke-[2.5]" />
@@ -493,7 +493,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               {/* Header Bar */}
               <div className="flex items-center justify-between px-5 py-3.5 bg-[#ebf1f8] dark:bg-[#172236] neu-flat border-b border-white/60 dark:border-white/10 shrink-0 z-10 shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-primary">
+                  <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-link">
                     {callType === 'audio' ? <Phone className="w-4 h-4" /> : <Video className="w-4 h-4" />}
                   </div>
                   <div>
@@ -502,7 +502,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     </h3>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <p className="text-3xs text-emerald-600 dark:text-emerald-400 font-mono font-bold tracking-wider">
+                      <p className="text-xs text-success dark:text-success-dark font-mono font-bold tracking-wider">
                         {formatTime(callTimer)}
                       </p>
                     </div>
@@ -514,19 +514,19 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     <button
                       type="button"
                       onClick={() => setRemoteRotation((r) => (r + 90) % 360)}
-                      className="neu-btn p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-primary transition-all active:scale-95 cursor-pointer shadow-sm"
+                      className="neu-btn p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-link transition-all active:scale-95 cursor-pointer shadow-sm"
                       title={`Rotate Participant Video (${remoteRotation}°)`}
                     >
                       <RotateCw className="w-4 h-4" />
                     </button>
                   )}
-                  <span className="hidden sm:inline-block text-2xs text-slate-400 font-semibold truncate max-w-[150px]">
+                  <span className="hidden sm:inline-block text-xs text-tertiary font-semibold truncate max-w-[150px]">
                     {otherUser?.name}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleEndCall(true)}
-                    className="neu-btn px-3 py-1.5 rounded-xl text-rose-500 hover:text-rose-600 text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
+                    className="neu-btn px-3 py-1.5 rounded-xl text-danger hover:text-danger text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
                     title="End Call"
                   >
                     <PhoneOff className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -569,7 +569,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                         {otherUser?.photoUrl ? (
                           <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-full" />
                         ) : (
-                          <span className="text-3xl font-black text-primary">
+                          <span className="text-3xl font-black text-link">
                             {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
                           </span>
                         )}
@@ -578,7 +578,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     <h3 className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white truncate max-w-xs text-center">
                       {otherUser?.name || 'Healthcare Provider'}
                     </h3>
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-3xs font-bold text-emerald-600 dark:text-emerald-400 mt-2 uppercase tracking-widest">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-2xs font-bold text-success dark:text-success-dark mt-2 uppercase tracking-widest">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       {callType === 'audio' ? 'Voice Consultation In Progress' : 'Remote camera is off'}
                     </div>
@@ -593,9 +593,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   isCameraOff && callType === 'audio' ? 'hidden' : 'block'
                 }`}>
                   {isCameraOff ? (
-                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-slate-400 bg-slate-800">
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-tertiary bg-slate-800">
                       <CameraOff className="w-5 h-5 mb-1" />
-                      <span className="text-3xs font-bold">Cam Off</span>
+                      <span className="text-xs font-bold">Cam Off</span>
                     </div>
                   ) : (
                     <>
@@ -632,7 +632,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   onClick={toggleMute}
                   className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
                     isMuted 
-                      ? 'neu-pressed text-rose-500 border border-rose-500/30' 
+                      ? 'neu-pressed text-danger border border-rose-500/30' 
                       : 'neu-btn text-slate-700 dark:text-slate-200'
                   }`}
                   title={isMuted ? 'Unmute' : 'Mute'}
@@ -645,7 +645,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   onClick={toggleCamera}
                   className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
                     isCameraOff 
-                      ? 'neu-pressed text-rose-500 border border-rose-500/30' 
+                      ? 'neu-pressed text-danger border border-rose-500/30' 
                       : 'neu-btn text-slate-700 dark:text-slate-200'
                   }`}
                   title={isCameraOff ? 'Turn Camera On' : 'Turn Camera Off'}
@@ -658,7 +658,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     <button
                       type="button"
                       onClick={switchCamera}
-                      className="w-12 h-12 rounded-2xl neu-btn text-slate-700 dark:text-slate-200 hover:text-primary flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md"
+                      className="w-12 h-12 rounded-2xl neu-btn text-slate-700 dark:text-slate-200 hover:text-link flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md"
                       title={facingMode === 'user' ? 'Switch to Rear Camera' : 'Switch to Front Camera'}
                     >
                       <SwitchCamera className="w-5 h-5 stroke-[2.2]" />
@@ -669,7 +669,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       onClick={rotateCamera}
                       className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md ${
                         cameraRotation > 0
-                          ? 'neu-pressed text-primary border border-primary/30'
+                          ? 'neu-pressed text-link border border-primary/30'
                           : 'neu-btn text-slate-700 dark:text-slate-200'
                       }`}
                       title={`Rotate Camera (${cameraRotation}°)`}
@@ -682,7 +682,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 <button
                   type="button"
                   onClick={() => handleEndCall(true)}
-                  className="w-14 h-14 rounded-2xl neu-btn text-rose-600 hover:text-rose-700 flex items-center justify-center transition-all active:scale-90 shadow-lg cursor-pointer"
+                  className="w-14 h-14 rounded-2xl neu-btn text-danger hover:text-danger flex items-center justify-center transition-all active:scale-90 shadow-lg cursor-pointer"
                   title="End Call"
                 >
                   <PhoneOff className="w-6 h-6 stroke-[2.5]" />
@@ -694,22 +694,22 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             {callStatus === 'ended' && (
               <div className="flex-1 flex flex-col items-center justify-center px-6">
                 <div className="neu-flat p-8 sm:p-10 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
-                  <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-slate-400">
+                  <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-tertiary">
                     <PhoneOff className="w-7 h-7" />
                   </div>
                   <h3 className="text-slate-900 dark:text-white text-xl font-display font-black">Session Concluded</h3>
                   {callTimer > 0 && (
-                    <div className="mt-2 inline-block px-3 py-1 rounded-full neu-flat-sm text-xs font-mono font-bold text-primary">
+                    <div className="mt-2 inline-block px-3 py-1 rounded-full neu-flat-sm text-xs font-mono font-bold text-link">
                       Duration: {formatTime(callTimer)}
                     </div>
                   )}
-                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-3 text-center max-w-xs mx-auto">
+                  <p className="text-tertiary dark:text-tertiary text-xs mt-3 text-center max-w-xs mx-auto">
                     {otherUser?.name || 'The participant'} has ended the consultation session.
                   </p>
                   <button
                     type="button"
                     onClick={closeCallOverlay}
-                    className="mt-6 px-6 py-2.5 neu-btn text-primary rounded-xl font-extrabold text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
+                    className="mt-6 px-6 py-2.5 neu-btn text-link rounded-xl font-extrabold text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
                   >
                     Return to Conversation
                   </button>
@@ -729,10 +729,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         >
           <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-xs w-full mx-4 shadow-2xl border border-slate-100 dark:border-slate-700 text-center">
             <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <PhoneOff className="w-9 h-9 text-red-500" />
+              <PhoneOff className="w-9 h-9 text-danger" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Call Declined</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">
+            <p className="text-sm text-tertiary dark:text-tertiary mt-1 font-medium">
               {otherUser?.name || 'The other party'} declined the call
             </p>
           </div>
@@ -747,7 +747,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         {onBack && (
           <button
             onClick={onBack}
-            className="neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer -ml-1 text-slate-600 dark:text-slate-300 hover:text-primary"
+            className="neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer -ml-1 text-slate-600 dark:text-slate-300 hover:text-link"
             title="Back to conversations"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -766,7 +766,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               {otherUser.photoUrl ? (
                 <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
               ) : (
-                <UserCircle className="w-6 h-6 text-primary" />
+                <UserCircle className="w-6 h-6 text-link" />
               )}
             </div>
             <div 
@@ -777,11 +777,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 group-hover:text-primary transition-colors leading-tight truncate">
+            <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors leading-tight truncate">
               {otherUser.name}
             </h3>
-            <p className={`text-3xs sm:text-xs font-bold transition-colors duration-300 ${
-              isUserOnline(otherUser.id) ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-500'
+            <p className={`text-xs sm:text-xs font-bold transition-colors duration-300 ${
+              isUserOnline(otherUser.id) ? 'text-success' : 'text-tertiary dark:text-tertiary'
             }`}>
               {isUserOnline(otherUser.id) ? 'Active now' : 'Offline'}
             </p>
@@ -791,7 +791,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           <motion.button
             type="button"
             onClick={() => handleStartCall('audio')}
-            className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-emerald-600 dark:text-emerald-400 flex items-center justify-center hover:text-emerald-700 transition-all shrink-0 cursor-pointer shadow-sm"
+            className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-success dark:text-success-dark flex items-center justify-center hover:text-success transition-all shrink-0 cursor-pointer shadow-sm"
             title="Start Voice Consultation"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -802,7 +802,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           <motion.button
             type="button"
             onClick={() => handleStartCall('video')}
-            className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-primary flex items-center justify-center hover:text-primary-700 transition-all shrink-0 cursor-pointer shadow-sm"
+            className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-2xl text-link flex items-center justify-center hover:text-primary-700 transition-all shrink-0 cursor-pointer shadow-sm"
             title="Start Teleconsultation (Video)"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -820,17 +820,17 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       >
         <div className="px-4 md:px-6 py-4">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 text-slate-400">
-              <Loader2 className="w-8 h-8 text-primary animate-spin mb-2" />
+            <div className="flex flex-col items-center justify-center py-24 text-tertiary">
+              <Loader2 className="w-8 h-8 text-link animate-spin mb-2" />
               <p className="text-xs font-semibold">Loading messages...</p>
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center text-slate-400 dark:text-slate-500 mt-16">
+            <div className="text-center text-tertiary dark:text-tertiary mt-16">
               <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">
                 <span>👋</span>
               </div>
               <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Say hello to start the conversation!</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Feel free to discuss details regarding your appointment.</p>
+              <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">Feel free to discuss details regarding your appointment.</p>
             </div>
           ) : (
             <>
@@ -846,7 +846,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   <React.Fragment key={msg.id}>
                     {showDate && (
                       <div className="flex justify-center my-4">
-                        <span className="neu-flat-sm text-3xs font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-400 px-3.5 py-1 rounded-full">
+                        <span className="neu-flat-sm text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary px-3.5 py-1 rounded-full">
                           {formatDateLabel(msg.created_at)}
                         </span>
                       </div>
@@ -861,7 +861,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                           {otherUser.photoUrl ? (
                             <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-primary font-black text-xs">
+                            <div className="w-full h-full flex items-center justify-center text-link font-black text-xs">
                               {otherUser.name?.[0] || '?'}
                             </div>
                           )}
@@ -884,7 +884,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                               className={`mt-2.5 w-full px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
                                 isMe
                                   ? 'bg-white/20 hover:bg-white/30 text-white'
-                                  : 'neu-btn text-primary'
+                                  : 'neu-btn text-link'
                               }`}
                             >
                               {msg.content?.startsWith('📹') ? (
@@ -903,11 +903,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                         </div>
                         {showTime && (
                           <div className="flex items-center gap-1.5 mt-1.5 px-1">
-                            <span className="text-3xs text-slate-400 dark:text-slate-500 font-semibold tabular-nums">
+                            <span className="text-xs text-tertiary dark:text-tertiary font-semibold tabular-nums">
                               {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             {isMe && (
-                              <span className="text-slate-400 dark:text-slate-500">{statusIcon(msg)}</span>
+                              <span className="text-tertiary dark:text-tertiary">{statusIcon(msg)}</span>
                             )}
                           </div>
                         )}
@@ -920,7 +920,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               {/* 24-Hour Notice */}
               <div className="flex items-center gap-3 my-6 px-4">
                 <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
-                <span className="text-3xs text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wider select-none shrink-0">
+                <span className="text-2xs text-tertiary dark:text-tertiary font-bold uppercase tracking-wider select-none shrink-0">
                   Messages disappear after 24 hours
                 </span>
                 <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
@@ -941,7 +941,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   {otherUser.photoUrl ? (
                     <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-primary font-black text-xs">
+                    <div className="w-full h-full flex items-center justify-center text-link font-black text-xs">
                       {otherUser.name?.[0] || '?'}
                     </div>
                   )}
@@ -966,7 +966,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             onClick={scrollToBottom}
             className="fixed bottom-20 right-6 neu-btn w-10 h-10 rounded-full flex items-center justify-center z-30 cursor-pointer"
           >
-            <svg className="w-5 h-5 text-slate-500 dark:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <svg className="w-5 h-5 text-tertiary dark:text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
             </svg>
           </motion.button>
@@ -985,7 +985,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               value={newMessage}
               onChange={handleTyping}
               placeholder="Type a message..."
-              className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-slate-400 placeholder:font-normal min-w-0"
+              className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
             />
           </div>
           <button
