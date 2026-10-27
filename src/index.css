@@ -1330,6 +1330,9 @@ select:focus {
   --trk-space-5: 24px;
   --trk-space-6: 32px;
   --trk-tap: 44px;
+  /* Tile treatments shared by the tracker and the onboarding picker. */
+  --mc-tiles-muted-filter: saturate(0.48) contrast(0.94) brightness(1.04);
+  --mc-tiles-dark-filter: invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.5);
   --trk-panel-w: 360px;
   --trk-sheet-collapsed: 208px;
   --trk-sheet-half: 56dvh;
@@ -1528,7 +1531,7 @@ select:focus {
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--trk-border);
   border-radius: var(--trk-radius-md);
   background: var(--trk-surface-overlay);
@@ -1546,6 +1549,10 @@ select:focus {
   top: calc(max(12px, env(safe-area-inset-top)) + 52px);
 }
 
+.mc-map-controls--bottom {
+  bottom: 12px;
+}
+
 .mc-map-control {
   width: var(--trk-tap);
   height: var(--trk-tap);
@@ -1561,6 +1568,16 @@ select:focus {
 
 .mc-map-control:last-child { border-bottom: 0; }
 
+.mc-map-control:first-child {
+  border-top-left-radius: calc(var(--trk-radius-md) - 1px);
+  border-top-right-radius: calc(var(--trk-radius-md) - 1px);
+}
+
+.mc-map-control:last-child {
+  border-bottom-left-radius: calc(var(--trk-radius-md) - 1px);
+  border-bottom-right-radius: calc(var(--trk-radius-md) - 1px);
+}
+
 .mc-map-control:hover {
   background: var(--trk-surface-muted);
   color: var(--trk-accent);
@@ -1569,6 +1586,51 @@ select:focus {
 .mc-map-control[aria-pressed='true'] {
   background: var(--trk-accent);
   color: #ffffff;
+}
+
+/* Base-map menu opens beside the stack (sibling, so the stack never clips it). */
+.mc-basemap {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 8px);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 158px;
+  padding: 6px;
+  border: 1px solid var(--trk-border);
+  border-radius: var(--trk-radius-md);
+  background: var(--trk-surface-overlay);
+  box-shadow: var(--trk-shadow-md);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.mc-basemap__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--trk-radius-sm);
+  background: transparent;
+  color: var(--trk-text-secondary);
+  font-family: var(--trk-font);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mc-basemap__item:hover {
+  background: var(--trk-surface-muted);
+  color: var(--trk-text);
+}
+
+.mc-basemap__item[aria-pressed='true'] {
+  color: var(--trk-accent);
 }
 
 /* ---------- Skeleton loading ---------- */
@@ -2068,6 +2130,34 @@ select:focus {
 
 .mc-lock-reason svg { flex: 0 0 14px; margin-top: 1px; }
 
+/* ---------- Manual on-site arrival override ---------- */
+.mc-override__link {
+  align-self: flex-start;
+  text-align: left;
+}
+
+.mc-override__title {
+  margin: 0;
+  font-size: 12px;
+  line-height: 17px;
+  font-weight: 700;
+}
+
+.mc-override__copy {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+  color: var(--trk-text-secondary);
+}
+
+.mc-override__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .mc-actions {
   display: flex;
   flex-direction: column;
@@ -2243,11 +2333,21 @@ select:focus {
 
 /* Muted basemap so the route, destination and provider marker dominate. */
 .mc-map-tiles.mc-muted-tiles {
-  filter: saturate(0.48) contrast(0.94) brightness(1.04);
+  filter: var(--mc-tiles-muted-filter);
 }
 
 .mc-map-tiles.mc-dark-tiles.mc-muted-tiles {
-  filter: invert(100%) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.5);
+  filter: var(--mc-tiles-dark-filter);
+}
+
+/* MapLibre basemap treatment shared by the onboarding picker and the live
+   tracker. Only the canvas is filtered; pins and controls are DOM siblings. */
+.mc-canvas-tiles--muted .maplibregl-canvas {
+  filter: var(--mc-tiles-muted-filter);
+}
+
+.mc-canvas-tiles--dark .maplibregl-canvas {
+  filter: var(--mc-tiles-dark-filter);
 }
 
 /* ---------- Modal surfaces (destination picker) ---------- */

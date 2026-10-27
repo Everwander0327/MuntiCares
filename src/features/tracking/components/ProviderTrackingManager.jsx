@@ -100,6 +100,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   const [follow, setFollow] = useState(true);
   const [minimized, setMinimized] = useState(false);
   const [arriving, setArriving] = useState(false);
+  const [overrideOpen, setOverrideOpen] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
   const [now, setNow] = useState(Date.now());
   const isDesktop = useMediaQuery('(min-width: 1024px)');
@@ -234,17 +235,24 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
     };
   }, [visit.id, onArrived]);
 
-  const markArrived = async () => {
-    const fixAge = fix?.timestamp ? Date.now() - fix.timestamp : null;
-    if (!fix || fix.degraded || fixAge == null || fixAge >= TRACKING_STALE_MS) {
-      toast.error('Waiting for a fresh, precise GPS fix before marking arrived.');
-      return;
+  const markArrived = async ({ override = false } = {}) => {
+    if (!override) {
+      const fixAge = fix?.timestamp ? Date.now() - fix.timestamp : null;
+      if (!fix || fix.degraded || fixAge == null || fixAge >= TRACKING_STALE_MS) {
+        toast.error('Waiting for a fresh, precise GPS fix before marking arrived.');
+        return;
+      }
     }
     setArriving(true);
     try {
-      const res = await markVisitArrived(visit.id, session.current?.sessionId);
+      const res = await markVisitArrived(
+        visit.id,
+        session.current?.sessionId,
+        override ? 'Provider confirmed on site (GPS unavailable or inaccurate)' : null
+      );
       if (res?.ok) {
-        toast.success('Marked as arrived!');
+        setOverrideOpen(false);
+        toast.success(res.override ? 'Arrived — override recorded.' : 'Marked as arrived!');
         try {
           await session.current?.stop('arrived');
         } catch { /* ignore */ }
@@ -286,6 +294,16 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
           : distance == null
             ? 'Visit location not set'
             : `${formatDistance(distance)} from the visit — arrive within 50 m to unlock`;
+
+  const overrideCause = !fix
+    ? 'GPS is unavailable'
+    : stale
+      ? 'the GPS signal is delayed'
+      : fix.degraded
+        ? `GPS is ${formatAccuracy(fix.rawAccuracy || fix.accuracy) || 'imprecise'}`
+        : distance != null
+          ? `you are ${formatDistance(distance)} from the visit location`
+          : 'the arrival location could not be verified';
 
   const patientName = visit.patient?.full_name || 'Patient';
   const patientAvatar = visit.patient?.avatar_url || null;
@@ -393,7 +411,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   const primaryAction = withinArrival ? (
     <button
       type="button"
-      onClick={markArrived}
+      onClick={() => markArrived()}
       disabled={arriving || !canArrive}
       className="mc-btn mc-btn--success mc-btn--block"
       title={arrivalReason || 'Mark arrived'}
@@ -428,7 +446,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   ) : (
     <button
       type="button"
-      onClick={markArrived}
+      onClick={() => markArrived()}
       disabled={arriving || !canArrive}
       className="mc-btn mc-btn--secondary mc-btn--block"
     >
@@ -477,7 +495,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
           <AlertTriangle className="w-4 h-4" />
           <span>
             {fix?.degraded
-              ? `GPS accuracy is ${formatAccuracy(fix.rawAccuracy || fix.accuracy) || 'low'}. Arrival will unlock after a precise fix.`
+              ? `GPS accuracy is ${formatAccuracy(fix.rawAccuracy || fix.accuracy) || 'low'}. Automatic arrival is locked — confirm on site below if you are at the patient's home.`
               : 'The patient has not confirmed a visit destination yet. Navigation and arrival distance are unavailable.'}
           </span>
         </div>
@@ -542,6 +560,51 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
                 )}
                 {withinArrival && !arrivalReason && (
                   <p className="mc-muted">You are within 50 m of the visit location.</p>
+                )}
+                {!canArrive && destination && (
+                  overrideOpen ? (
+                    <div className="mc-note" role="alert">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="mc-override__title">Confirm you are at the patient&apos;s home</p>
+                        <p className="mc-override__copy">
+                          Automatic arrival is locked because {overrideCause}. Your confirmation and
+                          reported position are recorded.
+                        </p>
+                        <div className="mc-override__actions">
+                          <button
+                            type="button"
+                            onClick={() => markArrived({ override: true })}
+                            disabled={arriving}
+                            className="mc-btn mc-btn--success mc-btn--block"
+                          >
+                            {arriving ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Home className="w-4 h-4" />
+                            )}
+                            {arriving ? 'Marking arrived…' : 'Yes, I am on site'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setOverrideOpen(false)}
+                            disabled={arriving}
+                            className="mc-btn mc-btn--secondary mc-btn--block"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="mc-link mc-override__link"
+                      onClick={() => setOverrideOpen(true)}
+                    >
+                      I am at the patient&apos;s home — mark arrived anyway
+                    </button>
+                  )
                 )}
               </div>
   

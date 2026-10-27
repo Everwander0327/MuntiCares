@@ -129,6 +129,7 @@ END $$;
 DO $$
 DECLARE
   v_req_id uuid := gen_random_uuid();
+  v_req2_id uuid := gen_random_uuid();
   v_prov_id uuid := gen_random_uuid();
   v_pat_id uuid := gen_random_uuid();
   v_sess_id uuid := gen_random_uuid();
@@ -187,12 +188,38 @@ BEGIN
     RAISE EXCEPTION 'TEST 4c FAILED: mark_arrived rejected valid arrival: %', v_res;
   END IF;
 
+  -- Case 4e: Manual on-site override bypasses accuracy/distance gates and is audited
+  INSERT INTO public.requests (
+    id, patient_id, provider_id, status, dest_lat, dest_lng, dest_version
+  )
+  VALUES (
+    v_req2_id, v_pat_id, v_prov_id, 'On The Way', 14.4000, 121.0400, 1
+  );
+
+  -- ~1.1 km away with 250 m hardware accuracy: would fail the normal path
+  INSERT INTO public.provider_locations (
+    request_id, provider_id, lat, lng, accuracy, session_id, seq, captured_at, updated_at
+  )
+  VALUES (
+    v_req2_id, v_prov_id, 14.4100, 121.0400, 250.0, v_sess_id, 1, now(), now()
+  );
+
+  v_res := public.mark_arrived(v_req2_id, NULL, 'Provider confirmed on site (test)');
+  IF (v_res->>'ok')::boolean <> true OR (v_res->>'override')::boolean <> true THEN
+    RAISE EXCEPTION 'TEST 4e FAILED: manual override did not mark arrival: %', v_res;
+  END IF;
+
+  IF (SELECT arrival_override_reason FROM public.requests WHERE id = v_req2_id)
+       IS DISTINCT FROM 'Provider confirmed on site (test)' THEN
+    RAISE EXCEPTION 'TEST 4e FAILED: override reason was not recorded';
+  END IF;
+
   -- Verify cleanup trigger fired: provider_locations row must be purged on Arrival
   IF EXISTS (SELECT 1 FROM public.provider_locations WHERE request_id = v_req_id) THEN
     RAISE EXCEPTION 'TEST 4d FAILED: cleanup trigger failed to delete provider_locations on arrival!';
   END IF;
 
-  RAISE NOTICE 'TEST 4 PASSED: mark_arrived correctly enforces geofence, freshness, and trigger cleanup.';
+  RAISE NOTICE 'TEST 4 PASSED: mark_arrived correctly enforces geofence, freshness, trigger cleanup, and manual override.';
 
   -- Rollback test entities
   RAISE EXCEPTION 'ROLLBACK_MOCK_DATA' USING ERRCODE = 'P0000';
