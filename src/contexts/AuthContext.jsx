@@ -130,7 +130,7 @@ export const AuthProvider = ({ children }) => {
     return profile;
   }, [fetchUserProfile]);
 
-  const register = useCallback(async ({ email, password, fullName, role }) => {
+  const register = useCallback(async ({ email, password, fullName, role, privacyAcceptedAt }) => {
     if (!supabase?.auth?.signUp) {
       throw new Error('Supabase Auth is not available');
     }
@@ -143,6 +143,7 @@ export const AuthProvider = ({ children }) => {
         data: {
           full_name: fullName,
           role: role || 'patient',
+          privacy_accepted_at: privacyAcceptedAt || null,
         },
       },
     });
@@ -167,6 +168,15 @@ export const AuthProvider = ({ children }) => {
 
   const logout = useCallback(async () => {
     setUser(null);
+    // Onboarding drafts hold contact details and medical notes; they must not
+    // survive on a shared device after sign-out.
+    try {
+      Object.keys(window.localStorage)
+        .filter((key) => key.startsWith('mc_onboarding_draft'))
+        .forEach((key) => window.localStorage.removeItem(key));
+    } catch (err) {
+      console.warn('[auth] Could not clear onboarding drafts:', err);
+    }
     try {
       await supabase?.auth?.signOut?.();
     } catch (err) {

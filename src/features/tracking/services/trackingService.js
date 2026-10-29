@@ -98,6 +98,15 @@ function waitForSubscription(channel, timeoutMs = 7000) {
   });
 }
 
+export const ARRIVAL_OVERRIDE_REASON = 'Provider confirmed on site (GPS unavailable or inaccurate)';
+
+const OVERRIDABLE_ARRIVAL_REASONS = new Set(['too_far', 'low_accuracy', 'stale_location', 'no_location']);
+
+/** True when the server rejected arrival only on GPS grounds, so a manual override can apply. */
+export function canOverrideArrival(res) {
+  return OVERRIDABLE_ARRIVAL_REASONS.has(res?.reason);
+}
+
 /**
  * Shared helper to mark a visit as arrived through the secure RPC.
  * Returns structured result: { ok: boolean, reason?: string, distance_m?: number, accuracy_m?: number }

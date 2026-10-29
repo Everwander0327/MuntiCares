@@ -16,6 +16,7 @@ import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
 import { ensurePatientCoords } from '@/features/tracking/services/geocoding';
+import { DEFAULT_CONSENT_PERMS } from '@/features/patient/utils/consent';
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
@@ -501,15 +502,27 @@ const PatientProviders = () => {
 
       if (reqError) throw reqError;
 
-      // 3. Enable Data Sharing (Consent)
-      const { error: consentErr } = await supabase
+      // 3. Enable Data Sharing (Consent). An existing grant keeps whatever
+      // categories the patient chose in Privacy & Consent; a new one starts
+      // with the medical summary only.
+      const { data: existingConsent } = await supabase
         .from('consent_access')
-        .upsert([{
-          patient_id: user.id,
-          provider_id: providerId,
-          is_enabled: true,
-          permissions: { medical_history: true, documents: true, visit_notes: true },
-        }], { onConflict: 'patient_id,provider_id' });
+        .select('id')
+        .eq('patient_id', user.id)
+        .eq('provider_id', providerId)
+        .maybeSingle();
+
+      const { error: consentErr } = existingConsent
+        ? await supabase
+            .from('consent_access')
+            .update({ is_enabled: true })
+            .eq('id', existingConsent.id)
+        : await supabase.from('consent_access').insert([{
+            patient_id: user.id,
+            provider_id: providerId,
+            is_enabled: true,
+            permissions: DEFAULT_CONSENT_PERMS,
+          }]);
 
       if (consentErr) {
         console.warn('Could not grant consent access:', consentErr);

@@ -13,6 +13,7 @@ import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { ProfilePhotoUpload, FhirExportModal } from '@/shared/components';
 import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
 import PermanentAddressSection from '@/features/patient/components/PermanentAddressSection';
+import { isMissingColumnError, parseEmergencyContact } from '@/features/patient/utils/patientProfile';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -155,6 +156,10 @@ const PatientProfile = () => {
         is_profile_complete: isComplete,
       };
 
+      const emergencyParts = parseEmergencyContact(profile.emergency_contact);
+      patientPayload.emergency_contact_name = emergencyParts.name;
+      patientPayload.emergency_contact_phone = emergencyParts.phone;
+
       if (homeCoords?.lat != null && homeCoords?.lng != null) {
         patientPayload.latitude = homeCoords.lat;
         patientPayload.longitude = homeCoords.lng;
@@ -165,9 +170,18 @@ const PatientProfile = () => {
         patientPayload.geocoded_at = null;
       }
 
-      const { error } = await supabase
+      let { error } = await supabase
         .from('patients')
         .upsert(patientPayload, { onConflict: 'user_id' });
+
+      if (error && isMissingColumnError(error)) {
+        const legacyPayload = { ...patientPayload };
+        delete legacyPayload.emergency_contact_name;
+        delete legacyPayload.emergency_contact_phone;
+        ({ error } = await supabase
+          .from('patients')
+          .upsert(legacyPayload, { onConflict: 'user_id' }));
+      }
 
       if (error) throw error;
 

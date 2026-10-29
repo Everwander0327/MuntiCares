@@ -70,7 +70,7 @@ CREATE TRIGGER trg_protect_users_privileges
 
 -- 1.3 Column-level privilege restriction on public.users
 REVOKE UPDATE ON public.users FROM authenticated, anon;
-GRANT UPDATE (full_name, avatar_url) ON public.users TO authenticated;
+GRANT UPDATE (full_name, avatar_url, is_banned, email) ON public.users TO authenticated;
 
 -- 1.4 Secure handle_new_auth_user() to prevent client-supplied admin role at signup
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
@@ -91,6 +91,12 @@ BEGIN
     assigned_role := 'patient';
   END IF;
 
+  -- Clean up any orphaned public.users row with the same email that no longer exists in auth.users
+  DELETE FROM public.users u
+  WHERE lower(u.email) = lower(new.email)
+    AND u.id <> new.id
+    AND NOT EXISTS (SELECT 1 FROM auth.users au WHERE au.id = u.id);
+
   INSERT INTO public.users (id, email, full_name, role, password, is_banned, created_at)
   VALUES (new.id, new.email, assigned_name, assigned_role, '', false, now())
   ON CONFLICT (id) DO UPDATE SET
@@ -104,8 +110,8 @@ BEGIN
     VALUES (new.id)
     ON CONFLICT (user_id) DO NOTHING;
   ELSE
-    INSERT INTO public.patients (user_id, full_name)
-    VALUES (new.id, assigned_name)
+    INSERT INTO public.patients (user_id)
+    VALUES (new.id)
     ON CONFLICT (user_id) DO NOTHING;
   END IF;
 
@@ -524,7 +530,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
-AS $
+AS $$
 BEGIN
   -- Apply checks when an authenticated client (not admin/service_role) creates a request
   IF auth.uid() IS NOT NULL AND NOT public.is_admin() THEN
@@ -559,7 +565,7 @@ BEGIN
 
   RETURN NEW;
 END;
-$;
+$$;
 
 REVOKE ALL ON FUNCTION public.validate_new_request() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.validate_new_request() TO authenticated;

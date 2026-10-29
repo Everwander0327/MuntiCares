@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
  * - Tapered precision stem whose tip is anchored at the exact map center (50%, 50%)
  * - Pulsing ground radar ring centered via wrapper so `animate-ping` scales from true center
  */
-export default function CenterMapPin({ isPanning, addressPreview, loading }) {
+export default function CenterMapPin({ isPanning, addressPreview, loading, hideLabel = false }) {
   return (
     <div
       className="pointer-events-none absolute inset-0 z-[500] select-none"
@@ -41,10 +41,12 @@ export default function CenterMapPin({ isPanning, addressPreview, loading }) {
       />
 
       {/* Caption + Care Home Beacon stack; bottom edge (stem tip) sits on exact map center */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full flex flex-col items-center">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full flex w-full flex-col items-center px-3">
         {/* Floating Address Pill above beacon */}
         <div
-          className={`mb-2 max-w-[80vw] sm:max-w-md px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg backdrop-blur-md transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+          className={`mb-2 max-w-full px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg backdrop-blur-md transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+            hideLabel ? 'hidden' : ''
+          } ${
             isPanning
               ? 'scale-95 -translate-y-1 opacity-85 bg-slate-900/90 text-white border border-white/15'
               : 'scale-100 translate-y-0 opacity-100 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-white/15'

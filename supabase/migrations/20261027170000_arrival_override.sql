@@ -128,4 +128,7 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.mark_arrived(uuid, uuid, text) FROM PUBLIC;
+-- Supabase grants EXECUTE to anon/authenticated by default; anon has no auth.uid()
+-- so it can never succeed, but it should not reach the function at all.
+REVOKE EXECUTE ON FUNCTION public.mark_arrived(uuid, uuid, text) FROM anon;
 GRANT EXECUTE ON FUNCTION public.mark_arrived(uuid, uuid, text) TO authenticated;

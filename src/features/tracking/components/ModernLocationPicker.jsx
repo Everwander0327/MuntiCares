@@ -9,12 +9,13 @@ import { reverseGeocode } from '../services/geocoding';
 import { BASEMAP_STYLES, STYLE_STREETS, focusOnLocation } from '../mapStyles';
 
 const ModernLocationPicker = forwardRef(function ModernLocationPicker(
-  { initial, onPinChange, className = 'h-[320px] sm:h-[400px]' },
+  { initial, onPinChange, readOnly = false, className = 'h-[320px] sm:h-[400px]' },
   ref
 ) {
   const { dark } = useTheme();
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
+  const [ready, setReady] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [addressPreview, setAddressPreview] = useState('');
   const [loadingAddress, setLoadingAddress] = useState(false);
@@ -27,6 +28,8 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
   const isMountedRef = useRef(true);
   const onPinChangeRef = useRef(onPinChange);
   onPinChangeRef.current = onPinChange;
+  const readOnlyRef = useRef(readOnly);
+  readOnlyRef.current = readOnly;
   const initialRef = useRef(initial);
   initialRef.current = initial;
 
@@ -35,12 +38,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
     flyToLocation: ({ lat, lng }) => {
       if (!mapRef.current) return;
       userMovedRef.current = true;
-      mapRef.current.flyTo({
-        center: [lng, lat],
-        zoom: 17,
-        pitch: 0,
-        essential: true,
-      });
+      focusOnLocation(mapRef.current, [lng, lat]);
     },
     getCenter: () => {
       if (!mapRef.current) return null;
@@ -70,6 +68,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       pitchWithRotate: false,
       bearing: 0,
       attributionControl: false,
+      interactive: !readOnlyRef.current,
     });
 
     mapRef.current = map;
@@ -83,6 +82,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
 
     map.on('load', () => {
       map.resize();
+      if (isMountedRef.current) setReady(true);
     });
 
     // A failed base map load reverts to the street map instead of leaving a
@@ -100,11 +100,16 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
     const onMoveStart = () => setIsPanning(true);
     const onMoveEnd = () => {
       setIsPanning(false);
+      if (readOnlyRef.current) return;
       // Ignore the initial moveend so the default Muntinlupa center isn't
       // silently accepted as the patient's home before they touch the map.
       if (!userMovedRef.current) return;
       const center = map.getCenter();
       const pos = { lat: center.lat, lng: center.lng };
+
+      // The pin itself is valid immediately; only the address label depends on
+      // the lookup, so the parent never waits on Nominatim to accept the pin.
+      onPinChangeRef.current?.({ ...pos, resolved: false, pending: true });
 
       // Debounce reverse geocoding to prevent excessive requests
       clearTimeout(debounceTimer.current);
@@ -112,10 +117,14 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       debounceTimer.current = setTimeout(async () => {
         const resolved = await reverseGeocode(pos.lat, pos.lng);
         if (!isMountedRef.current) return;
-        const label = resolved || `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`;
-        setAddressPreview(label);
+        setAddressPreview(resolved || 'Address lookup unavailable');
         setLoadingAddress(false);
-        onPinChangeRef.current?.({ ...pos, address: label });
+        onPinChangeRef.current?.({
+          ...pos,
+          address: resolved || undefined,
+          resolved: Boolean(resolved),
+          pending: false,
+        });
       }, 350);
     };
 
@@ -126,7 +135,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
     map.on('moveend', onMoveEnd);
 
     // Initial reverse geocode if initial coordinates provided
-    if (initCoords?.lat != null && initCoords?.lng != null) {
+    if (!readOnlyRef.current && initCoords?.lat != null && initCoords?.lng != null) {
       reverseGeocode(initCoords.lat, initCoords.lng).then((name) => {
         if (isMountedRef.current && name) setAddressPreview(name);
       });
@@ -157,11 +166,12 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
         center: [initial.lng, initial.lat],
         zoom: 17,
       });
+      if (readOnly) return;
       reverseGeocode(initial.lat, initial.lng).then((name) => {
         if (isMountedRef.current && name) setAddressPreview(name);
       });
     }
-  }, [initial?.lat, initial?.lng]);
+  }, [initial?.lat, initial?.lng, readOnly]);
 
   // Swap basemap; theme is handled by the muted/dark canvas filter, not the style.
   useEffect(() => {
@@ -201,65 +211,76 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
 
   return (
     <div
-      className={`relative w-full rounded-2xl overflow-hidden shadow-inner border border-slate-200/80 dark:border-white/10 ${
+      className={`relative w-full rounded-2xl overflow-hidden shadow-inner border border-surface-border ${
         basemap !== 'satellite' ? (dark ? 'mc-canvas-tiles--dark' : 'mc-canvas-tiles--muted') : ''
       } ${className}`}
     >
       {/* WebGL Map Canvas */}
       <div ref={mapContainer} className="w-full h-full" />
 
+      {!ready && (
+        <div className="absolute inset-0 z-[510] flex items-center justify-center bg-surface-subtle">
+          <span className="text-sm font-medium text-tertiary" role="status">
+            Loading map…
+          </span>
+        </div>
+      )}
+
       {/* Foodpanda-style Fixed Center Pin */}
       <CenterMapPin
         isPanning={isPanning}
         addressPreview={addressPreview}
         loading={loadingAddress}
+        hideLabel={readOnly}
       />
 
       {/* Control stack mirrors the live visit tracker */}
-      <div className="mc-map-controls mc-map-controls--bottom">
-        <BasemapControl value={basemap} onChange={setBasemap} />
+      {!readOnly && ready && (
+        <div className="mc-map-controls mc-map-controls--bottom">
+          <BasemapControl value={basemap} onChange={setBasemap} />
 
-        <button
-          type="button"
-          onClick={handleLocateMe}
-          disabled={locatingGps}
-          className="mc-map-control disabled:opacity-40 disabled:cursor-not-allowed"
-          title="Use my current GPS location"
-          aria-label="Use my current GPS location"
-        >
-          {locatingGps ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <LocateFixed className="w-4 h-4" />
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={handleLocateMe}
+            disabled={locatingGps}
+            className="mc-map-control disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Use my current GPS location"
+            aria-label="Use my current GPS location"
+          >
+            {locatingGps ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <LocateFixed className="w-4 h-4" />
+            )}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            userMovedRef.current = true;
-            mapRef.current?.zoomIn();
-          }}
-          className="mc-map-control"
-          title="Zoom in"
-          aria-label="Zoom in"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
+          <button
+            type="button"
+            onClick={() => {
+              userMovedRef.current = true;
+              mapRef.current?.zoomIn();
+            }}
+            className="mc-map-control"
+            title="Zoom in"
+            aria-label="Zoom in"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
 
-        <button
-          type="button"
-          onClick={() => {
-            userMovedRef.current = true;
-            mapRef.current?.zoomOut();
-          }}
-          className="mc-map-control"
-          title="Zoom out"
-          aria-label="Zoom out"
-        >
-          <Minus className="w-4 h-4" />
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => {
+              userMovedRef.current = true;
+              mapRef.current?.zoomOut();
+            }}
+            className="mc-map-control"
+            title="Zoom out"
+            aria-label="Zoom out"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 });

@@ -18,7 +18,6 @@ TRUNCATE TABLE
   public.medical_histories,
   public.medications,
   public.payouts,
-  public.transactions,
   public.requests,
   public.announcements,
   public.patients,

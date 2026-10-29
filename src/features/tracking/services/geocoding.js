@@ -8,6 +8,12 @@ const VIEWBOX = '120.98,14.47,121.08,14.35';
 const cache = new Map();
 let lastCall = 0;
 
+const REQUEST_TIMEOUT_MS = 8000;
+
+// AbortSignal.timeout is unavailable on older Safari; a hung request would
+// otherwise leave the map pinned on "Locating care address…" forever.
+const timeoutSignal = () => (AbortSignal.timeout ? AbortSignal.timeout(REQUEST_TIMEOUT_MS) : undefined);
+
 async function throttle() {
   const wait = lastCall + 1100 - Date.now();
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
@@ -19,6 +25,8 @@ export async function geocodeAddress(address) {
   const q = (address || '').trim();
   if (!q) return null;
   if (cache.has(q)) return cache.get(q);
+
+  const inMuntinlupa = (lat, lng) => lat >= 14.33 && lat <= 14.48 && lng >= 120.97 && lng <= 121.09;
 
   const tryQuery = async (query, bounded) => {
     try {
@@ -34,18 +42,21 @@ export async function geocodeAddress(address) {
       });
       const res = await fetch(`${NOMINATIM}/search?${params}`, {
         headers: { 'Accept-Language': 'en' },
+        signal: timeoutSignal(),
       });
       if (!res.ok) return null;
       const data = await res.json();
       if (!Array.isArray(data) || !data.length) return null;
       const hit = data[0];
-      return hit ? { lat: +hit.lat, lng: +hit.lon, displayName: hit.display_name } : null;
+      if (!hit || !inMuntinlupa(+hit.lat, +hit.lon)) return null;
+      return { lat: +hit.lat, lng: +hit.lon, displayName: hit.display_name };
     } catch {
       return null;
     }
   };
 
-  // Try strict Muntinlupa area first, then add city hint, then unbounded.
+  // Try strict Muntinlupa area first, then add a city hint, then fall back —
+  // every accepted hit must still land inside the Muntinlupa bounds above.
   const result =
     (await tryQuery(q, true)) ||
     (/muntinlupa/i.test(q) ? null : await tryQuery(`${q}, Muntinlupa City`, false)) ||
@@ -59,7 +70,7 @@ export async function reverseGeocode(lat, lng) {
   try {
     await throttle();
     const params = new URLSearchParams({ lat, lon: lng, format: 'jsonv2', email: 'support@municares.app' });
-    const res = await fetch(`${NOMINATIM}/reverse?${params}`);
+    const res = await fetch(`${NOMINATIM}/reverse?${params}`, { signal: timeoutSignal() });
     if (!res.ok) return null;
     const data = await res.json();
     return data?.display_name || null;

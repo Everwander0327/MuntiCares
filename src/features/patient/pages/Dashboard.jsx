@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, ArrowRight, Pause, Play } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import usePatientRequests from '@/hooks/usePatientRequests';
 import { SkeletonPage } from '@/shared/ui';
 import { LiveVisitTrackerModal } from '@/features/tracking/components';
@@ -41,7 +41,6 @@ const muntiHighlights = [
 ];
 
 const PatientDashboard = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState([]);
   const [stats, setStats] = useState({ active: 0, accepted: 0, pending: 0 });
@@ -57,20 +56,8 @@ const PatientDashboard = () => {
   const mainRef = React.useRef(null);
   const { user } = useAuth();
 
-  // Onboarding guard: redirect if profile is incomplete
-  useEffect(() => {
-    if (!user?.id || user.role !== 'patient') return;
-    supabase
-      .from('patients')
-      .select('is_profile_complete')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data, error }) => {
-        if (!error && (!data || !data.is_profile_complete)) {
-          navigate('/patient/onboarding', { replace: true });
-        }
-      });
-  }, [user?.id, user?.role, navigate]);
+  // Profile-completeness routing lives in DashboardLayout so every patient
+  // route is covered by one query instead of one per page.
 
   const carouselTrackRef = useRef(null);
   const isDraggingRef = useRef(false);

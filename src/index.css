@@ -111,6 +111,8 @@ a,
   --text-tertiary: #5A6B7F;
   --text-link: #2F6FB5;
   --focus-ring: #2F6FB5;
+  /* Field boundary: 3.49:1 on the page canvas (WCAG 1.4.11). */
+  --field-border: #6F879E;
   /* RGB channel triplets so Tailwind opacity modifiers (bg-surface-shell/95) work. */
   --surface-page: 244 248 252;
   --surface-shell: 235 241 248;
@@ -129,6 +131,8 @@ html.dark {
   --text-tertiary: #A5B6C8;
   --text-link: #8CBDF0;
   --focus-ring: #8CBDF0;
+  /* 3.61:1 on the dark page canvas. */
+  --field-border: #5B7189;
   --surface-page: 14 22 32;
   --surface-shell: 23 34 54;
   --surface-subtle: 31 45 62;
@@ -147,6 +151,12 @@ html.dark {
 :focus-visible {
   outline: 3px solid var(--focus-ring) !important;
   outline-offset: 2px !important;
+}
+
+/* Step containers are focused programmatically so screen readers announce the
+   new step; they are not interactive, so they opt out of the focus ring. */
+.mc-step-region:focus-visible {
+  outline: none !important;
 }
 
 /* Reserve space for the fixed cookie banner so the onboarding CTA stays reachable */

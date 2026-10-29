@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { isMissingColumnError } from '@/features/patient/utils/patientProfile';
 
 import { SkeletonPage } from '@/shared/ui';
 import toast from 'react-hot-toast';
@@ -40,6 +41,10 @@ const ProviderProfile = () => {
     location: '',
     bio: '',
     services: [],
+    license_number: null,
+    license_expiry: null,
+    service_radius_km: null,
+    languages: [],
     is_profile_complete: false,
     is_approved: false,
     professional_id_path: null,
@@ -52,6 +57,7 @@ const ProviderProfile = () => {
 
   const [editForm, setEditForm] = useState({ ...profile });
   const [servicesInput, setServicesInput] = useState('');
+  const [languagesInput, setLanguagesInput] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
   const [editingOverview, setEditingOverview] = useState(false);
@@ -93,6 +99,10 @@ const ProviderProfile = () => {
           location: provData.location || 'Muntinlupa City',
           bio: provData.bio || '',
           services: provData.services || [],
+          license_number: provData.license_number || null,
+          license_expiry: provData.license_expiry ? String(provData.license_expiry).slice(0, 10) : null,
+          service_radius_km: provData.service_radius_km ?? null,
+          languages: provData.languages || [],
           is_profile_complete: provData.is_profile_complete,
           is_approved: provData.is_approved,
           professional_id_path: provData.professional_id_path || null,
@@ -109,6 +119,7 @@ const ProviderProfile = () => {
         setProfile(fullProfile);
         setEditForm(fullProfile);
         setServicesInput((provData.services || []).join(', '));
+        setLanguagesInput((provData.languages || []).join(', '));
 
       } catch (err) {
         console.error('Error fetching profile:', err);
@@ -127,10 +138,25 @@ const ProviderProfile = () => {
 
     setSaving(true);
     try {
+      const languagesList = [...new Set(
+        (languagesInput || '').split(',').map(l => l.trim()).filter(l => l)
+      )];
+      const radiusInput = editForm.service_radius_km;
+      const hasRadius = radiusInput !== '' && radiusInput !== null && radiusInput !== undefined;
+      const serviceRadius = hasRadius && Number.isFinite(Number(radiusInput)) ? Number(radiusInput) : null;
+      if (serviceRadius !== null && (serviceRadius < 1 || serviceRadius > 100)) {
+        toast.error('Service radius must be between 1 and 100 km.');
+        return;
+      }
+
       const updatedData = {
         phone: editForm.phone,
         location: editForm.location,
         bio: editForm.bio,
+        license_number: (editForm.license_number || '').trim() || null,
+        license_expiry: editForm.license_expiry || null,
+        service_radius_km: serviceRadius,
+        languages: languagesList,
         is_profile_complete: true,
       };
 
@@ -142,14 +168,44 @@ const ProviderProfile = () => {
       });
       updatedData.trust_score = newScore;
 
-      const { error } = await supabase
+      let { error } = await supabase
         .from('providers')
         .update(updatedData)
         .eq('user_id', user.id);
 
+      // Databases without the credential migration keep the original form usable.
+      let savedExtended = true;
+      if (error && isMissingColumnError(error)) {
+        savedExtended = false;
+        const {
+          license_number: _licenseNumber,
+          license_expiry: _licenseExpiry,
+          service_radius_km: _serviceRadius,
+          languages: _languages,
+          ...legacyData
+        } = updatedData;
+        ({ error } = await supabase
+          .from('providers')
+          .update(legacyData)
+          .eq('user_id', user.id));
+      }
+
       if (error) throw error;
 
-      setProfile(prev => ({ ...prev, ...editForm, is_profile_complete: true, trust_score: newScore }));
+      setProfile(prev => ({
+        ...prev,
+        ...editForm,
+        ...(savedExtended
+          ? {
+              license_number: updatedData.license_number,
+              license_expiry: updatedData.license_expiry,
+              service_radius_km: updatedData.service_radius_km,
+              languages: languagesList,
+            }
+          : {}),
+        is_profile_complete: true,
+        trust_score: newScore,
+      }));
       setEditingOverview(false);
       toast.success('Profile updated successfully!');
     } catch (err) {
@@ -392,7 +448,7 @@ const ProviderProfile = () => {
                       {!editingOverview ? (
                         <motion.button
                           whileTap={{ scale: 0.96 }}
-                          onClick={() => { setEditingOverview(true); setEditForm(profile); }}
+                          onClick={() => { setEditingOverview(true); setEditForm(profile); setLanguagesInput((profile.languages || []).join(', ')); }}
                           className="neu-btn px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-link flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                         >
                           <Save className="w-4 h-4" />
@@ -402,7 +458,7 @@ const ProviderProfile = () => {
                         <div className="flex gap-2 w-full sm:w-auto">
                           <motion.button
                             whileTap={{ scale: 0.96 }}
-                            onClick={() => { setEditingOverview(false); setEditForm(profile); }}
+                            onClick={() => { setEditingOverview(false); setEditForm(profile); setLanguagesInput((profile.languages || []).join(', ')); }}
                             className="neu-btn px-3 sm:px-4 py-2 rounded-xl font-bold text-xs text-tertiary hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
                           >
                             Cancel
@@ -493,6 +549,90 @@ const ProviderProfile = () => {
                             <Mail className="w-4 h-4 text-tertiary shrink-0" />
                             <span className="truncate">{profile.email}</span>
                           </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5">
+                        <div>
+                          <label htmlFor="provider-license-number" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">PRC / License Number</label>
+                          {editingOverview ? (
+                            <input
+                              id="provider-license-number"
+                              type="text"
+                              name="license_number"
+                              value={editForm.license_number || ''}
+                              onChange={e => setEditForm({ ...editForm, license_number: e.target.value })}
+                              placeholder="PRC-0123456"
+                              className="w-full neu-inset rounded-xl py-2.5 sm:py-3 px-3.5 sm:px-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                            />
+                          ) : (
+                            <div className="neu-inset p-2.5 sm:p-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 break-words">
+                              {profile.license_number || 'Not provided'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="provider-license-expiry" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">License Expiry</label>
+                          {editingOverview ? (
+                            <input
+                              id="provider-license-expiry"
+                              type="date"
+                              name="license_expiry"
+                              value={editForm.license_expiry || ''}
+                              onChange={e => setEditForm({ ...editForm, license_expiry: e.target.value })}
+                              className="w-full neu-inset rounded-xl py-2.5 sm:py-3 px-3.5 sm:px-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                            />
+                          ) : (
+                            <div className="neu-inset p-2.5 sm:p-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                              {profile.license_expiry || 'Not provided'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="provider-service-radius" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Service Radius</label>
+                          {editingOverview ? (
+                            <div className="relative">
+                              <input
+                                id="provider-service-radius"
+                                type="number"
+                                name="service_radius_km"
+                                inputMode="numeric"
+                                min="1"
+                                max="100"
+                                aria-describedby="provider-service-radius-unit"
+                                value={editForm.service_radius_km ?? ''}
+                                onChange={e => setEditForm({ ...editForm, service_radius_km: e.target.value })}
+                                placeholder="15"
+                                className="w-full neu-inset rounded-xl py-2.5 sm:py-3 pl-3.5 sm:pl-4 pr-11 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                              />
+                              <span id="provider-service-radius-unit" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-extrabold text-tertiary pointer-events-none">km</span>
+                            </div>
+                          ) : (
+                            <div className="neu-inset p-2.5 sm:p-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">
+                              {profile.service_radius_km ? `${profile.service_radius_km} km` : 'Not provided'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="provider-languages" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Languages</label>
+                          {editingOverview ? (
+                            <input
+                              id="provider-languages"
+                              type="text"
+                              name="languages"
+                              value={languagesInput}
+                              onChange={e => setLanguagesInput(e.target.value)}
+                              placeholder="English, Filipino"
+                              className="w-full neu-inset rounded-xl py-2.5 sm:py-3 px-3.5 sm:px-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                            />
+                          ) : (
+                            <div className="neu-inset p-2.5 sm:p-3 rounded-xl text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 break-words">
+                              {(profile.languages || []).join(', ') || 'Not provided'}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

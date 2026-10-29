@@ -31,3 +31,5 @@ supabase_schema.sql
 .vercel
 .env*
 test-results/
+
+.design-qa/

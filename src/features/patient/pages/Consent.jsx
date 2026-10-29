@@ -10,6 +10,7 @@ import {
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { normalizePermissions } from '@/features/patient/utils/consent';
 import toast from 'react-hot-toast';
 
 const PERMISSION_CONFIG = [
@@ -39,12 +40,9 @@ const PERMISSION_LABELS = {
   visit_notes: 'Visit Notes',
 };
 
-const DEFAULT_PERMS = { medical_history: true, documents: true, visit_notes: true };
-
 const _staggerContainer = {
   animate: { transition: { staggerChildren: 0.05 } },
 };
-
 const _staggerItem = {
   initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.28, ease: [0.16, 1, 0.3, 1] } },
@@ -231,7 +229,7 @@ const PatientConsent = () => {
 
       const formatted = (data || []).map(c => {
         const provInfo = providerDetails[c.provider_id];
-        const perms = c.permissions || { ...DEFAULT_PERMS };
+        const perms = normalizePermissions(c.permissions);
         return {
           id: c.id,
           providerId: c.provider_id,

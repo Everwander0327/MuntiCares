@@ -7,7 +7,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage } from '@/shared/ui';
 import PatientRecordModal from '../components/PatientRecordModal';
-import { markVisitArrived, formatArrivalFailure } from '@/features/tracking/services/trackingService';
+import ArrivalOverrideDialog from '@/features/tracking/components/ArrivalOverrideDialog';
+import {
+  markVisitArrived,
+  formatArrivalFailure,
+  canOverrideArrival,
+  ARRIVAL_OVERRIDE_REASON,
+} from '@/features/tracking/services/trackingService';
 import toast from 'react-hot-toast';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -35,6 +41,7 @@ const ProviderSchedule = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [updatingId, setUpdatingId] = useState(null);
+  const [arrivalOverride, setArrivalOverride] = useState(null);
 
   // Pagination for selected day appointments (Eliminates scroll traps)
   const [apptsPage, setApptsPage] = useState(1);
@@ -191,7 +198,11 @@ const ProviderSchedule = () => {
       if (newStatus === 'Arrived') {
         const res = await markVisitArrived(appointmentId);
         if (!res?.ok) {
-          toast.error(formatArrivalFailure(res));
+          if (canOverrideArrival(res)) {
+            setArrivalOverride({ id: appointmentId, failure: res });
+          } else {
+            toast.error(formatArrivalFailure(res));
+          }
           return;
         }
         setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'Arrived' } : a));
@@ -202,7 +213,6 @@ const ProviderSchedule = () => {
       const payload = { status: newStatus };
       const nowIso = new Date().toISOString();
       if (newStatus === 'On The Way') payload.route_started_at = nowIso;
-      if (newStatus === 'Arrived') payload.arrived_at = nowIso;
 
       const { error } = await supabase
         .from('requests')
@@ -226,6 +236,28 @@ const ProviderSchedule = () => {
     } catch (err) {
       console.error(err);
       toast.error('Failed to update status.');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const confirmArrivalOverride = async () => {
+    if (!arrivalOverride) return;
+    const { id } = arrivalOverride;
+    setUpdatingId(id);
+    try {
+      const res = await markVisitArrived(id, null, ARRIVAL_OVERRIDE_REASON);
+      setArrivalOverride(null);
+      if (!res?.ok) {
+        toast.error(formatArrivalFailure(res));
+        return;
+      }
+      setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'Arrived' } : a));
+      toast.success('Arrived — override recorded.');
+    } catch (err) {
+      console.error(err);
+      setArrivalOverride(null);
+      toast.error(err?.message || 'Failed to mark arrived.');
     } finally {
       setUpdatingId(null);
     }
@@ -568,6 +600,14 @@ const ProviderSchedule = () => {
           patientName={modalPatient.name}
         />
       )}
+
+      <ArrivalOverrideDialog
+        open={Boolean(arrivalOverride)}
+        failure={arrivalOverride?.failure}
+        busy={updatingId === arrivalOverride?.id}
+        onCancel={() => setArrivalOverride(null)}
+        onConfirm={confirmArrivalOverride}
+      />
     </DashboardLayout>
   );
 };

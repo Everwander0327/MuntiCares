@@ -15,6 +15,7 @@ export default {
         // Theme-aware semantic text colors (see index.css for the values).
         tertiary: 'var(--text-tertiary)',
         link: 'var(--text-link)',
+        field: 'var(--field-border)',
         primary: {
           DEFAULT: "#2F6FB5", // Primary button
           hover: "#255A94",   // Primary hover

@@ -24,6 +24,7 @@ import {
   startPublishing,
   markVisitArrived,
   formatArrivalFailure,
+  ARRIVAL_OVERRIDE_REASON,
 } from '../services/trackingService';
 import { isNative } from '../services/locationSource';
 import useRouteEta from '../hooks/useRouteEta';
@@ -248,7 +249,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
       const res = await markVisitArrived(
         visit.id,
         session.current?.sessionId,
-        override ? 'Provider confirmed on site (GPS unavailable or inaccurate)' : null
+        override ? ARRIVAL_OVERRIDE_REASON : null
       );
       if (res?.ok) {
         setOverrideOpen(false);

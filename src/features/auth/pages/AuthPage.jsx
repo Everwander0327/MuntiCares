@@ -32,6 +32,7 @@ const registerSchema = z.object({
   email: z.string().email('Enter a valid email address'),
   password: z.string().min(6, 'At least 6 characters'),
   confirmPassword: z.string(),
+  privacyAccepted: z.literal(true, { message: 'Please accept the privacy notice to continue.' }),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
@@ -100,7 +101,10 @@ const AuthPage = () => {
   const bgRef = useRef(null);
 
   const loginForm = useForm({ resolver: zodResolver(loginSchema) });
-  const registerForm = useForm({ resolver: zodResolver(registerSchema) });
+  const registerForm = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { privacyAccepted: false },
+  });
   const setPasswordForm = useForm({ resolver: zodResolver(loginSchema) });
   const watchPassword = registerForm.watch('password', '');
 
@@ -198,7 +202,13 @@ const AuthPage = () => {
     setError('');
     setLoading(true);
     try {
-      await register({ email: data.email, password: data.password, fullName: data.fullName, role });
+      await register({
+        email: data.email,
+        password: data.password,
+        fullName: data.fullName,
+        role,
+        privacyAcceptedAt: new Date().toISOString(),
+      });
       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
       toast.success('Account created! You can now sign in.');
       setMode('login');
@@ -434,6 +444,31 @@ const AuthPage = () => {
           )}
 
 
+
+          <div className="rounded-xl border border-slate-200/70 dark:border-white/10 bg-white/50 dark:bg-slate-900/40 px-3 py-2.5">
+            <label htmlFor="register-privacy" className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                id="register-privacy"
+                type="checkbox"
+                aria-invalid={Boolean(registerForm.formState.errors.privacyAccepted)}
+                aria-describedby={
+                  registerForm.formState.errors.privacyAccepted ? 'register-privacy-error' : undefined
+                }
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 dark:border-slate-600 accent-[var(--primary)]"
+                {...registerForm.register('privacyAccepted')}
+              />
+              <span className="text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
+                I agree to MuntiCares storing the details I provide — my contact information, home address, and
+                any health information I choose to share — and using them to coordinate my care. I can review or
+                revoke provider access anytime in Privacy &amp; Consent.
+              </span>
+            </label>
+            {registerForm.formState.errors.privacyAccepted && (
+              <p id="register-privacy-error" className="mt-1.5 text-xs font-medium text-danger dark:text-danger-dark">
+                {registerForm.formState.errors.privacyAccepted.message}
+              </p>
+            )}
+          </div>
 
           {error && (
             <div className="bg-danger/10 text-danger dark:text-danger-dark p-3 rounded-[1.25rem] text-sm font-medium text-center ring-1 ring-red-500/20">

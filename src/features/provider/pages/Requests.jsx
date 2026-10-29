@@ -1,4 +1,10 @@
-import { markVisitArrived, formatArrivalFailure } from '../../tracking/services/trackingService';
+import {
+  markVisitArrived,
+  formatArrivalFailure,
+  canOverrideArrival,
+  ARRIVAL_OVERRIDE_REASON,
+} from '../../tracking/services/trackingService';
+import ArrivalOverrideDialog from '@/features/tracking/components/ArrivalOverrideDialog';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
@@ -77,6 +83,7 @@ const ProviderRequests = () => {
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState({});
   const [updatingVisitId, setUpdatingVisitId] = useState(null);
+  const [arrivalOverride, setArrivalOverride] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
   const { user } = useAuth();
@@ -192,7 +199,11 @@ const ProviderRequests = () => {
       if (nextStatus === 'Arrived') {
         const res = await markVisitArrived(visitId);
         if (!res?.ok) {
-          toast.error(formatArrivalFailure(res));
+          if (canOverrideArrival(res)) {
+            setArrivalOverride({ id: visitId, failure: res });
+          } else {
+            toast.error(formatArrivalFailure(res));
+          }
           return;
         }
         toast.success('Visit updated to "Arrived"!');
@@ -203,7 +214,6 @@ const ProviderRequests = () => {
       const payload = { status: nextStatus };
       const nowIso = new Date().toISOString();
       if (nextStatus === 'On The Way') payload.route_started_at = nowIso;
-      if (nextStatus === 'Arrived') payload.arrived_at = nowIso;
 
       const { error } = await supabase
         .from('requests')
@@ -216,6 +226,28 @@ const ProviderRequests = () => {
     } catch (err) {
       console.error('Error advancing visit:', err);
       toast.error('Failed to update visit status.');
+    } finally {
+      setUpdatingVisitId(null);
+    }
+  };
+
+  const confirmArrivalOverride = async () => {
+    if (!arrivalOverride) return;
+    const { id } = arrivalOverride;
+    setUpdatingVisitId(id);
+    try {
+      const res = await markVisitArrived(id, null, ARRIVAL_OVERRIDE_REASON);
+      setArrivalOverride(null);
+      if (!res?.ok) {
+        toast.error(formatArrivalFailure(res));
+        return;
+      }
+      toast.success('Arrived — override recorded.');
+      fetchAll();
+    } catch (err) {
+      console.error('Error recording arrival override:', err);
+      setArrivalOverride(null);
+      toast.error(err?.message || 'Failed to mark arrived.');
     } finally {
       setUpdatingVisitId(null);
     }
@@ -613,6 +645,14 @@ const ProviderRequests = () => {
         )}
 
       </div>
+
+      <ArrivalOverrideDialog
+        open={Boolean(arrivalOverride)}
+        failure={arrivalOverride?.failure}
+        busy={updatingVisitId === arrivalOverride?.id}
+        onCancel={() => setArrivalOverride(null)}
+        onConfirm={confirmArrivalOverride}
+      />
     </DashboardLayout>
   );
 };
