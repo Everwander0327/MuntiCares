@@ -2459,3 +2459,38 @@ select:focus {
 }
 
 
+
+/* ==========================================================================
+   Size-Aware Bento Card Layout (Option A: Editorial Split + 16:10 Media)
+   ========================================================================== */
+.mc-bento-cell {
+  container-type: inline-size;
+}
+
+.mc-bento-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.mc-bento-media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+@container (min-width: 580px) {
+  .mc-bento-card--split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .mc-bento-card--split .mc-bento-media {
+    height: 100%;
+    min-height: 260px;
+    aspect-ratio: 16 / 10;
+  }
+}
