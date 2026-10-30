@@ -9,7 +9,7 @@ import { reverseGeocode } from '../services/geocoding';
 import { BASEMAP_STYLES, STYLE_STREETS, focusOnLocation } from '../mapStyles';
 
 const ModernLocationPicker = forwardRef(function ModernLocationPicker(
-  { initial, onPinChange, readOnly = false, className = 'h-[320px] sm:h-[400px]' },
+  { initial, initialCenter = null, onPinChange, readOnly = false, className = 'h-[320px] sm:h-[400px]' },
   ref
 ) {
   const { dark } = useTheme();
@@ -32,6 +32,8 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
   readOnlyRef.current = readOnly;
   const initialRef = useRef(initial);
   initialRef.current = initial;
+  const initialCenterRef = useRef(initialCenter);
+  initialCenterRef.current = initialCenter;
 
   // Expose flyTo capability to parent components (e.g. for autocomplete search)
   useImperativeHandle(ref, () => ({
@@ -45,24 +47,33 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       const c = mapRef.current.getCenter();
       return { lat: c.lat, lng: c.lng };
     },
+    // True only after the user dragged, searched, or tapped locate. Zoom alone
+    // leaves the center unchanged, so it does not confirm a pin.
+    hasUserMoved: () => userMovedRef.current,
   }));
 
   useEffect(() => {
     if (!mapContainer.current) return;
     isMountedRef.current = true;
     const initCoords = initialRef.current;
+    const centerHint = initialCenterRef.current;
 
-    // Default to Muntinlupa City Hall / Alabang
-    const startCenter =
+    // An unconfirmed destination opens near its geocoded estimate, but the
+    // hint never becomes a pin until the user moves the map.
+    const cameraAnchor =
       initCoords?.lat != null && initCoords?.lng != null
-        ? [initCoords.lng, initCoords.lat]
-        : [121.0415, 14.4081];
+        ? initCoords
+        : centerHint?.lat != null && centerHint?.lng != null
+          ? centerHint
+          : null;
+    // Default to Muntinlupa City Hall / Alabang
+    const startCenter = cameraAnchor ? [cameraAnchor.lng, cameraAnchor.lat] : [121.0415, 14.4081];
 
     const map = new MapLibreMap({
       container: mapContainer.current,
       style: STYLE_STREETS,
       center: startCenter,
-      zoom: initCoords ? 17 : 14.5,
+      zoom: cameraAnchor ? 17 : 14.5,
       pitch: 0, // Flat top-down 2D perspective
       maxPitch: 0,
       pitchWithRotate: false,
@@ -161,17 +172,20 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
   // Sync map camera when initial coordinates arrive asynchronously (and user hasn't manually panned yet)
   useEffect(() => {
     if (!mapRef.current || userMovedRef.current) return;
-    if (initial?.lat != null && initial?.lng != null) {
-      mapRef.current.jumpTo({
-        center: [initial.lng, initial.lat],
-        zoom: 17,
-      });
-      if (readOnly) return;
-      reverseGeocode(initial.lat, initial.lng).then((name) => {
-        if (isMountedRef.current && name) setAddressPreview(name);
-      });
-    }
-  }, [initial?.lat, initial?.lng, readOnly]);
+    const pin = initialRef.current;
+    const hint = initialCenterRef.current;
+    const hasPin = pin?.lat != null && pin?.lng != null;
+    const focus = hasPin ? pin : hint;
+    if (focus?.lat == null || focus?.lng == null) return;
+    mapRef.current.jumpTo({
+      center: [focus.lng, focus.lat],
+      zoom: 17,
+    });
+    if (readOnly || !hasPin) return;
+    reverseGeocode(pin.lat, pin.lng).then((name) => {
+      if (isMountedRef.current && name) setAddressPreview(name);
+    });
+  }, [initial?.lat, initial?.lng, initialCenter?.lat, initialCenter?.lng, readOnly]);
 
   // Swap basemap; theme is handled by the muted/dark canvas filter, not the style.
   useEffect(() => {
@@ -257,7 +271,6 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
           <button
             type="button"
             onClick={() => {
-              userMovedRef.current = true;
               mapRef.current?.zoomIn();
             }}
             className="mc-map-control"
@@ -270,7 +283,6 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
           <button
             type="button"
             onClick={() => {
-              userMovedRef.current = true;
               mapRef.current?.zoomOut();
             }}
             className="mc-map-control"

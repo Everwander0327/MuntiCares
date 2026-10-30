@@ -123,16 +123,20 @@ const PatientProviders = () => {
           lng: data.longitude,
           address,
           source: 'patient_home',
+          confirmed: true,
           version: 0,
         });
       } else if (address) {
         const coords = await ensurePatientCoords(user.id);
         if (!active || !coords) return;
-        setPatientHome((prev) => ({ ...(prev || {}), ...coords, address }));
+        // Keep patientHome as the saved pin/address only; geocoded coords are
+        // an approximate hint and must not survive as a confirmed location.
+        setPatientHome((prev) => ({ ...(prev || {}), address }));
         setVisitDestination((prev) => prev || {
           ...coords,
           address,
-          source: 'patient_home',
+          source: 'geocoded',
+          confirmed: false,
           version: 0,
         });
       }
@@ -356,7 +360,8 @@ const PatientProviders = () => {
         setVisitDestination((prev) => prev || {
           ...coords,
           address: patientHome?.address || '',
-          source: 'patient_home',
+          source: 'geocoded',
+          confirmed: false,
           version: 0,
         });
       });
@@ -389,8 +394,42 @@ const PatientProviders = () => {
     }
   }, [loading, providers, location.search, location.pathname]);
 
-  const handleReviewBooking = () => {
+  const destinationConfirmed = Boolean(
+    visitDestination?.lat != null
+    && visitDestination?.lng != null
+    && visitDestination?.confirmed !== false
+  );
+
+  const handleReviewBooking = async () => {
     if (!user || !selectedProvider) return;
+
+    let destination = visitDestination;
+    if (!destination) {
+      const coords = await ensurePatientCoords(user.id);
+      if (coords) {
+        destination = {
+          ...coords,
+          address: patientHome?.address || '',
+          source: 'geocoded',
+          confirmed: false,
+          version: 0,
+        };
+        setVisitDestination((prev) => prev || destination);
+      }
+    }
+
+    // A geocoded centroid is only a starting point on the map; the patient
+    // must place and confirm the pin before the request is created.
+    if (!destination?.lat || destination?.confirmed === false) {
+      setDestinationModalOpen(true);
+      toast.error(
+        destination
+          ? 'Place and confirm your visit pin before booking.'
+          : 'Set your visit location before booking.'
+      );
+      return;
+    }
+
     setBookingStep('confirm');
   };
 
@@ -442,13 +481,21 @@ const PatientProviders = () => {
           destination = {
             ...coords,
             address: patientHome?.address || '',
-            source: 'patient_home',
+            source: 'geocoded',
+            confirmed: false,
             version: 0,
           };
         }
       }
       if (!destination) {
         toast.error('Please confirm the visit location before booking.');
+        setBookingLoading(false);
+        setBookingStep('form');
+        return;
+      }
+      if (destination.confirmed === false) {
+        setDestinationModalOpen(true);
+        toast.error('Place and confirm your visit pin before booking.');
         setBookingLoading(false);
         setBookingStep('form');
         return;
@@ -538,6 +585,7 @@ const PatientProviders = () => {
               lng: patientHome.lng,
               address: patientHome.address || '',
               source: 'patient_home',
+              confirmed: true,
               version: 0,
             }
           : null
@@ -1064,7 +1112,13 @@ const PatientProviders = () => {
                         4. Visit Location
                       </label>
                       <span className="text-xs font-semibold text-tertiary dark:text-tertiary">
-                        {visitDestination?.source === 'booking' ? 'Custom visit location' : 'Saved address'}
+                        {!visitDestination
+                          ? 'Not set'
+                          : !destinationConfirmed
+                            ? 'Approximate — confirm pin'
+                            : visitDestination.source === 'booking'
+                              ? 'Custom visit location'
+                              : 'Saved address'}
                       </span>
                     </div>
                     <button
@@ -1079,9 +1133,11 @@ const PatientProviders = () => {
                         <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
                           {visitDestination?.address || patientHome?.address || 'Set visit location'}
                         </p>
-                        <p className="text-xs text-tertiary dark:text-tertiary font-semibold truncate mt-0.5">
+                        <p className={`text-xs font-semibold truncate mt-0.5 ${destinationConfirmed ? 'text-tertiary dark:text-tertiary' : 'text-[#B45309] dark:text-[#FCD34D]'}`}>
                           {visitDestination?.lat
-                            ? `GPS Pin Confirmed (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)}) · Tap to change`
+                            ? destinationConfirmed
+                              ? `GPS Pin Confirmed (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)}) · Tap to change`
+                              : `Approximate (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)}) · Tap to place the pin`
                             : 'Tap to set address & gate directions'}
                         </p>
                       </div>
@@ -1195,7 +1251,9 @@ const PatientProviders = () => {
                         </p>
                       </div>
                       <div className="col-span-2">
-                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">Visit Location</span>
+                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">
+                          Visit Location{visitDestination && !destinationConfirmed ? ' · approximate' : ''}
+                        </span>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5 leading-snug">
                           {visitDestination?.address || 'Not confirmed'}
                         </p>
@@ -1660,13 +1718,14 @@ const PatientProviders = () => {
       <VisitDestinationModal
         isOpen={destinationModalOpen}
         onClose={() => setDestinationModalOpen(false)}
-        initial={visitDestination}
+        initial={visitDestination?.confirmed === false ? null : visitDestination}
+        initialCenter={visitDestination?.confirmed === false ? visitDestination : null}
         homeAddress={patientHome?.address || ''}
         title="Confirm visit location"
         description="This pin is shared with your provider for this visit only. It does not change your saved home address."
         confirmLabel="Use this visit location"
         onConfirm={(dest) => {
-          setVisitDestination({ ...dest, source: 'booking', version: 1 });
+          setVisitDestination({ ...dest, source: 'booking', version: 1, confirmed: true });
         }}
       />
 

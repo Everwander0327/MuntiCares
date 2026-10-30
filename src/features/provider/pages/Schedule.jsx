@@ -274,7 +274,7 @@ const ProviderSchedule = () => {
 
   return (
     <DashboardLayout role="provider">
-      <div className="w-full max-w-full lg:max-w-6xl mx-auto space-y-3.5 sm:space-y-6 pb-12 px-0 sm:px-2">
+      <div className="w-full max-w-full space-y-3.5 sm:space-y-6 pb-12 px-0 sm:px-2">
         {/* Page Header */}
         <motion.div 
           className="flex flex-row items-center justify-between gap-2"

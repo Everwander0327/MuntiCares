@@ -226,7 +226,7 @@ const PatientProfileView = () => {
   return (
     <>
     <DashboardLayout role="provider">
-      <div className="w-full max-w-full lg:max-w-6xl mx-auto space-y-4 md:space-y-6 pb-12 px-0 sm:px-2">
+      <div className="w-full max-w-full space-y-4 md:space-y-6 pb-12 px-0 sm:px-2">
         {/* Navigation Breadcrumb / Back button */}
         <div className="flex items-center justify-between">
           <motion.button

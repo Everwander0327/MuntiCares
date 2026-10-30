@@ -28,7 +28,7 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
   <Link
     to={to}
     onClick={onClick}
-    className={`group flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-300 relative overflow-hidden ${
+    className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-2xl transition-all duration-300 relative overflow-hidden ${
       active 
         ? 'neu-btn-primary font-bold shadow-md' 
         : 'text-txt-secondary dark:text-txt-darkSecondary hover:text-link dark:hover:text-[#8CBDF0]'
@@ -167,32 +167,34 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   };
 
   const patientLinks = [
-    { icon: <LayoutDashboard />, label: 'Dashboard', to: '/patient/dashboard' },
-    { icon: <Search />, label: 'Find Providers', shortLabel: 'Find', primary: true, to: '/patient/providers' },
-    { icon: <FileText />, label: 'My Requests', shortLabel: 'Requests', to: '/patient/requests' },
-    { icon: <MessageCircle />, label: 'Messages', to: '/patient/messages' },
-    { icon: <Settings />, label: 'Consent Settings', shortLabel: 'Consent', to: '/patient/consent' },
+    { icon: <LayoutDashboard />, label: 'Dashboard', to: '/patient/dashboard', group: 'main' },
+    { icon: <Search />, label: 'Find Providers', shortLabel: 'Find', primary: true, to: '/patient/providers', group: 'main' },
+    { icon: <FileText />, label: 'My Requests', shortLabel: 'Requests', to: '/patient/requests', group: 'main' },
+    { icon: <MessageCircle />, label: 'Messages', to: '/patient/messages', group: 'main' },
+    { icon: <Settings />, label: 'Consent Settings', shortLabel: 'Consent', to: '/patient/consent', group: 'account' },
   ];
 
   const providerLinks = [
-    { icon: <LayoutDashboard />, label: 'Dashboard', to: '/provider/dashboard' },
-    { icon: <Bell />, label: 'Incoming Requests', shortLabel: 'Requests', primary: true, to: '/provider/requests' },
-    { icon: <Users />, label: 'My Patients', shortLabel: 'Patients', to: '/provider/patients' },
-    { icon: <CalendarDays />, label: 'My Schedule', shortLabel: 'Schedule', to: '/provider/schedule' },
-    { icon: <MessageCircle />, label: 'Messages', to: '/provider/messages' },
+    { icon: <LayoutDashboard />, label: 'Dashboard', to: '/provider/dashboard', group: 'main' },
+    { icon: <Bell />, label: 'Incoming Requests', shortLabel: 'Requests', primary: true, to: '/provider/requests', group: 'main' },
+    { icon: <Users />, label: 'My Patients', shortLabel: 'Patients', to: '/provider/patients', group: 'main' },
+    { icon: <CalendarDays />, label: 'My Schedule', shortLabel: 'Schedule', to: '/provider/schedule', group: 'main' },
+    { icon: <MessageCircle />, label: 'Messages', to: '/provider/messages', group: 'main' },
   ];
 
   const adminLinks = [
-    { icon: <LayoutDashboard />, label: 'Overview', shortLabel: 'Home', primary: true, to: '/admin/dashboard' },
-    { icon: <Users />, label: 'Patients', shortLabel: 'Patients', to: '/admin/patients' },
-    { icon: <Briefcase />, label: 'Providers', shortLabel: 'Providers', to: '/admin/providers' },
-    { icon: <FileText />, label: 'Requests', shortLabel: 'Requests', to: '/admin/requests' },
-    { icon: <Megaphone />, label: 'Announcements', shortLabel: 'Alerts', to: '/admin/announcements' },
+    { icon: <LayoutDashboard />, label: 'Overview', shortLabel: 'Home', primary: true, to: '/admin/dashboard', group: 'main' },
+    { icon: <Users />, label: 'Patients', shortLabel: 'Patients', to: '/admin/patients', group: 'main' },
+    { icon: <Briefcase />, label: 'Providers', shortLabel: 'Providers', to: '/admin/providers', group: 'main' },
+    { icon: <FileText />, label: 'Requests', shortLabel: 'Requests', to: '/admin/requests', group: 'main' },
+    { icon: <Megaphone />, label: 'Announcements', shortLabel: 'Alerts', to: '/admin/announcements', group: 'main' },
   ];
 
   // Use the actual logged in user data, fallback to dummy info if not available
   const currentRole = currentUserProfile?.role || role;
   const links = currentRole === 'patient' ? patientLinks : currentRole === 'provider' ? providerLinks : adminLinks;
+  const mainLinks = links.filter(l => l.group !== 'account');
+  const accountLinks = links.filter(l => l.group === 'account');
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -400,9 +402,22 @@ const DashboardShell = ({ children, role = 'patient' }) => {
     return result;
   };
 
+  const getBadgeForLink = (link) => {
+    if (currentRole === 'patient') {
+      if (link.label === 'My Requests') return pendingCount;
+      if (link.label === 'Messages') return unreadMsgCount;
+    } else if (currentRole === 'provider') {
+      if (link.label === 'Incoming Requests') return pendingCount;
+      if (link.label === 'Messages') return unreadMsgCount;
+    } else if (currentRole === 'admin') {
+      if (link.label === 'Requests') return pendingCount;
+    }
+    return 0;
+  };
+
   return (
     <>
-      <div className="min-h-[100dvh] bg-[#F4F8FC] dark:bg-[#0E1620] flex overflow-hidden">
+      <div className="h-[100dvh] bg-[#F4F8FC] dark:bg-[#0E1620] flex overflow-hidden">
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {isSidebarOpen && (
@@ -416,23 +431,21 @@ const DashboardShell = ({ children, role = 'patient' }) => {
           )}
         </AnimatePresence>
 
-        {/* Sidebar - floating neumorphic island with rollup bottom-to-top collapse */}
+        {/* Sidebar - Seamless Full-Height Edge Shell (Option 1) + Grouped Menu & Support Card (Option 4) */}
         <motion.aside
           initial={false}
           animate={{
-            width: isDesktopCollapsed ? 0 : 312,
+            width: isDesktopCollapsed ? 0 : 288,
             opacity: isDesktopCollapsed ? 0 : 1,
-            paddingLeft: isDesktopCollapsed ? 0 : undefined,
-            paddingRight: isDesktopCollapsed ? 0 : undefined,
           }}
           transition={{ duration: 0.38, ease: [0.25, 1, 0.5, 1] }}
           className={`fixed inset-y-0 left-0 z-50 transition-transform duration-500 ease-fluid transform ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:static lg:translate-x-0 lg:p-4 overflow-hidden shrink-0 select-none`}
+          } lg:static lg:h-full lg:translate-x-0 lg:p-0 overflow-hidden shrink-0 select-none`}
         >
-          <div className="h-full w-[280px] flex flex-col p-5 neu-flat lg:rounded-[2.25rem] transform-gpu">
-            {/* Logo row - ALWAYS natural 1:1 scale, NEVER stretched */}
-            <div className="flex items-center justify-between mb-6 shrink-0 px-1 pt-1">
+          <div className="h-full w-[288px] flex flex-col p-5 neu-flat rounded-none border-r border-slate-200/80 dark:border-white/10 transform-gpu">
+            {/* Logo row - Flush & aligned with top bar height */}
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/70 dark:border-white/10 shrink-0 px-1 pt-0.5">
               <div className="flex items-center gap-2.5">
                 {!isDesktopCollapsed ? (
                   <motion.button
@@ -445,7 +458,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     transition={{
                       layout: { duration: 0.42, ease: [0.25, 1, 0.5, 1] },
                     }}
-                    className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-link cursor-pointer active:scale-95 transition-all shrink-0 shadow-sm group hover:text-primary-600"
+                    className="hidden lg:flex neu-flat-sm w-10 h-10 rounded-xl items-center justify-center text-link cursor-pointer active:scale-95 transition-all shrink-0 shadow-sm group hover:text-primary-600"
                     title="Collapse sidebar (click to toggle)"
                   >
                     <motion.div
@@ -461,13 +474,13 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     </motion.div>
                   </motion.button>
                 ) : (
-                  <div className="w-11 h-11" />
+                  <div className="w-10 h-10" />
                 )}
                 <Link to="/" className="flex items-center">
                   <span className="text-xl font-display font-extrabold text-link tracking-tight">MuntiCares</span>
                 </Link>
               </div>
-              <button onClick={() => setIsSidebarOpen(false)} aria-label="Close navigation menu" className="lg:hidden text-tertiary flex h-11 w-11 items-center justify-center neu-btn rounded-xl transition-all">
+              <button onClick={() => setIsSidebarOpen(false)} aria-label="Close navigation menu" className="lg:hidden text-tertiary flex h-10 w-10 items-center justify-center neu-btn rounded-xl transition-all">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -481,99 +494,101 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 originY: 0,
               }}
               transition={{ duration: 0.36, ease: [0.25, 1, 0.5, 1] }}
-              className="flex-1 flex flex-col min-h-0 p-1"
+              className="flex-1 flex flex-col min-h-0 px-0.5"
             >
-              {/* Nav section label */}
-              <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2.5">Navigation</p>
+              {/* Grouped Navigation (Option 4) */}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 pr-1.5 -mr-1 space-y-4">
+                <div>
+                  <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2">Main Menu</p>
+                  <nav className="space-y-1.5">
+                    {mainLinks.map((link) => (
+                      <SidebarItem 
+                        key={link.label} 
+                        icon={link.icon}
+                        label={link.label}
+                        to={link.to}
+                        active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
+                        onClick={() => setIsSidebarOpen(false)}
+                        badge={getBadgeForLink(link)}
+                      />
+                    ))}
+                  </nav>
+                </div>
 
-              {/* Nav links with padding so shadows never cut off */}
-              <nav className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden p-1 pr-1.5 -mr-1">
-                {links.map((link) => {
-                  let badge = 0;
-                  if (currentRole === 'patient') {
-                    if (link.label === 'My Requests') badge = pendingCount;
-                    if (link.label === 'Messages') badge = unreadMsgCount;
-                  } else if (currentRole === 'provider') {
-                    if (link.label === 'Incoming Requests') badge = pendingCount;
-                    if (link.label === 'Messages') badge = unreadMsgCount;
-                  } else if (currentRole === 'admin') {
-                    if (link.label === 'Requests') badge = pendingCount;
-                  }
-                  return (
-                    <SidebarItem 
-                      key={link.label} 
-                      icon={link.icon}
-                      label={link.label}
-                      to={link.to}
-                      active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
-                      onClick={() => setIsSidebarOpen(false)}
-                      badge={badge}
-                    />
-                  );
-                })}
-              </nav>
-
-              {/* Divider */}
-              <div className="border-t border-slate-200/50 dark:border-white/5 my-3" />
-
-              {/* User Info - Clickable Raised Neumorphic Card leading to Profile */}
-              <div className="p-1">
-                <Link 
-                  to={`/${currentRole}/profile`}
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="group flex items-center gap-3 px-3.5 py-3 neu-flat-sm hover:neu-flat rounded-2xl transition-all cursor-pointer active:scale-95 shadow-sm"
-                  title="View Profile"
-                >
-                  <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-link font-bold text-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
-                    {user.avatar_url ? (
-                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      user.initials
-                    )}
+                {accountLinks.length > 0 && (
+                  <div>
+                    <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2">Account &amp; Privacy</p>
+                    <nav className="space-y-1.5">
+                      {accountLinks.map((link) => (
+                        <SidebarItem 
+                          key={link.label} 
+                          icon={link.icon}
+                          label={link.label}
+                          to={link.to}
+                          active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
+                          onClick={() => setIsSidebarOpen(false)}
+                          badge={getBadgeForLink(link)}
+                        />
+                      ))}
+                    </nav>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-sm truncate group-hover:text-link dark:group-hover:text-[#8CBDF0] transition-colors">{user.name}</p>
-                    <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-link dark:text-[#8CBDF0] text-2xs font-black rounded-full uppercase tracking-wider mt-0.5">
-                      {user.badge}
-                    </span>
-                  </div>
-                </Link>
+                )}
               </div>
 
-              {/* Logout with padding so shadow doesn't clip */}
-              <div className="p-1 pt-0">
-                <button 
-                  onClick={async () => {
-                    await logout();
-                    navigate('/login');
-                  }}
-                  className="neu-btn flex items-center gap-3 px-3.5 py-3 rounded-2xl text-txt-secondary dark:text-txt-darkSecondary hover:text-[#BC3030] dark:hover:text-[#F4918B] transition-all w-full group"
-                >
-                  <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]">
-                    <LogOut className="w-4 h-4 text-txt-secondary dark:text-txt-darkSecondary group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]" />
-                  </div>
-                  <span className="font-bold text-xs">Logout</span>
-                </button>
+              {/* Bottom Account & Logout Section (Option A - Clean, No Extra Card) */}
+              <div className="mt-auto pt-3 space-y-2.5">
+                {/* Divider */}
+                <div className="border-t border-slate-200/70 dark:border-white/10 mx-1" />
+
+                {/* User Info - Clickable Raised Neumorphic Card leading to Profile */}
+                <div className="px-1">
+                  <Link 
+                    to={`/${currentRole}/profile`}
+                    onClick={() => setIsSidebarOpen(false)}
+                    className="group flex items-center gap-3 px-3.5 py-3 neu-flat-sm hover:neu-flat rounded-2xl transition-all cursor-pointer active:scale-95 shadow-sm"
+                    title="View Profile"
+                  >
+                    <div className="w-10 h-10 rounded-xl neu-flat-sm flex items-center justify-center text-link font-bold text-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                      {user.avatar_url ? (
+                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        user.initials
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-sm truncate group-hover:text-link dark:group-hover:text-[#8CBDF0] transition-colors">{user.name}</p>
+                      <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-link dark:text-[#8CBDF0] text-2xs font-black rounded-full uppercase tracking-wider mt-0.5">
+                        {user.badge}
+                      </span>
+                    </div>
+                  </Link>
+                </div>
+
+                {/* Full-Width Logout Button */}
+                <div className="px-1">
+                  <button 
+                    onClick={async () => {
+                      await logout();
+                      navigate('/login');
+                    }}
+                    className="neu-btn flex items-center gap-3 px-3.5 py-3 rounded-2xl text-txt-secondary dark:text-txt-darkSecondary hover:text-[#BC3030] dark:hover:text-[#F4918B] transition-all w-full group cursor-pointer"
+                  >
+                    <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]">
+                      <LogOut className="w-4 h-4 text-txt-secondary dark:text-txt-darkSecondary group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]" />
+                    </div>
+                    <span className="font-bold text-xs">Logout</span>
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>
         </motion.aside>
 
-        {/* Main Content */}
-        <div className={`flex-1 flex flex-col min-w-0 min-h-[100dvh] lg:p-4 ${isDesktopCollapsed ? 'lg:pl-4' : 'lg:pl-4'} transition-all duration-500`}>
-          {/* Upper Panel Header - Raised Neumorphic Banner flush with body on mobile */}
-          <header className="h-[72px] sm:h-[78px] lg:h-[76px] neu-flat rounded-none lg:rounded-[2.25rem] flex items-center justify-between px-4 sm:px-6 lg:px-7 shrink-0 mb-0 lg:mb-4 border-b border-white/50 dark:border-white/5 lg:border-0 transition-all">
+        {/* Main Content Column - Sticky Full-Width Top Bar + Open Scrollable Canvas (Option 1) */}
+        <div className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden transition-all duration-500">
+          {/* Upper Panel Header - Flush Sticky Top Bar */}
+          <header className="h-[72px] sm:h-[76px] neu-flat rounded-none flex items-center justify-between px-4 sm:px-6 lg:px-8 shrink-0 border-b border-slate-200/80 dark:border-white/10 transition-all z-20">
             <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-              {/* Mobile Heart Logo branding */}
-              <button
-                type="button"
-                onClick={() => setIsSidebarOpen(true)}
-                aria-label="Open navigation menu"
-                className="lg:hidden lg:pointer-events-none neu-flat-sm w-11 h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-link shrink-0 shadow-sm cursor-pointer active:scale-95 transition-transform"
-              >
-                <Heart className="w-4 h-4 text-link fill-primary" />
-              </button>
-
               {/* When collapsed on desktop: The heart badge physically flies here from the sidebar while spinning! */}
               {isDesktopCollapsed && (
                 <motion.button
@@ -586,7 +601,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                   transition={{
                     layout: { duration: 0.45, ease: [0.25, 1, 0.5, 1] },
                   }}
-                  className="hidden lg:flex neu-btn w-11 h-11 rounded-2xl items-center justify-center text-link cursor-pointer shrink-0 shadow-md group hover:text-primary-600"
+                  className="hidden lg:flex neu-btn w-10 h-10 rounded-xl items-center justify-center text-link cursor-pointer shrink-0 shadow-md group hover:text-primary-600"
                   title="Expand sidebar (click to expand)"
                 >
                   <motion.div
@@ -604,7 +619,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 <p className="text-xs sm:text-base md:text-lg font-display font-black text-[#17283B] dark:text-[#E6EEF6] truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
                   Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
                 </p>
-                <p className="text-xs sm:text-xs text-txt-secondary dark:text-txt-darkSecondary font-medium truncate">
+                <p className="text-xs text-txt-secondary dark:text-txt-darkSecondary font-medium truncate">
                   {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
               </div>
@@ -615,7 +630,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               <NotificationBell />
               <Link 
                 to={`/${currentRole}/profile`} 
-                className="neu-btn w-11 h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-link font-black shadow-sm shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden"
+                className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center text-link font-black shadow-sm shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden"
                 title="Profile"
               >
                 {user.avatar_url ? (
@@ -627,13 +642,14 @@ const DashboardShell = ({ children, role = 'patient' }) => {
             </div>
           </header>
 
-        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-3.5 sm:p-6 lg:p-7 pb-24 sm:pb-28 lg:pb-10 neu-flat rounded-none lg:rounded-[2.25rem] flex flex-col">
-          <div className="w-full max-w-full p-1 flex-1 flex flex-col">
-            {children || <Outlet />}
-          </div>
-        </main>
+          {/* Open Canvas Main Area - Expands full width when sidebar collapses */}
+          <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-8 pb-24 sm:pb-28 lg:pb-10 flex flex-col">
+            <div className="w-full max-w-full flex-1 flex flex-col">
+              {children || <Outlet />}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
 
       {/* Mobile Bottom Navigation */}
       <div 
@@ -647,30 +663,18 @@ const DashboardShell = ({ children, role = 'patient' }) => {
           <div className="flex items-center justify-around px-1 py-1">
             {(() => {
               const mobileLinks = buildMobileLinks(links);
-                return mobileLinks.map((link, i) => {
-                  let badge = 0;
-                  if (currentRole === 'patient') {
-                    if (link.label === 'My Requests') badge = pendingCount;
-                    if (link.label === 'Messages') badge = unreadMsgCount;
-                  } else if (currentRole === 'provider') {
-                    if (link.label === 'Incoming Requests') badge = pendingCount;
-                    if (link.label === 'Messages') badge = unreadMsgCount;
-                  } else if (currentRole === 'admin') {
-                    if (link.label === 'Requests') badge = pendingCount;
-                  }
-                  return (
-                    <MobileNavItem 
-                      key={link.label}
-                      icon={link.icon}
-                      label={link.shortLabel || link.label}
-                      to={link.to}
-                      active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
-                      badge={badge}
-                      prominent={i === 2}
-                    />
-                  );
-                });
-              })()}
+              return mobileLinks.map((link, i) => (
+                <MobileNavItem 
+                  key={link.label}
+                  icon={link.icon}
+                  label={link.shortLabel || link.label}
+                  to={link.to}
+                  active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
+                  badge={getBadgeForLink(link)}
+                  prominent={i === 2}
+                />
+              ));
+            })()}
           </div>
         </div>
       </div>

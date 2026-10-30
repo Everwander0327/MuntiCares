@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, ArrowRight, Pause, Play } from 'lucide-react';
+import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import usePatientRequests from '@/hooks/usePatientRequests';
@@ -64,7 +64,6 @@ const PatientDashboard = () => {
   const dragStartXRef = useRef(0);
   const dragScrollLeftRef = useRef(0);
   const isInteractingRef = useRef(false);
-  const [carouselPaused, setCarouselPaused] = useState(false);
   const [carouselHeld, setCarouselHeld] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -128,7 +127,7 @@ const PatientDashboard = () => {
 
   // Auto-advance carousel every 6 seconds when not interacting (WCAG 2.2.2)
   useEffect(() => {
-    if (carouselPaused || carouselHeld || reduceMotion) return undefined;
+    if (carouselHeld || reduceMotion) return undefined;
     const timer = setInterval(() => {
       if (carouselTrackRef.current && !isInteractingRef.current && !isDraggingRef.current) {
         const nextSlide = (currentSlide + 1) % muntiHighlights.length;
@@ -136,7 +135,7 @@ const PatientDashboard = () => {
       }
     }, 6000);
     return () => clearInterval(timer);
-  }, [currentSlide, carouselPaused, carouselHeld, reduceMotion]);
+  }, [currentSlide, carouselHeld, reduceMotion]);
 
   // Use shared hook for requests + realtime
   const { requests: fetchedRequests, loading: requestsLoading, refetch } = usePatientRequests(user?.id || null);
@@ -422,7 +421,7 @@ const PatientDashboard = () => {
             {/* Overlaid Bottom Controls: Glassmorphic Dots + Compact Action Buttons */}
             <div className="relative z-10 p-4 sm:p-6 space-y-3 mt-auto">
               {/* Dots indicator inside the image */}
-              <div className="flex items-center justify-center gap-2">
+              <div className="flex items-center justify-center">
                 <div className="flex items-center gap-1.5 py-1">
                   {muntiHighlights.map((_, idx) => (
                     <button
@@ -441,18 +440,6 @@ const PatientDashboard = () => {
                     />
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setCarouselPaused((paused) => !paused);
-                  }}
-                  aria-label={carouselPaused ? 'Play highlights slideshow' : 'Pause highlights slideshow'}
-                  aria-pressed={carouselPaused}
-                  className="w-11 h-11 min-w-[44px] min-h-[44px] -my-3 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/35 backdrop-blur-sm text-white transition-colors"
-                >
-                  {carouselPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-                </button>
               </div>
 
               {/* Action Buttons: Soft Coral #C4623F (CTA / Find) + Soft Sky Blue #2F6FB5 (Requests) */}

@@ -4,6 +4,13 @@ import { distanceToPolyline, haversine, projectOnRoute } from '../services/geo';
 
 const MIN_FETCH_MS = 5000;
 const OFF_ROUTE_SAMPLES_THRESHOLD = 3;
+const REMAINING_NOISE_M = 25;
+
+// Small backward jumps in remaining distance are projection noise; anything
+// larger is real movement and must be shown, even when the ETA grows.
+const nextRemaining = (previous, current) => (
+  current < previous || current > previous + REMAINING_NOISE_M ? current : previous
+);
 
 // Global shared store per destination/request key so multiple components share identical route & ETA
 const sharedEtaStore = new Map();
@@ -119,7 +126,7 @@ function projectOnPreparedRoute(provider, preparedRoute, lastIndex = 0) {
  * - Shared store per request/destination key
  * - Returns explicit source: 'route' | 'estimate'
  * - Reroutes only when destination changes or 3 consecutive off-route samples occur
- * - Precomputed segment lengths and monotonic progress forward
+ * - Precomputed segment lengths, with a small deadband against projection jitter
  */
 export default function useRouteEta(provider, destination, destVersion = 0, requestId = null) {
   const storeKey = getStoreKey(requestId, destination, destVersion);
@@ -272,10 +279,7 @@ export default function useRouteEta(provider, destination, destVersion = 0, requ
         const scale = internal.preparedRoute.distance / projection.total;
         const currentRemaining = projection.remaining * scale;
 
-        // Monotonic remaining distance along the route
-        if (currentRemaining < internal.lastRemaining) {
-          internal.lastRemaining = currentRemaining;
-        }
+        internal.lastRemaining = nextRemaining(internal.lastRemaining, currentRemaining);
         distance = internal.lastRemaining;
         duration = internal.preparedRoute.duration * (internal.lastRemaining / internal.preparedRoute.distance);
       } else {

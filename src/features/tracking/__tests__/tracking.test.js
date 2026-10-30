@@ -29,10 +29,34 @@ describe('geo', () => {
 });
 
 describe('gpsFilter', () => {
-  it('rejects inaccurate fixes after the first', () => {
+  it('keeps delivering coarse fixes while flagging them degraded', () => {
     const f = createGpsFilter();
-    expect(f({ lat: 14.4, lng: 121.04, accuracy: 10, timestamp: 0 })).not.toBeNull();
-    expect(f({ lat: 14.4, lng: 121.04, accuracy: 500, timestamp: 1000 })).toBeNull();
+    f({ lat: 14.4, lng: 121.04, accuracy: 1200, timestamp: 0 });
+    const next = f({ lat: 14.402, lng: 121.04, accuracy: 900, timestamp: 3000 });
+
+    expect(next).not.toBeNull();
+    expect(next.degraded).toBe(true);
+    expect(next.lat).toBeCloseTo(14.402, 5);
+    expect(next.accuracy).toBeGreaterThanOrEqual(900);
+  });
+  it('recovers from coarse fixes on a precise fix', () => {
+    const f = createGpsFilter();
+    f({ lat: 14.4, lng: 121.04, accuracy: 1200, timestamp: 0 });
+    f({ lat: 14.402, lng: 121.04, accuracy: 900, timestamp: 3000 });
+
+    const recovered = f({ lat: 14.405, lng: 121.04, accuracy: 25, timestamp: 6000 });
+    expect(recovered).not.toBeNull();
+    expect(recovered.degraded).toBe(false);
+    expect(recovered.lat).toBeCloseTo(14.405, 5);
+  });
+  it('keeps reported accuracy conservative for coarse fixes', () => {
+    const f = createGpsFilter();
+    let lastFix = null;
+    for (let i = 0; i < 20; i += 1) {
+      lastFix = f({ lat: 14.4 + i * 0.0001, lng: 121.04, accuracy: 1200, timestamp: i * 3000 });
+    }
+    expect(lastFix.degraded).toBe(true);
+    expect(lastFix.accuracy).toBeGreaterThanOrEqual(1200);
   });
   it('rejects teleports', () => {
     const f = createGpsFilter();
@@ -54,18 +78,8 @@ describe('gpsFilter', () => {
     expect(first.degraded).toBe(true);
     expect(first.rawAccuracy).toBe(1200);
   });
-  it('rejects a second coarse fix and recovers on a precise fix', () => {
+  it('rejects fixes too coarse to place a pin', () => {
     const f = createGpsFilter();
-    f({ lat: 14.4, lng: 121.04, accuracy: 1200, timestamp: 0 });
-    expect(f({ lat: 14.4, lng: 121.04, accuracy: 600, timestamp: 1000 })).toBeNull();
-
-    const recovered = f({ lat: 14.405, lng: 121.04, accuracy: 25, timestamp: 2000 });
-    expect(recovered).not.toBeNull();
-    expect(recovered.degraded).toBe(false);
-    expect(recovered.lat).toBeCloseTo(14.405, 5);
-  });
-  it('rejects a first fix that is too coarse', () => {
-    const f = createGpsFilter();
-    expect(f({ lat: 14.4, lng: 121.04, accuracy: 3500, timestamp: 0 })).toBeNull();
+    expect(f({ lat: 14.4, lng: 121.04, accuracy: 6000, timestamp: 0 })).toBeNull();
   });
 });

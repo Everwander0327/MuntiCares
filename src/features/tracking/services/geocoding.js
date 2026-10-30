@@ -89,8 +89,10 @@ export async function savePatientCoords(userId, { lat, lng }) {
 }
 
 /**
- * Get patient coordinates; geocode + persist on the fly if missing.
- * Returns { lat, lng } or null.
+ * Resolve coordinates for a patient. A saved pin is returned as-is; when only
+ * a text address exists, this returns a geocoded street/barangay estimate
+ * WITHOUT persisting it, so an approximate centroid never becomes the
+ * patient's confirmed home pin.
  */
 export async function ensurePatientCoords(patientUserId) {
   const { data, error } = await supabase
@@ -103,9 +105,6 @@ export async function ensurePatientCoords(patientUserId) {
     return { lat: data.latitude, lng: data.longitude };
   }
   const hit = await geocodeAddress(data.address);
-  if (hit) {
-    try { await savePatientCoords(patientUserId, hit); } catch { /* non-fatal */ }
-    return { lat: hit.lat, lng: hit.lng };
-  }
-  return null;
+  if (!hit) return null;
+  return { lat: hit.lat, lng: hit.lng };
 }

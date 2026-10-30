@@ -146,7 +146,7 @@ const ProviderProfileView = () => {
 
   return (
     <DashboardLayout role="patient">
-      <div className="max-w-6xl mx-auto space-y-4 md:space-y-6 pb-6 w-full">
+      <div className="w-full max-w-full space-y-4 md:space-y-6 pb-6">
         {/* Top Header & Breadcrumb */}
         <div className="flex items-center justify-between">
           <motion.button

@@ -864,7 +864,7 @@ const PatientProfile = () => {
                           initialCoords={homeCoords}
                           onChange={({ address, coords }) => {
                             setProfile((prev) => ({ ...prev, address }));
-                            if (coords) setHomeCoords(coords);
+                            setHomeCoords(coords || null);
                           }}
                         />
                       </div>

@@ -135,10 +135,19 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
             address: data.dest_address || null,
             source: data.dest_source || null,
             version: data.dest_version || 0,
+            confirmed: true,
           });
         } else if (request.patientId) {
           const c = await ensurePatientCoords(request.patientId);
-          if (alive && c) setDestination({ ...c, address: null, version: 0 });
+          if (alive && c) {
+            setDestination({
+              ...c,
+              address: null,
+              source: 'geocoded',
+              version: 0,
+              confirmed: false,
+            });
+          }
         }
       });
 
@@ -163,6 +172,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
             address: row.dest_address || null,
             source: row.dest_source || null,
             version: row.dest_version || 0,
+            confirmed: true,
           });
         }
       },
@@ -231,7 +241,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
   const arrived = status === 'Arrived' || status === 'Completed';
   const eta = duration != null ? new Date(Date.now() + duration * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null;
   const routeReady = Array.isArray(route) && route.length > 1;
-  const etaApproximate = Boolean(eta) && !routeReady && !arrived;
+  const etaApproximate = Boolean(eta) && (!routeReady || provider?.degraded) && !arrived;
   const statusMeta = getTrackingStatus({ arrived, approximate, live, stationary, session, provider });
   const freshness = formatFreshness(ageS);
   const accuracyText = arrived ? null : formatAccuracy(provider?.accuracy);
@@ -249,7 +259,10 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
   const avatarUrl = request?.providerAvatarUrl || providerMeta?.avatarUrl || null;
   const service = request?.service || 'Home care visit';
   const sessionPaused = Boolean(!arrived && session && session.status !== 'active');
-  const destinationAddress = destination?.address || (destination ? 'Pinned visit location' : 'Visit location not confirmed');
+  const destinationAddress = destination?.address
+    || (destination
+      ? (destination.confirmed === false ? 'Approximate visit location' : 'Pinned visit location')
+      : 'Visit location not confirmed');
   const etaValue = arrived ? 'On site' : formatDuration(duration);
   const etaSub = arrived
     ? 'Provider is at the visit location'
@@ -279,7 +292,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
       source: 'manual',
     });
     if (!updated) throw new Error('The visit destination could not be saved.');
-    setDestination(updated);
+    setDestination({ ...updated, confirmed: true });
     toast.success('Visit location updated.');
   };
 
@@ -391,12 +404,16 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
           </span>
         </div>
       )}
-      {!destination && canEditDestination && (
+      {(!destination || destination.confirmed === false) && canEditDestination && (
         <div className="mc-note">
           <MapPin className="w-4 h-4" />
-          <span className="flex-1">Set the visit location for an exact road ETA.</span>
+          <span className="flex-1">
+            {destination?.confirmed === false
+              ? 'This destination is approximate. Place the pin for an exact road ETA.'
+              : 'Set the visit location for an exact road ETA.'}
+          </span>
           <button type="button" onClick={() => setDestinationModalOpen(true)} className="mc-link">
-            Set
+            {destination?.confirmed === false ? 'Pin it' : 'Set'}
           </button>
         </div>
       )}
@@ -420,6 +437,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
       address={destinationAddress}
       canEdit={canEditDestination}
       hasDestination={Boolean(destination)}
+      approximate={destination?.confirmed === false}
       onChange={() => setDestinationModalOpen(true)}
     />
   );
@@ -633,7 +651,8 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
       <VisitDestinationModal
         isOpen={destinationModalOpen}
         onClose={() => setDestinationModalOpen(false)}
-        initial={destination}
+        initial={destination?.confirmed === false ? null : destination}
+        initialCenter={destination?.confirmed === false ? destination : null}
         title="Update visit location"
         description="This updates the destination for this visit only. Your provider's ETA will refresh automatically."
         confirmLabel="Update visit location"
@@ -767,7 +786,7 @@ function JourneyProgress({ progressPct, arrived }) {
   );
 }
 
-function DestinationRow({ address, canEdit, hasDestination, onChange }) {
+function DestinationRow({ address, canEdit, hasDestination, approximate = false, onChange }) {
   const parsed = parseFullVisitAddress(address);
   const displayTitle = parsed.baseAddress || address;
   const gateNotes = parsed.instructions;
@@ -796,6 +815,11 @@ function DestinationRow({ address, canEdit, hasDestination, onChange }) {
           <p className="mc-title text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
             {displayTitle}
           </p>
+          {approximate && (
+            <p className="mt-0.5 text-2xs font-semibold text-[#B45309] dark:text-[#FCD34D]">
+              Approximate location — place the pin to confirm.
+            </p>
+          )}
           {gateNotes && (
             <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-200/50 dark:border-white/5">
               <strong className="font-extrabold text-link dark:text-[#8CBDF0]">Gate / Arrival:</strong> {gateNotes}

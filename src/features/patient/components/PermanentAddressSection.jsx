@@ -84,13 +84,17 @@ export default function PermanentAddressSection({
   const handleFieldChange = (setter, fieldName) => (e) => {
     const val = e.target.value;
     setter(val);
+    // Editing the street/barangay invalidates the previous pin; keep it as
+    // text only until the patient confirms the new location on the map.
+    const nextCoords = fieldName === 'base' ? null : coords;
+    if (fieldName === 'base') setCoords(null);
     const updated = {
       base: fieldName === 'base' ? val : baseAddress,
       unit: fieldName === 'unit' ? val : unitFloor,
       sub: fieldName === 'sub' ? val : subdivisionGate,
       instr: fieldName === 'instr' ? val : arrivalInstructions,
     };
-    notifyParent(updated.base, updated.unit, updated.sub, updated.instr, coords);
+    notifyParent(updated.base, updated.unit, updated.sub, updated.instr, nextCoords);
   };
 
   return (
@@ -134,6 +138,11 @@ export default function PermanentAddressSection({
           onPinChange={handlePinChange}
           className="h-[260px] sm:h-[300px]"
         />
+        {!coords && baseAddress.trim() && (
+          <p className="text-2xs font-semibold text-[#B45309] dark:text-[#FCD34D] ml-1">
+            Move the map or search an address to confirm this location before saving.
+          </p>
+        )}
       </div>
 
       {/* Step 3: Granular Building & Gate Details */}

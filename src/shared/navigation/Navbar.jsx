@@ -53,7 +53,7 @@ const Navbar = () => {
         >
           <Link to="/" className="flex items-center gap-2.5 group shrink-0 min-h-11" aria-label="MuntiCares home">
             <motion.div
-              className="neu-flat-sm p-2 rounded-2xl"
+              className="hidden md:flex neu-flat-sm p-2 rounded-2xl"
               whileHover={{ rotate: 12 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >

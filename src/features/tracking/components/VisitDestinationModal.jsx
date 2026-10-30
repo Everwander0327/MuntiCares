@@ -31,6 +31,7 @@ export default function VisitDestinationModal({
   isOpen,
   onClose,
   initial,
+  initialCenter = null,
   homeAddress = '',
   confirmLabel = 'Save visit location',
   onConfirm,
@@ -55,13 +56,13 @@ export default function VisitDestinationModal({
     if (!isOpen) return;
     setStep('pin');
     setCurrentPin(initial || null);
-    setBaseAddress(initial?.address || homeAddress || '');
+    setBaseAddress(initial?.address || initialCenter?.address || homeAddress || '');
     setUnit('');
     setSubdivision('');
     setInstructions('');
     setSaving(false);
     setError(null);
-  }, [isOpen, initial, homeAddress]);
+  }, [isOpen, initial, initialCenter, homeAddress]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -87,7 +88,9 @@ export default function VisitDestinationModal({
 
   const handleAdvanceToDetails = async () => {
     let pin = currentPin;
-    if (!pin && pickerRef.current) {
+    // The map's untouched default center is not a chosen location. Only accept
+    // getCenter() after the user actually moved the map.
+    if (!pin && pickerRef.current?.hasUserMoved()) {
       const center = pickerRef.current.getCenter();
       if (center) {
         const resolved = await reverseGeocode(center.lat, center.lng);
@@ -98,7 +101,7 @@ export default function VisitDestinationModal({
     }
 
     if (!pin?.lat || !pin?.lng) {
-      setError('Please position the map pin to select a visit location.');
+      setError('Place the pin on your home first: drag the map, search an address, or use the GPS button.');
       return;
     }
     setError(null);
@@ -110,8 +113,8 @@ export default function VisitDestinationModal({
     setError(null);
     try {
       let pin = currentPin;
-      if (!pin?.lat || !pin?.lng) {
-        const center = pickerRef.current?.getCenter();
+      if ((!pin?.lat || !pin?.lng) && pickerRef.current?.hasUserMoved()) {
+        const center = pickerRef.current.getCenter();
         if (center?.lat != null && center?.lng != null) {
           const resolved = await reverseGeocode(center.lat, center.lng);
           pin = { ...center, address: resolved || '' };
@@ -123,7 +126,7 @@ export default function VisitDestinationModal({
       }
 
       if (!pin?.lat || !pin?.lng) {
-        setError('Please position the map pin to select a visit location.');
+        setError('Place the pin on your home first: drag the map, search an address, or use the GPS button.');
         setSaving(false);
         return;
       }
@@ -219,6 +222,7 @@ export default function VisitDestinationModal({
                   <ModernLocationPicker
                     ref={pickerRef}
                     initial={currentPin}
+                    initialCenter={initialCenter}
                     onPinChange={handlePinUpdate}
                     className="h-[300px] sm:h-[360px]"
                   />
@@ -234,7 +238,12 @@ export default function VisitDestinationModal({
                           Pinned Location
                         </p>
                         <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                          {baseAddress || (currentPin ? `${currentPin.lat.toFixed(5)}, ${currentPin.lng.toFixed(5)}` : 'Move map to pinpoint')}
+                          {baseAddress || (currentPin ? 'Pinned location' : 'Move map to pinpoint')}
+                        </p>
+                        <p className="text-2xs font-semibold text-tertiary tabular-nums mt-0.5">
+                          {currentPin
+                            ? `${currentPin.lat.toFixed(5)}, ${currentPin.lng.toFixed(5)}`
+                            : 'No pin placed yet'}
                         </p>
                       </div>
                     </div>
@@ -242,11 +251,19 @@ export default function VisitDestinationModal({
                     <button
                       type="button"
                       onClick={() => handleFinalSave(true)}
-                      className="text-xs font-bold text-tertiary hover:text-link dark:text-tertiary underline shrink-0 px-2"
+                      disabled={!currentPin || saving}
+                      className="text-xs font-bold text-tertiary hover:text-link dark:text-tertiary underline shrink-0 px-2 disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       Quick Save
                     </button>
                   </div>
+
+                  {!currentPin && (
+                    <div className="mc-note">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span>Drag the map, search an address, or tap the GPS button to place your pin.</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* STAGE 2: EXACT ARRIVAL DETAILS FORM */
@@ -265,7 +282,10 @@ export default function VisitDestinationModal({
                           GPS Pin Confirmed
                         </p>
                         <p className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate">
-                          {baseAddress || `${currentPin?.lat.toFixed(5)}, ${currentPin?.lng.toFixed(5)}`}
+                          {baseAddress || 'Pinned location'}
+                        </p>
+                        <p className="text-2xs font-semibold text-link dark:text-[#8CBDF0] tabular-nums">
+                          {currentPin?.lat.toFixed(5)}, {currentPin?.lng.toFixed(5)}
                         </p>
                       </div>
                     </div>
@@ -362,7 +382,8 @@ export default function VisitDestinationModal({
                   <button
                     type="button"
                     onClick={handleAdvanceToDetails}
-                    className="neu-btn-primary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2"
+                    disabled={!currentPin}
+                    className="neu-btn-primary px-5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <span>Confirm Pin & Details</span>
                     <ArrowRight className="w-4 h-4" />

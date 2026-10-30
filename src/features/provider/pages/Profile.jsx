@@ -258,7 +258,7 @@ const ProviderProfile = () => {
 
   return (
     <DashboardLayout role="provider">
-      <div className="w-full max-w-full lg:max-w-6xl mx-auto space-y-3.5 sm:space-y-6 pb-12 px-0 sm:px-2 select-text">
+      <div className="w-full max-w-full space-y-3.5 sm:space-y-6 pb-12 px-0 sm:px-2 select-text">
         {/* Header */}
         <div className="pt-0.5 pb-1 sm:pt-1 sm:pb-2">
           <h1 className="font-display font-black tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
