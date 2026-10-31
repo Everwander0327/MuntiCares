@@ -518,10 +518,10 @@ const PatientDashboard = () => {
                   </div>
                 )}
 
-                {/* Unified Cohesive Metric Segment (Zero Loud Baby Blocks) */}
+                {/* Unified Cohesive Metric Segment with Colored Numbers */}
                 <div className="grid grid-cols-3 divide-x divide-slate-200/70 dark:divide-white/10 rounded-2xl border border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-800/30 p-3 text-center">
                   <div className="px-2">
-                    <p className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white leading-none">
+                    <p className="text-xl sm:text-2xl font-display font-black text-[#2F6FB5] dark:text-[#8CBDF0] leading-none">
                       {stats.active}
                     </p>
                     <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
@@ -529,7 +529,7 @@ const PatientDashboard = () => {
                     </p>
                   </div>
                   <div className="px-2">
-                    <p className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white leading-none">
+                    <p className="text-xl sm:text-2xl font-display font-black text-[#2C7A55] dark:text-[#7DD3A3] leading-none">
                       {stats.accepted}
                     </p>
                     <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
@@ -537,7 +537,7 @@ const PatientDashboard = () => {
                     </p>
                   </div>
                   <div className="px-2">
-                    <p className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white leading-none">
+                    <p className="text-xl sm:text-2xl font-display font-black text-[#9C5A06] dark:text-[#F1BD6B] leading-none">
                       {stats.pending}
                     </p>
                     <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
