@@ -402,13 +402,13 @@ const PatientDashboard = () => {
                     {/* Deep gradient overlay spanning the whole card for high contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
-                    {/* Content / Badge & Caption - Balanced nicely just above bottom buttons and dots */}
-                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-24 sm:pb-28 md:pb-32">
+                    {/* Content: Event Title & Description */}
+                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-14 sm:pb-16">
                       <div className="space-y-2 sm:space-y-2.5 max-w-xl">
                         <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
-                        <p className="text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
+                        <p className="text-xs sm:text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
                           {slide.description}
                         </p>
                       </div>
@@ -418,46 +418,27 @@ const PatientDashboard = () => {
               </div>
             </div>
 
-            {/* Overlaid Bottom Controls: Glassmorphic Dots + Compact Action Buttons */}
-            <div className="relative z-10 p-4 sm:p-6 space-y-3 mt-auto">
-              {/* Dots indicator inside the image */}
-              <div className="flex items-center justify-center">
-                <div className="flex items-center gap-1.5 py-1">
-                  {muntiHighlights.map((_, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        scrollToSlide(idx);
-                      }}
-                      aria-label={`Go to slide ${idx + 1}`}
-                      className={`h-1 rounded-full transition-all duration-300 cursor-pointer ${
-                        currentSlide === idx
-                          ? 'w-4 bg-[#8CBDF0] shadow-sm'
-                          : 'w-1 bg-white/40 hover:bg-white/80'
+            {/* Overlaid Bottom Controls: Clean Story Progress Bars */}
+            <div className="relative z-10 p-5 sm:p-7 md:p-8 mt-auto pointer-events-auto">
+              <div className="flex items-center gap-2 w-full max-w-sm sm:max-w-md">
+                {muntiHighlights.map((_, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      scrollToSlide(idx);
+                    }}
+                    aria-label={`Go to slide ${idx + 1}`}
+                    className="h-1 flex-1 rounded-full transition-all duration-300 cursor-pointer overflow-hidden bg-white/25 hover:bg-white/40"
+                  >
+                    <span
+                      className={`block h-full rounded-full transition-all duration-300 ${
+                        currentSlide === idx ? 'bg-sky-400 w-full' : 'w-0'
                       }`}
                     />
-                  ))}
-                </div>
-              </div>
-
-              {/* Action Buttons: Soft Coral #C4623F (CTA / Find) + Soft Sky Blue #2F6FB5 (Requests) */}
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3.5 w-full">
-                <Link
-                  to="/patient/providers"
-                  className="bg-[#A9502F] hover:bg-[#8F4327] dark:bg-[#F2A98E] dark:hover:bg-[#F6BEA9] text-white dark:text-[#2B1409] shadow-md border border-white/20 w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer"
-                >
-                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                  <span className="truncate">Find Provider</span>
-                </Link>
-                <Link
-                  to="/patient/requests"
-                  className="bg-[#2F6FB5] hover:bg-[#255A94] dark:bg-[#8CBDF0] dark:hover:bg-[#AFD2F6] backdrop-blur-md border border-white/20 text-white dark:text-[#08182A] shadow-md w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer"
-                >
-                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#DDEBF8] dark:text-[#08182A] shrink-0" />
-                  <span className="truncate">View Requests</span>
-                </Link>
+                  </button>
+                ))}
               </div>
             </div>
           </section>
