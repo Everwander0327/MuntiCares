@@ -402,9 +402,12 @@ const PatientDashboard = () => {
                     {/* Deep gradient overlay spanning the whole card for high contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
-                    {/* Content: Event Title & Description */}
-                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-14 sm:pb-16">
-                      <div className="space-y-2 sm:space-y-2.5 max-w-xl">
+                    {/* Content: Event Eyebrow, Title & Description (Raised for breathing room) */}
+                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-18 sm:pb-20 md:pb-22">
+                      <div className="space-y-1.5 sm:space-y-2 max-w-xl">
+                        <span className="text-2xs sm:text-xs font-extrabold uppercase tracking-widest text-sky-400 dark:text-[#8CBDF0] drop-shadow-sm">
+                          Recent Event
+                        </span>
                         <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
