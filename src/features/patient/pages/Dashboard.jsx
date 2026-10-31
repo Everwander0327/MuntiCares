@@ -402,9 +402,9 @@ const PatientDashboard = () => {
                     {/* Deep gradient overlay spanning the whole card for high contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
-                    {/* Content: Event Eyebrow, Title & Description (Balanced height with comfortable gap) */}
-                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-16 sm:pb-20">
-                      <div className="space-y-2 sm:space-y-2.5 max-w-xl">
+                    {/* Content: Event Eyebrow, Title & Description (Direct coordinate anchoring to guarantee perfect gap) */}
+                    <div className="absolute left-5 right-5 sm:left-7 sm:right-7 md:left-8 md:right-8 bottom-12 sm:bottom-14 pointer-events-none">
+                      <div className="space-y-1.5 sm:space-y-2 max-w-xl">
                         <span className="text-2xs sm:text-xs font-extrabold uppercase tracking-widest text-sky-400 dark:text-[#8CBDF0] drop-shadow-md">
                           Recent Event
                         </span>
@@ -421,8 +421,8 @@ const PatientDashboard = () => {
               </div>
             </div>
 
-            {/* Overlaid Bottom Controls: Clean Story Progress Bars */}
-            <div className="relative z-10 px-5 sm:px-7 md:px-8 pb-5 sm:pb-7 md:pb-8 mt-auto pointer-events-auto">
+            {/* Overlaid Bottom Controls: Clean Story Progress Bars (Fixed at bottom) */}
+            <div className="absolute left-5 right-5 sm:left-7 sm:right-7 md:left-8 md:right-8 bottom-4 sm:bottom-5 z-10 pointer-events-auto">
               <div className="flex items-center gap-2 w-full max-w-xs sm:max-w-sm">
                 {muntiHighlights.map((_, idx) => (
                   <button
