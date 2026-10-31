@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
-  MapPin, Calendar, Shield, ShieldCheck, 
-  Star, CheckCircle2, Clock, MessageCircle, CalendarDays, ArrowLeft, Users, 
-  ChevronDown, ChevronUp, Activity
+  CheckCircle2, MessageCircle, CalendarDays, ArrowLeft,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
@@ -142,13 +141,14 @@ const ProviderProfileView = () => {
     : 0;
 
   const servicesList = provider.services || [];
-  const displayedServices = showAllServices ? servicesList : servicesList.slice(0, 4);
+  const displayedServices = showAllServices ? servicesList : servicesList.slice(0, 6);
+  const online = isUserOnline(id);
 
   return (
     <DashboardLayout role="patient">
-      <div className="w-full max-w-full space-y-4 md:space-y-6 pb-6">
-        {/* Top Header & Breadcrumb */}
-        <div className="flex items-center justify-between">
+      <div className="w-full max-w-full space-y-5 md:space-y-6 pb-8">
+        {/* Top Bar: Back Button */}
+        <div className="flex items-center justify-between gap-3">
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={() => navigate('/patient/providers')}
@@ -157,349 +157,235 @@ const ProviderProfileView = () => {
             <ArrowLeft className="w-4 h-4" />
             <span>Back to Providers</span>
           </motion.button>
-          
-          <div className="flex items-center gap-2">
-            <span className={`neu-flat-sm inline-flex items-center px-3 py-1.5 rounded-full text-2xs font-extrabold uppercase tracking-wider ${
-              isUserOnline(id) 
-                ? 'text-success dark:text-success-dark border border-emerald-500/30 bg-emerald-500/10' 
-                : 'text-tertiary dark:text-tertiary'
-            }`}>
-              {isUserOnline(id) ? 'Active Online' : 'Offline'}
-            </span>
-            {provider.professional_id_status === 'verified' && (
-              <span className="neu-flat-sm hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold text-success dark:text-success-dark border border-emerald-500/30 bg-emerald-500/10">
-                <ShieldCheck className="w-3.5 h-3.5" /> Verified Practitioner
-              </span>
-            )}
+        </div>
+
+        {/* 1. Unified Top Hero Profile Banner (Option 1) */}
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="neu-flat rounded-3xl p-5 sm:p-7 md:p-8"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            {/* Avatar + Identity */}
+            <div className="flex items-start sm:items-center gap-4 min-w-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl neu-flat-sm overflow-hidden p-1 shadow-sm relative shrink-0">
+                {provider.avatar_url ? (
+                  <img src={provider.avatar_url} alt={provider.full_name} className="w-full h-full object-cover rounded-[12px]" />
+                ) : (
+                  <div className="w-full h-full rounded-[12px] bg-primary/10 flex items-center justify-center text-xl sm:text-2xl font-black text-link">
+                    {provider.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'}
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="font-display text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    {provider.full_name}
+                  </h1>
+                </div>
+
+                <p className="text-xs sm:text-sm font-medium text-txt-secondary dark:text-txt-darkSecondary">
+                  {provider.location || 'Muntinlupa City'} &bull; Mon–Sat, 9:00 AM – 5:00 PM &bull; Member since {new Date(provider.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                </p>
+
+                <p className="text-xs text-tertiary truncate">
+                  {provider.email}{provider.phone ? ` • ${provider.phone}` : ''}
+                </p>
+              </div>
+            </div>
+
+            {/* Primary Actions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+              <motion.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => navigate(`/patient/messages?provider=${id}&name=${encodeURIComponent(provider.full_name || '')}`)}
+                className="px-4 py-3 rounded-2xl neu-btn font-bold text-xs sm:text-sm text-link flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Send Message</span>
+              </motion.button>
+
+              {activeBooking ? (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/patient/requests')}
+                  className="px-5 py-3 rounded-2xl neu-btn font-bold text-xs sm:text-sm text-success dark:text-success-dark flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4 text-success" />
+                  <span>{activeBooking.status === 'Pending' ? 'Request Pending — View' : 'Ongoing Visit — Track Live'}</span>
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate(`/patient/providers?book=${id}`)}
+                  className="px-5 py-3 rounded-2xl neu-btn-primary font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  <span>Book Appointment</span>
+                </motion.button>
+              )}
+            </div>
+          </div>
+
+          {/* Bio Row */}
+          <div className="mt-5 pt-5 border-t border-slate-200/70 dark:border-white/10">
+            <p className="text-2xs font-extrabold uppercase tracking-widest text-tertiary mb-1.5">
+              About Practitioner
+            </p>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-4xl">
+              {provider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa City.'}
+            </p>
+          </div>
+        </motion.section>
+
+        {/* 2. 4-KPI Strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+          <div className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
+              <span className={`text-2xs font-extrabold ${trustLevel.color}`}>{trustLevel.label}</span>
+            </div>
+            <p className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-2">
+              {provider.trust_score || 0}<span className="text-xs font-bold text-tertiary">/100</span>
+            </p>
+            <div className="w-full h-1.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden mt-2.5">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ease-out ${
+                  (provider.trust_score || 0) >= 70 ? 'bg-emerald-500' : (provider.trust_score || 0) >= 40 ? 'bg-amber-500' : 'bg-slate-400'
+                }`}
+                style={{ width: `${provider.trust_score || 0}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Overall Rating</span>
+            <p className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-2">
+              {(provider.rating || 0).toFixed(1)} <span className="text-amber-400">★</span>
+            </p>
+            <p className="text-xs text-tertiary mt-1">{stats.review_count} verified reviews</p>
+          </div>
+
+          <div className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Completed Visits</span>
+            <p className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-2">
+              {stats.completed_requests}
+            </p>
+            <p className="text-xs text-tertiary mt-1">{stats.unique_patients} patients served</p>
+          </div>
+
+          <div className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Success Rate</span>
+            <p className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-2">
+              {completionRate}%
+            </p>
+            <p className="text-xs text-tertiary mt-1">Visit completion rate</p>
           </div>
         </div>
 
-        {/* 2-Column Responsive Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-start">
-          
-          {/* Compressed Left Sidebar: Exact fit without overflowing */}
-          <div className="lg:col-span-5 xl:col-span-4">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="neu-flat rounded-[2.5rem] overflow-hidden"
-            >
-              {/* Cover Gradient */}
-              <div className="h-20 bg-gradient-to-r from-primary via-primary-600 to-primary-700 relative overflow-hidden">
-                <div className="absolute inset-0 bg-white/10 dark:bg-black/20" />
+        {/* 3. 2-Column Split: Offered Services (Left) + Patient Reviews (Right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 md:gap-6 items-start">
+          {/* Left Column: Offered Services */}
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="lg:col-span-5 neu-flat p-5 sm:p-7 rounded-3xl space-y-4"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="font-display text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Offered Services ({servicesList.length})
+                </h2>
+                <p className="text-xs text-tertiary mt-0.5">Select any service to book directly</p>
               </div>
-
-              {/* Avatar & Main Identity */}
-              <div className="px-5 -mt-10 relative z-10 flex flex-col items-center">
-                <div className="w-20 h-20 rounded-2xl neu-flat overflow-hidden p-1 shadow-xl relative">
-                  {provider.avatar_url ? (
-                    <img src={provider.avatar_url} alt={provider.full_name} className="w-full h-full object-cover rounded-[14px]" />
+              {servicesList.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllServices(!showAllServices)}
+                  className="neu-btn px-3 py-1.5 rounded-xl text-xs font-extrabold text-link flex items-center gap-1 cursor-pointer"
+                >
+                  {showAllServices ? (
+                    <>Less <ChevronUp className="w-3 h-3" /></>
                   ) : (
-                    <div className="w-full h-full rounded-[14px] bg-primary/10 flex items-center justify-center text-2xl font-black text-link">
-                      {provider.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'}
-                    </div>
+                    <>All ({servicesList.length}) <ChevronDown className="w-3 h-3" /></>
                   )}
-                  <div className={`absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-800 ${isUserOnline(id) ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                </div>
+                </button>
+              )}
+            </div>
 
-                <h1 className="font-display text-lg font-extrabold text-slate-900 dark:text-white mt-2.5 text-center leading-tight">
-                  {provider.full_name}
-                </h1>
-                
-                <div className="flex items-center gap-1.5 mt-1 text-warning">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100 tabular-nums">
-                    {(provider.rating || 0).toFixed(1)}
-                  </span>
-                  <span className="text-xs text-tertiary">({stats.review_count} reviews)</span>
-                  <span className="text-tertiary">•</span>
-                  <span className={`text-xs font-extrabold ${trustLevel.color}`}>
-                    {trustLevel.label}
-                  </span>
-                </div>
-              </div>
-
-              {/* Compressed Details Panel */}
-              <div className="p-5 space-y-3.5">
-                {/* 3 Metric Chips */}
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="neu-flat-sm p-2 rounded-xl text-center">
-                    <p className="text-2xs uppercase font-bold text-tertiary">Rating</p>
-                    <p className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">{(provider.rating || 0).toFixed(1)} ★</p>
-                  </div>
-                  <div className="neu-flat-sm p-2 rounded-xl text-center">
-                    <p className="text-2xs uppercase font-bold text-tertiary">Services</p>
-                    <p className="text-xs font-black text-slate-800 dark:text-slate-100 mt-0.5">{servicesList.length}</p>
-                  </div>
-                  <div className="neu-flat-sm p-2 rounded-xl text-center">
-                    <p className="text-2xs uppercase font-bold text-tertiary">Status</p>
-                    <p className={`text-xs font-black mt-1 capitalize ${isUserOnline(id) ? 'text-success' : 'text-tertiary'}`}>
-                      {isUserOnline(id) ? 'Active' : 'Offline'}
+            <div className="grid grid-cols-1 gap-2.5">
+              {displayedServices.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    if (activeBooking) {
+                      toast(
+                        activeBooking.status === 'Pending'
+                          ? 'You already have a pending booking request with this provider. View it in My Requests.'
+                          : `You already have an ongoing visit (${activeBooking.status}) with this provider. Track it in My Requests.`,
+                        { icon: 'ℹ️' }
+                      );
+                      navigate('/patient/requests');
+                      return;
+                    }
+                    navigate(`/patient/providers?book=${id}&service=${encodeURIComponent(s)}`);
+                  }}
+                  className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
+                >
+                  <div className="min-w-0 pr-2">
+                    <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-link transition-colors truncate">
+                      {s}
                     </p>
+                    <p className="text-xs text-tertiary mt-0.5">Available for home visit</p>
                   </div>
-                </div>
-
-                {/* Trust Score */}
-                <div className="neu-flat-sm p-3 rounded-2xl">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <Shield className="w-3 h-3 text-link" />
-                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
-                    </div>
-                    <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{provider.trust_score || 0}/100</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-200/70 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ease-out ${
-                        (provider.trust_score || 0) >= 70 ? 'bg-emerald-500' : (provider.trust_score || 0) >= 40 ? 'bg-amber-500' : 'bg-slate-400'
-                      }`}
-                      style={{ width: `${provider.trust_score || 0}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Compact Info Badges */}
-                <div className="neu-flat-sm p-3 rounded-2xl space-y-2 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-tertiary flex items-center gap-1.5 text-xs">
-                      <MapPin className="w-3 h-3 text-link shrink-0" /> Location
-                    </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-xs truncate max-w-[150px]">{provider.location || 'Muntinlupa City'}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-tertiary flex items-center gap-1.5 text-xs">
-                      <Calendar className="w-3 h-3 text-link shrink-0" /> Member Since
-                    </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-200 text-xs">
-                      {new Date(provider.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Call to Actions */}
-                <div className="pt-1 space-y-2">
-                  {activeBooking ? (
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate('/patient/requests')}
-                      className="w-full py-3 rounded-2xl neu-btn font-bold text-xs text-success dark:text-success-dark flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-success" />
-                      <span>{activeBooking.status === 'Pending' ? 'Request Pending — View' : 'Ongoing Visit — Track Live'}</span>
-                    </motion.button>
-                  ) : (
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => navigate(`/patient/providers?book=${id}`)}
-                      className="w-full py-3 rounded-2xl neu-btn-primary font-bold text-xs flex items-center justify-center gap-2 shadow-md cursor-pointer"
-                    >
-                      <CalendarDays className="w-4 h-4" />
-                      <span>Book Appointment</span>
-                    </motion.button>
-                  )}
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => navigate(`/patient/messages?provider=${id}&name=${encodeURIComponent(provider.full_name || '')}`)}
-                    className="w-full py-2.5 rounded-2xl neu-btn font-bold text-xs text-link flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Send Direct Message</span>
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Right Main Column: Holds Bio, Contact, Services, Stats & Reviews */}
-          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
-            
-            {/* Section 1: About Practitioner & Practice Cards */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 }}
-              className="neu-flat p-6 md:p-7 rounded-[2.5rem] space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-display text-sm md:text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                    About Practitioner
-                  </h2>
-                  <p className="text-sm text-tertiary mt-0.5">Licensed Healthcare Practitioner • Muntinlupa Health Network</p>
-                </div>
-                <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-primary/10 text-link">
-                  Official Provider
-                </span>
-              </div>
-
-              {/* Unified Bio, Practice & Contact Card */}
-              <div className="neu-flat-sm p-4 md:p-5 rounded-2xl space-y-4">
-                {/* Bio Statement */}
-                <div>
-                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mb-1">Professional Bio</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    {provider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa.'}
-                  </p>
-                </div>
-
-                {/* Detail Columns with Border Dividers */}
-                <div className="pt-3.5 border-t border-slate-200/60 dark:border-white/5 divide-y sm:divide-y-0 sm:divide-x divide-slate-200/60 dark:divide-white/5 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-0">
-                  <div className="sm:pr-4">
-                    <p className="text-2xs uppercase font-extrabold text-tertiary tracking-wider">Practice Hours</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1">Mon – Sat • 9AM – 5PM</p>
-                    <p className="text-sm text-tertiary mt-0.5">Walk-ins & appointments</p>
-                  </div>
-                  <div className="pt-3 sm:pt-0 sm:pl-4">
-                    <p className="text-2xs uppercase font-extrabold text-tertiary tracking-wider">Contact Direct</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1 truncate" title={provider.email}>
-                      {provider.email}
-                    </p>
-                    <p className="text-sm text-tertiary mt-0.5">{provider.phone || 'Verified on platform'}</p>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Section 2: Offered Medical Services (Collapsible) */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="neu-flat p-6 md:p-7 rounded-[2.5rem] space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-display text-sm md:text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Offered Services ({servicesList.length})
-                  </h2>
-                  <p className="text-sm text-tertiary mt-0.5">Click any service to book directly</p>
-                </div>
-                {servicesList.length > 4 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllServices(!showAllServices)}
-                    className="neu-btn px-3 py-1.5 rounded-xl text-xs font-extrabold text-link flex items-center gap-1 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
-                  >
-                    {showAllServices ? (
-                      <>Show Less <ChevronUp className="w-3 h-3" /></>
-                    ) : (
-                      <>Show All ({servicesList.length}) <ChevronDown className="w-3 h-3" /></>
-                    )}
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {displayedServices.map((s, i) => (
-                  <button
-                    key={i}
-                    onClick={() => {
-                      if (activeBooking) {
-                        toast(
-                          activeBooking.status === 'Pending'
-                            ? 'You already have a pending booking request with this provider. View it in My Requests.'
-                            : `You already have an ongoing visit (${activeBooking.status}) with this provider. Track it in My Requests.`,
-                          { icon: 'ℹ️' }
-                        );
-                        navigate('/patient/requests');
-                        return;
-                      }
-                      navigate(`/patient/providers?book=${id}&service=${encodeURIComponent(s)}`);
-                    }}
-                    className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
-                  >
-                    <div className="min-w-0 pr-2">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-link transition-colors truncate">{s}</p>
-                      <p className="text-xs text-tertiary">Available for appointment</p>
-                    </div>
-                  </button>
-                ))}
-                {servicesList.length === 0 && (
-                  <p className="text-xs text-tertiary italic py-3 col-span-2 text-center">General consultation service only.</p>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Section 3: Performance Statistics */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              className="neu-flat p-6 md:p-7 rounded-[2.5rem] space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-display text-sm md:text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Performance Statistics
-                  </h2>
-                  <p className="text-sm text-tertiary mt-0.5">Verified track record on MuntiCares</p>
-                </div>
-                <Activity className="w-4 h-4 text-link" />
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="neu-flat-sm p-3 rounded-2xl text-center">
-                  <Users className="w-4 h-4 text-link mx-auto mb-1" />
-                  <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{stats.unique_patients}</p>
-                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mt-0.5">Patients Served</p>
-                </div>
-                <div className="neu-flat-sm p-3 rounded-2xl text-center">
-                  <CheckCircle2 className="w-4 h-4 text-success mx-auto mb-1" />
-                  <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{stats.completed_requests}</p>
-                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mt-0.5">Completed Visits</p>
-                </div>
-                <div className="neu-flat-sm p-3 rounded-2xl text-center">
-                  <Star className="w-4 h-4 text-amber-400 mx-auto mb-1" />
-                  <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{stats.review_count}</p>
-                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mt-0.5">Total Reviews</p>
-                </div>
-                <div className="neu-flat-sm p-3 rounded-2xl text-center">
-                  <Clock className="w-4 h-4 text-link mx-auto mb-1" />
-                  <p className="text-lg font-black text-slate-900 dark:text-white tabular-nums">{completionRate}%</p>
-                  <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mt-0.5">Completion Rate</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Section 4: Patient Reviews */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="neu-flat p-6 md:p-7 rounded-[2.5rem] space-y-4"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="font-display text-sm md:text-base font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                    Patient Reviews
-                  </h2>
-                  <p className="text-sm text-tertiary mt-0.5">Feedback from verified appointments</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center text-warning">
-                    <Star className="w-4 h-4 fill-current" />
-                  </div>
-                  <span className="font-display text-base font-black text-slate-900 dark:text-white">
-                    {(provider.rating || 0).toFixed(1)}
+                  <span className="text-xs font-extrabold text-link shrink-0 group-hover:translate-x-0.5 transition-transform">
+                    Book &rarr;
                   </span>
-                  <span className="text-xs text-tertiary">({reviews.length})</span>
+                </button>
+              ))}
+              {servicesList.length === 0 && (
+                <p className="text-xs text-tertiary italic py-4 text-center">
+                  General consultation service available.
+                </p>
+              )}
+            </div>
+          </motion.section>
+
+          {/* Right Column: Verified Patient Reviews */}
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="lg:col-span-7 neu-flat p-5 sm:p-7 rounded-3xl space-y-4"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h2 className="font-display text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+                  Patient Reviews ({reviews.length})
+                </h2>
+                <p className="text-xs text-tertiary mt-0.5">Feedback from verified home visits</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {reviews.length > 0 ? (
+                reviews.map((rev) => (
+                  <ReviewCard key={rev.id} review={rev} variant="bordered" />
+                ))
+              ) : (
+                <div className="neu-inset p-6 rounded-2xl text-center border border-slate-200/50 dark:border-white/5">
+                  <EmptyState
+                    icon="star"
+                    title="No reviews yet"
+                    message="This healthcare provider has not received any patient reviews yet."
+                    variant="compact"
+                  />
                 </div>
-              </div>
-
-              <div className="space-y-2.5">
-                {reviews.length > 0 ? (
-                  reviews.map((rev) => (
-                    <ReviewCard key={rev.id} review={rev} variant="bordered" />
-                  ))
-                ) : (
-                  <div className="neu-inset p-6 rounded-2xl text-center border border-slate-200/50 dark:border-white/5">
-                    <EmptyState icon="star" title="No reviews yet" message="This healthcare provider has not received any reviews yet." variant="compact" />
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-          </div>
+              )}
+            </div>
+          </motion.section>
         </div>
       </div>
     </DashboardLayout>
