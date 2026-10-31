@@ -402,8 +402,8 @@ const PatientDashboard = () => {
                     {/* Deep gradient overlay spanning the whole card for high contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
-                    {/* Content: Event Eyebrow, Title & Description (Raised with ample breathing room above progress bars) */}
-                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-24 sm:pb-28 md:pb-32">
+                    {/* Content: Event Eyebrow, Title & Description (Balanced height with comfortable gap) */}
+                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-16 sm:pb-20">
                       <div className="space-y-2 sm:space-y-2.5 max-w-xl">
                         <span className="text-2xs sm:text-xs font-extrabold uppercase tracking-widest text-sky-400 dark:text-[#8CBDF0] drop-shadow-md">
                           Recent Event
