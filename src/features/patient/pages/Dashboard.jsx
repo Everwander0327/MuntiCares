@@ -402,16 +402,16 @@ const PatientDashboard = () => {
                     {/* Deep gradient overlay spanning the whole card for high contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
-                    {/* Content: Event Eyebrow, Title & Description (Raised for breathing room) */}
-                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-18 sm:pb-20 md:pb-22">
-                      <div className="space-y-1.5 sm:space-y-2 max-w-xl">
-                        <span className="text-2xs sm:text-xs font-extrabold uppercase tracking-widest text-sky-400 dark:text-[#8CBDF0] drop-shadow-sm">
+                    {/* Content: Event Eyebrow, Title & Description (Raised with ample breathing room above progress bars) */}
+                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-24 sm:pb-28 md:pb-32">
+                      <div className="space-y-2 sm:space-y-2.5 max-w-xl">
+                        <span className="text-2xs sm:text-xs font-extrabold uppercase tracking-widest text-sky-400 dark:text-[#8CBDF0] drop-shadow-md">
                           Recent Event
                         </span>
                         <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
-                        <p className="text-xs sm:text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
+                        <p className="text-xs sm:text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-md font-medium">
                           {slide.description}
                         </p>
                       </div>
@@ -422,8 +422,8 @@ const PatientDashboard = () => {
             </div>
 
             {/* Overlaid Bottom Controls: Clean Story Progress Bars */}
-            <div className="relative z-10 p-5 sm:p-7 md:p-8 mt-auto pointer-events-auto">
-              <div className="flex items-center gap-2 w-full max-w-sm sm:max-w-md">
+            <div className="relative z-10 px-5 sm:px-7 md:px-8 pb-5 sm:pb-7 md:pb-8 mt-auto pointer-events-auto">
+              <div className="flex items-center gap-2 w-full max-w-xs sm:max-w-sm">
                 {muntiHighlights.map((_, idx) => (
                   <button
                     key={idx}
@@ -433,11 +433,11 @@ const PatientDashboard = () => {
                       scrollToSlide(idx);
                     }}
                     aria-label={`Go to slide ${idx + 1}`}
-                    className="h-1 flex-1 rounded-full transition-all duration-300 cursor-pointer overflow-hidden bg-white/25 hover:bg-white/40"
+                    className="h-1.5 flex-1 rounded-full transition-all duration-300 cursor-pointer overflow-hidden bg-white/25 hover:bg-white/40"
                   >
                     <span
                       className={`block h-full rounded-full transition-all duration-300 ${
-                        currentSlide === idx ? 'bg-sky-400 w-full' : 'w-0'
+                        currentSlide === idx ? 'bg-[#8CBDF0] w-full' : 'w-0'
                       }`}
                     />
                   </button>
