@@ -465,21 +465,15 @@ const PatientDashboard = () => {
           {/* Quick Actions Card with Combined Horizontal Stats on Top (lg:col-span-5) */}
           <div className="lg:col-span-5 neu-flat rounded-2xl sm:rounded-[2.25rem] p-5 sm:p-6 flex flex-col justify-start gap-5">
             <div>
-              {/* Horizontal Stats Row on Top: Light & Airy Semantic Hierarchy */}
+              {/* Horizontal Stats Row on Top: Clean Minimalist Hierarchy */}
               <div className="mb-4 pb-4 border-b border-surface-border">
-                <div className="flex items-center justify-between mb-2.5">
+                <div className="mb-2.5">
                   <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-txt-secondary dark:text-txt-darkSecondary">
                     Request Status
                   </h4>
-                  <Link
-                    to="/patient/requests"
-                    className="text-xs font-bold text-link hover:text-primary-600 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-0.5"
-                  >
-                    View all &rarr;
-                  </Link>
                 </div>
 
-                {/* Slim active-visit banner or empty state */}
+                {/* Slim active-visit banner or empty state (No dots) */}
                 {activeVisit ? (
                   <Link
                     to="/patient/requests"
@@ -496,129 +490,126 @@ const PatientDashboard = () => {
                         });
                       }
                     }}
-                    className="group mb-3 flex w-full items-center gap-3 rounded-lg border-l-2 border-emerald-500 bg-emerald-500/[0.07] px-3 py-2.5 transition-colors hover:bg-emerald-500/[0.12] dark:bg-emerald-500/10 dark:hover:bg-emerald-500/15"
+                    className="group mb-3 flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] px-3.5 py-2.5 transition-colors hover:bg-emerald-500/[0.12] dark:bg-emerald-500/10 dark:hover:bg-emerald-500/15"
                   >
-                    <span className="relative flex h-2 w-2 shrink-0">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-2xs font-extrabold uppercase tracking-wider text-success dark:text-emerald-300">
                         {activeVisit.status}
                       </p>
-                      <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">
-                        {activeVisit.provider} &bull; {activeVisit.service}
+                      <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 mt-0.5">
+                        {activeVisit.provider} — {activeVisit.service}
                       </p>
                     </div>
-                    <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-success underline underline-offset-4 dark:text-emerald-300">
-                      {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track live' : (activeVisit.time || 'Today')}
-                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-success dark:text-emerald-300">
+                      {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track live' : (activeVisit.time || 'Today')} &rarr;
                     </span>
                   </Link>
                 ) : (
-                  <div className="mb-3 px-3 py-2 rounded-xl flex items-center justify-between gap-2 bg-surface-subtle/60 dark:bg-primary-800/40 border border-surface-border/60 dark:border-white/5 text-txt-secondary">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#A5B6C8] shrink-0" />
-                      <p className="text-sm font-semibold text-txt-secondary dark:text-txt-darkSecondary truncate">
-                        No active or upcoming visits scheduled today
-                      </p>
-                    </div>
+                  <div className="mb-3 px-3.5 py-2.5 rounded-xl flex items-center justify-between gap-2 border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-slate-800/40 text-xs">
+                    <p className="font-medium text-txt-secondary dark:text-txt-darkSecondary truncate">
+                      No visits scheduled today
+                    </p>
                     <Link
                       to="/patient/providers"
-                      className="text-xs font-bold text-link hover:underline shrink-0"
+                      className="font-bold text-link hover:underline shrink-0"
                     >
                       Book a visit
                     </Link>
                   </div>
                 )}
 
-                <div className="grid grid-cols-3 gap-2.5">
-                  {/* Active: Primary Soft (#DDEBF8 bg, #2F6FB5 text) */}
-                  <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl bg-[#DDEBF8] dark:bg-[#183049] border border-[#C5DCF2] dark:border-[#24466B] select-text">
-                    <p className="text-xl sm:text-2xl font-display font-black text-[#2F6FB5] dark:text-[#8CBDF0] leading-none">
+                {/* Unified Cohesive Metric Segment (Zero Loud Baby Blocks) */}
+                <div className="grid grid-cols-3 divide-x divide-slate-200/70 dark:divide-white/10 rounded-2xl border border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-800/30 p-3 text-center">
+                  <div className="px-2">
+                    <p className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white leading-none">
                       {stats.active}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-primary-700 dark:text-link uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
                       Active
                     </p>
                   </div>
-
-                  {/* Accepted: Success (#E1F3EA bg, #2C7A55 text) */}
-                  <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl bg-[#E1F3EA] dark:bg-[#14301F] border border-[#C3E6D4] dark:border-[#214D32] select-text">
-                    <p className="text-xl sm:text-2xl font-display font-black text-[#2C7A55] dark:text-[#7DD3A3] leading-none">
+                  <div className="px-2">
+                    <p className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white leading-none">
                       {stats.accepted}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-success dark:text-success-dark uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
                       Accepted
                     </p>
                   </div>
-
-                  {/* Pending: Warning (#FFF1D6 bg, #9C5A06 text) */}
-                  <div className="flex flex-col items-center justify-center text-center p-3 sm:p-3.5 rounded-2xl bg-[#FFF1D6] dark:bg-[#34260E] border border-[#FEE1AC] dark:border-[#4F3B16] select-text">
-                    <p className="text-xl sm:text-2xl font-display font-black text-[#9C5A06] dark:text-[#F1BD6B] leading-none">
+                  <div className="px-2">
+                    <p className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white leading-none">
                       {stats.pending}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-warning dark:text-warning-dark uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
                       Pending
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Quick Actions List in Soft Sky Blue + Cloud White */}
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-display font-extrabold text-[#17283B] dark:text-[#E6EEF6]">
+              {/* Quick Actions List (Clean Minimalist — Zero Icons) */}
+              <div className="mb-2.5">
+                <h3 className="text-xs font-display font-extrabold uppercase tracking-wider text-txt-secondary dark:text-txt-darkSecondary">
                   Quick Actions
                 </h3>
               </div>
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 <Link
                   to="/patient/providers"
-                  className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#C4623F] dark:hover:border-[#F2A98E]"
+                  className="group neu-btn p-3 px-3.5 rounded-xl flex items-center justify-between transition-all hover:border-primary/40"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#FCEBE4] dark:bg-[#3B2219] text-[#C4623F] dark:text-[#F2A98E] border border-[#F8D4C7] dark:border-[#5C3325] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#C4623F] group-hover:text-white dark:group-hover:bg-[#F2A98E] dark:group-hover:text-[#2B1409] transition-all shadow-sm">
-                    <Search className="w-4 h-4" />
+                  <div className="min-w-0 flex-1 pr-3">
+                    <span className="block text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-link transition-colors">
+                      Find a Provider
+                    </span>
+                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate mt-0.5">
+                      Browse verified caregivers
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#C4623F] dark:group-hover:text-[#F2A98E] transition-colors">Find a Provider</span>
-                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate">Browse verified caregivers</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-txt-secondary group-hover:text-[#C4623F] dark:group-hover:text-[#F2A98E] group-hover:translate-x-1 transition-all shrink-0" />
+                  <span className="text-xs font-bold text-txt-secondary group-hover:text-link group-hover:translate-x-0.5 transition-transform shrink-0">
+                    &rarr;
+                  </span>
                 </Link>
 
                 <Link
                   to="/patient/requests"
-                  className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#2F6FB5] dark:hover:border-[#8CBDF0]"
+                  className="group neu-btn p-3 px-3.5 rounded-xl flex items-center justify-between transition-all hover:border-primary/40"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-[#DDEBF8] dark:bg-[#183049] text-[#2F6FB5] dark:text-[#8CBDF0] border border-[#C5DCF2] dark:border-[#24466B] flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-sm">
-                    <FileText className="w-4 h-4" />
+                  <div className="min-w-0 flex-1 pr-3">
+                    <span className="block text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-link transition-colors">
+                      View Requests
+                    </span>
+                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate mt-0.5">
+                      Track appointments status
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] transition-colors">View Requests</span>
-                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate">Track appointments status</span>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-txt-secondary group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] group-hover:translate-x-1 transition-all shrink-0" />
+                  <span className="text-xs font-bold text-txt-secondary group-hover:text-link group-hover:translate-x-0.5 transition-transform shrink-0">
+                    &rarr;
+                  </span>
                 </Link>
 
                 <Link
                   to="/patient/messages"
-                  className="group neu-btn p-3 rounded-2xl flex items-center gap-3 transition-all text-[#17283B] dark:text-[#E6EEF6] hover:border-[#2F6FB5] dark:hover:border-[#8CBDF0]"
+                  className="group neu-btn p-3 px-3.5 rounded-xl flex items-center justify-between transition-all hover:border-primary/40"
                 >
-                  <div className="w-9 h-9 rounded-xl bg-surface-subtle text-[#2F6FB5] dark:text-[#8CBDF0] border border-surface-border flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-[#2F6FB5] group-hover:text-white dark:group-hover:bg-[#8CBDF0] dark:group-hover:text-[#08182A] transition-all shadow-sm relative">
-                    <MessageCircle className="w-4 h-4" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#BC3030] text-white rounded-full text-xs font-extrabold flex items-center justify-center shadow-sm">
-                        {unreadCount > 9 ? '9+' : unreadCount}
+                  <div className="min-w-0 flex-1 pr-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-link transition-colors">
+                        Messages
                       </span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className="block text-xs sm:text-[13px] font-bold group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] transition-colors">
-                      Messages {unreadCount > 0 && `(${unreadCount})`}
+                      {unreadCount > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full bg-danger text-white text-2xs font-extrabold">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate mt-0.5">
+                      Direct chat with providers
                     </span>
-                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate">Direct chat with providers</span>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-[#A5B6C8] dark:text-txt-secondary group-hover:text-[#2F6FB5] dark:group-hover:text-[#8CBDF0] group-hover:translate-x-1 transition-all shrink-0" />
+                  <span className="text-xs font-bold text-txt-secondary group-hover:text-link group-hover:translate-x-0.5 transition-transform shrink-0">
+                    &rarr;
+                  </span>
                 </Link>
               </div>
             </div>
