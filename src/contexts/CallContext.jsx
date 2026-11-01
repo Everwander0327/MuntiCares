@@ -69,7 +69,7 @@ export const CallProvider = ({ children }) => {
           event: 'call_accepted',
           payload: { sender_id: user.id }
         });
-        supabase.removeChannel(channel);
+        setTimeout(() => supabase.removeChannel(channel), 3000);
       }
     });
   }, [user]);
@@ -95,7 +95,7 @@ export const CallProvider = ({ children }) => {
           event: 'call_declined',
           payload: { sender_id: user.id, call_id: incomingCall.callId || null }
         });
-        supabase.removeChannel(channel);
+        setTimeout(() => supabase.removeChannel(channel), 3000);
       }
     });
     setIncomingCall(null);
@@ -110,7 +110,7 @@ export const CallProvider = ({ children }) => {
           event: 'incoming_call',
           payload: { sender_id: user.id, sender_name: callerName, call_type: callType, call_id: callId }
         });
-        supabase.removeChannel(channel);
+        setTimeout(() => supabase.removeChannel(channel), 3000);
       }
     });
   }, [user]);
@@ -124,7 +124,7 @@ export const CallProvider = ({ children }) => {
           event: 'call_ended',
           payload: { sender_id: user.id, call_id: callId }
         });
-        supabase.removeChannel(channel);
+        setTimeout(() => supabase.removeChannel(channel), 3000);
       }
     });
   }, [user]);

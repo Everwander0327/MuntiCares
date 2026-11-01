@@ -131,7 +131,9 @@ Deno.serve(async (req) => {
       headers: {
         "access-control-allow-origin": req.headers.get("origin") ?? "*",
         "access-control-allow-methods": "POST, OPTIONS",
-        "access-control-allow-headers": "authorization, apikey, content-type",
+        "access-control-allow-headers":
+          req.headers.get("access-control-request-headers") ??
+          "authorization, apikey, content-type, x-client-info, x-supabase-api-version, prefer",
       },
     });
   }

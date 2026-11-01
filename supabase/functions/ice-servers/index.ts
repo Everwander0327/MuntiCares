@@ -36,7 +36,11 @@ const withCors = (req: Request, res: Response) => {
   const origin = req.headers.get("origin");
   if (origin) res.headers.set("access-control-allow-origin", origin);
   res.headers.set("vary", "origin");
-  res.headers.set("access-control-allow-headers", "authorization, apikey, content-type");
+  res.headers.set(
+    "access-control-allow-headers",
+    req.headers.get("access-control-request-headers") ??
+      "authorization, apikey, content-type, x-client-info, x-supabase-api-version, prefer",
+  );
   res.headers.set("access-control-allow-methods", "GET, OPTIONS");
   res.headers.set("access-control-max-age", "600");
   return res;
