@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { initialsAvatar } from '@/lib/avatar';
-import { MessageSquareWarning, Search } from 'lucide-react';
+import { MessageSquareWarning, Search, PhoneOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePresence } from '@/contexts/PresenceContext';
+import { fetchRecentCalls, onCallsChanged } from '../lib/callRecords';
 
 const formatRelativeTime = (dateStr) => {
   if (!dateStr) return '';
@@ -21,11 +22,18 @@ const formatRelativeTime = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
-const getLastMessagePreview = (msg, userId) => {
+const getLastMessagePreview = (msg, userId, callRecord) => {
   if (!msg) return { text: 'No messages yet', isYou: false };
   const isYou = msg.sender_id === userId;
+  if (msg.message_type === 'call') {
+    return { text: `${callRecord?.call_type === 'audio' ? 'Voice' : 'Video'} consultation`, isYou };
+  }
+  // Chat rows written before calls were recorded carry only their emoji, which is how
+  // this list came to label a voice consultation as "Video call started".
+  if (msg.content?.startsWith('📹') || msg.content?.startsWith('📞')) {
+    return { text: 'Consultation call', isYou };
+  }
   let text = msg.content || '';
-  if (text.startsWith('📞')) text = '📞 Video call started';
   if (text.length > 50) text = text.slice(0, 50) + '…';
   return { text, isYou };
 };
@@ -34,6 +42,28 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   const { isUserOnline } = usePresence();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [callById, setCallById] = useState({});
+  const [missedByPartner, setMissedByPartner] = useState({});
+
+  // Only the last 24 hours are flagged, matching the window the transcript itself shows
+  // when the conversation is opened. Older records stay in `calls` for auditing.
+  const loadCalls = useCallback(async () => {
+    if (!user?.id) return;
+    const rows = await fetchRecentCalls({ userId: user.id });
+    setCallById(Object.fromEntries(rows.map((row) => [row.id, row])));
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const missed = {};
+    rows.forEach((row) => {
+      if (row.status !== 'missed' || row.callee_id !== user.id) return;
+      if (row.seen_at) return;
+      if (new Date(row.ringing_at).getTime() < dayAgo) return;
+      const previous = missed[row.caller_id];
+      if (!previous || new Date(row.ringing_at) > new Date(previous.ringing_at)) {
+        missed[row.caller_id] = row;
+      }
+    });
+    setMissedByPartner(missed);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -156,22 +186,26 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
     fetchUnreadCounts();
 
     const onMessagesRead = () => fetchUnreadCounts();
-    const onVisibilityChange = () => { if (document.visibilityState === 'visible') fetchUnreadCounts(); };
-    const onWindowFocus = () => fetchUnreadCounts();
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible') { fetchUnreadCounts(); loadCalls(); } };
+    const onWindowFocus = () => { fetchUnreadCounts(); loadCalls(); };
     window.addEventListener('messages-read', onMessagesRead);
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('focus', onWindowFocus);
+    const stopCallsListener = onCallsChanged(loadCalls);
+
+    loadCalls();
 
     const pollInterval = setInterval(fetchUnreadCounts, 2000);
 
     return () => {
       clearInterval(pollInterval);
       supabase.removeChannel(channel);
+      stopCallsListener();
       window.removeEventListener('messages-read', onMessagesRead);
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('focus', onWindowFocus);
     };
-  }, [user]);
+  }, [user, loadCalls]);
 
   const filtered = searchTerm
     ? conversations.filter(c => c.name?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -217,7 +251,8 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   return (
     <div className="space-y-3 sm:space-y-4 select-text">
       {filtered.map((conv, i) => {
-        const preview = getLastMessagePreview(conv.lastMessage, user.id);
+        const preview = getLastMessagePreview(conv.lastMessage, user.id, callById[conv.lastMessage?.call_id]);
+        const missed = missedByPartner[conv.id];
         const hasUnread = conv.unreadCount > 0;
         return (
           <motion.div
@@ -274,6 +309,15 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
                     <p className="text-xs text-tertiary italic">No messages yet</p>
                   )}
                 </div>
+
+                {missed && (
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <PhoneOff className="w-3 h-3 text-danger shrink-0" />
+                    <span className="text-2xs font-extrabold uppercase tracking-wider text-danger truncate">
+                      Missed {missed.call_type === 'audio' ? 'voice' : 'video'} call · {formatRelativeTime(missed.ringing_at)}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

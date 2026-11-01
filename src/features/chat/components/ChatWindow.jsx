@@ -8,6 +8,18 @@ import { usePresence } from '@/contexts/PresenceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import useWebRTCCall from '../hooks/useWebRTCCall';
+import {
+  newCallId,
+  createCallRecord,
+  markCallAnswered,
+  markCallEnded,
+  markCallMissed,
+  markCallFailed,
+  fetchCallRecord,
+  fetchConversationCalls,
+  markMissedCallsSeen,
+  sendCallInvite,
+} from '../lib/callRecords';
 
 const addReadMsgIds = (userId, ids) => {
   if (!ids.length) return;
@@ -39,6 +51,70 @@ const shouldShowTimestamp = (msg, nextMsg) => {
   return diff > 5 * 60 * 1000;
 };
 
+// A call bubble is only joinable while its record is still ringing. Unknown records
+// (rows predating message_type, or a record past the fetch window) fall back to the
+// ringing sweep's 60-second window rather than offering a call that already ended.
+const isCallMessage = (msg) =>
+  msg.message_type === 'call' || msg.content?.startsWith('📹') || msg.content?.startsWith('📞');
+
+const callTypeOf = (msg, record) => {
+  const type = record?.call_type || (msg.content?.startsWith('📞') ? 'audio' : 'video');
+  return type === 'audio' ? 'audio' : 'video';
+};
+
+const isJoinable = (msg, record) =>
+  record ? record.status === 'ringing' : Date.now() - new Date(msg.created_at).getTime() < 90000;
+
+const formatDuration = (seconds) => {
+  const total = Number(seconds) || 0;
+  if (total < 60) return `${total}s`;
+  const mins = Math.floor(total / 60);
+  if (mins < 60) return total % 60 ? `${mins}m ${total % 60}s` : `${mins}m`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+};
+
+const CALL_OUTCOME = {
+  answered: 'in progress',
+  ended: 'ended',
+  declined: 'declined',
+  missed: 'missed',
+  failed: 'could not connect',
+};
+
+const CallBubbleAction = ({ msg, record, isMe, onJoin }) => {
+  const isVideo = callTypeOf(msg, record) === 'video';
+  const kind = isVideo ? 'Video' : 'Voice';
+
+  if (isJoinable(msg, record)) {
+    const Icon = isVideo ? Video : Phone;
+    return (
+      <button
+        type="button"
+        onClick={onJoin}
+        className={`mt-2.5 w-full px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
+          isMe ? 'bg-white/20 hover:bg-white/30 text-white' : 'neu-btn text-link'
+        }`}
+      >
+        <Icon className="w-3.5 h-3.5" />
+        <span>Join {kind} Call</span>
+      </button>
+    );
+  }
+
+  const outcome = record ? CALL_OUTCOME[record.status] || 'ended' : 'no longer available';
+  const length = record?.duration_seconds != null && record.status === 'ended'
+    ? ` · ${formatDuration(record.duration_seconds)}`
+    : '';
+  return (
+    <p className={`mt-2 flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wider ${
+      isMe ? 'text-white/80' : 'text-tertiary dark:text-tertiary'
+    }`}>
+      <PhoneOff className="w-3 h-3 shrink-0" />
+      <span>{kind} consultation {outcome}{length}</span>
+    </p>
+  );
+};
+
 const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartCall }) => {
   const { user: authUser } = useAuth();
   const { startCallBroadcast, sendCallEnded, callDeclinedByPeer, callCancelledByPeer } = useCalls();
@@ -51,6 +127,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   const [callTimer, setCallTimer] = useState(0);
   const [showDeclinedCall, setShowDeclinedCall] = useState(false);
   const [remoteRotation, setRemoteRotation] = useState(0);
+  const [callRecordsById, setCallRecordsById] = useState({});
 
   const {
     callStatus,
@@ -84,6 +161,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   const typingTimeoutRef = useRef(null);
   const channelRef = useRef(null);
   const lastChimeRef = useRef(0);
+  const activeCallIdRef = useRef(null);
+  const callConnectedRef = useRef(false);
 
   const playNotificationSound = () => {
     const now = Date.now();
@@ -123,21 +202,22 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     if (!isScrolledUp) scrollToBottom();
   }, [messages.length, isTyping]);
 
+  const refreshCallRecords = useCallback(async () => {
+    if (!currentUser?.id || !otherUser?.id) return;
+    const rows = await fetchConversationCalls({ userId: currentUser.id, peerId: otherUser.id });
+    setCallRecordsById(Object.fromEntries(rows.map((row) => [row.id, row])));
+    await markMissedCallsSeen({ userId: currentUser.id, peerId: otherUser.id });
+  }, [currentUser?.id, otherUser?.id]);
+
   useEffect(() => {
     if (!currentUser?.id || !otherUser?.id) return;
 
     const fetchMessages = async () => {
       setLoading(true);
 
+      // Expiry of rows older than the promised 24 hours is enforced by the
+      // `messages 24h expiry` cron job, not by the app opening a chat.
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      supabase
-        .from('messages')
-        .delete()
-        .lt('created_at', yesterday)
-        .then(({ error }) => {
-          if (error) console.warn('Chat cleanup error:', error);
-        });
-
       const { data } = await supabase
         .from('messages')
         .select('*')
@@ -161,6 +241,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     };
 
     fetchMessages();
+    refreshCallRecords();
 
     const roomName = `chat_${[currentUser.id, otherUser.id].sort().join('_')}`;
     const channel = supabase.channel(roomName, {
@@ -228,7 +309,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser, otherUser]);
+  }, [currentUser, otherUser, refreshCallRecords]);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -255,7 +336,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     }
   };
 
-  const sendMessage = async (text) => {
+  const sendMessage = async (text, { messageType = 'text', callId = null } = {}) => {
     if (!text.trim()) return;
 
     const tempMsg = {
@@ -263,6 +344,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       sender_id: currentUser.id,
       receiver_id: otherUser.id,
       content: text,
+      message_type: messageType,
+      call_id: callId,
       created_at: new Date().toISOString(),
       is_read: false,
       status: 'sending',
@@ -280,6 +363,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         sender_id: currentUser.id,
         receiver_id: otherUser.id,
         content: text,
+        message_type: messageType,
+        call_id: callId,
         is_read: false,
       }]).select();
 
@@ -317,29 +402,54 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   }, [callStatus]);
 
   const handleStartCall = useCallback(async (type = 'video') => {
+    if (!currentUser?.id || !otherUser?.id) return;
+
+    const callId = newCallId();
+    activeCallIdRef.current = callId;
+    callConnectedRef.current = false;
+
+    // The record is written before the invite leaves, so the callee always has a row
+    // to answer into — including when a decline arrives before the offer round-trips.
     try {
-      if (type === 'video') {
-        sendMessage("📹 I've started a video consultation. Click the Video icon to join!");
-      } else {
-        sendMessage("📞 I've started a voice consultation. Click the Phone icon to join!");
-      }
-      if (otherUser?.id && currentUser) {
-        startCallBroadcast(otherUser.id, currentUser.name, type);
-      }
-      await rtcStartCall(type);
+      await createCallRecord({ id: callId, callerId: currentUser.id, calleeId: otherUser.id, callType: type });
+    } catch (err) {
+      console.error('Failed to open call record:', err);
+      toast.error('Could not start the consultation. Please try again.');
+      activeCallIdRef.current = null;
+      return;
+    }
+
+    const isVideo = type === 'video';
+    sendMessage(
+      `${isVideo ? '📹' : '📞'} I've started a ${isVideo ? 'video' : 'voice'} consultation. Click the ${isVideo ? 'Video' : 'Phone'} icon to join!`,
+      { messageType: 'call', callId },
+    );
+    startCallBroadcast(otherUser.id, currentUser.name, type, callId);
+    sendCallInvite(callId);
+
+    try {
+      await rtcStartCall(type, callId);
+      refreshCallRecords();
     } catch (err) {
       console.error('Failed to start call:', err);
+      markCallFailed(callId, err?.message || 'Microphone or camera unavailable');
       toast.error('Could not access microphone/camera. Please check permissions.');
       rtcEndCall();
     }
-  }, [currentUser, otherUser?.id, rtcEndCall, rtcStartCall, sendMessage, startCallBroadcast]);
+  }, [currentUser, otherUser?.id, refreshCallRecords, rtcEndCall, rtcStartCall, sendMessage, startCallBroadcast]);
 
   const handleEndCall = useCallback((notify = true) => {
+    const callId = activeCallIdRef.current;
+    if (callId) {
+      if (callConnectedRef.current) markCallEnded(callId);
+      else markCallMissed(callId);
+      refreshCallRecords();
+    }
     if (notify && otherUser?.id) {
-      sendCallEnded(otherUser.id);
+      sendCallEnded(otherUser.id, callId);
     }
     rtcEndCall();
-  }, [otherUser?.id, rtcEndCall, sendCallEnded]);
+  }, [otherUser?.id, refreshCallRecords, rtcEndCall, sendCallEnded]);
 
   const closeCallOverlay = useCallback(() => {
     rtcResetCall();
@@ -349,22 +459,69 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   useEffect(() => {
     if (autoStartCall?.active && otherUser?.id && currentUser?.id) {
       const callKey = `${autoStartCall.type}_${autoStartCall.ts || 'default'}`;
-      if (lastJoinedCallRef.current === callKey) return;
+      if (lastJoinedCallRef.current === callKey) return undefined;
       lastJoinedCallRef.current = callKey;
       const type = autoStartCall.type || 'video';
-      rtcJoinCall(type);
+      let cancelled = false;
+
+      // A push deep link can land here after the caller already gave up, so confirm
+      // the call is still ringing before putting the callee into a dead connect loop.
+      (async () => {
+        if (autoStartCall.callId) {
+          const record = await fetchCallRecord(autoStartCall.callId);
+          if (cancelled) return;
+          if (record && record.status !== 'ringing') {
+            toast('That consultation call has already ended.');
+            refreshCallRecords();
+            return;
+          }
+          activeCallIdRef.current = autoStartCall.callId;
+        }
+        if (cancelled) return;
+        callConnectedRef.current = false;
+        rtcJoinCall(type);
+      })();
+
+      return () => { cancelled = true; };
     } else if (autoStartVideo && otherUser?.id && currentUser?.id) {
-      if (lastJoinedCallRef.current === 'video_legacy') return;
+      if (lastJoinedCallRef.current === 'video_legacy') return undefined;
       lastJoinedCallRef.current = 'video_legacy';
       rtcJoinCall('video');
     }
-  }, [autoStartCall, autoStartVideo, currentUser?.id, otherUser?.id, rtcJoinCall]);
+    return undefined;
+  }, [autoStartCall, autoStartVideo, currentUser?.id, otherUser?.id, refreshCallRecords, rtcJoinCall]);
 
   useEffect(() => {
     if (callStatus === 'idle') {
       lastJoinedCallRef.current = null;
     }
   }, [callStatus]);
+
+  // Persist the transitions this device observes. Both sides may report the same
+  // event; the database keeps the first write because each update is guarded on the
+  // timestamp column it fills.
+  useEffect(() => {
+    const callId = activeCallIdRef.current;
+    if (!callId) return;
+
+    if (callStatus === 'connected') {
+      if (!callConnectedRef.current) {
+        callConnectedRef.current = true;
+        markCallAnswered(callId);
+      }
+      return;
+    }
+
+    if (callStatus === 'ended') {
+      if (callConnectedRef.current) markCallEnded(callId);
+      else if (webRtcError) markCallFailed(callId, webRtcError);
+      else markCallMissed(callId);
+      refreshCallRecords();
+      return;
+    }
+
+    if (callStatus === 'idle') refreshCallRecords();
+  }, [callStatus, webRtcError, refreshCallRecords]);
 
   useEffect(() => {
     attachMedia();
@@ -874,31 +1031,19 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                             : 'neu-flat rounded-2xl rounded-bl-sm text-slate-800 dark:text-slate-100 font-medium'
                         }`}>
                           <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{msg.content}</p>
-                          {(msg.content?.startsWith('📹') || msg.content?.startsWith('📞')) && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const type = msg.content.startsWith('📹') ? 'video' : 'audio';
-                                rtcJoinCall(type);
+                          {isCallMessage(msg) && (
+                            <CallBubbleAction
+                              msg={msg}
+                              record={msg.call_id ? callRecordsById[msg.call_id] : null}
+                              isMe={isMe}
+                              onJoin={() => {
+                                if (msg.call_id) {
+                                  activeCallIdRef.current = msg.call_id;
+                                  callConnectedRef.current = false;
+                                }
+                                rtcJoinCall(callTypeOf(msg, callRecordsById[msg.call_id]));
                               }}
-                              className={`mt-2.5 w-full px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer ${
-                                isMe
-                                  ? 'bg-white/20 hover:bg-white/30 text-white'
-                                  : 'neu-btn text-link'
-                              }`}
-                            >
-                              {msg.content?.startsWith('📹') ? (
-                                <>
-                                  <Video className="w-3.5 h-3.5" />
-                                  <span>Join Video Call</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Phone className="w-3.5 h-3.5" />
-                                  <span>Join Voice Call</span>
-                                </>
-                              )}
-                            </button>
+                            />
                           )}
                         </div>
                         {showTime && (

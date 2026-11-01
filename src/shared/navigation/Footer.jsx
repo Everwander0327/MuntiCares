@@ -88,7 +88,7 @@ const Footer = () => (
       {/* Bottom Legal Bar */}
       <div className="pt-8 border-t border-slate-800 text-xs text-slate-400 flex flex-col sm:flex-row justify-between items-center gap-4">
         <p>&copy; {new Date().getFullYear()} MuntiCares. All rights reserved.</p>
-        <p>Built for the people of Muntinlupa City &bull; DPA 2012 Compliant</p>
+        <p>Built for the people of Muntinlupa City</p>
       </div>
     </div>
   </footer>

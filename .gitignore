@@ -33,3 +33,5 @@ supabase_schema.sql
 test-results/
 
 .design-qa/
+google-services.json
+**/google-services.json

@@ -15,22 +15,60 @@ import { supabase } from '@/lib/supabase';
  * Every call has a callId so duplicate/stale signals are ignored.
  */
 
-const buildRtcConfig = () => {
-  const iceServers = [
-    { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-  ];
-  // Optional TURN relay for strict NATs (e.g. some mobile carriers).
-  const turnUrl = import.meta.env.VITE_TURN_URL;
-  if (turnUrl) {
-    iceServers.push({
-      urls: turnUrl.split(',').map((u) => u.trim()).filter(Boolean),
-      username: import.meta.env.VITE_TURN_USERNAME,
-      credential: import.meta.env.VITE_TURN_CREDENTIAL,
-    });
+const STUN_ICE_SERVERS = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  { urls: ['stun:stun.cloudflare.com:3478'] },
+];
+
+/*
+ * TURN is minted per call by the `ice-servers` Edge Function: a static TURN login in a
+ * VITE_ variable ships inside the public bundle, so anyone could relays traffic on our bill.
+ * Server-side secrets stay server-side and only the expiring derived credential reaches us.
+ * VITE_TURN_* remains as a local-dev escape hatch only.
+ */
+let cachedIceServers = STUN_ICE_SERVERS;
+let cachedUntil = 0;
+let pendingIce = null;
+
+async function requestIceServers() {
+  const { data, error } = await supabase.functions.invoke('ice-servers', { method: 'GET', timeout: 6000 });
+  if (error) throw error;
+  if (!Array.isArray(data?.iceServers) || data.iceServers.length === 0) {
+    throw new Error('ice-servers returned no servers');
   }
-  return { iceServers, iceCandidatePoolSize: 2 };
-};
+  const ttl = Number(data.ttl) || 300;
+  // Refresh at half the credential lifetime so a long consult never dials with dead creds.
+  cachedUntil = Date.now() + Math.max(60, Math.floor(ttl / 2)) * 1000;
+  cachedIceServers = data.iceServers;
+  return cachedIceServers;
+}
+
+export async function getIceServers() {
+  if (Date.now() < cachedUntil) return cachedIceServers;
+  if (!pendingIce) {
+    pendingIce = requestIceServers()
+      .catch((err) => {
+        console.warn('[webrtc] ice-servers unavailable, falling back to STUN-only:', err?.message || err);
+        const turnUrl = import.meta.env.VITE_TURN_URL;
+        cachedIceServers = turnUrl
+          ? [...STUN_ICE_SERVERS, {
+            urls: turnUrl.split(',').map((u) => u.trim()).filter(Boolean),
+            username: import.meta.env.VITE_TURN_USERNAME,
+            credential: import.meta.env.VITE_TURN_CREDENTIAL,
+          }]
+          : STUN_ICE_SERVERS;
+        cachedUntil = Date.now() + 60000; // back off, but retry rather than lose TURN for the session
+        return cachedIceServers;
+      })
+      .finally(() => { pendingIce = null; });
+  }
+  return pendingIce;
+}
+
+const buildRtcConfig = (servers) => ({
+  iceServers: servers?.length ? servers : STUN_ICE_SERVERS,
+  iceCandidatePoolSize: 2,
+});
 
 /*
  * Long-lived, shared signaling channels (one per conversation).
@@ -301,9 +339,9 @@ export default function useWebRTCCall({ selfId, peerId }) {
     if (statusRef.current !== 'idle') setCallStatus('ended');
   }, [cleanup, send, setCallStatus]);
 
-  const createPeerConnection = useCallback((callId) => {
+  const createPeerConnection = useCallback((callId, iceServers) => {
     console.log('[webrtc] createPeerConnection for callId:', callId);
-    const pc = new RTCPeerConnection(buildRtcConfig());
+    const pc = new RTCPeerConnection(buildRtcConfig(iceServers));
     pcRef.current = pc;
 
     pc.onicecandidate = (e) => {
@@ -384,7 +422,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setCallType(requestedType);
 
     try {
-      const pc = createPeerConnection(msg.callId);
+      const pc = createPeerConnection(msg.callId, await getIceServers());
       await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
       console.log('[webrtc] callee applied remote offer');
 
@@ -582,11 +620,11 @@ export default function useWebRTCCall({ selfId, peerId }) {
   }, []);
 
   // ----- Public API -----
-  const startCall = useCallback(async (type = 'video') => {
+  const startCall = useCallback(async (type = 'video', externalCallId) => {
     console.log('[webrtc] startCall called with type:', type);
     if (statusRef.current === 'connecting' || statusRef.current === 'connected') return null;
     cleanup();
-    const callId = newCallId();
+    const callId = externalCallId || newCallId();
     callIdRef.current = callId;
     answeredCallIdRef.current = null;
     setRoleBoth('caller');
@@ -595,6 +633,9 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setIsCameraOff(type === 'audio');
     setCallType(type);
     setCallStatus('connecting');
+
+    // Mint TURN credentials while the user is still answering the permission prompt.
+    const iceServersPromise = getIceServers();
 
     let media;
     try {
@@ -617,7 +658,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setIsCameraOff(media.type === 'audio');
     attachMedia();
 
-    const pc = createPeerConnection(callId);
+    const pc = createPeerConnection(callId, await iceServersPromise);
     media.stream.getTracks().forEach((track) => pc.addTrack(track, media.stream));
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -646,6 +687,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setIsCameraOff(type === 'audio');
     setCallType(type === 'audio' ? 'audio' : 'video');
     setCallStatus('connecting');
+    getIceServers(); // warm the cache so answerOffer does not stall on the first fetch
 
     const pending = pendingOfferRef.current;
     if (pending && Date.now() - pending.receivedAt < 60000 && pending.callId !== answeredCallIdRef.current) {

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { clearPushToken } from '@/lib/pushNotifications';
 
 const defaultAuthValue = {
   user: null,
@@ -167,6 +168,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
+    // Drop this device from the push registry while the session can still authorise it,
+    // otherwise a signed-out handset keeps ringing for someone else's consultations.
+    await clearPushToken();
     setUser(null);
     // Onboarding drafts hold contact details and medical notes; they must not
     // survive on a shared device after sign-out.

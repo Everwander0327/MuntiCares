@@ -8,6 +8,7 @@ import { unlockAudio } from '@/lib/audio';
 import { useAuth } from '@/contexts/AuthContext';
 import { CallProvider } from '@/contexts/CallContext';
 import { IncomingCallOverlay } from '@/features/chat';
+import { useCallPushNotifications } from '@/lib/pushNotifications';
 
 // Layouts
 import MainLayout from '@/layouts/MainLayout';
@@ -52,6 +53,8 @@ function AppContent() {
 
   const auth = useAuth();
   const user = auth?.user;
+
+  useCallPushNotifications(user);
 
   useEffect(() => {
     window.scrollTo(0, 0);

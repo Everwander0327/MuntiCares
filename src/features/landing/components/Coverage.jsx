@@ -61,12 +61,6 @@ const Coverage = () => (
         <motion.div variants={staggerItem}>
           <TypographicTicker items={barangays} label="Covered barangays" />
         </motion.div>
-        <motion.p
-          className="text-center text-tertiary dark:text-tertiary text-base pt-4"
-          variants={staggerItem}
-        >
-          <span className="font-display font-semibold text-link text-2xl">{barangays.length}</span> barangays covered and expanding
-        </motion.p>
       </motion.div>
     </div>
   </section>
