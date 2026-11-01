@@ -65,10 +65,16 @@ export async function getIceServers() {
   return pendingIce;
 }
 
-const buildRtcConfig = (servers) => ({
-  iceServers: servers?.length ? servers : STUN_ICE_SERVERS,
-  iceCandidatePoolSize: 2,
-});
+const buildRtcConfig = (servers) => {
+  const iceServers = servers?.length ? servers : STUN_ICE_SERVERS;
+  console.log('[webrtc] configuring RTCPeerConnection with iceServers:', iceServers);
+  return {
+    iceServers,
+    iceCandidatePoolSize: 2,
+    bundlePolicy: 'max-bundle',
+    rtcpMuxPolicy: 'require',
+  };
+};
 
 /*
  * Long-lived, shared signaling channels (one per conversation).

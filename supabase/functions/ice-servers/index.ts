@@ -21,6 +21,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ??
 const STUN_SERVERS: IceServer[] = [
   { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
   { urls: ["stun:stun.cloudflare.com:3478"] },
+  { urls: ["stun:stun.relay.metered.ca:80"] },
 ];
 
 const json = (body: unknown, init: ResponseInit = {}) =>
@@ -83,7 +84,12 @@ const restHmacCredentials = async (): Promise<{ turn: IceServer[]; ttl: number }
   const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(username));
   const credential = btoa(String.fromCharCode(...new Uint8Array(signature)));
 
-  return { turn: [{ urls: splitUrls(urls), username, credential }], ttl };
+  const turn = splitUrls(urls).map((url) => ({
+    urls: [url],
+    username,
+    credential,
+  }));
+  return { turn, ttl };
 };
 
 // Proxy for vendors that mint the credentials themselves.
@@ -125,7 +131,12 @@ const staticCredentials = (): { turn: IceServer[]; ttl: number } | null => {
   const username = Deno.env.get("TURN_USERNAME");
   const credential = Deno.env.get("TURN_PASSWORD");
   if (!urls || !username || !credential) return null;
-  return { turn: [{ urls: splitUrls(urls), username, credential }], ttl: 3600 };
+  const turn = splitUrls(urls).map((url) => ({
+    urls: [url],
+    username,
+    credential,
+  }));
+  return { turn, ttl: 3600 };
 };
 
 Deno.serve(async (req) => {
