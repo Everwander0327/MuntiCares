@@ -491,7 +491,7 @@ const AuthPage = () => {
   };
 
   return (
-    <main ref={pageRef} className="relative min-h-[100dvh] overflow-x-hidden w-full max-w-full flex items-center justify-center bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white pt-24 sm:pt-28 pb-8 px-3 sm:px-6">
+    <main ref={pageRef} className="relative min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] overflow-x-hidden w-full max-w-full flex items-center justify-center bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white py-8 sm:py-12 px-3 sm:px-6">
       {/* Theme-aware cinema backdrop */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
         <div ref={bgRef} className="h-full w-full">

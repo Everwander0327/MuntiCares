@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Heart, House, MagnifyingGlass, Info, SignIn, ArrowUpRight } from '@phosphor-icons/react';
+import { Heart, ArrowUpRight } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/shared/feedback';
 import { useAuth } from '@/contexts/AuthContext';
-
-const mobileLinks = [
-  { to: '/', label: 'Home', icon: <House size={18} weight="light" /> },
-  { to: '/patient/providers', label: 'Find Providers', icon: <MagnifyingGlass size={18} weight="light" /> },
-  { to: '#footer', label: 'About', icon: <Info size={18} weight="light" />, isAnchor: true },
-];
-
-const FLUID = [0.32, 0.72, 0, 1];
 
 const Navbar = () => {
   const location = useLocation();
@@ -19,6 +11,7 @@ const Navbar = () => {
   const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
   const isActive = (path) => location.pathname === path;
 
   useEffect(() => {
@@ -42,121 +35,169 @@ const Navbar = () => {
 
   return (
     <>
-      {/* Floating glass pill detached from top */}
-      <div className="fixed top-0 left-0 right-0 z-40 flex justify-center px-4 pt-4 md:pt-6 pointer-events-none">
-        <motion.nav
-          initial={{ y: -64, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.8, ease: FLUID }}
-          className="pointer-events-auto w-full max-w-4xl neu-flat rounded-full px-4 md:px-6 py-2.5 sm:py-3 flex justify-between items-center"
-          aria-label="Primary navigation"
-        >
-          <Link to="/" className="flex items-center gap-2.5 group shrink-0 min-h-11" aria-label="MuntiCares home">
+      {/* Full-Width Edge-to-Edge Sticky Header (Option 2) */}
+      <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md transition-colors duration-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between">
+          
+          {/* Brand Logo with Preserved Heart Icon */}
+          <Link to="/" className="flex items-center gap-2.5 group shrink-0" aria-label="MuntiCares home">
             <motion.div
-              className="hidden md:flex neu-flat-sm p-2 rounded-2xl"
-              whileHover={{ rotate: 12 }}
+              className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/20 text-link"
+              whileHover={{ scale: 1.05, rotate: 6 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >
               <Heart size={20} weight="fill" className="text-link fill-primary" />
             </motion.div>
-            <span className="font-display text-lg md:text-xl font-black text-link tracking-tight">MuntiCares</span>
+            <span className="font-display text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight group-hover:text-link dark:group-hover:text-primary-400 transition-colors">
+              MuntiCares
+            </span>
           </Link>
 
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-6">
-            <div className="flex gap-3">
-              <Link to="/" className={`inline-flex items-center justify-center min-h-11 min-w-11 px-1 font-bold text-sm transition-all ${isActive('/') ? 'text-link underline underline-offset-4 decoration-2' : 'text-slate-600 dark:text-slate-300 hover:text-link'}`}>Home</Link>
-              <Link to="/patient/providers" className={`inline-flex items-center justify-center min-h-11 min-w-11 px-1 font-bold text-sm transition-all ${isActive('/patient/providers') ? 'text-link underline underline-offset-4 decoration-2' : 'text-slate-600 dark:text-slate-300 hover:text-link'}`}>Find Providers</Link>
-              <button type="button" onClick={scrollToFooter} className="inline-flex items-center justify-center min-h-11 min-w-11 px-1 cursor-pointer text-slate-600 dark:text-slate-300 hover:text-link font-bold text-sm transition-all">About</button>
+          {/* Conditional Navigation & Actions */}
+          {isAuthPage ? (
+            /* Auth Pages State (/login, /register): Clean Minimal Header */
+            <div className="flex items-center gap-3 sm:gap-4">
+              <ThemeToggle className="!w-10 !h-10 !rounded-xl" />
+              <Link
+                to="/"
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400 transition-colors px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900"
+              >
+                <span>&larr;</span> Back to Home
+              </Link>
             </div>
-            <div className="flex items-center gap-3">
-              <ThemeToggle className="!w-11 !h-11 !rounded-2xl" />
-              {user ? (
-                <Link to={`/${user.role}/dashboard`} className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 min-h-11 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
-                  Dashboard
-                  <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
-                    <ArrowUpRight size={14} weight="bold" className="text-white" />
-                  </span>
+          ) : (
+            /* Landing & Public Pages: Full Navigation Links & Actions */
+            <>
+              {/* Desktop Nav Links */}
+              <nav className="hidden md:flex items-center gap-8 text-sm font-semibold">
+                <Link
+                  to="/"
+                  className={`transition-colors duration-150 ${
+                    isActive('/')
+                      ? 'text-link dark:text-primary-400 font-bold'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Home
                 </Link>
-              ) : (
-                <>
-                  <Link to="/login" className="neu-btn inline-flex items-center justify-center min-h-11 font-bold text-xs sm:text-sm text-link px-4 py-2 rounded-xl transition-all">Login</Link>
-                  <Link to="/register" className="neu-btn-primary group inline-flex items-center gap-2 text-white pl-5 pr-2.5 py-2 min-h-11 rounded-2xl font-bold text-xs sm:text-sm shadow-md active:scale-[0.98]">
-                    Get Started
-                    <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center">
-                      <ArrowUpRight size={14} weight="bold" className="text-white" />
-                    </span>
+                <Link
+                  to="/patient/providers"
+                  className={`transition-colors duration-150 ${
+                    isActive('/patient/providers')
+                      ? 'text-link dark:text-primary-400 font-bold'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Find Providers
+                </Link>
+                <button
+                  type="button"
+                  onClick={scrollToFooter}
+                  className="cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors duration-150"
+                >
+                  About
+                </button>
+              </nav>
+
+              {/* Desktop Actions */}
+              <div className="hidden md:flex items-center gap-3">
+                <ThemeToggle className="!w-10 !h-10 !rounded-xl" />
+                {user ? (
+                  <Link
+                    to={`/${user.role}/dashboard`}
+                    className="neu-btn-primary inline-flex items-center gap-2 text-white px-4 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    Dashboard
+                    <ArrowUpRight size={14} weight="bold" />
                   </Link>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Mobile hamburger button */}
-          <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle className="!w-11 !h-11 !rounded-xl" />
-            <button
-              type="button"
-              onClick={() => setIsMenuOpen((v) => !v)}
-              className="neu-btn relative w-11 h-11 rounded-xl flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-link cursor-pointer active:scale-95 transition-all"
-              aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={isMenuOpen}
-            >
-              <div className="w-5 h-5 flex flex-col justify-center items-center gap-1">
-                <span className={`block h-0.5 w-5 bg-current rounded-full transition-transform duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
-                <span className={`block h-0.5 w-5 bg-current rounded-full transition-opacity duration-200 ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`} />
-                <span className={`block h-0.5 w-5 bg-current rounded-full transition-transform duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="inline-flex items-center justify-center font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200 hover:text-link dark:hover:text-primary-400 px-3.5 py-2 rounded-xl transition-colors"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="neu-btn-primary inline-flex items-center gap-1.5 text-white px-4 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    >
+                      Get Started
+                    </Link>
+                  </>
+                )}
               </div>
-            </button>
-          </div>
-        </motion.nav>
-      </div>
 
-      {/* Fullscreen neumorphic overlay drawer */}
+              {/* Mobile Hamburger Button */}
+              <div className="md:hidden flex items-center gap-2">
+                <ThemeToggle className="!w-10 !h-10 !rounded-xl" />
+                <button
+                  type="button"
+                  onClick={() => setIsMenuOpen((v) => !v)}
+                  className="relative w-10 h-10 rounded-xl border border-slate-200/80 dark:border-slate-800 bg-slate-100/80 dark:bg-slate-900/80 flex items-center justify-center text-slate-800 dark:text-slate-100 hover:text-link cursor-pointer active:scale-95 transition-all"
+                  aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+                  aria-expanded={isMenuOpen}
+                >
+                  <div className="w-5 h-5 flex flex-col justify-center items-center gap-1">
+                    <span className={`block h-0.5 w-5 bg-current rounded-full transition-transform duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+                    <span className={`block h-0.5 w-5 bg-current rounded-full transition-opacity duration-200 ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`} />
+                    <span className={`block h-0.5 w-5 bg-current rounded-full transition-transform duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+                  </div>
+                </button>
+              </div>
+            </>
+          )}
+
+        </div>
+      </header>
+
+      {/* Fullscreen Mobile Drawer (Under Sticky Header) */}
       <AnimatePresence>
-        {isMenuOpen && (
+        {isMenuOpen && !isAuthPage && (
           <motion.div
-            className="fixed inset-0 z-30 md:hidden bg-[#ebf1f8] dark:bg-[#151f31] transform-gpu will-change-transform"
+            className="fixed inset-x-0 top-16 sm:top-18 bottom-0 z-30 md:hidden bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 transform-gpu overflow-y-auto"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="flex flex-col gap-3 px-6 pt-24 pb-10 h-full overflow-y-auto" style={{ minHeight: '100dvh' }}>
-              {mobileLinks.map((link) => (
-                <div key={link.label}>
-                  {link.isAnchor ? (
-                    <button
-                      type="button"
-                      onClick={scrollToFooter}
-                      className="neu-btn w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-display text-lg font-bold text-slate-800 dark:text-slate-100 transition-all text-left cursor-pointer"
-                    >
-                      <span className="text-link">{link.icon}</span>
-                      {link.label}
-                    </button>
-                  ) : (
-                    <Link
-                      to={link.to}
-                      onClick={() => setIsMenuOpen(false)}
-                      className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl font-display text-lg font-bold transition-all ${
-                        isActive(link.to)
-                          ? 'neu-pressed text-link font-black'
-                          : 'neu-btn text-slate-800 dark:text-slate-100'
-                      }`}
-                    >
-                      <span className="text-link">{link.icon}</span>
-                      {link.label}
-                    </Link>
-                  )}
-                </div>
-              ))}
+            <div className="flex flex-col gap-2 px-6 py-6">
+              <Link
+                to="/"
+                onClick={() => setIsMenuOpen(false)}
+                className={`w-full py-3 px-4 rounded-xl font-display text-base font-bold transition-all ${
+                  isActive('/')
+                    ? 'bg-primary/10 text-link font-black'
+                    : 'text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900'
+                }`}
+              >
+                Home
+              </Link>
+              <Link
+                to="/patient/providers"
+                onClick={() => setIsMenuOpen(false)}
+                className={`w-full py-3 px-4 rounded-xl font-display text-base font-bold transition-all ${
+                  isActive('/patient/providers')
+                    ? 'bg-primary/10 text-link font-black'
+                    : 'text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900'
+                }`}
+              >
+                Find Providers
+              </Link>
+              <button
+                type="button"
+                onClick={scrollToFooter}
+                className="w-full py-3 px-4 rounded-xl font-display text-base font-bold text-left text-slate-800 dark:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all cursor-pointer"
+              >
+                About
+              </button>
 
-              <div className="neu-flat rounded-3xl p-3.5 mt-3 flex flex-col gap-2.5">
+              <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2.5">
                 {user ? (
                   <Link
                     to={`/${user.role}/dashboard`}
                     onClick={() => setIsMenuOpen(false)}
-                    className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-2xl text-white font-bold text-sm shadow-md cursor-pointer"
+                    className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-xl text-white font-bold text-sm shadow-md cursor-pointer"
                   >
                     Dashboard
                     <ArrowUpRight size={16} weight="bold" />
@@ -166,18 +207,16 @@ const Navbar = () => {
                     <Link
                       to="/login"
                       onClick={() => setIsMenuOpen(false)}
-                      className="neu-btn flex items-center justify-center gap-2.5 py-3 rounded-2xl font-bold text-sm text-link transition-all cursor-pointer"
+                      className="w-full py-3 rounded-xl font-bold text-sm text-center text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-900 transition-all cursor-pointer border border-slate-200 dark:border-slate-800"
                     >
-                      <SignIn size={18} weight="bold" />
-                      Login to Account
+                      Login
                     </Link>
                     <Link
                       to="/register"
                       onClick={() => setIsMenuOpen(false)}
-                      className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-2xl text-white font-bold text-sm shadow-md cursor-pointer"
+                      className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-xl text-white font-bold text-sm shadow-md cursor-pointer"
                     >
                       Get Started
-                      <ArrowUpRight size={16} weight="bold" />
                     </Link>
                   </>
                 )}

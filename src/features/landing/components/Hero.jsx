@@ -14,7 +14,7 @@ const Hero = () => {
     <section
       id="hero"
       ref={sectionRef}
-      className="relative overflow-hidden min-h-[100dvh] flex items-center pt-20 pb-20 md:pb-32"
+      className="relative overflow-hidden min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] flex items-center pt-8 sm:pt-12 pb-16 md:pb-24"
       aria-label="Hero banner"
     >
       {/* Cinematic full-bleed backdrop with theme-aware wash */}
