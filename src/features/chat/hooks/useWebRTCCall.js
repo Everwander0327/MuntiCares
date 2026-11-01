@@ -227,6 +227,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
   const pendingOfferRef = useRef(null);
   const answeredCallIdRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
+  const localCandidatesRef = useRef([]);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -291,8 +292,8 @@ export default function useWebRTCCall({ selfId, peerId }) {
     attach(remoteAudioRef.current, remoteStreamRef.current, false);
   }, []);
 
-  const cleanup = useCallback(() => {
-    console.log('[webrtc] cleanup called');
+  const cleanup = useCallback((keepPendingCallId = null) => {
+    console.log('[webrtc] cleanup called, keepPendingCallId:', keepPendingCallId);
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     remoteStreamRef.current = null;
@@ -309,7 +310,12 @@ export default function useWebRTCCall({ selfId, peerId }) {
     [localVideoRef, remoteVideoRef, remoteAudioRef].forEach((r) => {
       if (r.current) r.current.srcObject = null;
     });
-    pendingCandidatesRef.current = [];
+    if (keepPendingCallId) {
+      pendingCandidatesRef.current = pendingCandidatesRef.current.filter((c) => c.callId === keepPendingCallId);
+    } else {
+      pendingCandidatesRef.current = [];
+    }
+    localCandidatesRef.current = [];
     offerPayloadRef.current = null;
     setPcState('new');
   }, []);
@@ -317,11 +323,10 @@ export default function useWebRTCCall({ selfId, peerId }) {
   const flushCandidates = useCallback(async (callId) => {
     const pc = pcRef.current;
     if (!pc || !pc.remoteDescription) return;
-    const queued = pendingCandidatesRef.current;
-    pendingCandidatesRef.current = queued.filter((c) => c.callId !== callId);
-    console.log('[webrtc] flushing', queued.length, 'queued candidates for callId:', callId);
-    for (const c of queued) {
-      if (c.callId !== callId) continue;
+    const forThisCall = pendingCandidatesRef.current.filter((c) => c.callId === callId);
+    pendingCandidatesRef.current = pendingCandidatesRef.current.filter((c) => c.callId !== callId);
+    console.log('[webrtc] flushing', forThisCall.length, 'queued candidates for callId:', callId);
+    for (const c of forThisCall) {
       try {
         await pc.addIceCandidate(new RTCIceCandidate(c.candidate));
       } catch (err) {
@@ -352,16 +357,18 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
-        console.log('[webrtc] onicecandidate:', e.candidate.candidate?.slice(0, 45));
+        console.log('[webrtc] onicecandidate:', e.candidate.candidate?.slice(0, 55));
+        const candObj = {
+          candidate: e.candidate.candidate,
+          sdpMid: e.candidate.sdpMid,
+          sdpMLineIndex: e.candidate.sdpMLineIndex,
+          usernameFragment: e.candidate.usernameFragment,
+        };
+        localCandidatesRef.current.push(candObj);
         send({
           type: 'candidate',
           callId,
-          candidate: {
-            candidate: e.candidate.candidate,
-            sdpMid: e.candidate.sdpMid,
-            sdpMLineIndex: e.candidate.sdpMLineIndex,
-            usernameFragment: e.candidate.usernameFragment,
-          },
+          candidate: candObj,
         });
       }
     };
@@ -392,28 +399,32 @@ export default function useWebRTCCall({ selfId, peerId }) {
     const onState = () => {
       if (pcRef.current !== pc) return;
       const state = pc.connectionState || pc.iceConnectionState;
-      console.log('[webrtc] pc connection state change:', state, 'connState:', pc.connectionState, 'iceState:', pc.iceConnectionState);
+      console.log('[webrtc] pc state change - connState:', pc.connectionState, 'iceState:', pc.iceConnectionState);
       setPcState(state);
-      if (state === 'connected' || state === 'completed') {
+      const isConnected =
+        pc.connectionState === 'connected' ||
+        pc.connectionState === 'completed' ||
+        pc.iceConnectionState === 'connected' ||
+        pc.iceConnectionState === 'completed';
+
+      if (isConnected) {
         setError(null);
         setCallStatus('connected');
         if (remoteStreamRef.current) {
-          const hasVideo = remoteStreamRef.current.getVideoTracks().some(t => t.readyState === 'live');
+          const hasVideo = remoteStreamRef.current.getVideoTracks().some((t) => t.readyState === 'live');
           if (hasVideo) setHasRemoteVideo(true);
         }
         tuneSenderParameters(pc);
         attachMedia();
-      } else if (state === 'disconnected' || state === 'closed') {
+      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
         console.log('[webrtc] peer connection state became disconnected/closed, finishing call');
         finishCall({ notify: false });
-      } else if (state === 'failed') {
+      } else if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed') {
         finishCall({ notify: true, reason: 'Connection failed. The network may be blocking peer-to-peer calls.' });
       }
     };
     pc.onconnectionstatechange = onState;
-    pc.oniceconnectionstatechange = () => {
-      if (!('connectionState' in pc)) onState();
-    };
+    pc.oniceconnectionstatechange = onState;
 
     return pc;
   }, [attachMedia, finishCall, send, setCallStatus]);
@@ -464,6 +475,16 @@ export default function useWebRTCCall({ selfId, peerId }) {
         sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
       });
       console.log('[webrtc] callee sent answer');
+
+      if (localCandidatesRef.current?.length) {
+        for (const cand of localCandidatesRef.current) {
+          send({
+            type: 'candidate',
+            callId: msg.callId,
+            candidate: cand,
+          });
+        }
+      }
     } catch (err) {
       console.error('[webrtc] failed to answer offer', err);
       finishCall({ notify: true, reason: 'Could not connect the call. Please try again.' });
@@ -495,6 +516,16 @@ export default function useWebRTCCall({ selfId, peerId }) {
           pcRef.current?.signalingState === 'have-local-offer') {
           console.log('[webrtc] caller sending offer in response to ready');
           send(offerPayloadRef.current);
+          if (localCandidatesRef.current?.length) {
+            console.log('[webrtc] caller re-sending', localCandidatesRef.current.length, 'candidates in response to ready');
+            for (const cand of localCandidatesRef.current) {
+              send({
+                type: 'candidate',
+                callId: callIdRef.current,
+                candidate: cand,
+              });
+            }
+          }
         }
         break;
       }
@@ -538,6 +569,17 @@ export default function useWebRTCCall({ selfId, peerId }) {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
           console.log('[webrtc] applied answer successfully');
           await flushCandidates(msg.callId);
+
+          if (localCandidatesRef.current?.length) {
+            console.log('[webrtc] caller re-sending', localCandidatesRef.current.length, 'candidates to callee after answer');
+            for (const cand of localCandidatesRef.current) {
+              send({
+                type: 'candidate',
+                callId: msg.callId,
+                candidate: cand,
+              });
+            }
+          }
         } catch (err) {
           console.error('[webrtc] failed to apply answer', err);
         }
@@ -685,7 +727,8 @@ export default function useWebRTCCall({ selfId, peerId }) {
     console.log('[webrtc] joinCall called with type:', type, 'role:', roleRef.current);
     if (roleRef.current === 'callee' &&
       (statusRef.current === 'connecting' || statusRef.current === 'connected')) return;
-    cleanup();
+    const pendingCallId = pendingOfferRef.current?.callId;
+    cleanup(pendingCallId);
     callIdRef.current = null;
     setRoleBoth('callee');
     setError(null);
