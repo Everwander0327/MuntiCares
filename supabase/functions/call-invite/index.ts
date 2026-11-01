@@ -124,21 +124,38 @@ const sendTo = async (accessToken: string, registrationToken: string, call: Call
   return response;
 };
 
+const withCors = (req: Request, res: Response) => {
+  const origin = req.headers.get("origin");
+  if (origin) res.headers.set("access-control-allow-origin", origin);
+  res.headers.set("vary", "origin");
+  res.headers.set(
+    "access-control-allow-headers",
+    req.headers.get("access-control-request-headers") ??
+      "authorization, apikey, content-type, x-client-info, x-supabase-api-version, prefer",
+  );
+  res.headers.set("access-control-allow-methods", "POST, OPTIONS");
+  res.headers.set("access-control-max-age", "600");
+  return res;
+};
+
+const json = (req: Request, body: unknown, init: ResponseInit = {}) =>
+  withCors(
+    req,
+    new Response(JSON.stringify(body), {
+      ...init,
+      headers: {
+        "content-type": "application/json",
+        ...init.headers,
+      },
+    }),
+  );
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "access-control-allow-origin": req.headers.get("origin") ?? "*",
-        "access-control-allow-methods": "POST, OPTIONS",
-        "access-control-allow-headers":
-          req.headers.get("access-control-request-headers") ??
-          "authorization, apikey, content-type, x-client-info, x-supabase-api-version, prefer",
-      },
-    });
+    return withCors(req, new Response(null, { status: 204 }));
   }
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "method_not_allowed" }), { status: 405, headers: { "content-type": "application/json" } });
+    return json(req, { error: "method_not_allowed" }, { status: 405 });
   }
 
   const authHeader = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "").trim() ?? "";
@@ -148,12 +165,12 @@ Deno.serve(async (req) => {
   });
   const { data: authData, error: authError } = await jwtClient.auth.getUser();
   if (authError || !authData?.user) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { "content-type": "application/json" } });
+    return json(req, { error: "unauthorized" }, { status: 401 });
   }
 
   const { callId } = await req.json().catch(() => ({ callId: null }));
   if (!callId || !SERVICE_ROLE_KEY || !PROJECT_ID) {
-    return new Response(JSON.stringify({ error: "bad_request" }), { status: 400, headers: { "content-type": "application/json" } });
+    return json(req, { error: "bad_request" }, { status: 400 });
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -169,10 +186,10 @@ Deno.serve(async (req) => {
     .maybeSingle<CallRow>();
 
   if (callError || !call) {
-    return new Response(JSON.stringify({ error: "call_not_found" }), { status: 404, headers: { "content-type": "application/json" } });
+    return json(req, { error: "call_not_found" }, { status: 404 });
   }
   if (call.caller_id !== authData.user.id || call.status !== "ringing") {
-    return new Response(JSON.stringify({ error: "not_ringable" }), { status: 403, headers: { "content-type": "application/json" } });
+    return json(req, { error: "not_ringable" }, { status: 403 });
   }
 
   const { data: tokens, error: tokensError } = await admin
@@ -182,7 +199,7 @@ Deno.serve(async (req) => {
     .eq("platform", "android");
 
   if (tokensError || !tokens?.length) {
-    return new Response(JSON.stringify({ delivered: 0, reason: "no_tokens" }), { headers: { "content-type": "application/json" } });
+    return json(req, { delivered: 0, reason: "no_tokens" });
   }
 
   let accessToken: string;
@@ -190,7 +207,7 @@ Deno.serve(async (req) => {
     accessToken = await getAccessToken();
   } catch (err) {
     console.error("[call-invite] OAuth failed:", err);
-    return new Response(JSON.stringify({ error: "push_provider_unavailable" }), { status: 502, headers: { "content-type": "application/json" } });
+    return json(req, { error: "push_provider_unavailable" }, { status: 502 });
   }
 
   let delivered = 0;
@@ -211,5 +228,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  return new Response(JSON.stringify({ delivered, attempted: tokens.length }), { headers: { "content-type": "application/json" } });
+  return json(req, { delivered, attempted: tokens.length });
 });
