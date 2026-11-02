@@ -85,6 +85,25 @@ const buildRtcConfig = (servers) => {
  */
 const registry = (globalThis.__mcSignalingChannels ||= new Map());
 
+/*
+ * A CHANNEL_ERROR or TIMED_OUT channel does not recover on its own, so every signal
+ * would stay queued until the page reloads. Rebuild it and carry listeners and the
+ * pending queue across.
+ */
+function retrySignalingChannel(topic, entry) {
+  if (entry.retryTimer || registry.get(topic) !== entry) return;
+  entry.retryTimer = setTimeout(() => {
+    entry.retryTimer = null;
+    if (registry.get(topic) !== entry) return;
+    console.log('[webrtc] rebuilding signaling channel for', topic);
+    registry.delete(topic);
+    supabase.removeChannel(entry.channel);
+    const next = getSignalingChannel(topic);
+    entry.listeners.forEach((fn) => next.listeners.add(fn));
+    entry.queue.forEach((payload) => next.queue.push(payload));
+  }, 1500);
+}
+
 function getSignalingChannel(topic) {
   const existing = registry.get(topic);
   if (existing) {
@@ -94,7 +113,7 @@ function getSignalingChannel(topic) {
 
   console.log('[webrtc] creating new channel for', topic);
   const channel = supabase.channel(topic);
-  const entry = { channel, listeners: new Set(), ready: false, queue: [] };
+  const entry = { channel, listeners: new Set(), ready: false, queue: [], retryTimer: null };
 
   channel.on('broadcast', { event: 'signal' }, (data) => {
     const payload = data?.payload;
@@ -114,6 +133,7 @@ function getSignalingChannel(topic) {
       entry.listeners.forEach((fn) => fn({ type: '__subscribed' }));
     } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       entry.ready = false;
+      retrySignalingChannel(topic, entry);
     }
   });
 
@@ -121,22 +141,7 @@ function getSignalingChannel(topic) {
   return entry;
 }
 
-export const waitForIceGathering = (pc, timeoutMs) =>
-  new Promise((resolve) => {
-    if (pc.iceGatheringState === 'complete') return resolve();
-    const check = () => {
-      if (pc.iceGatheringState === 'complete') done();
-    };
-    const done = () => {
-      clearTimeout(timer);
-      pc.removeEventListener('icegatheringstatechange', check);
-      resolve();
-    };
-    const timer = setTimeout(done, timeoutMs);
-    pc.addEventListener('icegatheringstatechange', check);
-  });
-
-const newCallId = () =>
+export const newCallId = () =>
   (globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
 const tuneSenderParameters = async (pc) => {
@@ -158,6 +163,31 @@ const tuneSenderParameters = async (pc) => {
   } catch (err) {
     console.warn('[webrtc] sender parameter tuning notice:', err);
   }
+};
+
+/*
+ * The sender carrying our video track. A sender is matched by track kind only:
+ * every sender has a dtlsTransport once the connection is up, so a looser test
+ * returns the audio sender and replaceTrack(videoTrack) then throws a kind mismatch.
+ */
+const findVideoSender = (pc) => pc?.getSenders().find((s) => s.track?.kind === 'video') || null;
+
+/**
+ * Swap in or add an outgoing video track. Renegotiates only when the connection
+ * has no video sender yet (an audio call that later turns the camera on).
+ */
+const setOutgoingVideoTrack = async (pc, track, stream, sendRenegotiateOffer) => {
+  const sender = findVideoSender(pc);
+  if (sender) {
+    await sender.replaceTrack(track);
+    await tuneSenderParameters(pc);
+    return;
+  }
+  pc.addTrack(track, stream);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await tuneSenderParameters(pc);
+  await sendRenegotiateOffer();
 };
 
 async function getMedia(type, facing = 'user') {
@@ -228,6 +258,8 @@ export default function useWebRTCCall({ selfId, peerId }) {
   const answeredCallIdRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
   const localCandidatesRef = useRef([]);
+  const disconnectTimerRef = useRef(null);
+  const iceRestartTriedRef = useRef(false);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -294,6 +326,11 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
   const cleanup = useCallback((keepPendingCallId = null) => {
     console.log('[webrtc] cleanup called, keepPendingCallId:', keepPendingCallId);
+    if (disconnectTimerRef.current) {
+      clearTimeout(disconnectTimerRef.current);
+      disconnectTimerRef.current = null;
+    }
+    iceRestartTriedRef.current = false;
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     remoteStreamRef.current = null;
@@ -349,6 +386,44 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setCameraRotation(0);
     if (statusRef.current !== 'idle') setCallStatus('ended');
   }, [cleanup, send, setCallStatus]);
+
+  /**
+   * Announce a locally created renegotiation offer (camera turned on mid-call).
+   * Refuses when the peer is offering at the same time, otherwise both sides sit in
+   * have-local-offer and every setRemoteDescription afterwards throws.
+   */
+  const sendRenegotiationOffer = useCallback(async (pc) => {
+    if (pcRef.current !== pc) return;
+    if (pc.signalingState !== 'have-local-offer') return;
+    offerPayloadRef.current = {
+      type: 'offer',
+      callId: callIdRef.current,
+      callType: 'video',
+      sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
+    };
+    send(offerPayloadRef.current);
+  }, [send]);
+
+  /*
+   * 'disconnected' is recoverable — a Wi-Fi handoff or a brief NAT pinhole lapse
+   * looks exactly like a real drop. Wait, then restart ICE once, then give up.
+   */
+  const watchDisconnected = useCallback((pc) => {
+    if (disconnectTimerRef.current || pcRef.current !== pc) return;
+    disconnectTimerRef.current = setTimeout(() => {
+      disconnectTimerRef.current = null;
+      if (pcRef.current !== pc) return;
+      if (pc.connectionState === 'connected' || pc.connectionState === 'completed') return;
+      if (!iceRestartTriedRef.current) {
+        iceRestartTriedRef.current = true;
+        try { pc.restartIce(); } catch { /* browser without restartIce */ }
+        setError('Connection unstable — reconnecting…');
+        watchDisconnected(pc);
+        return;
+      }
+      finishCall({ notify: true, reason: 'Connection lost. Please call again.' });
+    }, 8000);
+  }, [finishCall]);
 
   const createPeerConnection = useCallback((callId, iceServers) => {
     console.log('[webrtc] createPeerConnection for callId:', callId);
@@ -408,6 +483,11 @@ export default function useWebRTCCall({ selfId, peerId }) {
         pc.iceConnectionState === 'completed';
 
       if (isConnected) {
+        if (disconnectTimerRef.current) {
+          clearTimeout(disconnectTimerRef.current);
+          disconnectTimerRef.current = null;
+        }
+        iceRestartTriedRef.current = false;
         setError(null);
         setCallStatus('connected');
         if (remoteStreamRef.current) {
@@ -416,10 +496,18 @@ export default function useWebRTCCall({ selfId, peerId }) {
         }
         tuneSenderParameters(pc);
         attachMedia();
-      } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
-        console.log('[webrtc] peer connection state became disconnected/closed, finishing call');
+      } else if (pc.connectionState === 'closed') {
+        console.log('[webrtc] peer connection closed, finishing call');
         finishCall({ notify: false });
+      } else if (pc.connectionState === 'disconnected') {
+        console.log('[webrtc] peer connection disconnected, watching for recovery');
+        watchDisconnected(pc);
       } else if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed') {
+        if (!iceRestartTriedRef.current) {
+          iceRestartTriedRef.current = true;
+          try { pc.restartIce(); } catch { /* browser without restartIce */ }
+          return;
+        }
         finishCall({ notify: true, reason: 'Connection failed. The network may be blocking peer-to-peer calls.' });
       }
     };
@@ -427,7 +515,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     pc.oniceconnectionstatechange = onState;
 
     return pc;
-  }, [attachMedia, finishCall, send, setCallStatus]);
+  }, [attachMedia, finishCall, send, setCallStatus, watchDisconnected]);
 
   const answerOffer = useCallback(async (msg) => {
     console.log('[webrtc] answerOffer starting for callId:', msg.callId);
@@ -532,6 +620,11 @@ export default function useWebRTCCall({ selfId, peerId }) {
       case 'offer': {
         console.log('[webrtc] RX offer, role:', roleRef.current, 'hasPc:', !!pcRef.current);
         if (pcRef.current && statusRef.current === 'connected' && msg.callId === callIdRef.current) {
+          if (pcRef.current.signalingState !== 'stable') {
+            // Both sides toggled the camera at once: applying this offer now would throw.
+            console.warn('[webrtc] renegotiation offer ignored, signalingState:', pcRef.current.signalingState);
+            return;
+          }
           console.log('[webrtc] handling renegotiation offer mid-call');
           try {
             await pcRef.current.setRemoteDescription(new RTCSessionDescription(msg.sdp));
@@ -606,12 +699,26 @@ export default function useWebRTCCall({ selfId, peerId }) {
           }
         } else {
           pendingCandidatesRef.current.push({ callId: msg.callId, candidate: msg.candidate });
-          if (pendingCandidatesRef.current.length > 200) pendingCandidatesRef.current.shift();
+          if (pendingCandidatesRef.current.length > 200) {
+            // Under a candidate flood, shed other calls first — the active call's
+            // earliest candidates are the host candidates that make it connect.
+            const activeCallId = callIdRef.current;
+            const hasForeign = pendingCandidatesRef.current.some((c) => c.callId !== activeCallId);
+            if (hasForeign) {
+              pendingCandidatesRef.current = pendingCandidatesRef.current.filter((c) => c.callId === activeCallId);
+            } else {
+              pendingCandidatesRef.current.shift();
+            }
+          }
         }
         break;
       }
       case 'hangup': {
         console.log('[webrtc] RX hangup, active:', statusRef.current, 'msgCallId:', msg.callId, 'ourCallId:', callIdRef.current);
+        // A hangup for a call that already ended must not kill the one now in flight
+        // between the same two people.
+        const currentCallId = callIdRef.current || pendingOfferRef.current?.callId;
+        if (msg.callId && currentCallId && msg.callId !== currentCallId) return;
         if (pendingOfferRef.current?.callId === msg.callId) pendingOfferRef.current = null;
         const active = statusRef.current === 'connecting' || statusRef.current === 'connected';
         if (!active) return;
@@ -812,25 +919,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
       const pc = pcRef.current;
       if (pc) {
-        const senders = pc.getSenders();
-        const videoSender = senders.find((s) => s.track?.kind === 'video' || s.dtlsTransport);
-        if (videoSender && typeof videoSender.replaceTrack === 'function') {
-          console.log('[webrtc] replaceTrack on existing video sender');
-          await videoSender.replaceTrack(newTrack);
-          await tuneSenderParameters(pc);
-        } else {
-          console.log('[webrtc] addTrack new video track to pc');
-          pc.addTrack(newTrack, localStreamRef.current);
-          const offer = await pc.createOffer();
-          await pc.setLocalDescription(offer);
-          await tuneSenderParameters(pc);
-          send({
-            type: 'offer',
-            callId: callIdRef.current,
-            callType: 'video',
-            sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
-          });
-        }
+        await setOutgoingVideoTrack(pc, newTrack, localStreamRef.current, () => sendRenegotiationOffer(pc));
       }
 
       setIsCameraOff(false);
@@ -842,7 +931,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     } catch (err) {
       console.error('[webrtc] failed to turn camera on', err);
     }
-  }, [attachMedia, isCameraOff, send]);
+  }, [attachMedia, isCameraOff, send, sendRenegotiationOffer]);
 
   const rotateCamera = useCallback(() => {
     setCameraRotation((prev) => (prev + 90) % 360);
@@ -887,12 +976,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
       const pc = pcRef.current;
       if (pc) {
-        const senders = pc.getSenders();
-        const videoSender = senders.find((s) => s.track?.kind === 'video' || s.dtlsTransport);
-        if (videoSender && typeof videoSender.replaceTrack === 'function') {
-          await videoSender.replaceTrack(newTrack);
-          await tuneSenderParameters(pc);
-        }
+        await setOutgoingVideoTrack(pc, newTrack, localStreamRef.current, () => sendRenegotiationOffer(pc));
       }
 
       facingModeRef.current = nextFacing;
@@ -903,7 +987,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
       console.warn('[webrtc] device could not switch facingMode, rotating preview instead:', err);
       rotateCamera();
     }
-  }, [attachMedia, rotateCamera]);
+  }, [attachMedia, rotateCamera, sendRenegotiationOffer]);
 
   return {
     callStatus,

@@ -80,7 +80,7 @@ export const PresenceProvider = ({ children }) => {
         channelRef.current = null;
       }
     };
-  }, [user?.id]);
+  }, [user?.id, user?.full_name]);
 
   const isUserOnline = useCallback((userId) => onlineUsers.has(userId), [onlineUsers]);
 

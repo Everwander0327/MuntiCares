@@ -37,6 +37,10 @@ export default function usePatientRequests(patientId) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const channelRef = useRef(null);
+  // Mirror of the list for realtime handlers: reading state inside a setState
+  // updater would run toasts and refetches twice under StrictMode.
+  const requestsRef = useRef([]);
+  useEffect(() => { requestsRef.current = requests; }, [requests]);
 
   const fetchRequests = useCallback(async () => {
     if (!patientId) {
@@ -119,47 +123,46 @@ export default function usePatientRequests(patientId) {
             const newRow = payload.new || payload.record || payload;
             if (!newRow) return;
 
-            setRequests(prev => {
-              const exists = prev.find(r => r.id === newRow.id);
-              if (exists) {
-                const resolvedProvider =
-                  newRow.provider?.full_name ||
-                  newRow.provider_name ||
-                  (exists.provider && exists.provider !== 'Unknown' ? exists.provider : 'Unknown');
-
-                if (newRow.status && newRow.status !== exists.status) {
-                  notifyPatientStatusChange(newRow.id, exists.status, newRow.status, resolvedProvider);
-                }
-
-                // Preserve joined provider fields (full_name, avatar_url, location) since
-                // Supabase Realtime postgres_changes payloads do not include foreign table joins.
-                return prev.map(r => r.id === newRow.id ? {
-                  ...r,
-                  id: newRow.id,
-                  patientId: newRow.patient_id ?? r.patientId,
-                  providerId: newRow.provider_id ?? r.providerId,
-                  provider: resolvedProvider,
-                  providerAvatarUrl: newRow.provider?.avatar_url || r.providerAvatarUrl || '',
-                  service: newRow.service ?? r.service,
-                  date: newRow.date ?? r.date,
-                  time: newRow.time ?? r.time,
-                  status: newRow.status ?? r.status,
-                  location: newRow.provider?.location || (r.location && r.location !== 'Unknown' ? r.location : 'Muntinlupa City'),
-                  originalNotes: newRow.notes ?? r.originalNotes ?? '',
-                  destLat: newRow.dest_lat !== undefined ? newRow.dest_lat : r.destLat,
-                  destLng: newRow.dest_lng !== undefined ? newRow.dest_lng : r.destLng,
-                  destAddress: newRow.dest_address !== undefined ? newRow.dest_address : r.destAddress,
-                  destSource: newRow.dest_source !== undefined ? newRow.dest_source : r.destSource,
-                  destVersion: newRow.dest_version !== undefined ? newRow.dest_version : r.destVersion,
-                  destUpdatedAt: newRow.dest_updated_at !== undefined ? newRow.dest_updated_at : r.destUpdatedAt,
-                  routeStartedAt: newRow.route_started_at !== undefined ? newRow.route_started_at : r.routeStartedAt,
-                  arrivedAt: newRow.arrived_at !== undefined ? newRow.arrived_at : r.arrivedAt,
-                } : r);
-              }
+            const exists = requestsRef.current.find(r => r.id === newRow.id);
+            if (!exists) {
               // New request inserted: refetch so joined provider details are populated
               fetchRequests();
-              return prev;
-            });
+              return;
+            }
+
+            const resolvedProvider =
+              newRow.provider?.full_name ||
+              newRow.provider_name ||
+              (exists.provider && exists.provider !== 'Unknown' ? exists.provider : 'Unknown');
+
+            if (newRow.status && newRow.status !== exists.status) {
+              notifyPatientStatusChange(newRow.id, exists.status, newRow.status, resolvedProvider);
+            }
+
+            // Preserve joined provider fields (full_name, avatar_url, location) since
+            // Supabase Realtime postgres_changes payloads do not include foreign table joins.
+            setRequests(prev => prev.map(r => r.id === newRow.id ? {
+              ...r,
+              id: newRow.id,
+              patientId: newRow.patient_id ?? r.patientId,
+              providerId: newRow.provider_id ?? r.providerId,
+              provider: resolvedProvider,
+              providerAvatarUrl: newRow.provider?.avatar_url || r.providerAvatarUrl || '',
+              service: newRow.service ?? r.service,
+              date: newRow.date ?? r.date,
+              time: newRow.time ?? r.time,
+              status: newRow.status ?? r.status,
+              location: newRow.provider?.location || (r.location && r.location !== 'Unknown' ? r.location : 'Muntinlupa City'),
+              originalNotes: newRow.notes ?? r.originalNotes ?? '',
+              destLat: newRow.dest_lat !== undefined ? newRow.dest_lat : r.destLat,
+              destLng: newRow.dest_lng !== undefined ? newRow.dest_lng : r.destLng,
+              destAddress: newRow.dest_address !== undefined ? newRow.dest_address : r.destAddress,
+              destSource: newRow.dest_source !== undefined ? newRow.dest_source : r.destSource,
+              destVersion: newRow.dest_version !== undefined ? newRow.dest_version : r.destVersion,
+              destUpdatedAt: newRow.dest_updated_at !== undefined ? newRow.dest_updated_at : r.destUpdatedAt,
+              routeStartedAt: newRow.route_started_at !== undefined ? newRow.route_started_at : r.routeStartedAt,
+              arrivedAt: newRow.arrived_at !== undefined ? newRow.arrived_at : r.arrivedAt,
+            } : r));
           } else if (type === 'DELETE') {
             const oldRow = payload.old || payload.record || payload;
             if (!oldRow) return;

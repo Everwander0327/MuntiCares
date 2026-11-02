@@ -48,7 +48,9 @@ const AdminRequests = () => {
           patient:patient_id(id, full_name, email, avatar_url),
           provider:provider_id(id, full_name, email, avatar_url)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        // Pagination here is client-side, so the table must not be pulled whole.
+        .limit(500);
 
       if (error) throw error;
 

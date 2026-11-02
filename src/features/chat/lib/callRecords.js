@@ -37,12 +37,13 @@ export async function createCallRecord({ id, callerId, calleeId, callType }) {
   return id;
 }
 
-async function patchCall(id, patch, guardColumn) {
+async function patchCall(id, patch, guardColumn, guardStatus) {
   if (!id) return;
   let query = supabase.from('calls').update(patch).eq('id', id);
   if (guardColumn) query = query.is(guardColumn, null);
+  if (guardStatus) query = query.eq('status', guardStatus);
   const { error } = await query;
-  if (error) console.warn('[calls] update failed:', error.message);
+  if (error) console.error('[calls] update failed:', error.code, error.message);
   notify();
 }
 
@@ -50,6 +51,9 @@ export const markCallAnswered = (id) => patchCall(
   id,
   { status: 'answered', answered_at: new Date().toISOString() },
   'answered_at',
+  // A row the sweep already closed stays closed: writing 'answered' onto it would
+  // break the answered-not-after-ended rule and rewrite call history.
+  'ringing',
 );
 
 export const markCallEnded = (id) => patchCall(

@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { playRingtone, stopRingtone } from '@/lib/audio';
 
 const IncomingCallOverlay = () => {
-  const { incomingCall, acceptCall, rejectCall, callCancelledByPeer } = useCalls();
+  const { incomingCall, acceptCall, rejectCall, callCancelledByPeer, expireIncomingCall } = useCalls();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -18,6 +18,13 @@ const IncomingCallOverlay = () => {
     }
     stopRingtone();
   }, [incomingCall]);
+
+  // Nobody answers forever: after 45 s the invitation is stale and the ring must stop.
+  useEffect(() => {
+    if (!incomingCall) return undefined;
+    const timer = setTimeout(expireIncomingCall, 45000);
+    return () => clearTimeout(timer);
+  }, [incomingCall, expireIncomingCall]);
 
   useEffect(() => {
     const handleVisibility = () => {

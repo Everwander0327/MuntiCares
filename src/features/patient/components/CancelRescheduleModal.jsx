@@ -11,6 +11,7 @@ import {
   Button
 } from '@/shared/ui';
 import { WORKING_HOURS } from '@/config/constants';
+import { slotsOverlap } from '@/lib/localDate';
 
 const WORKING_HOURS_START = WORKING_HOURS.START;
 const WORKING_HOURS_END = WORKING_HOURS.END;
@@ -102,12 +103,25 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
     const reason = cancelReason || selectedReason || 'No reason provided';
 
     try {
-      const { error } = await supabase
+      // A provider already on the way or on site cannot be cancelled from here;
+      // that has to be agreed with them.
+      const { data: updated, error } = await supabase
         .from('requests')
-        .update({ status: 'Cancelled', notes: `[Cancelled by patient] ${reason}` })
-        .eq('id', request.id);
+        .update({
+          status: 'Cancelled',
+          notes: request.originalNotes
+            ? `${request.originalNotes}\n[Cancelled by patient] ${reason}`
+            : `[Cancelled by patient] ${reason}`,
+        })
+        .eq('id', request.id)
+        .in('status', ['Pending', 'Accepted'])
+        .select('id');
 
       if (error) throw error;
+      if (!updated?.length) {
+        toast.error('This visit is already underway, so it cannot be cancelled here.');
+        return;
+      }
 
       toast.success('Request has been cancelled.');
       onActionComplete?.();
@@ -130,34 +144,38 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
     setSubmitting(true);
 
     try {
-      const { data: conflict } = await supabase
+      const { data: sameDay } = await supabase
         .from('requests')
-        .select('id')
+        .select('id, time')
         .neq('id', request.id)
         .eq('provider_id', request.providerId)
         .eq('date', newDate)
-        .in('status', ['Accepted', 'On The Way', 'Arrived'])
-        .gte('time', newTime + ':00')
-        .lt('time', `${String(parseInt(newTime.split(':')[0]) + 1).padStart(2, '0')}:00`);
+        .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
 
-      if (conflict && conflict.length > 0) {
+      if ((sameDay || []).some(r => slotsOverlap(newDate, newTime, newDate, r.time))) {
         toast.error('That slot was taken. The reschedule may not have been saved.');
         setSubmitting(false);
         return;
       }
 
-      const { error } = await supabase
+      const { data: moved, error } = await supabase
         .from('requests')
-        .update({ 
-          date: newDate, 
+        .update({
+          date: newDate,
           time: newTime + ':00',
-          notes: request.originalNotes 
+          notes: request.originalNotes
             ? `${request.originalNotes} [Rescheduled by patient]`
             : '[Rescheduled by patient]'
         })
-        .eq('id', request.id);
+        .eq('id', request.id)
+        .in('status', ['Pending', 'Accepted'])
+        .select('id');
 
       if (error) throw error;
+      if (!moved?.length) {
+        toast.error('This visit is already underway, so it cannot be rescheduled here.');
+        return;
+      }
 
       toast.success('Appointment rescheduled successfully!');
       onActionComplete?.();

@@ -9,7 +9,6 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
-import { usePresence } from '@/contexts/PresenceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -23,7 +22,6 @@ const getTrustLevel = (score) => {
 const ProviderProfileView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isUserOnline } = usePresence();
   const { user } = useAuth();
   const [activeBooking, setActiveBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -142,7 +140,6 @@ const ProviderProfileView = () => {
 
   const servicesList = provider.services || [];
   const displayedServices = showAllServices ? servicesList : servicesList.slice(0, 6);
-  const online = isUserOnline(id);
 
   return (
     <DashboardLayout role="patient">
@@ -318,7 +315,7 @@ const ProviderProfileView = () => {
             <div className="grid grid-cols-1 gap-2.5">
               {displayedServices.map((s, i) => (
                 <button
-                  key={i}
+                  key={`${s}-${i}`}
                   onClick={() => {
                     if (activeBooking) {
                       toast(

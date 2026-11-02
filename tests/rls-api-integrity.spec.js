@@ -1,10 +1,20 @@
 import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://kumijiwepididcsyqchy.supabase.co';
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_hdidvVeUbR32XSkjNqiq_g_SgjNN3HN';
+// Credentials come from the environment only. Committing a project URL, an anon key
+// or a working account password means anyone with repo read access can sign in.
+const SUPABASE_URL = process.env.E2E_SUPABASE_URL;
+const SUPABASE_KEY = process.env.E2E_SUPABASE_ANON_KEY;
+const PATIENT_PASSWORD = process.env.E2E_PATIENT_PASSWORD;
+const PROVIDER_PASSWORD = process.env.E2E_PROVIDER_PASSWORD;
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
 
 test.describe('Supabase Row Level Security (RLS) Deep Enforcement Suite', () => {
+  test.beforeAll(() => {
+    if (!SUPABASE_URL || !SUPABASE_KEY || !PATIENT_PASSWORD || !PROVIDER_PASSWORD || !ADMIN_PASSWORD) {
+      throw new Error('Set E2E_SUPABASE_URL, E2E_SUPABASE_ANON_KEY and the E2E_*_PASSWORD variables to run the RLS suite.');
+    }
+  });
 
   test('RLS 1: Anonymous / Unauthenticated client has zero access to sensitive tables', async () => {
     const anonClient = createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -39,7 +49,7 @@ test.describe('Supabase Row Level Security (RLS) Deep Enforcement Suite', () => 
     // Sign in as Andrew (Patient)
     const { data: authData, error: loginError } = await patientClient.auth.signInWithPassword({
       email: 'andrew@gmail.com',
-      password: 'andrew123',
+      password: PATIENT_PASSWORD,
     });
     expect(loginError).toBeNull();
     const patientUserId = authData.user.id;
@@ -80,7 +90,7 @@ test.describe('Supabase Row Level Security (RLS) Deep Enforcement Suite', () => 
     // Sign in as John Lawrence (Provider)
     const { data: authData, error: loginError } = await providerClient.auth.signInWithPassword({
       email: 'johnlawrence@gmail.com',
-      password: '12345678',
+      password: PROVIDER_PASSWORD,
     });
     expect(loginError).toBeNull();
     const providerUserId = authData.user.id;
@@ -112,7 +122,7 @@ test.describe('Supabase Row Level Security (RLS) Deep Enforcement Suite', () => 
     // Sign in as Admin
     const { error: loginError } = await adminClient.auth.signInWithPassword({
       email: 'admin@munticares.com',
-      password: 'admin123',
+      password: ADMIN_PASSWORD,
     });
     expect(loginError).toBeNull();
 

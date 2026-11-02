@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Search, Star, MapPin, Home, X, Calendar, FileText, CheckCircle2, Shield, ShieldCheck, SlidersHorizontal, Check, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Star, MapPin, X, Calendar, CheckCircle2, Shield, ShieldCheck, SlidersHorizontal, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,19 +17,11 @@ import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
 import { ensurePatientCoords } from '@/features/tracking/services/geocoding';
 import { DEFAULT_CONSENT_PERMS } from '@/features/patient/utils/consent';
+import { slotsOverlap, toLocalDateKey } from '@/lib/localDate';
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
-const SLOT_DURATION_MINUTES = 60;
 
-const PROVIDER_CATEGORIES = [
-  { value: 'All', label: 'All Providers' },
-  { value: 'Elderly Care', label: 'Elderly Care' },
-  { value: 'Physical Therapy', label: 'Physical Therapy' },
-  { value: 'Post-Surgery', label: 'Post-Surgery Care' },
-  { value: 'Companion Care', label: 'Companion Care' },
-  { value: 'Medication', label: 'Medication Management' },
-];
 const bookingSchema = z.object({
   service: z.string().min(1, 'Please select a service.'),
   date: z.string().min(1, 'Please select a date.').refine(d => d >= new Date().toLocaleDateString('en-CA'), 'Appointment date cannot be in the past.'),
@@ -278,48 +270,45 @@ const PatientProviders = () => {
       return;
     }
 
+    let cancelled = false;
     const fetchAvailableSlots = async () => {
       setLoadingSlots(true);
       try {
+        // Pending requests hold the slot: a provider can accept two of them, so a
+        // time showing as free here must not be one someone is already waiting on.
         const { data: existingBookings } = await supabase
           .from('requests')
           .select('time')
           .eq('provider_id', selectedProvider.id)
           .eq('date', watchedDate)
-          .in('status', ['Accepted', 'On The Way', 'Arrived']);
+          .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
+
+        if (cancelled) return;
 
         const bookedTimes = (existingBookings || []).map(b => b.time).filter(Boolean);
 
-        const todayStr = new Date().toLocaleDateString('en-CA');
+        const todayStr = toLocalDateKey();
         const currentHour = new Date().getHours();
         const slots = [];
         for (let hour = WORKING_HOURS_START; hour < WORKING_HOURS_END; hour++) {
           const time = `${String(hour).padStart(2, '0')}:00`;
-          const isBooked = bookedTimes.some(bt => {
-            if (!bt || typeof bt !== 'string') return false;
-            const parts = bt.split(':');
-            if (parts.length < 2) return false;
-            const bh = parseInt(parts[0], 10);
-            const bm = parseInt(parts[1], 10);
-            const slotStart = hour;
-            const slotEnd = hour + SLOT_DURATION_MINUTES / 60;
-            const bookingTime = bh + bm / 60;
-            return bookingTime >= slotStart && bookingTime < slotEnd;
-          });
+          const isBooked = bookedTimes.some(bt => slotsOverlap(watchedDate, time, watchedDate, bt));
           const isPast = watchedDate < todayStr || (watchedDate === todayStr && hour <= currentHour);
           slots.push({ time, available: !isBooked && !isPast });
         }
 
+        if (cancelled) return;
         setAvailableSlots(slots);
       } catch (err) {
         console.error('Error fetching available slots:', err);
-        setAvailableSlots([]);
+        if (!cancelled) setAvailableSlots([]);
       } finally {
-        setLoadingSlots(false);
+        if (!cancelled) setLoadingSlots(false);
       }
     };
 
     fetchAvailableSlots();
+    return () => { cancelled = true; };
   }, [selectedProvider, watchedDate]);
 
   // Toggle body class when modals open to hide bottom nav
@@ -488,18 +477,14 @@ const PatientProviders = () => {
         return;
       }
 
-      const startHour = values.time.split(':')[0];
       const { data: conflict } = await supabase
         .from('requests')
         .select('id, time')
         .eq('provider_id', selectedProvider.id)
         .eq('date', values.date)
-        .in('status', ['Accepted', 'On The Way', 'Arrived']);
+        .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
 
-      const hasConflict = (conflict || []).some(c => {
-        if (!c.time) return false;
-        return parseInt(c.time.split(':')[0], 10) === parseInt(startHour, 10);
-      });
+      const hasConflict = (conflict || []).some(c => slotsOverlap(values.date, values.time, values.date, c.time));
 
       if (hasConflict) {
         toast.error('This time slot has just been taken. Please choose another.');
@@ -581,32 +566,61 @@ const PatientProviders = () => {
           dest_updated_at: new Date().toISOString(),
         }]);
 
-      if (reqError) throw reqError;
+      if (reqError) {
+        // The requests_slot_exclusive unique index is the authority on slot claims:
+        // two patients submitting the same check-then-insert at once cannot both win.
+        if (reqError.code === '23505') {
+          toast.error('This time slot has just been taken. Please choose another.');
+          setBookingLoading(false);
+          setBookingStep('form');
+          return;
+        }
+        throw reqError;
+      }
 
       // 3. Enable Data Sharing (Consent). An existing grant keeps whatever
       // categories the patient chose in Privacy & Consent; a new one starts
-      // with the medical summary only.
+      // with the medical summary only. Enabling always needs a future expiry.
       const { data: existingConsent } = await supabase
         .from('consent_access')
-        .select('id')
+        .select('id, expires_at')
         .eq('patient_id', user.id)
         .eq('provider_id', providerId)
         .maybeSingle();
 
+      const grantTtlMs = 90 * 86400000;
+      const stillFuture = existingConsent?.expires_at && new Date(existingConsent.expires_at).getTime() > Date.now();
+      const expiresAt = stillFuture ? existingConsent.expires_at : new Date(Date.now() + grantTtlMs).toISOString();
+
       const { error: consentErr } = existingConsent
         ? await supabase
             .from('consent_access')
-            .update({ is_enabled: true })
+            .update({ is_enabled: true, expires_at: expiresAt })
             .eq('id', existingConsent.id)
         : await supabase.from('consent_access').insert([{
             patient_id: user.id,
             provider_id: providerId,
             is_enabled: true,
+            expires_at: expiresAt,
             permissions: DEFAULT_CONSENT_PERMS,
           }]);
 
       if (consentErr) {
-        console.warn('Could not grant consent access:', consentErr);
+        // Pre-migration databases have no expires_at column; the grant itself still works.
+        const missingColumn = consentErr.code === '42703' || /column .* does not exist/i.test(consentErr.message || '');
+        if (missingColumn) {
+          const retry = existingConsent
+            ? await supabase.from('consent_access').update({ is_enabled: true }).eq('id', existingConsent.id)
+            : await supabase.from('consent_access').insert([{
+                patient_id: user.id,
+                provider_id: providerId,
+                is_enabled: true,
+                permissions: DEFAULT_CONSENT_PERMS,
+              }]);
+          if (retry.error) console.warn('Could not grant consent access:', retry.error);
+        } else {
+          console.warn('Could not grant consent access:', consentErr);
+        }
       }
 
       setRequested(prev => [...new Set([...prev, providerId])]);

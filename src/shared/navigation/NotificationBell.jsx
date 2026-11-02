@@ -288,6 +288,17 @@ const NotificationBell = () => {
     } catch {}
   };
 
+  const readStoredList = (key) => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      // A corrupt key must not silence the whole bell.
+      localStorage.removeItem(key);
+      return [];
+    }
+  };
+
   const fetchNotifications = useCallback(async () => {
     if (!user?.id || isFetchingRef.current) return;
     isFetchingRef.current = true;
@@ -318,7 +329,8 @@ const NotificationBell = () => {
         .eq('receiver_id', user.id)
         .eq('is_read', false)
         .gte('created_at', oneDayAgo)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(60);
 
       if (msgData) {
         let readMsgIds = new Set();
@@ -345,13 +357,13 @@ const NotificationBell = () => {
 
       notifs.sort((a, b) => new Date(b.time) - new Date(a.time));
 
-      const dismissed = JSON.parse(localStorage.getItem(`dismissed_notifs_${user.id}`) || '[]');
+      const dismissed = readStoredList(`dismissed_notifs_${user.id}`);
       const activeNotifs = notifs.filter(n => !dismissed.includes(n.id));
 
       const seenToastKey = `seen_toast_notifs_${user.id}`;
-      const seenToastIds = new Set(JSON.parse(localStorage.getItem(seenToastKey) || '[]'));
+      const seenToastIds = new Set(readStoredList(seenToastKey));
       const readKey = `read_notifs_${user.id}`;
-      const readIds = new Set(JSON.parse(localStorage.getItem(readKey) || '[]'));
+      const readIds = new Set(readStoredList(readKey));
 
       const isAlreadyInitialized =
         prevNotifsRef.current.userId === user.id && prevNotifsRef.current.initialized;
@@ -365,7 +377,11 @@ const NotificationBell = () => {
         newlyAdded.forEach(notif => {
           seenToastIds.add(notif.id);
           toast(`${notif.title}: ${notif.message}`, { id: `bell-${notif.id}` });
-          fireBrowserNotification(notif.title, notif.message);
+          // Message text is PHI: it stays inside the app, the OS tray gets a pointer only.
+          fireBrowserNotification(
+            notif.title,
+            notif.type === 'new_message' ? 'Open MuntiCares to read the message.' : notif.message
+          );
         });
       } else {
         // Initial load on login: mark all pre-existing notifications as already seen so past
@@ -405,9 +421,11 @@ const NotificationBell = () => {
 
     if (!user?.id) return;
 
+    // Realtime already fires on every request/message change; this is only a
+    // backstop for dropped sockets, so it must not cost two queries per second.
     const pollInterval = setInterval(() => {
       fetchNotifications();
-    }, 1500);
+    }, 15000);
 
     const filterCol = user.role === 'patient' ? 'patient_id' : 'provider_id';
     const reqChangeConfig = user.role === 'admin'

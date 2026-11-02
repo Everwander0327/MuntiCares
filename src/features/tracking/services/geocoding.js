@@ -81,9 +81,17 @@ export async function reverseGeocode(lat, lng) {
 
 /** Save coordinates on the patient row. */
 export async function savePatientCoords(userId, { lat, lng }) {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+  // A bad pin poisons routing, geofence arrival and the visit address, so only
+  // finite in-range coordinates are persisted.
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+    || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    throw new Error('Invalid coordinates');
+  }
   const { error } = await supabase
     .from('patients')
-    .update({ latitude: lat, longitude: lng, geocoded_at: new Date().toISOString() })
+    .update({ latitude, longitude, geocoded_at: new Date().toISOString() })
     .eq('user_id', userId);
   if (error) throw error;
 }

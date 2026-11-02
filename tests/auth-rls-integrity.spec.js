@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 
+// Account passwords come from the environment; nothing here may name a live credential.
+const PATIENT_PASSWORD = process.env.E2E_PATIENT_PASSWORD;
+const PROVIDER_PASSWORD = process.env.E2E_PROVIDER_PASSWORD;
+const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD;
+
 test.describe('MuntiCares System & Auth+RLS Integrity Suite', () => {
 
   test('1. Public Shell: Landing page loads and FAQ section is confirmed absent', async ({ page }) => {
@@ -42,7 +47,7 @@ test.describe('MuntiCares System & Auth+RLS Integrity Suite', () => {
   test('4. Patient Journey: Real Login, Multi-Tab Navigation, Role Boundaries & Logout', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="email"]', 'andrew@gmail.com');
-    await page.fill('input[type="password"]', 'andrew123');
+    await page.fill('input[type="password"]', PATIENT_PASSWORD);
     await page.click('button[type="submit"]');
 
     // Successfully redirects to patient dashboard
@@ -84,7 +89,7 @@ test.describe('MuntiCares System & Auth+RLS Integrity Suite', () => {
   test('5. Provider Journey: Real Login, Multi-Tab Navigation, Role Boundaries & Logout', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="email"]', 'johnlawrence@gmail.com');
-    await page.fill('input[type="password"]', '12345678');
+    await page.fill('input[type="password"]', PROVIDER_PASSWORD);
     await page.click('button[type="submit"]');
 
     // Successfully redirects to provider dashboard
@@ -123,7 +128,7 @@ test.describe('MuntiCares System & Auth+RLS Integrity Suite', () => {
   test('6. Admin Journey: Real Login, System Administration Tabs & Logout', async ({ page }) => {
     await page.goto('/login');
     await page.fill('input[type="email"]', 'admin@munticares.com');
-    await page.fill('input[type="password"]', 'admin123');
+    await page.fill('input[type="password"]', ADMIN_PASSWORD);
     await page.click('button[type="submit"]');
 
     // Successfully redirects to admin dashboard

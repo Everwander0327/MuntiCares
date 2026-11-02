@@ -160,14 +160,8 @@ const ProviderProfile = () => {
         is_profile_complete: true,
       };
 
-      const newScore = calculateTrustScore({
-        ...profile,
-        ...updatedData,
-        professional_id_path: profile.professional_id_path,
-        rating: profile.rating,
-      });
-      updatedData.trust_score = newScore;
-
+      // trust_score is derived by the database from approval/verification/completeness/
+      // rating. The provider must not be able to raise it, so it is never sent here.
       let { error } = await supabase
         .from('providers')
         .update(updatedData)
@@ -204,7 +198,7 @@ const ProviderProfile = () => {
             }
           : {}),
         is_profile_complete: true,
-        trust_score: newScore,
+        trust_score: calculateTrustScore({ ...prev, ...editForm, is_profile_complete: true }),
       }));
       setEditingOverview(false);
       toast.success('Profile updated successfully!');
@@ -226,15 +220,14 @@ const ProviderProfile = () => {
 
     setSaving(true);
     try {
-      const newScore = calculateTrustScore({ ...profile, services: servicesList });
       const { error } = await supabase
         .from('providers')
-        .update({ services: servicesList, trust_score: newScore })
+        .update({ services: servicesList })
         .eq('user_id', user.id);
 
       if (error) throw error;
 
-      setProfile(prev => ({ ...prev, services: servicesList, trust_score: newScore }));
+      setProfile(prev => ({ ...prev, services: servicesList }));
       setEditingSpecializations(false);
       toast.success('Specializations updated!');
     } catch (err) {

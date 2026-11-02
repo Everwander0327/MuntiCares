@@ -214,12 +214,20 @@ const ProviderSchedule = () => {
       const nowIso = new Date().toISOString();
       if (newStatus === 'On The Way') payload.route_started_at = nowIso;
 
-      const { error } = await supabase
+      // Only the status this screen is showing may advance, so a visit cannot be
+      // completed from "Accepted" while someone else moved it.
+      const { data: updated, error } = await supabase
         .from('requests')
         .update(payload)
-        .eq('id', appointmentId);
+        .eq('id', appointmentId)
+        .eq('status', appt?.status ?? newStatus)
+        .select('id');
 
       if (error) throw error;
+      if (!updated?.length) {
+        toast.error('This visit changed status somewhere else. Reopen it to continue.');
+        return;
+      }
 
       setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: newStatus } : a));
 

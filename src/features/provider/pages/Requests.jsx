@@ -5,6 +5,7 @@ import {
   ARRIVAL_OVERRIDE_REASON,
 } from '../../tracking/services/trackingService';
 import ArrivalOverrideDialog from '@/features/tracking/components/ArrivalOverrideDialog';
+import { parseLocalDate, slotsOverlap } from '@/lib/localDate';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
@@ -126,7 +127,7 @@ const ProviderRequests = () => {
           patient: r.patient?.full_name || 'Unknown Patient',
           avatarUrl: r.patient?.avatar_url || '',
           service: r.service,
-          date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          date: parseLocalDate(r.date)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unscheduled',
           time: timeLabel,
           notes: r.notes || '',
           status: r.status,
@@ -172,12 +173,48 @@ const ProviderRequests = () => {
     const newStatus = action === 'accepted' ? 'Accepted' : 'Rejected';
 
     try {
-      const { error } = await supabase
+      if (action === 'accepted') {
+        const { data: target } = await supabase
+          .from('requests')
+          .select('date, time, status')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!target || target.status !== 'Pending') {
+          toast.error('This request was handled already.');
+          fetchAll();
+          return;
+        }
+
+        // The slot may have been taken while the request waited.
+        const { data: held } = await supabase
+          .from('requests')
+          .select('id, time')
+          .eq('provider_id', user.id)
+          .eq('date', target.date)
+          .in('status', ['Accepted', 'On The Way', 'Arrived'])
+          .neq('id', id);
+        if ((held || []).some(h => slotsOverlap(target.date, target.time, target.date, h.time))) {
+          toast.error('You already have a visit accepted for that time.');
+          fetchAll();
+          return;
+        }
+      }
+
+      // Guarded on Pending so two providers — or two taps — cannot both accept.
+      const { data: updated, error } = await supabase
         .from('requests')
         .update({ status: newStatus })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('status', 'Pending')
+        .select('id');
 
       if (error) throw error;
+      if (!updated?.length) {
+        toast.error('This request was handled already.');
+        fetchAll();
+        return;
+      }
       toast.success(action === 'accepted' ? `Accepted visit for ${patientName}!` : `Declined request.`);
       fetchAll();
     } catch (err) {
@@ -193,7 +230,7 @@ const ProviderRequests = () => {
   };
 
   // Progression: Accepted -> On The Way -> Arrived -> Completed
-  const handleAdvanceVisit = async (visitId, nextStatus) => {
+  const handleAdvanceVisit = async (visitId, nextStatus, fromStatus) => {
     setUpdatingVisitId(visitId);
     try {
       if (nextStatus === 'Arrived') {
@@ -215,12 +252,19 @@ const ProviderRequests = () => {
       const nowIso = new Date().toISOString();
       if (nextStatus === 'On The Way') payload.route_started_at = nowIso;
 
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('requests')
         .update(payload)
-        .eq('id', visitId);
+        .eq('id', visitId)
+        .eq('status', fromStatus)
+        .select('id');
 
       if (error) throw error;
+      if (!updated?.length) {
+        toast.error(`This visit is no longer "${fromStatus}".`);
+        fetchAll();
+        return;
+      }
       toast.success(`Visit updated to "${nextStatus === 'On The Way' ? 'On Route' : nextStatus}"!`);
       fetchAll();
     } catch (err) {
@@ -592,7 +636,7 @@ const ProviderRequests = () => {
                         <button
                           type="button"
                           disabled={updatingVisitId === req.id}
-                          onClick={() => handleAdvanceVisit(req.id, STATUS_FLOW[req.status].next)}
+                          onClick={() => handleAdvanceVisit(req.id, STATUS_FLOW[req.status].next, req.status)}
                           className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 ${
                             STATUS_FLOW[req.status].color
                           }`}

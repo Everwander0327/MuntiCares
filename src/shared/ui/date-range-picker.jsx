@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Calendar, X } from 'lucide-react';
+import { toLocalDateKey } from '@/lib/localDate';
 
 const DateRangePicker = ({ startDate, endDate, onChange, className = '' }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +27,7 @@ const DateRangePicker = ({ startDate, endDate, onChange, className = '' }) => {
     const end = new Date();
     const start = new Date();
     start.setDate(start.getDate() - days);
-    onChange({ start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] });
+    onChange({ start: toLocalDateKey(start), end: toLocalDateKey(end) });
     setIsOpen(false);
   };
 

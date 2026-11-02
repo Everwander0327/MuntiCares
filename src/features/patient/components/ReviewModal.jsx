@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { markRequestRated } from '@/features/patient/utils/localState';
 
 const RATING_LABELS = {
   1: 'Needs Improvement',
@@ -23,6 +25,7 @@ const QUICK_TAGS = [
 ];
 
 const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
+  const { user } = useAuth();
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
   const [comment, setComment] = useState('');
@@ -78,13 +81,6 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
     const currentRatingVal = rating;
     const cleanComment = comment.trim() || null;
     const submittedCb = onReviewSubmitted;
-    handleClose();
-    toast.success('Thank you! Your review has been submitted.');
-    confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
-    if (submittedCb) submittedCb(request.id);
-    const rated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
-    rated[request.id] = true;
-    localStorage.setItem('rated_requests', JSON.stringify(rated));
 
     try {
       const { error: reviewError } = await supabase
@@ -97,9 +93,9 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
           review_text: cleanComment
         }]);
 
-      if (reviewError) {
-        console.warn('provider_reviews insert failed, falling back to direct provider rating update...', reviewError);
-      }
+      // Nothing is announced until the row exists: the old order reported success,
+      // flagged the visit as rated and lost the review when the insert failed.
+      if (reviewError) throw reviewError;
 
       const { data: allReviews } = await supabase
         .from('provider_reviews')
@@ -129,9 +125,15 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
       if (updateError) {
         console.warn('Direct provider rating update failed:', updateError);
       }
+
+      markRequestRated(user?.id, request.id);
+      handleClose();
+      toast.success('Thank you! Your review has been submitted.');
+      confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
+      if (submittedCb) submittedCb(request.id);
     } catch (err) {
       console.error('Error submitting review:', err);
-      toast.error('Your review is saved locally but failed to sync to the server.');
+      toast.error('Your review could not be sent. Please try again.');
     } finally {
       setSubmitting(false);
     }

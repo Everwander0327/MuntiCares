@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, MessageCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, RefreshCw, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import usePatientRequests from '@/hooks/usePatientRequests';
@@ -141,8 +141,6 @@ const PatientDashboard = () => {
   const { requests: fetchedRequests, loading: requestsLoading, refetch } = usePatientRequests(user?.id || null);
 
   useEffect(() => {
-    let channel;
-
     // map fetchedRequests into local structures used by this component
     if (!requestsLoading) {
       if (fetchedRequests && fetchedRequests.length > 0) {
@@ -213,12 +211,6 @@ const PatientDashboard = () => {
         setLoading(false);
       }
     }
-
-    return () => {
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
-    };
   }, [fetchedRequests, requestsLoading, user]);
 
   useEffect(() => {

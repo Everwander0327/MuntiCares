@@ -95,7 +95,12 @@ const getAccessToken = async (): Promise<string> => {
   return cachedToken.value;
 };
 
-const sendTo = async (accessToken: string, registrationToken: string, call: CallRow) => {
+const sendTo = async (
+  accessToken: string,
+  registrationToken: string,
+  call: CallRow,
+  senderName: string | null,
+) => {
   const isVideo = call.call_type !== "audio";
   const response = await fetch(`https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`, {
     method: "POST",
@@ -107,6 +112,7 @@ const sendTo = async (accessToken: string, registrationToken: string, call: Call
           kind: "call_invite",
           call_id: call.id,
           sender_id: call.caller_id,
+          sender_name: senderName ?? "",
           call_type: call.call_type,
         },
         android: {
@@ -114,7 +120,7 @@ const sendTo = async (accessToken: string, registrationToken: string, call: Call
           ttl: "30s",
           notification: {
             title: isVideo ? "Incoming video consultation" : "Incoming voice consultation",
-            body: "Tap to answer while the call is still ringing.",
+            body: `${senderName || "A care provider"} is calling. Tap to answer while it still rings.`,
             channel_id: CALL_CHANNEL_ID,
           },
         },
@@ -169,8 +175,13 @@ Deno.serve(async (req) => {
   }
 
   const { callId } = await req.json().catch(() => ({ callId: null }));
-  if (!callId || !SERVICE_ROLE_KEY || !PROJECT_ID) {
+  if (!callId) {
     return json(req, { error: "bad_request" }, { status: 400 });
+  }
+  if (!SERVICE_ROLE_KEY || !PROJECT_ID) {
+    // Server misconfiguration, not a client error.
+    console.error("[call-invite] missing SERVICE_ROLE_KEY or FIREBASE_PROJECT_ID");
+    return json(req, { error: "push_not_configured" }, { status: 500 });
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -192,6 +203,12 @@ Deno.serve(async (req) => {
     return json(req, { error: "not_ringable" }, { status: 403 });
   }
 
+  const { data: caller } = await admin
+    .from("users")
+    .select("full_name")
+    .eq("id", call.caller_id)
+    .maybeSingle<{ full_name: string | null }>();
+
   const { data: tokens, error: tokensError } = await admin
     .from("push_tokens")
     .select("device_token")
@@ -210,23 +227,33 @@ Deno.serve(async (req) => {
     return json(req, { error: "push_provider_unavailable" }, { status: 502 });
   }
 
-  let delivered = 0;
-  for (const { device_token: registrationToken } of tokens) {
-    try {
-      const response = await sendTo(accessToken, registrationToken, call);
-      delivered += 1;
-      if (response.status === 404 || response.status === 400) {
-        // Unregistered or malformed: the app is gone from this handset, so stop
-        // spending fan-out budget on it.
-        await admin.from("push_tokens").delete().eq("device_token", registrationToken);
-        delivered -= 1;
-      } else if (!response.ok) {
-        console.warn(`[call-invite] FCM ${response.status} for one device`);
+  const senderName = caller?.full_name ?? null;
+
+  // One handset per person is the normal case, but a shared tablet can hold several
+  // tokens. Fan out concurrently so invite latency does not grow with each device.
+  const results = await Promise.all(
+    tokens.map(async ({ device_token: registrationToken }) => {
+      try {
+        const response = await sendTo(accessToken, registrationToken, call, senderName);
+        if (response.status === 404 || response.status === 400) {
+          // Unregistered or malformed: the app is gone from this handset, so stop
+          // spending fan-out budget on it.
+          await admin.from("push_tokens").delete().eq("device_token", registrationToken);
+          return false;
+        }
+        if (!response.ok) {
+          console.warn(`[call-invite] FCM ${response.status} for one device`);
+          return false;
+        }
+        return true;
+      } catch (err) {
+        console.warn("[call-invite] send failed for one device:", err);
+        return false;
       }
-    } catch (err) {
-      console.warn("[call-invite] send failed for one device:", err);
-    }
-  }
+    }),
+  );
+
+  const delivered = results.filter(Boolean).length;
 
   return json(req, { delivered, attempted: tokens.length });
 });

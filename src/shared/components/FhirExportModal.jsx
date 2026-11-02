@@ -1,14 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Check, Download, Upload, Globe, Loader2, X } from 'lucide-react';
-import { uploadToHapiFhir } from '@/lib/fhir';
+import { Copy, Check, Download, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   const [copied, setCopied] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState(null);
 
   const json = useMemo(() => {
     if (!open || !bundle) return '';
@@ -20,7 +17,6 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && open) {
         onClose();
-        setUploadResult(null);
         setCopied(false);
       }
     };
@@ -58,36 +54,8 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     toast.success('Downloaded!');
   };
 
-  const handleUpload = async () => {
-    setUploading(true);
-    setUploadResult(null);
-    try {
-      const result = await uploadToHapiFhir(bundle);
-      const patientId = bundle.entry?.[0]?.resource?.id || 'patient';
-      const okCount = result.entry?.filter(e => String(e.response?.status || '').startsWith('2')).length || 0;
-      const totalCount = result.entry?.length || 0;
-
-      const hapiUrl = `https://hapi.fhir.org/baseR4/Patient/${patientId}`;
-      setUploadResult({
-        success: true,
-        message: `Uploaded! ${okCount}/${totalCount} resources saved.`,
-        url: hapiUrl,
-      });
-      toast.success('Data uploaded to HAPI FHIR!');
-    } catch (err) {
-      setUploadResult({
-        success: false,
-        message: err.message,
-      });
-      toast.error('Upload failed');
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleClose = () => {
     onClose();
-    setUploadResult(null);
     setCopied(false);
   };
 
@@ -184,63 +152,10 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleUpload}
-                  disabled={uploading}
-                  className="neu-btn-primary px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl font-extrabold text-xs sm:text-xs flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer active:scale-95 shadow-md w-full sm:w-auto"
-                >
-                  {uploading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Upload className="w-3.5 h-3.5" />
-                  )}
-                  <span>{uploading ? 'Uploading...' : 'Upload to HAPI FHIR'}</span>
-                </button>
+                <p className="text-xs text-tertiary dark:text-tertiary sm:text-right font-semibold sm:max-w-[16rem] sm:leading-snug">
+                  Saved to this device only. Nothing is sent to an external FHIR server.
+                </p>
               </div>
-
-              {/* Upload Result Feedback */}
-              {uploadResult && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`neu-flat p-2.5 sm:p-3 rounded-2xl text-xs flex items-start gap-2.5 border ${
-                    uploadResult.success
-                      ? 'border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
-                      : 'border-rose-500/30 text-rose-800 dark:text-danger-dark'
-                  }`}
-                >
-                  {uploadResult.success ? (
-                    <div className="neu-flat-sm w-6 h-6 rounded-lg flex items-center justify-center text-success shrink-0 mt-0.5">
-                      <Globe className="w-3.5 h-3.5" />
-                    </div>
-                  ) : (
-                    <div className="neu-flat-sm w-6 h-6 rounded-lg flex items-center justify-center text-danger shrink-0 mt-0.5">
-                      <X className="w-3.5 h-3.5" />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-extrabold text-xs sm:text-xs leading-snug">{uploadResult.message}</p>
-                    {uploadResult.success && uploadResult.url && (
-                      <a
-                        href={uploadResult.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs underline mt-0.5 block font-mono text-link hover:text-primary-600 transition-colors break-all"
-                      >
-                        {uploadResult.url}
-                      </a>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setUploadResult(null)}
-                    className="neu-btn w-6 h-6 rounded-lg flex items-center justify-center text-tertiary hover:text-danger transition-colors shrink-0 cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </motion.div>
-              )}
             </div>
           </motion.div>
         </div>

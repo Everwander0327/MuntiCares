@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, Image, Trash2, CheckCircle2, Loader2, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { markPresessionSubmitted } from '@/features/patient/utils/localState';
 
 const CHECKLIST_ITEMS = [
   { key: 'id', label: 'Prepare your medical ID or identification card' },
@@ -25,6 +27,7 @@ const saveChecklist = (requestId, checklist) => {
 };
 
 const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
+  const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [symptomNotes, setSymptomNotes] = useState('');
@@ -95,6 +98,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
 
     try {
       const uploadedUrls = [];
+      const failedUploads = [];
 
       // 1. Upload files to Supabase Storage
       for (const file of files) {
@@ -107,20 +111,28 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
 
         if (uploadError) {
           console.warn('Storage upload failed:', uploadError);
+          failedUploads.push(file.name);
           continue;
         }
 
         uploadedUrls.push(fileName);
 
         if (request.patientId) {
-          await supabase
+          const { error: docError } = await supabase
             .from('patient_documents')
             .insert([{
               patient_id: request.patientId,
               document_title: `[Pre-Session] ${file.name}`,
               file_path: fileName
             }]);
+          if (docError) console.warn('patient_documents row not created:', docError);
         }
+      }
+
+      // Nothing was attached and nothing was typed: do not claim success.
+      if (files.length > 0 && uploadedUrls.length === 0) {
+        toast.error('Your files could not be uploaded. Check your connection and try again.');
+        return;
       }
 
       // 2. Append pre-session data to the request notes
@@ -141,18 +153,21 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
           .single();
 
         const existingNotes = currentReq?.notes || '';
-        await supabase
+        const { error: notesError } = await supabase
           .from('requests')
           .update({ notes: existingNotes ? `${existingNotes}\n${notesSummary}` : notesSummary })
           .eq('id', request.id);
+
+        if (notesError) throw notesError;
       }
 
-      toast.success('Pre-session info submitted successfully!');
-      
-      // Mark as submitted in localStorage
-      const submitted = JSON.parse(localStorage.getItem('presession_submitted') || '{}');
-      submitted[request.id] = true;
-      localStorage.setItem('presession_submitted', JSON.stringify(submitted));
+      if (failedUploads.length > 0) {
+        toast.error(`${failedUploads.length} file(s) were not uploaded.`);
+      } else {
+        toast.success('Pre-session info submitted successfully!');
+      }
+
+      markPresessionSubmitted(user?.id, request.id);
 
       setFiles([]);
       setSymptomNotes('');

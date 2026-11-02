@@ -7,16 +7,27 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchConsentGrant } from '../lib/consent';
 import toast from 'react-hot-toast';
 import { EmptyState } from '@/shared/ui';
 import { motion } from 'framer-motion';
 
+const CONSENT_TABS = { history: 'medical_history', documents: 'documents', notes: 'visit_notes' };
+
+/** Consent is deny-by-default: only an explicit `true` grants a category. */
+const canView = (perms, key) => perms?.[key] === true;
+
+const firstGrantedTab = (perms) =>
+  Object.keys(CONSENT_TABS).find(tab => canView(perms, CONSENT_TABS[tab])) || null;
+
 const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRef = null }) => {
   const { user } = useAuth();
   const fileInputRef = useRef(null);
+  const permsRef = useRef(null);
   const [activeTab, setActiveTab] = useState('history');
   const [loading, setLoading] = useState(true);
   const [consentBlocked, setConsentBlocked] = useState(false);
+  const [accessError, setAccessError] = useState(null);
   const [grantedPermissions, setGrantedPermissions] = useState(null);
 
   // Data States
@@ -35,110 +46,16 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
 
   const availableServices = ['Routine Checkup', 'Wound Care', 'IV Therapy', 'Physical Therapy', 'Medication Admin'];
 
-  const checkConsentThenLoad = useCallback(async () => {
-    setLoading(true);
-    setConsentBlocked(false);
-    if (!user) return;
-    try {
-      const { data, error } = await supabase
-        .from('consent_access')
-        .select('is_enabled, permissions')
-        .eq('patient_id', patientId)
-        .eq('provider_id', user.id)
-        .single();
+  const applyPerms = useCallback((perms) => {
+    const next = perms || {};
+    const changed = JSON.stringify(next) !== JSON.stringify(permsRef.current || {});
+    permsRef.current = next;
+    setGrantedPermissions(next);
+    setActiveTab(curr => (canView(next, CONSENT_TABS[curr]) ? curr : firstGrantedTab(next) || curr));
+    return changed;
+  }, []);
 
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (!data || !data.is_enabled) {
-        setConsentBlocked(true);
-        setLoading(false);
-        return;
-      }
-
-      const perms = data.permissions || { medical_history: true, documents: true, visit_notes: true };
-      setGrantedPermissions(perms);
-      if (perms.medical_history === false) {
-        setActiveTab(perms.documents !== false ? 'documents' : 'notes');
-      }
-      fetchPatientData();
-      logDataAccess();
-    } catch (err) {
-      console.warn('Consent check failed:', err.message);
-      setGrantedPermissions({ medical_history: true, documents: true, visit_notes: true });
-      fetchPatientData();
-      logDataAccess();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientId, user]);
-
-  useEffect(() => {
-    if (isOpen && patientId) {
-      checkConsentThenLoad();
-    }
-  }, [isOpen, patientId, checkConsentThenLoad]);
-
-  useEffect(() => {
-    if (!isOpen || !patientId || !user) return;
-
-    const pollConsent = async () => {
-      const { data } = await supabase
-        .from('consent_access')
-        .select('is_enabled, permissions')
-        .eq('patient_id', patientId)
-        .eq('provider_id', user.id)
-        .single();
-
-      if (!data) return;
-      if (!data.is_enabled) {
-        setConsentBlocked(true);
-        setGrantedPermissions(null);
-      } else {
-        const perms = data.permissions || { medical_history: true, documents: true, visit_notes: true };
-        setConsentBlocked(false);
-        setGrantedPermissions(perms);
-        setActiveTab(curr => {
-          const tabPerms = {
-            history: perms.medical_history !== false,
-            documents: perms.documents !== false,
-            notes: perms.visit_notes !== false,
-          };
-          if (!tabPerms[curr]) {
-            const fallback = ['history', 'documents', 'notes'].find(t => tabPerms[t]);
-            return fallback || curr;
-          }
-          return curr;
-        });
-      }
-    };
-
-    const channel = supabase
-      .channel(`consent-realtime-${patientId}-${user.id}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'consent_access',
-        filter: `patient_id=eq.${patientId}`,
-      }, () => { pollConsent(); })
-      .subscribe();
-
-    const interval = setInterval(pollConsent, 2000);
-
-    return () => { clearInterval(interval); supabase.removeChannel(channel); };
-  }, [isOpen, patientId, user]);
-
-  // Lock background scroll while the record is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, [isOpen]);
-
-  const logDataAccess = async () => {
+  const logDataAccess = useCallback(async () => {
     if (!user) return;
     try {
       const { error } = await supabase
@@ -153,44 +70,149 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
     } catch (err) {
       console.warn('Could not log data access:', err.message);
     }
-  };
+  }, [patientId, user]);
 
-  const fetchPatientData = async () => {
+  const fetchPatientData = useCallback(async (perms) => {
+    const granted = perms || {};
     setLoading(true);
     try {
-      // 1. Fetch History
-      const { data: histRows } = await supabase
-        .from('medical_histories')
-        .select('*')
-        .eq('patient_id', patientId);
-      const histData = histRows?.[0] || null;
-      
-      setHistory(histData || { allergies: '', chronic_conditions: '', past_surgeries: '' });
+      // 1. History — only when the patient granted that category
+      if (canView(granted, 'medical_history')) {
+        const { data: histRows, error: histError } = await supabase
+          .from('medical_histories')
+          .select('allergies, chronic_conditions, past_surgeries')
+          .eq('patient_id', patientId)
+          .limit(1);
+        if (histError) throw histError;
+        setHistory(histRows?.[0] || { allergies: '', chronic_conditions: '', past_surgeries: '' });
+      } else {
+        setHistory(null);
+      }
 
-      // 2. Fetch Documents
-      const { data: docsData } = await supabase
-        .from('patient_documents')
-        .select('*')
-        .eq('patient_id', patientId)
-        .order('uploaded_at', { ascending: false });
-      
-      setDocuments(docsData || []);
+      // 2. Documents
+      if (canView(granted, 'documents')) {
+        const { data: docsData, error: docsError } = await supabase
+          .from('patient_documents')
+          .select('id, document_title, file_path, uploaded_at')
+          .eq('patient_id', patientId)
+          .order('uploaded_at', { ascending: false })
+          .limit(50);
+        if (docsError) throw docsError;
+        setDocuments(docsData || []);
+      } else {
+        setDocuments([]);
+      }
 
-      // 3. Fetch Visit Notes
-      const { data: notesData } = await supabase
-        .from('visit_notes')
-        .select('*, provider:provider_id(full_name)')
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false });
-      
-      setNotes(notesData || []);
+      // 3. Visit Notes
+      if (canView(granted, 'visit_notes')) {
+        const { data: notesData, error: notesError } = await supabase
+          .from('visit_notes')
+          .select('*, provider:provider_id(full_name)')
+          .eq('patient_id', patientId)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (notesError) throw notesError;
+        setNotes(notesData || []);
+      } else {
+        setNotes([]);
+      }
     } catch (error) {
       console.error('Error fetching patient data:', error);
       toast.error('Failed to load patient records');
+      setHistory(null);
+      setDocuments([]);
+      setNotes([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [patientId]);
+
+  const checkConsentThenLoad = useCallback(async () => {
+    setLoading(true);
+    setConsentBlocked(false);
+    setAccessError(null);
+    if (!user) return;
+    try {
+      const grant = await fetchConsentGrant(patientId, user.id);
+
+      if (!grant) {
+        setConsentBlocked(true);
+        setGrantedPermissions(null);
+        permsRef.current = null;
+        setLoading(false);
+        return;
+      }
+
+      const perms = grant.permissions;
+      applyPerms(perms);
+      fetchPatientData(perms);
+      if (canView(perms, 'medical_history') || canView(perms, 'documents') || canView(perms, 'visit_notes')) {
+        logDataAccess();
+      }
+    } catch (err) {
+      console.warn('Consent check failed:', err.message);
+      // Fail closed: an unreadable consent row is not consent.
+      setGrantedPermissions(null);
+      setAccessError('Sharing settings could not be verified. Records stay hidden until this loads.');
+      setLoading(false);
+    }
+  }, [patientId, user, applyPerms, fetchPatientData, logDataAccess]);
+
+  useEffect(() => {
+    if (isOpen && patientId) {
+      checkConsentThenLoad();
+    }
+  }, [isOpen, patientId, checkConsentThenLoad]);
+
+  useEffect(() => {
+    if (!isOpen || !patientId || !user) return;
+
+    const pollConsent = async () => {
+      let grant;
+      try {
+        grant = await fetchConsentGrant(patientId, user.id);
+      } catch {
+        return;
+      }
+
+      if (!grant) {
+        setConsentBlocked(true);
+        setGrantedPermissions(null);
+        permsRef.current = null;
+        return;
+      }
+
+      setConsentBlocked(false);
+      setAccessError(null);
+      if (applyPerms(grant.permissions)) fetchPatientData(grant.permissions);
+    };
+
+    const channel = supabase
+      .channel(`consent-realtime-${patientId}-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'consent_access',
+        filter: `patient_id=eq.${patientId}`,
+      }, () => { pollConsent(); })
+      .subscribe();
+
+    const interval = setInterval(pollConsent, 20000);
+
+    return () => { clearInterval(interval); supabase.removeChannel(channel); };
+  }, [isOpen, patientId, user, applyPerms, fetchPatientData]);
+
+  // Lock background scroll while the record is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [isOpen]);
 
   const handleSaveNote = async (e) => {
     e.preventDefault();
@@ -239,7 +261,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
       toast.success("Progress note added!");
       setNewNote({ bp: '', temp: '', hr: '', rr: '', spo2: '', pain: '', services: [], text: '', file: null });
       if (fileInputRef.current) fileInputRef.current.value = '';
-      fetchPatientData(); // refresh
+      fetchPatientData(permsRef.current); // refresh
     } catch (error) {
       console.error('Error saving note:', error);
       toast.error("Failed to add note.");
@@ -352,7 +374,24 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
         </div>
 
         {/* Content Body */}
-        {consentBlocked ? (
+        {accessError ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 text-center my-auto">
+            <div className="neu-flat w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-4 text-warning">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-display font-extrabold text-slate-900 dark:text-white mb-2">
+              Records Unavailable
+            </h3>
+            <p className="text-sm text-tertiary dark:text-tertiary max-w-md mb-6 leading-relaxed">{accessError}</p>
+            <button
+              type="button"
+              onClick={checkConsentThenLoad}
+              className="neu-btn px-6 py-2.5 rounded-xl font-bold text-xs cursor-pointer"
+            >
+              Try again
+            </button>
+          </div>
+        ) : consentBlocked ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 sm:p-12 text-center my-auto">
             <div className="neu-flat w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-4 text-danger">
               <ShieldAlert className="w-8 h-8" />
@@ -377,7 +416,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
             <div className="px-3 sm:px-6 pt-3 pb-2 border-b border-slate-200/50 dark:border-white/5 grid grid-cols-3 gap-1.5 sm:flex sm:items-center sm:gap-2.5 shrink-0">
               <button
                 type="button"
-                disabled={grantedPermissions?.medical_history === false}
+                disabled={!canView(grantedPermissions, 'medical_history')}
                 onClick={() => setActiveTab('history')}
                 className={`py-2 px-1 sm:px-3.5 rounded-xl text-xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   activeTab === 'history'
@@ -391,7 +430,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
 
               <button
                 type="button"
-                disabled={grantedPermissions?.documents === false}
+                disabled={!canView(grantedPermissions, 'documents')}
                 onClick={() => setActiveTab('documents')}
                 className={`py-2 px-1 sm:px-3.5 rounded-xl text-xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   activeTab === 'documents'
@@ -405,7 +444,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
 
               <button
                 type="button"
-                disabled={grantedPermissions?.visit_notes === false}
+                disabled={!canView(grantedPermissions, 'visit_notes')}
                 onClick={() => setActiveTab('notes')}
                 className={`py-2 px-1 sm:px-3.5 rounded-xl text-xs sm:text-xs font-bold transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   activeTab === 'notes'
@@ -430,7 +469,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
                   {/* TAB 1: MEDICAL HISTORY */}
                   {activeTab === 'history' && (
                     <div className="space-y-4">
-                      {grantedPermissions?.medical_history === false ? (
+                      {!canView(grantedPermissions, 'medical_history') ? (
                         <div className="neu-inset p-8 rounded-2xl text-center">
                           <AlertCircle className="w-8 h-8 text-warning mx-auto mb-2" />
                           <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Medical History Restricted</p>
@@ -486,7 +525,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
                   {/* TAB 2: DOCUMENTS */}
                   {activeTab === 'documents' && (
                     <div className="space-y-4">
-                      {grantedPermissions?.documents === false ? (
+                      {!canView(grantedPermissions, 'documents') ? (
                         <div className="neu-inset p-8 rounded-2xl text-center">
                           <AlertCircle className="w-8 h-8 text-warning mx-auto mb-2" />
                           <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Documents Restricted</p>
@@ -544,7 +583,7 @@ const PatientRecordModal = ({ isOpen, onClose, patientId, patientName, triggerRe
                   {/* TAB 3: PROGRESS NOTES & VITALS */}
                   {activeTab === 'notes' && (
                     <div className="space-y-6">
-                      {grantedPermissions?.visit_notes === false ? (
+                      {!canView(grantedPermissions, 'visit_notes') ? (
                         <div className="neu-inset p-8 rounded-2xl text-center">
                           <AlertCircle className="w-8 h-8 text-warning mx-auto mb-2" />
                           <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Progress Notes Restricted</p>

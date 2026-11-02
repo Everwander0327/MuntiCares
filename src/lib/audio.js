@@ -57,7 +57,11 @@ export const playRingtone = () => {
         scheduleRing(nextRingTime);
         nextRingTime += 1.2;
         ringCount++;
-        if (ringCount > 500) break;
+        // ~60s of ringing: the peer has either answered or the caller has given up.
+        if (ringCount > 50) {
+          stopRingtone();
+          return;
+        }
       }
       ringtoneInterval = requestAnimationFrame(tick);
     };

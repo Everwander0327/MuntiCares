@@ -5,22 +5,30 @@ const ProtectedRoute = ({ allowedRole }) => {
   const { user, authInitialized } = useAuth();
   const location = useLocation();
 
+  const spinner = (
+    <div className="min-h-[100dvh] flex items-center justify-center">
+      <div className="flex items-center gap-3">
+        <div className="w-6 h-6 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    </div>
+  );
+
   // Wait for auth to initialize to prevent flicker / incorrect redirects
   if (!authInitialized) {
-    return (
-      <div className="min-h-[100dvh] flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-          <div className="text-slate-600">Loading...</div>
-        </div>
-      </div>
-    );
+    return spinner;
   }
 
   if (!user) {
     // Not logged in, redirect to login page preserving destination
     const target = location.pathname + location.search;
     return <Navigate to={`/login?redirect=${encodeURIComponent(target)}`} state={{ from: location }} replace />;
+  }
+
+  // The role is confirmed from public.users, not client metadata. Until that read
+  // returns, redirecting would send a provider to /patient/… and a patient to /null/.
+  if (!user.role) {
+    return spinner;
   }
 
   if (user?.is_banned) {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
+import { parseLocalDate } from '@/lib/localDate';
 import { 
   MessageSquare, Search, CheckCircle, FileText, User, 
   ChevronLeft, ChevronRight,
@@ -66,7 +67,7 @@ const ProviderPatients = () => {
             name: r.patient?.full_name || 'Unknown Patient',
             avatarUrl: r.patient?.avatar_url || '',
             service: r.service,
-            date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            date: parseLocalDate(r.date)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unscheduled',
             rawDate: r.date,
             time: timeLabel,
             notes: r.notes || '',
@@ -127,12 +128,20 @@ const ProviderPatients = () => {
     
     setUpdatingId(requestId);
     try {
-      const { error } = await supabase
+      // Only a visit that is actually underway can be completed: this stops a
+      // Pending or Accepted request from jumping straight to Completed.
+      const { data: updated, error } = await supabase
         .from('requests')
         .update({ status: 'Completed' })
-        .eq('id', requestId);
-      
+        .eq('id', requestId)
+        .in('status', ['On The Way', 'Arrived'])
+        .select('id');
+
       if (error) throw error;
+      if (!updated?.length) {
+        toast.error('This visit is not on the way or arrived, so it cannot be completed here.');
+        return;
+      }
 
       setPatients(prev => prev.map(p => 
         p.requestId === requestId ? { ...p, status: 'Completed', rawStatus: 'Completed' } : p

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { Mail, Phone, MapPin, Calendar, HeartPulse, Activity, FileText, Clock, MessageCircle, ArrowLeft, Lock, Shield, AlertCircle, Stethoscope, FolderOpen, User, FileCode, Loader2, ExternalLink, Paperclip } from 'lucide-react';
@@ -12,11 +12,13 @@ import toast from 'react-hot-toast';
 import { FhirExportModal } from '@/shared/components';
 import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
 import PatientRecordModal from '../components/PatientRecordModal';
+import { fetchConsentGrant } from '../lib/consent';
 
 const PatientProfileView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user: authUser } = useAuth(); // need to import useAuth
+  const consentRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState(null);
   const [consent, setConsent] = useState(null);
@@ -69,20 +71,15 @@ const PatientProfileView = () => {
         emergency_contact: patData?.emergency_contact || '',
       });
 
-      const { data: consentData } = await supabase
-        .from('consent_access')
-        .select('*')
-        .eq('patient_id', id)
-        .eq('provider_id', authUser.id)
-        .maybeSingle();
-      setConsent(consentData);
+      const grant = await fetchConsentGrant(id, authUser.id);
+      consentRef.current = grant;
+      setConsent(grant);
 
-      const canAccess = consentData?.is_enabled;
-      const perms = consentData?.permissions && Object.keys(consentData.permissions).length > 0
-        ? consentData.permissions
-        : { medical_history: true, documents: true, visit_notes: true };
+      const canAccess = Boolean(grant);
+      // Deny by default: only an explicit true grants a category.
+      const perms = grant?.permissions || {};
 
-      if (canAccess && perms.medical_history) {
+      if (canAccess && perms.medical_history === true) {
         const { data: mh } = await supabase
           .from('medical_histories')
           .select('allergies, chronic_conditions, past_surgeries')
@@ -93,24 +90,30 @@ const PatientProfileView = () => {
         setMedicalHistory(null);
       }
 
-      if (canAccess && perms.documents) {
+      if (canAccess && perms.documents === true) {
         const { data: docs } = await supabase
           .from('patient_documents')
           .select('*')
           .eq('patient_id', id)
-          .order('uploaded_at', { ascending: false });
+          .order('uploaded_at', { ascending: false })
+          .limit(50);
         setDocuments(docs || []);
       } else {
         setDocuments([]);
       }
 
-      const { data: notes } = await supabase
-        .from('visit_notes')
-        .select('*')
-        .eq('patient_id', id)
-        .eq('provider_id', authUser.id)
-        .order('created_at', { ascending: false });
-      if (notes) setVisitNotes(notes);
+      if (canAccess && perms.visit_notes === true) {
+        const { data: notes } = await supabase
+          .from('visit_notes')
+          .select('*')
+          .eq('patient_id', id)
+          .eq('provider_id', authUser.id)
+          .order('created_at', { ascending: false })
+          .limit(100);
+        setVisitNotes(notes || []);
+      } else {
+        setVisitNotes([]);
+      }
     } catch (err) {
       console.error('Error fetching patient profile:', err);
       navigate('/provider/patients');
@@ -123,6 +126,20 @@ const PatientProfileView = () => {
     if (!authUser || !id) return;
     fetchData();
 
+    const refreshConsent = async () => {
+      let grant;
+      try {
+        grant = await fetchConsentGrant(id, authUser.id);
+      } catch {
+        return;
+      }
+      if (JSON.stringify(grant) === JSON.stringify(consentRef.current)) return;
+      consentRef.current = grant;
+      setConsent(grant);
+      // Re-run the gated fetch so revoked or expired categories stop showing.
+      fetchData();
+    };
+
     const subscription = supabase
       .channel(`consent-${id}-${authUser.id}`)
       .on('postgres_changes', {
@@ -132,21 +149,12 @@ const PatientProfileView = () => {
         filter: `patient_id=eq.${id}`,
       }, (payload) => {
         if (payload.new?.provider_id === authUser.id) {
-          setConsent(payload.new);
-          fetchData();
+          refreshConsent();
         }
       })
       .subscribe();
 
-    const pollInterval = setInterval(async () => {
-      const { data } = await supabase
-        .from('consent_access')
-        .select('*')
-        .eq('patient_id', id)
-        .eq('provider_id', authUser.id)
-        .maybeSingle();
-      if (data) setConsent(data);
-    }, 5000);
+    const pollInterval = setInterval(refreshConsent, 20000);
 
     return () => {
       supabase.removeChannel(subscription);
@@ -184,7 +192,7 @@ const PatientProfileView = () => {
       const perms = consent?.permissions || {};
 
       if (canAccess) {
-        if (perms.medical_history) {
+        if (perms.medical_history === true) {
           const { data: mh } = await supabase
             .from('medical_histories')
             .select('*')
@@ -199,16 +207,19 @@ const PatientProfileView = () => {
           }
         }
 
-        const { data: notesData } = await supabase
-          .from('visit_notes')
-          .select('*')
-          .eq('patient_id', id)
-          .eq('provider_id', authUser.id)
-          .order('created_at', { ascending: false });
+        if (perms.visit_notes === true) {
+          const { data: notesData } = await supabase
+            .from('visit_notes')
+            .select('*')
+            .eq('patient_id', id)
+            .eq('provider_id', authUser.id)
+            .order('created_at', { ascending: false })
+            .limit(100);
 
-        if (notesData?.length) {
-          const vitals = buildVitalSignObservations(notesData, id);
-          resources.push(...vitals);
+          if (notesData?.length) {
+            const vitals = buildVitalSignObservations(notesData, id);
+            resources.push(...vitals);
+          }
         }
       }
 

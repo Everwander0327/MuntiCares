@@ -3,11 +3,12 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   Clock, MapPin, MessageSquare, XCircle, FileUp, 
   Search, SlidersHorizontal, Check, Calendar,
-  ChevronRight, ChevronLeft, Sparkles, X, ChevronDown,
-  AlertCircle, CheckCircle2, Navigation
+  ChevronRight, ChevronLeft, X, ChevronDown,
+  Navigation
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { presessionMapFor, ratedMapFor } from '@/features/patient/utils/localState';
 import usePatientRequests from '@/hooks/usePatientRequests';
 import { supabase } from '@/lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
@@ -29,43 +30,19 @@ const staggerItem = {
 const getStatusStyle = (status) => {
   switch (status) {
     case 'Accepted':
+      return { textColor: 'text-sky-600 dark:text-[#8CBDF0]' };
     case 'On The Way':
     case 'Arrived':
-      return {
-        badge: 'neu-flat-sm text-success dark:text-success-dark border border-success/30 dark:border-success-dark/30 bg-success-soft dark:bg-success-darkSoft font-black',
-        icon: Sparkles,
-        dot: 'bg-success dark:bg-success-dark',
-        ping: true,
-      };
+      return { textColor: 'text-emerald-600 dark:text-emerald-400' };
     case 'Completed':
-      return {
-        badge: 'neu-flat-sm text-primary dark:text-primary-400 border border-primary/30 dark:border-primary-400/30 bg-primary-soft dark:bg-primary-800 font-black',
-        icon: CheckCircle2,
-        dot: 'bg-primary dark:bg-primary-400',
-        ping: false,
-      };
+      return { textColor: 'text-slate-600 dark:text-slate-400' };
     case 'Pending':
-      return {
-        badge: 'neu-flat-sm text-warning dark:text-warning-dark border border-warning/30 dark:border-warning-dark/30 bg-warning-soft dark:bg-warning-darkSoft font-black',
-        icon: Clock,
-        dot: 'bg-warning dark:bg-warning-dark',
-        ping: false,
-      };
+      return { textColor: 'text-amber-600 dark:text-amber-400' };
     case 'Cancelled':
-      return {
-        badge: 'neu-flat-sm text-txt-secondary dark:text-txt-darkSecondary border border-surface-border bg-surface-subtle font-bold',
-        icon: XCircle,
-        dot: 'bg-txt-secondary dark:bg-txt-darkSecondary',
-        ping: false,
-      };
+      return { textColor: 'text-slate-400 dark:text-slate-500' };
     case 'Rejected':
     default:
-      return {
-        badge: 'neu-flat-sm text-danger dark:text-danger-dark border border-danger/30 dark:border-danger-dark/30 bg-danger-soft dark:bg-danger-darkSoft font-black',
-        icon: AlertCircle,
-        dot: 'bg-danger dark:bg-danger-dark',
-        ping: false,
-      };
+      return { textColor: 'text-rose-600 dark:text-rose-400' };
   }
 };
 
@@ -130,18 +107,10 @@ const RequestCard = ({
             </div>
           </div>
 
-          {/* Status Badge */}
-          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 sm:gap-3 shrink-0">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs shadow-sm ${statusTheme.badge}`}>
-              {statusTheme.ping ? (
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-              ) : (
-                <statusTheme.icon className="w-3 h-3 shrink-0" />
-              )}
-              <span>{status}</span>
+          {/* Clean Text-Only Status (No Pill Background, No Green Dot) */}
+          <div className="shrink-0 text-right">
+            <span className={`text-xs font-extrabold tracking-tight ${statusTheme.textColor}`}>
+              {status}
             </span>
           </div>
         </div>
@@ -249,6 +218,7 @@ const RequestCard = ({
 };
 
 const PatientRequests = () => {
+  const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' | 'past' | 'all'
   const [filter, setFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [requests, setRequests] = useState([]);
@@ -277,8 +247,8 @@ const PatientRequests = () => {
   }, []);
 
   useEffect(() => {
-    const localRated = JSON.parse(localStorage.getItem('rated_requests') || '{}');
-    const presession = JSON.parse(localStorage.getItem('presession_submitted') || '{}');
+    const localRated = ratedMapFor(user?.id);
+    const presession = presessionMapFor(user?.id);
     setPresessionSubmitted(presession);
 
     if (user) {
@@ -317,24 +287,40 @@ const PatientRequests = () => {
     (r.status === 'Accepted' && (!r.date || r.date >= todayStr))
   ), [todayStr]);
 
+  const activeLiveReq = useMemo(() => {
+    return requests.find(r => ['On The Way', 'Arrived'].includes(r.status));
+  }, [requests]);
+
   const filteredRequests = useMemo(() => {
     return requests.filter(r => {
+      // 1. Tab filter
+      if (activeTab === 'upcoming' && !['Pending', 'Accepted', 'On The Way', 'Arrived'].includes(r.status)) {
+        return false;
+      }
+      if (activeTab === 'past' && !['Completed', 'Cancelled', 'Rejected'].includes(r.status)) {
+        return false;
+      }
+
+      // 2. Status dropdown filter
       const matchesFilter =
         filter === 'All' ||
         (filter === 'Active' ? isReqActive(r) : r.status === filter);
+      if (!matchesFilter) return false;
+
+      // 3. Search filter
       const term = searchTerm.toLowerCase().trim();
       const matchesSearch = !term || 
         r.provider?.toLowerCase().includes(term) ||
         r.service?.toLowerCase().includes(term) ||
         r.location?.toLowerCase().includes(term);
-      return matchesFilter && matchesSearch;
+      return matchesSearch;
     });
-  }, [requests, filter, searchTerm, isReqActive]);
+  }, [requests, activeTab, filter, searchTerm, isReqActive]);
 
   // Reset to first page when filtering or searching
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, searchTerm]);
+  }, [activeTab, filter, searchTerm]);
 
   // Smoothly scroll back to top of main container when changing pagination pages
   const handlePageChange = (newPage) => {
@@ -371,10 +357,12 @@ const PatientRequests = () => {
 
   // Quick Counter Stats
   const stats = useMemo(() => {
+    const upcoming = requests.filter(r => ['Pending', 'Accepted', 'On The Way', 'Arrived'].includes(r.status)).length;
+    const past = requests.filter(r => ['Completed', 'Cancelled', 'Rejected'].includes(r.status)).length;
     const pending = requests.filter(r => r.status === 'Pending').length;
     const active = requests.filter(isReqActive).length;
     const completed = requests.filter(r => r.status === 'Completed').length;
-    return { pending, active, completed, total: requests.length };
+    return { upcoming, past, pending, active, completed, total: requests.length };
   }, [requests, isReqActive]);
 
   if (loading) {
@@ -383,82 +371,93 @@ const PatientRequests = () => {
 
   return (
     <DashboardLayout role="patient">
-      <div className="flex-1 flex flex-col justify-between space-y-4 sm:space-y-6 relative w-full max-w-full">
+      <div className="flex-1 flex flex-col space-y-4 sm:space-y-6 relative w-full max-w-full">
         
-        {/* Unified Neumorphic Header Card with Integrated Search & Filter Dropdown */}
-        <section className="neu-flat p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-4 sm:space-y-5 relative z-30">
+        {/* Slim Live Visit Notification (Polite & Calm, Zero Green Dots) */}
+        {activeLiveReq && (
+          <div className="rounded-2xl border border-sky-500/20 bg-sky-50/60 dark:bg-sky-950/30 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+            <div className="min-w-0">
+              <div className="text-xs text-slate-900 dark:text-white truncate">
+                <strong className="font-bold">{activeLiveReq.provider}</strong> is on the way &bull;{' '}
+                <span className="text-slate-600 dark:text-slate-300 font-medium">
+                  {activeLiveReq.service} ({activeLiveReq.status})
+                </span>
+              </div>
+              <div className="text-2xs text-tertiary mt-0.5">
+                Scheduled for {activeLiveReq.date} &bull; Muntinlupa City
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <Link
+                to={`/patient/messages?provider=${activeLiveReq.providerId}`}
+                className="neu-btn px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                Chat
+              </Link>
+              <button
+                type="button"
+                onClick={() => setTrackingReq(activeLiveReq)}
+                className="neu-btn-primary px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                <span>Track Live GPS</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Unified Header Card with Segmented Tabs */}
+        <section className="neu-flat p-4 sm:p-6 rounded-2xl sm:rounded-3xl space-y-4 relative z-30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
               <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
                 My Service Requests
               </h1>
-              <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 sm:mt-1 max-w-xl">
-                Track, reschedule, and manage all your healthcare appointments in one place.
+              <p className="text-xs sm:text-sm text-tertiary mt-0.5">
+                Track, reschedule, and manage all your healthcare appointments.
               </p>
-            </div>
-
-            {/* Quick Summary Clickable Filter Pills */}
-            <div className="flex items-center flex-wrap gap-1.5 sm:gap-2">
-              <button
-                type="button"
-                onClick={() => setFilter(filter === 'Pending' ? 'All' : 'Pending')}
-                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  filter === 'Pending'
-                    ? 'neu-pressed text-warning dark:text-warning-dark border border-amber-500/40 bg-amber-500/15'
-                    : 'neu-btn text-warning dark:text-warning-dark hover:text-warning'
-                }`}
-                title="Filter Pending requests"
-              >
-                <Clock className="w-3 h-3 text-warning shrink-0" />
-                <span>{stats.pending} Pending</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilter(filter === 'Active' ? 'All' : 'Active')}
-                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  filter === 'Active'
-                    ? 'neu-pressed text-success dark:text-success-dark border border-emerald-500/40 bg-emerald-500/15'
-                    : 'neu-btn text-success dark:text-success-dark hover:text-success'
-                }`}
-                title="Filter Active / On Route requests"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                <span>{stats.active} Active</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilter(filter === 'Completed' ? 'All' : 'Completed')}
-                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  filter === 'Completed'
-                    ? 'neu-pressed text-link dark:text-primary-300 border border-blue-500/40 bg-blue-500/15'
-                    : 'neu-btn text-link dark:text-primary-300 hover:text-blue-700'
-                }`}
-                title="Filter Completed requests"
-              >
-                <CheckCircle2 className="w-3 h-3 text-link shrink-0" />
-                <span>{stats.completed} Completed</span>
-              </button>
-
-              {filter !== 'All' && (
-                <button
-                  type="button"
-                  onClick={() => setFilter('All')}
-                  className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-extrabold text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1"
-                  title="Clear filter and show all"
-                >
-                  <X className="w-3 h-3" />
-                  <span>Show All</span>
-                </button>
-              )}
             </div>
           </div>
 
-          {/* Integrated Search Bar + Side Dropdown Button */}
+            {/* Clean Segmented Tab Pill */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+            <div className="flex p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 text-xs font-semibold self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => { setActiveTab('upcoming'); setFilter('All'); }}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === 'upcoming'
+                    ? 'bg-white dark:bg-slate-800 text-link font-bold shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Upcoming ({stats.upcoming})
+              </button>
+              <button
+                type="button"
+                onClick={() => { setActiveTab('past'); setFilter('All'); }}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === 'past'
+                    ? 'bg-white dark:bg-slate-800 text-link font-bold shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Past Visits ({stats.past})
+              </button>
+              <button
+                type="button"
+                onClick={() => { setActiveTab('all'); setFilter('All'); }}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  activeTab === 'all'
+                    ? 'bg-white dark:bg-slate-800 text-link font-bold shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                All ({stats.total})
+              </button>
+            </div>
+
+            {/* Integrated Search Bar + Side Dropdown Button */}
           <div className="flex items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
             {/* Sunken Search Box */}
             <div className="relative flex-1 min-w-0">
@@ -547,7 +546,8 @@ const PatientRequests = () => {
               </AnimatePresence>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
         {/* Request Cards Feed */}
         <motion.div
@@ -671,8 +671,7 @@ const PatientRequests = () => {
       <PreSessionUploadModal
         isOpen={!!selectedPreSessionReq}
         onClose={() => {
-          const presession = JSON.parse(localStorage.getItem('presession_submitted') || '{}');
-          setPresessionSubmitted(presession);
+          setPresessionSubmitted(presessionMapFor(user?.id));
           setSelectedPreSessionReq(null);
         }}
         request={selectedPreSessionReq}

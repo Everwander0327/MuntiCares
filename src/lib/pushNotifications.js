@@ -41,6 +41,11 @@ async function saveToken(userId, deviceToken) {
   } catch {
     // Private mode / quota: the row is still written, only logout pruning is lost.
   }
+  // One handset belongs to exactly one account. Without this, a shared tablet that
+  // signed in as A then B keeps ringing A's invitations on B's device.
+  const { error: staleError } = await supabase.from('push_tokens').delete().eq('device_token', deviceToken);
+  if (staleError) console.warn('[push] stale token prune failed:', staleError.message);
+
   const { error } = await supabase.from('push_tokens').upsert({
     user_id: userId,
     device_token: deviceToken,
@@ -84,6 +89,20 @@ export function useCallPushNotifications(user) {
 
     (async () => {
       try {
+        // Listeners must exist before register(): the registration event can arrive
+        // immediately, and a missed one means this handset never joins the registry.
+        await Promise.all([
+          attach('registration', ({ value }) => saveTokenSafe(userId, value)),
+          attach('registrationError', (err) => console.warn('[push] registration error:', err?.error || err)),
+          attach('pushNotificationReceived', (notification) => {
+            emitInvite(inviteFromPayload(notification?.data));
+          }),
+          attach('pushNotificationActionPerformed', (action) => {
+            emitInvite(inviteFromPayload(action?.notification?.data));
+          }),
+        ]);
+        if (disposed) return;
+
         if (Capacitor.getPlatform() === 'android') {
           // Android 8+ drops notifications that name no channel, and the Edge Function
           // has to address this exact id for a killed app's tray notification.
@@ -107,15 +126,6 @@ export function useCallPushNotifications(user) {
         console.warn('[push] registration failed:', err?.message || err);
       }
     })();
-
-    attach('registration', ({ value }) => saveTokenSafe(userId, value));
-    attach('registrationError', (err) => console.warn('[push] registration error:', err?.error || err));
-    attach('pushNotificationReceived', (notification) => {
-      emitInvite(inviteFromPayload(notification?.data));
-    });
-    attach('pushNotificationActionPerformed', (action) => {
-      emitInvite(inviteFromPayload(action?.notification?.data));
-    });
 
     return () => {
       disposed = true;

@@ -28,6 +28,12 @@ const getLastMessagePreview = (msg, userId, callRecord) => {
   if (msg.message_type === 'call') {
     return { text: `${callRecord?.call_type === 'audio' ? 'Voice' : 'Video'} consultation`, isYou };
   }
+  if (msg.message_type === 'image') {
+    return { text: 'Photo attachment', isYou };
+  }
+  if (msg.message_type === 'video') {
+    return { text: 'Video attachment', isYou };
+  }
   // Chat rows written before calls were recorded carry only their emoji, which is how
   // this list came to label a voice consultation as "Video call started".
   if (msg.content?.startsWith('📹') || msg.content?.startsWith('📞')) {
@@ -38,7 +44,7 @@ const getLastMessagePreview = (msg, userId, callRecord) => {
   return { text, isYou };
 };
 
-const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
+const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }) => {
   const { isUserOnline } = usePresence();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -147,7 +153,8 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
         .select('id, sender_id, receiver_id, content, created_at, is_read')
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .gte('created_at', yesterday)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
 
       if (!data) return;
       let readIds = new Set();
@@ -179,7 +186,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
     };
 
     const channel = supabase
-      .channel(`conversation-list-${user.id}`)
+      .channel(`conversation-list-${user.id}-${Math.random().toString(36).slice(2, 9)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, fetchUnreadCounts)
       .subscribe();
 
@@ -195,7 +202,9 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
 
     loadCalls();
 
-    const pollInterval = setInterval(fetchUnreadCounts, 2000);
+    // Incoming messages already arrive over realtime; polling only covers a
+    // dropped socket and must not query every two seconds per open session.
+    const pollInterval = setInterval(fetchUnreadCounts, 15000);
 
     return () => {
       clearInterval(pollInterval);
@@ -249,7 +258,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
   }
 
   return (
-    <div className="space-y-3 sm:space-y-4 select-text">
+    <div className="space-y-1 sm:space-y-1.5 select-text">
       {filtered.map((conv, i) => {
         const preview = getLastMessagePreview(conv.lastMessage, user.id, callById[conv.lastMessage?.call_id]);
         const missed = missedByPartner[conv.id];
@@ -257,26 +266,28 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
         return (
           <motion.div
             key={conv.id}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: Math.min(i, 8) * 0.03 }}
+            transition={{ duration: 0.2, delay: Math.min(i, 8) * 0.02 }}
             onClick={() => {
               setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
               onSelect(conv);
             }}
-            className={`neu-flat p-4 sm:p-5 rounded-2xl sm:rounded-[2rem] flex items-center justify-between gap-3.5 sm:gap-4 transition-all cursor-pointer transform-gpu will-change-transform ${
-              hasUnread 
-                ? 'border border-primary/30 ring-1 ring-primary/20' 
-                : 'hover:scale-[1.008]'
+            className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 transition-all cursor-pointer ${
+              conv.id === selectedId
+                ? 'neu-pressed border border-primary/40 bg-primary/10'
+                : hasUnread 
+                ? 'neu-flat border border-primary/30 ring-1 ring-primary/20' 
+                : 'hover:bg-slate-200/50 dark:hover:bg-white/5'
             }`}
           >
-            <div className="flex items-center gap-3.5 sm:gap-4 min-w-0 flex-1">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="relative shrink-0">
-                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl overflow-hidden p-0.5 flex items-center justify-center aspect-square">
-                  <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden p-0.5 flex items-center justify-center aspect-square bg-slate-100 dark:bg-slate-700 shadow-sm">
+                  <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-full" />
                 </div>
                 <div 
-                  className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-surface-shell transition-colors ${
+                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-surface-shell transition-colors ${
                     isUserOnline(conv.id) ? 'bg-emerald-500' : 'bg-slate-400'
                   }`} 
                   title={isUserOnline(conv.id) ? 'Online' : 'Offline'}
@@ -285,35 +296,35 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <p className={`font-display font-extrabold text-sm sm:text-base truncate ${
+                  <p className={`font-display font-extrabold text-xs sm:text-sm truncate ${
                     hasUnread ? 'text-link' : 'text-slate-900 dark:text-white'
                   }`}>
                     {conv.name}
                   </p>
-                  <span className="text-sm text-tertiary dark:text-tertiary shrink-0 font-bold tabular-nums">
+                  <span className="text-2xs text-tertiary dark:text-tertiary shrink-0 font-medium tabular-nums">
                     {formatRelativeTime(conv.lastMessage?.created_at)}
                   </span>
                 </div>
                 
-                <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1.5 mt-0.5">
                   {preview.text ? (
-                    <p className={`text-xs sm:text-sm truncate ${
+                    <p className={`text-xs truncate ${
                       hasUnread 
                         ? 'text-slate-800 dark:text-slate-100 font-bold' 
-                        : 'text-tertiary dark:text-tertiary font-medium'
+                        : 'text-tertiary dark:text-tertiary font-normal'
                     }`}>
                       {preview.isYou && <span className="text-tertiary font-normal">You: </span>}
                       {preview.text}
                     </p>
                   ) : (
-                    <p className="text-xs text-tertiary italic">No messages yet</p>
+                    <p className="text-2xs text-tertiary italic">No messages yet</p>
                   )}
                 </div>
 
                 {missed && (
-                  <div className="flex items-center gap-1.5 mt-1.5">
+                  <div className="flex items-center gap-1.5 mt-1">
                     <PhoneOff className="w-3 h-3 text-danger shrink-0" />
-                    <span className="text-2xs font-extrabold uppercase tracking-wider text-danger truncate">
+                    <span className="text-3xs font-extrabold uppercase tracking-wider text-danger truncate">
                       Missed {missed.call_type === 'audio' ? 'voice' : 'video'} call · {formatRelativeTime(missed.ringing_at)}
                     </span>
                   </div>
@@ -322,7 +333,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '' }) => {
             </div>
 
             {hasUnread && (
-              <span className="min-w-[22px] h-[22px] bg-primary rounded-full flex items-center justify-center text-xs font-black text-white px-1.5 shadow-sm shrink-0">
+              <span className="min-w-[18px] h-[18px] bg-primary rounded-full flex items-center justify-center text-3xs font-black text-white px-1 shadow-sm shrink-0">
                 {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
               </span>
             )}

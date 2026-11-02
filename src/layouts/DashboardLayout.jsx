@@ -214,15 +214,6 @@ const DashboardShell = ({ children, role = 'patient' }) => {
     avatar_url: currentUserProfile?.avatar_url || '',
   };
 
-  const deleteOldMessages = useCallback(async () => {
-    if (!authUser) return;
-    const { error } = await supabase
-      .from('messages')
-      .delete()
-      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
-    if (error) console.warn('Message cleanup error:', error);
-  }, [authUser]);
-
   const fetchCounts = useCallback(async () => {
     if (!authUser) return;
     let pendingQuery = supabase
@@ -254,7 +245,6 @@ const DashboardShell = ({ children, role = 'patient' }) => {
 
   useEffect(() => {
     fetchCounts();
-    deleteOldMessages();
 
     if (!authUser) return;
 
@@ -276,12 +266,11 @@ const DashboardShell = ({ children, role = 'patient' }) => {
     document.addEventListener('visibilitychange', onVisibilityChange);
     window.addEventListener('focus', onWindowFocus);
 
-    const pollInterval = setInterval(fetchCounts, 2000);
-    const cleanupInterval = setInterval(deleteOldMessages, 60000);
+    // Counts also arrive over realtime; this backstop only covers dropped sockets.
+    const pollInterval = setInterval(fetchCounts, 15000);
 
     return () => {
       clearInterval(pollInterval);
-      clearInterval(cleanupInterval);
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -290,7 +279,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('focus', onWindowFocus);
     };
-  }, [authUser, fetchCounts, deleteOldMessages]);
+  }, [authUser, fetchCounts]);
 
   // Auto-hide mobile bottom nav on scroll down or input typing/focus
   const [isMobileNavVisible, setIsMobileNavVisible] = useState(true);
@@ -643,11 +632,23 @@ const DashboardShell = ({ children, role = 'patient' }) => {
           </header>
 
           {/* Open Canvas Main Area - Expands full width when sidebar collapses */}
-          <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-8 pb-24 sm:pb-28 lg:pb-10 flex flex-col">
-            <div className="w-full max-w-full flex-1 flex flex-col">
-              {children || <Outlet />}
-            </div>
-          </main>
+          {(() => {
+            const isMessagesPage = location.pathname.includes('/messages');
+            return (
+              <main
+                ref={mainRef}
+                className={`flex-1 w-full max-w-full flex flex-col transition-all duration-300 ${
+                  isMessagesPage
+                    ? 'p-2 sm:p-3 lg:p-3.5 pb-2 sm:pb-3 lg:pb-3.5 overflow-hidden'
+                    : 'p-4 sm:p-6 lg:p-8 pb-24 sm:pb-28 lg:pb-10 overflow-y-auto overflow-x-hidden'
+                }`}
+              >
+                <div className="w-full max-w-full flex-1 flex flex-col h-full min-h-0">
+                  {children || <Outlet />}
+                </div>
+              </main>
+            );
+          })()}
         </div>
       </div>
 

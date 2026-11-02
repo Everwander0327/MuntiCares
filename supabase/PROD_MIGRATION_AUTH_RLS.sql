@@ -11,6 +11,8 @@ ALTER TABLE public.users ALTER COLUMN password DROP NOT NULL;
 ALTER TABLE public.users ALTER COLUMN password SET DEFAULT '';
 
 -- 1. HELPER FUNCTION: Check if authenticated user is Admin (SECURITY DEFINER prevents RLS recursion)
+--    search_path is pinned: an unqualified CREATE OR REPLACE FUNCTION public.* name can be
+--    hijacked by another schema on the search path when this runs as superuser.
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS boolean AS $$
 BEGIN
@@ -19,9 +21,15 @@ BEGIN
     WHERE id = auth.uid() AND role = 'admin'
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE
+SET search_path = public, pg_temp;
 
--- 2. BRIDGE: Populate auth.users with the 18 existing users + EXACT recovered passwords
+-- 2. BRIDGE: Populate auth.users for the existing public.users rows.
+--    NO PASSWORD IS EVER WRITTEN HERE. Each bridged account gets an unusable random
+--    credential and is onboarded through the dashboard invite / reset-link flow, or
+--    supabase.auth.admin.updateUserById from an Edge Function. Re-running this file
+--    must not reset a live password (the old version re-set all 18 accounts to
+--    published plaintext values, which is why those credentials are burned).
 INSERT INTO auth.users (
   instance_id,
   id,
@@ -45,20 +53,10 @@ SELECT
   'authenticated',
   'authenticated',
   u.email,
-  CASE 
-    WHEN u.email = 'johnlawrence@gmail.com' THEN crypt('12345678', gen_salt('bf'))
-    WHEN u.email = 'andrew@gmail.com' THEN crypt('andrew123', gen_salt('bf'))
-    WHEN u.email = 'admin@munticares.com' THEN crypt('admin123', gen_salt('bf'))
-    WHEN u.email = 'markdaniel@gmail.com' THEN crypt('12345678', gen_salt('bf'))
-    WHEN u.email = 'pabilarbryan@gmail.com' THEN crypt('kalkal', gen_salt('bf'))
-    WHEN u.email = 'rene@gmail.com' THEN crypt('123456', gen_salt('bf'))
-    WHEN u.email = 'johnny@gmail.com' THEN crypt('john123', gen_salt('bf'))
-    WHEN u.email = 'markverdijo0809@gmail.com' THEN crypt('123456', gen_salt('bf'))
-    ELSE crypt('MuntiCares2026!', gen_salt('bf'))
-  END,
+  crypt(gen_random_uuid()::text, gen_salt('bf')),
   now(),
   jsonb_build_object('provider', 'email', 'providers', array['email']),
-  jsonb_build_object('full_name', u.full_name, 'role', u.role),
+  jsonb_build_object('full_name', u.full_name),
   u.created_at,
   now(),
   '',
@@ -67,7 +65,6 @@ SELECT
   ''
 FROM public.users u
 ON CONFLICT (id) DO UPDATE SET
-  encrypted_password = EXCLUDED.encrypted_password,
   email_confirmed_at = now();
 
 -- 3. BRIDGE IDENTITIES: Ensure auth.identities has matching records so login succeeds
@@ -145,11 +142,19 @@ ALTER TABLE public.patient_documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.provider_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
 
--- Clean existing policies before recreation
+-- Clean existing policies before recreation.
+-- This drops EVERY policy in public, including ones added by later migrations, so it
+-- must be opted into: SET mc.allow_policy_reset = 'yes'; before running this file.
+-- The policy set below is superseded by
+-- supabase/migrations/20261102150000_rls_rollout_and_server_guards.sql.
 DO $$
 DECLARE
   pol record;
 BEGIN
+  IF COALESCE(current_setting('mc.allow_policy_reset', true), '') <> 'yes' THEN
+    RAISE NOTICE 'Skipping drop-all-policies. Set mc.allow_policy_reset to yes to run it.';
+    RETURN;
+  END IF;
   FOR pol IN 
     SELECT policyname, tablename 
     FROM pg_policies 

@@ -211,18 +211,3 @@ export function buildBundle(resources) {
     })),
   };
 }
-
-export async function uploadToHapiFhir(bundle) {
-  const res = await fetch('https://hapi.fhir.org/baseR4', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/fhir+json' },
-    body: JSON.stringify(bundle),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`FHIR server error (${res.status}): ${errText.slice(0, 300)}`);
-  }
-
-  return res.json();
-}

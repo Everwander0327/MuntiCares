@@ -239,6 +239,7 @@ const PatientConsent = () => {
           lastAccess: c.last_access ? new Date(c.last_access).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Never',
           lastAccessRaw: c.last_access,
           isEnabled: c.is_enabled,
+          expiresAt: c.expires_at || null,
           permissions: perms,
         };
       });
@@ -255,23 +256,51 @@ const PatientConsent = () => {
     fetchConsents();
   }, [user]);
 
+  const DEFAULT_GRANT_DAYS = 90;
+
+  // The expiry column ships with its own migration; until it is applied the
+  // consent screen must keep working, so a missing-column error downgrades to
+  // an enable-only write instead of failing the toggle.
+  const isMissingColumnError = (err) =>
+    err?.code === '42703' || /column .* does not exist/i.test(err?.message || '');
+
   const handleToggle = async (consentId, currentValue, providerName, providerId) => {
     setTogglingId(consentId);
     try {
       const nextValue = !currentValue;
-      const { error } = await supabase
+      const consent = consents.find(c => c.id === consentId);
+      let expiresAt = consent?.expiresAt || null;
+      if (nextValue) {
+        // Enabling requires a future expiry; grant 90 days when there is none.
+        if (!expiresAt || new Date(expiresAt).getTime() <= Date.now()) {
+          expiresAt = new Date(Date.now() + DEFAULT_GRANT_DAYS * 86400000).toISOString();
+        }
+      } else {
+        // A revoked row keeps a past expiry so the record shows when it lapsed.
+        expiresAt = new Date().toISOString();
+      }
+
+      let { error } = await supabase
         .from('consent_access')
-        .update({ is_enabled: nextValue })
+        .update({ is_enabled: nextValue, expires_at: expiresAt })
         .eq('id', consentId);
+
+      if (isMissingColumnError(error)) {
+        expiresAt = consent?.expiresAt || null;
+        ({ error } = await supabase
+          .from('consent_access')
+          .update({ is_enabled: nextValue })
+          .eq('id', consentId));
+      }
 
       if (error) throw error;
 
       setConsents(prev => prev.map(c =>
-        c.id === consentId ? { ...c, isEnabled: nextValue } : c
+        c.id === consentId ? { ...c, isEnabled: nextValue, expiresAt } : c
       ));
 
       if (selectedPermProvider?.id === consentId) {
-        setSelectedPermProvider(prev => prev ? { ...prev, isEnabled: nextValue } : null);
+        setSelectedPermProvider(prev => prev ? { ...prev, isEnabled: nextValue, expiresAt } : null);
       }
 
       if (nextValue) {
@@ -287,6 +316,42 @@ const PatientConsent = () => {
     } finally {
       setTogglingId(null);
     }
+  };
+
+  const EXPIRY_CHOICES = [
+    { label: '30 days', days: 30 },
+    { label: '90 days', days: 90 },
+    { label: '1 year', days: 365 },
+    { label: 'No expiry', days: null },
+  ];
+
+  const handleExpiryChoice = async (consent, days) => {
+    const iso = days === null ? null : new Date(Date.now() + days * 86400000).toISOString();
+    const label = days === null ? 'has no expiry date' : `expires in ${days} days`;
+
+    const { error } = await supabase
+      .from('consent_access')
+      .update({ expires_at: iso })
+      .eq('id', consent.id);
+
+    if (isMissingColumnError(error)) {
+      toast.error('This database has no consent_expiry column yet. Apply the consent expiry migration first.');
+      return;
+    }
+    if (error) {
+      toast.error('Failed to change the expiry. Check your connection.');
+      return;
+    }
+
+    setConsents(prev => prev.map(c => (c.id === consent.id ? { ...c, expiresAt: iso } : c)));
+    setSelectedPermProvider(prev => (prev?.id === consent.id ? { ...prev, expiresAt: iso } : prev));
+    addHistoryEntry({
+      providerName: consent.providerName,
+      providerId: consent.providerId,
+      action: 'Expiry set',
+      details: `Access ${label}`,
+    });
+    toast.success(`Access ${label}`);
   };
 
   const handlePermChange = async (providerId, providerName, permKey) => {
@@ -598,6 +663,37 @@ const PatientConsent = () => {
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Access expiry */}
+                  <div className="neu-flat-sm rounded-2xl p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">Access expiry</p>
+                      <span className="text-xs text-tertiary dark:text-tertiary font-semibold">
+                        {(() => {
+                          const raw = selectedPermProvider.expiresAt;
+                          if (!raw) return 'No expiry set';
+                          const date = new Date(raw);
+                          if (date <= new Date()) return `Expired ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                          return `Ends ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {EXPIRY_CHOICES.map(opt => (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => handleExpiryChoice(selectedPermProvider, opt.days)}
+                          className="neu-btn px-3 py-2 min-h-[44px] rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer active:scale-95"
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-tertiary dark:text-tertiary leading-relaxed font-medium">
+                      Providers lose access automatically on this date. Re-enabling access always sets a future expiry.
+                    </p>
                   </div>
 
                   {/* Footer action */}

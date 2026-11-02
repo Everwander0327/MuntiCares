@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
+import { parseLocalDate } from '@/lib/localDate';
 import { 
   Calendar, ChevronRight, ChevronLeft,
   Star, MessageCircle, ArrowRight,
@@ -84,7 +85,6 @@ const _STATUS_FLOW = {
 const ProviderDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState({});
-  const [, setUpdatingVisitId] = useState(null);
   
   const [stats, setStats] = useState({ pending: 0, active: 0, completed: 0 });
   const [activeVisit, setActiveVisit] = useState(null);
@@ -254,7 +254,7 @@ const ProviderDashboard = () => {
         patient: r.patient?.full_name || 'Unknown Patient',
         patientAvatarUrl: r.patient?.avatar_url || '',
         service: r.service,
-        date: new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        date: parseLocalDate(r.date)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unscheduled',
         status: r.status,
         notes: r.notes || '',
       })));
@@ -354,31 +354,6 @@ const ProviderDashboard = () => {
         delete next[id];
         return next;
       });
-    }
-  };
-
-  // Live Visit Stepper update
-  const _handleAdvanceVisit = async (visitId, nextStatus) => {
-    setUpdatingVisitId(visitId);
-    try {
-      const payload = { status: nextStatus };
-      const nowIso = new Date().toISOString();
-      if (nextStatus === 'On The Way') payload.route_started_at = nowIso;
-      if (nextStatus === 'Arrived') payload.arrived_at = nowIso;
-
-      const { error } = await supabase
-        .from('requests')
-        .update(payload)
-        .eq('id', visitId);
-
-      if (error) throw error;
-      toast.success(`Visit updated to "${nextStatus === 'On The Way' ? 'On Route' : nextStatus}"!`);
-      fetchDashboardData();
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to update visit status.');
-    } finally {
-      setUpdatingVisitId(null);
     }
   };
 

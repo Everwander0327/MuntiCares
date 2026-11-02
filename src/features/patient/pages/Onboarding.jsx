@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, MapPin, RotateCcw } from 'lucide-react';
 import { Heart } from '@phosphor-icons/react';
+import { toLocalDateKey } from '@/lib/localDate';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -1270,7 +1271,7 @@ export default function Onboarding({ isPreview = false }) {
                           id="onboard-dob"
                           type="date"
                           autoComplete="bday"
-                          max={new Date().toISOString().slice(0, 10)}
+                          max={toLocalDateKey()}
                           value={dateOfBirth}
                           onChange={(e) => {
                             setDateOfBirth(e.target.value);
@@ -1546,8 +1547,8 @@ export default function Onboarding({ isPreview = false }) {
                         ) : privacyConsent ? (
                           <>
                             <span className="font-bold text-slate-900 dark:text-white">You consented to storing these details.</span>{' '}
-                            They are encrypted at rest and shown only to providers you approve during a visit. You
-                            can revoke this in Privacy &amp; Consent.
+                            They are saved to your MuntiCares record and shown only to providers you approve during a
+                            visit. You can revoke this in Privacy &amp; Consent.
                           </>
                         ) : (
                           <>

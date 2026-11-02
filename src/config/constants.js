@@ -20,16 +20,6 @@ export const WORKING_HOURS = {
   SLOT_DURATION_MINUTES: 60,
 };
 
-export const APPOINTMENT_STATUSES = {
-  PENDING: 'pending',
-  APPROVED: 'approved',
-  CONFIRMED: 'confirmed',
-  IN_PROGRESS: 'in_progress',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled',
-  DECLINED: 'declined',
-};
-
 export const USER_ROLES = {
   PATIENT: 'patient',
   PROVIDER: 'provider',

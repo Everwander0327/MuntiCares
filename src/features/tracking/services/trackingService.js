@@ -110,38 +110,25 @@ export function canOverrideArrival(res) {
 /**
  * Shared helper to mark a visit as arrived through the secure RPC.
  * Returns structured result: { ok: boolean, reason?: string, distance_m?: number, accuracy_m?: number }
+ * The RPC is the only arrival path: it enforces geofence, accuracy, freshness and the
+ * audited override. A direct `requests` update here would skip all of it, so RPC errors
+ * are reported as failures instead of falling back.
  */
 export async function markVisitArrived(requestId, sessionId = null, overrideReason = null) {
-  try {
-    const { data, error } = await supabase.rpc('mark_arrived', {
-      p_request_id: requestId,
-      p_session_id: sessionId,
-      p_override_reason: overrideReason,
-    });
-    if (error) {
-      // If mark_arrived has not been created in Supabase yet (404 / PGRST202), fallback gracefully
-      if (error.code === 'PGRST202' || error.message?.includes('404') || error.message?.includes('not found')) {
-        const { error: fallbackError } = await supabase
-          .from('requests')
-          .update({ status: 'Arrived', arrived_at: new Date().toISOString() })
-          .eq('id', requestId);
-        if (fallbackError) throw fallbackError;
-        return { ok: true, status: 'Arrived', fallback: true };
-      }
-      throw error;
-    }
-    return data;
-  } catch (err) {
-    if (err?.code === 'PGRST202' || err?.message?.includes('404') || err?.message?.includes('not found')) {
-      const { error: fallbackError } = await supabase
-        .from('requests')
-        .update({ status: 'Arrived', arrived_at: new Date().toISOString() })
-        .eq('id', requestId);
-      if (fallbackError) throw fallbackError;
-      return { ok: true, status: 'Arrived', fallback: true };
-    }
-    throw err;
+  const { data, error } = await supabase.rpc('mark_arrived', {
+    p_request_id: requestId,
+    p_session_id: sessionId,
+    p_override_reason: overrideReason,
+  });
+  if (error) {
+    console.error('mark_arrived failed:', error.code, error.message);
+    return {
+      ok: false,
+      reason: 'server_error',
+      message: 'Arrival could not be recorded. Check your connection and try again.',
+    };
   }
+  return data;
 }
 
 export function formatArrivalFailure(res) {

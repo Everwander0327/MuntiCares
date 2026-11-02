@@ -41,7 +41,10 @@ export const AuthProvider = ({ children }) => {
       return {
         id: authUser.id,
         email: authUser.email,
-        role: profile?.role || authUser.user_metadata?.role || 'patient',
+        // Role comes from the database only. auth.users.user_metadata is writable by
+        // the account owner through supabase.auth.updateUser(), so trusting it lets
+        // anyone grant themselves provider or admin UI.
+        role: profile?.role || 'patient',
         full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
         avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || '',
         is_banned: profile?.is_banned || false,
@@ -51,7 +54,7 @@ export const AuthProvider = ({ children }) => {
       return {
         id: authUser.id,
         email: authUser.email,
-        role: authUser.user_metadata?.role || 'patient',
+        role: 'patient',
         full_name: authUser.user_metadata?.full_name || '',
         avatar_url: authUser.user_metadata?.avatar_url || '',
         is_banned: false,
@@ -70,11 +73,12 @@ export const AuthProvider = ({ children }) => {
         if (!isMounted) return;
 
         if (session?.user) {
-          // Provide instant local metadata so ProtectedRoute doesn't block
+          // Render continuity while the profile query runs. The role stays unknown
+          // until public.users confirms it — user_metadata.role is client-writable.
           const quickUser = {
             id: session.user.id,
             email: session.user.email,
-            role: session.user.user_metadata?.role || 'patient',
+            role: null,
             full_name: session.user.user_metadata?.full_name || '',
             avatar_url: session.user.user_metadata?.avatar_url || '',
             is_banned: false,
@@ -85,9 +89,9 @@ export const AuthProvider = ({ children }) => {
           setTimeout(async () => {
             if (!isMounted) return;
             const profile = await fetchUserProfile(session.user);
-            if (isMounted && profile) {
-              setUser(profile);
-            }
+            if (!isMounted) return;
+            // null means the account is banned and has just been signed out.
+            setUser(profile || null);
           }, 0);
         } else {
           setUser(null);

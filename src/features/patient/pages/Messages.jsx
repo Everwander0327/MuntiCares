@@ -9,19 +9,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
 import { useLocation } from 'react-router-dom';
 
-
-const _slideVariants = {
-  initial: { x: '30%', opacity: 0 },
-  animate: { x: 0, opacity: 1, transition: { type: 'spring', damping: 25, stiffness: 250 } },
-  exit: { x: '30%', opacity: 0, transition: { duration: 0.15 } },
-};
-
 const PatientMessages = () => {
   const { user } = useAuth();
   const location = useLocation();
 
   const [view, setView] = useState('list');
   const [selectedPartner, setSelectedPartner] = useState(null);
+  const [isDesktop, setIsDesktop] = useState(() => 
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
   const [currentUserData, setCurrentUserData] = useState(() =>
     user
       ? {
@@ -35,6 +31,12 @@ const PatientMessages = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [autoStartVideo, setAutoStartVideo] = useState(false);
   const [autoStartCall, setAutoStartCall] = useState(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -85,7 +87,7 @@ const PatientMessages = () => {
       setSelectedPartner({
         id: targetId,
         name: initialName,
-        photoUrl: initialsAvatar(initialName),
+        photoUrl: initialsAvatar(initialName, { background: 'DDEBF8', color: '2F6FB5' }),
       });
       supabase
         .from('users')
@@ -99,14 +101,14 @@ const PatientMessages = () => {
             name: resolvedName,
             photoUrl:
               partData?.avatar_url ||
-              initialsAvatar(resolvedName),
+              initialsAvatar(resolvedName, { background: 'DDEBF8', color: '2F6FB5' }),
           });
         })
         .catch(() => {
           setSelectedPartner({
             id: targetId,
             name: initialName,
-            photoUrl: initialsAvatar(initialName),
+            photoUrl: initialsAvatar(initialName, { background: 'DDEBF8', color: '2F6FB5' }),
           });
         });
 
@@ -127,7 +129,7 @@ const PatientMessages = () => {
   }, [location.search, currentUserData, location.pathname]);
 
   useEffect(() => {
-    if (view === 'chat') {
+    if (view === 'chat' && !isDesktop) {
       document.body.classList.add('modal-open');
     } else {
       document.body.classList.remove('modal-open');
@@ -135,7 +137,7 @@ const PatientMessages = () => {
     return () => {
       document.body.classList.remove('modal-open');
     };
-  }, [view]);
+  }, [view, isDesktop]);
 
   const handleSelect = (partner) => {
     setSelectedPartner(partner);
@@ -154,61 +156,80 @@ const PatientMessages = () => {
   return (
     <>
       <DashboardLayout role="patient">
-        {view === 'list' ? (
-          <div className="flex-1 flex flex-col space-y-4 sm:space-y-6 relative w-full max-w-full">
-            {/* Neumorphic Header Card */}
-            <section className="neu-flat p-4 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-4 sm:space-y-5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* ================= UNIFIED MESSENGER CONTAINER ================= */}
+        <div className="flex-1 neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col lg:flex-row h-full max-h-full min-h-0 border border-slate-200/80 dark:border-white/10 shadow-sm w-full">
+          {/* Threads List Pane (Full width on mobile, 288px-320px on desktop) */}
+          <div className="w-full lg:w-72 xl:w-80 border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-white/10 flex flex-col h-full bg-surface-shell/40 shrink-0 select-text">
+            <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 space-y-3 shrink-0">
+              <div className="flex items-center justify-between">
                 <div>
-                  <div className="flex items-center gap-2">
-                    <span className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center text-link">
-                      <MessageCircle className="w-4 h-4" />
-                    </span>
-                    <span className="text-2xs uppercase font-extrabold tracking-wider text-link">Direct Communication</span>
-                  </div>
-                  <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white mt-1">
+                  <h1 className="font-display font-black text-xl sm:text-2xl text-slate-900 dark:text-white">
                     Messages
                   </h1>
-                  <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 sm:mt-1 max-w-xl">
-                    Chat in real-time or start teleconsultations with your healthcare providers.
-                  </p>
+                  <span className="text-2xs font-extrabold uppercase tracking-wider text-link">Direct Communication</span>
                 </div>
               </div>
-
-              {/* Neumorphic Inset Search Bar */}
-              <div className="neu-inset p-1.5 sm:p-2 rounded-2xl flex items-center gap-2.5 h-[48px] sm:h-[52px]">
-                <Search className="w-4 h-4 text-link ml-2 shrink-0" />
+              <div className="neu-inset p-1.5 rounded-xl flex items-center gap-2 h-10">
+                <Search className="w-3.5 h-3.5 text-link ml-1.5 shrink-0" />
                 <input
                   type="text"
-                  aria-label="Search provider conversations"
-                  placeholder="Search provider, conversations..."
+                  aria-label="Search conversations"
+                  placeholder="Search conversations..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
+                  className="w-full bg-transparent border-0 px-1 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none placeholder:text-tertiary"
                 />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="neu-btn w-7 h-7 rounded-xl flex items-center justify-center text-tertiary hover:text-danger transition-colors shrink-0 mr-1 cursor-pointer"
+                    className="text-xs text-tertiary hover:text-danger pr-1.5 cursor-pointer font-bold"
                     title="Clear search"
                   >
-                    <span className="text-xs font-bold leading-none">✕</span>
+                    ✕
                   </button>
                 )}
               </div>
-            </section>
-
-            {/* Conversation Feed */}
-            <div className="flex-1 min-h-0">
-              <ConversationList user={user} onSelect={handleSelect} searchTerm={searchTerm} />
+            </div>
+            <div className="flex-1 overflow-y-auto p-3 min-h-0 space-y-2">
+              <ConversationList
+                user={user}
+                onSelect={handleSelect}
+                searchTerm={searchTerm}
+                selectedId={selectedPartner?.id}
+              />
             </div>
           </div>
-        ) : null}
+
+          {/* Desktop Right Chat Pane: Only rendered on desktop to prevent duplicate chat subscriptions */}
+          <div className="hidden lg:flex flex-1 flex-col h-full min-w-0 bg-white dark:bg-slate-800/50">
+            {isDesktop && (
+              selectedPartner && currentUserData ? (
+                <ChatWindow
+                  key={selectedPartner.id}
+                  currentUser={currentUserData}
+                  otherUser={selectedPartner}
+                  autoStartVideo={autoStartVideo}
+                  autoStartCall={autoStartCall}
+                />
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-tertiary">
+                  <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-link">
+                    <MessageCircle className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">Select a conversation</h3>
+                  <p className="text-xs text-tertiary mt-1 max-w-xs">
+                    Choose a provider from your list on the left to start or continue chatting.
+                  </p>
+                </div>
+              )
+            )}
+          </div>
+        </div>
       </DashboardLayout>
 
-      {/* Full-Screen Immersive Chat Window (Escapes DashboardLayout stacking via Portal) */}
-      {createPortal(
+      {/* Mobile-Only Portal: Only rendered when NOT desktop to prevent duplicate chat subscriptions */}
+      {!isDesktop && createPortal(
         <AnimatePresence>
           {view === 'chat' && currentUserData && selectedPartner?.id && (
             <motion.div
