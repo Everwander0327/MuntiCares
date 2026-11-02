@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { logCallEvent } from '../lib/callEvents';
 
 /**
  * Native WebRTC 1-on-1 call hook (voice or video) using Supabase Realtime broadcast
@@ -29,9 +30,15 @@ const STUN_ICE_SERVERS = [
 let cachedIceServers = STUN_ICE_SERVERS;
 let cachedUntil = 0;
 let pendingIce = null;
+let iceServersFallbackReason = null;
 
-async function requestIceServers() {
-  const { data, error } = await supabase.functions.invoke('ice-servers', { method: 'GET', timeout: 6000 });
+// An Edge Function cold start can outrun a short timeout, and the STUN-only fallback that
+// follows is what a call over mobile data or a strict NAT then reports as "Connection
+// failed" — so the request gets room for a cold start and one retry before we give up the
+// relay. The first dial of a session waits on this inside the caller's 45 s ring budget, so
+// the two tries are bounded rather than both getting the full window.
+async function requestIceServers(timeout = 15000) {
+  const { data, error } = await supabase.functions.invoke('ice-servers', { method: 'GET', timeout });
   if (error) throw error;
   if (!Array.isArray(data?.iceServers) || data.iceServers.length === 0) {
     throw new Error('ice-servers returned no servers');
@@ -40,25 +47,40 @@ async function requestIceServers() {
   // Refresh at half the credential lifetime so a long consult never dials with dead creds.
   cachedUntil = Date.now() + Math.max(60, Math.floor(ttl / 2)) * 1000;
   cachedIceServers = data.iceServers;
+  iceServersFallbackReason = null;
   return cachedIceServers;
 }
+
+export const hasTurnServer = (servers) =>
+  (servers || []).some((server) =>
+    [].concat(server?.urls || []).some((url) => String(url).startsWith('turn')));
+
+export const getIceServersFallbackReason = () => iceServersFallbackReason;
 
 export async function getIceServers() {
   if (Date.now() < cachedUntil) return cachedIceServers;
   if (!pendingIce) {
     pendingIce = requestIceServers()
-      .catch((err) => {
-        console.warn('[webrtc] ice-servers unavailable, falling back to STUN-only:', err?.message || err);
-        const turnUrl = import.meta.env.VITE_TURN_URL;
-        cachedIceServers = turnUrl
-          ? [...STUN_ICE_SERVERS, {
-            urls: turnUrl.split(',').map((u) => u.trim()).filter(Boolean),
-            username: import.meta.env.VITE_TURN_USERNAME,
-            credential: import.meta.env.VITE_TURN_CREDENTIAL,
-          }]
-          : STUN_ICE_SERVERS;
-        cachedUntil = Date.now() + 60000; // back off, but retry rather than lose TURN for the session
-        return cachedIceServers;
+      .catch(async (err) => {
+        console.warn('[webrtc] ice-servers unavailable, retrying once:', err?.message || err);
+        try {
+          return await requestIceServers(6000);
+        } catch (retryErr) {
+          console.warn('[webrtc] ice-servers still unavailable, falling back to STUN-only:', retryErr?.message || retryErr);
+          const turnUrl = import.meta.env.VITE_TURN_URL;
+          cachedIceServers = turnUrl
+            ? [...STUN_ICE_SERVERS, {
+              urls: turnUrl.split(',').map((u) => u.trim()).filter(Boolean),
+              username: import.meta.env.VITE_TURN_USERNAME,
+              credential: import.meta.env.VITE_TURN_CREDENTIAL,
+            }]
+            : STUN_ICE_SERVERS;
+          iceServersFallbackReason = `${err?.message || err} / ${retryErr?.message || retryErr}`;
+          // A cold start must not cost the rest of the session its relay, so this
+          // negative cache is shorter than the old 60 s one.
+          cachedUntil = Date.now() + 15000;
+          return cachedIceServers;
+        }
       })
       .finally(() => { pendingIce = null; });
   }
@@ -172,6 +194,36 @@ const tuneSenderParameters = async (pc) => {
  */
 const findVideoSender = (pc) => pc?.getSenders().find((s) => s.track?.kind === 'video') || null;
 
+/*
+ * Which candidate pair actually carried the call: host (LAN), srflx (P2P through NAT)
+ * or relay (TURN). This is the number the STUN-only vs TURN argument needs, and it is
+ * only readable from getStats once a pair has been selected.
+ */
+const describeTransport = async (pc) => {
+  try {
+    const stats = await pc.getStats();
+    let selectedPairId = null;
+    const pairs = [];
+    stats.forEach((entry) => {
+      if (entry.type === 'transport' && entry.selectedCandidatePairId) selectedPairId = entry.selectedCandidatePairId;
+      if (entry.type === 'candidate-pair') pairs.push(entry);
+    });
+    const pair = pairs.find((p) => p.id === selectedPairId)
+      || pairs.find((p) => p.state === 'succeeded' && (p.selected || p.nominated));
+    if (!pair) return null;
+    const local = stats.get(pair.localCandidateId);
+    const remote = stats.get(pair.remoteCandidateId);
+    return {
+      localType: local?.candidateType || null,
+      remoteType: remote?.candidateType || null,
+      protocol: local?.protocol || null,
+      relayProtocol: local?.relayProtocol || null,
+    };
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Swap in or add an outgoing video track. Renegotiates only when the connection
  * has no video sender yet (an audio call that later turns the camera on).
@@ -260,6 +312,8 @@ export default function useWebRTCCall({ selfId, peerId }) {
   const localCandidatesRef = useRef([]);
   const disconnectTimerRef = useRef(null);
   const iceRestartTriedRef = useRef(false);
+  const transportLoggedRef = useRef(false);
+  const lastPcStateKeyRef = useRef('');
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -274,6 +328,10 @@ export default function useWebRTCCall({ selfId, peerId }) {
     roleRef.current = next;
     setRole(next);
   }, []);
+
+  const log = useCallback((event, detail = {}, callId = callIdRef.current) => {
+    logCallEvent(callId, selfId, event, detail);
+  }, [selfId]);
 
   const send = useCallback((msg) => {
     if (!topic) {
@@ -331,6 +389,8 @@ export default function useWebRTCCall({ selfId, peerId }) {
       disconnectTimerRef.current = null;
     }
     iceRestartTriedRef.current = false;
+    transportLoggedRef.current = false;
+    lastPcStateKeyRef.current = '';
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     remoteStreamRef.current = null;
@@ -363,6 +423,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     const forThisCall = pendingCandidatesRef.current.filter((c) => c.callId === callId);
     pendingCandidatesRef.current = pendingCandidatesRef.current.filter((c) => c.callId !== callId);
     console.log('[webrtc] flushing', forThisCall.length, 'queued candidates for callId:', callId);
+    log('candidates_flushed', { count: forThisCall.length }, callId);
     for (const c of forThisCall) {
       try {
         await pc.addIceCandidate(new RTCIceCandidate(c.candidate));
@@ -370,10 +431,11 @@ export default function useWebRTCCall({ selfId, peerId }) {
         console.warn('[webrtc] addIceCandidate failed in flush', err);
       }
     }
-  }, []);
+  }, [log]);
 
   const finishCall = useCallback(({ notify, reason } = {}) => {
     console.log('[webrtc] finishCall called, notify:', notify, 'reason:', reason);
+    log('call_finish', { notify: !!notify, reason: reason || null, status: statusRef.current });
     if (notify && callIdRef.current) {
       send({ type: 'hangup', callId: callIdRef.current });
     }
@@ -385,7 +447,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     facingModeRef.current = 'user';
     setCameraRotation(0);
     if (statusRef.current !== 'idle') setCallStatus('ended');
-  }, [cleanup, send, setCallStatus]);
+  }, [cleanup, log, send, setCallStatus]);
 
   /**
    * Announce a locally created renegotiation offer (camera turned on mid-call).
@@ -416,6 +478,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
       if (pc.connectionState === 'connected' || pc.connectionState === 'completed') return;
       if (!iceRestartTriedRef.current) {
         iceRestartTriedRef.current = true;
+        log('ice_restart', { why: 'disconnected_timeout' });
         try { pc.restartIce(); } catch { /* browser without restartIce */ }
         setError('Connection unstable — reconnecting…');
         watchDisconnected(pc);
@@ -423,12 +486,19 @@ export default function useWebRTCCall({ selfId, peerId }) {
       }
       finishCall({ notify: true, reason: 'Connection lost. Please call again.' });
     }, 8000);
-  }, [finishCall]);
+  }, [finishCall, log]);
 
   const createPeerConnection = useCallback((callId, iceServers) => {
     console.log('[webrtc] createPeerConnection for callId:', callId);
     const pc = new RTCPeerConnection(buildRtcConfig(iceServers));
     pcRef.current = pc;
+    transportLoggedRef.current = false;
+    lastPcStateKeyRef.current = '';
+    log('ice_config', {
+      servers: iceServers?.length || 0,
+      hasTurn: hasTurnServer(iceServers),
+      stunFallback: getIceServersFallbackReason(),
+    }, callId);
 
     pc.onicecandidate = (e) => {
       if (e.candidate) {
@@ -475,6 +545,11 @@ export default function useWebRTCCall({ selfId, peerId }) {
       if (pcRef.current !== pc) return;
       const state = pc.connectionState || pc.iceConnectionState;
       console.log('[webrtc] pc state change - connState:', pc.connectionState, 'iceState:', pc.iceConnectionState);
+      const stateKey = `${pc.connectionState}|${pc.iceConnectionState}`;
+      if (stateKey !== lastPcStateKeyRef.current) {
+        lastPcStateKeyRef.current = stateKey;
+        log('pc_state', { conn: pc.connectionState, ice: pc.iceConnectionState }, callId);
+      }
       setPcState(state);
       const isConnected =
         pc.connectionState === 'connected' ||
@@ -490,6 +565,12 @@ export default function useWebRTCCall({ selfId, peerId }) {
         iceRestartTriedRef.current = false;
         setError(null);
         setCallStatus('connected');
+        if (!transportLoggedRef.current) {
+          transportLoggedRef.current = true;
+          describeTransport(pc).then((transport) => {
+            if (transport) log('transport_selected', transport, callId);
+          });
+        }
         if (remoteStreamRef.current) {
           const hasVideo = remoteStreamRef.current.getVideoTracks().some((t) => t.readyState === 'live');
           if (hasVideo) setHasRemoteVideo(true);
@@ -505,6 +586,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
       } else if (pc.connectionState === 'failed' || pc.iceConnectionState === 'failed') {
         if (!iceRestartTriedRef.current) {
           iceRestartTriedRef.current = true;
+          log('ice_restart', { why: 'connection_failed' }, callId);
           try { pc.restartIce(); } catch { /* browser without restartIce */ }
           return;
         }
@@ -515,10 +597,11 @@ export default function useWebRTCCall({ selfId, peerId }) {
     pc.oniceconnectionstatechange = onState;
 
     return pc;
-  }, [attachMedia, finishCall, send, setCallStatus, watchDisconnected]);
+  }, [attachMedia, finishCall, log, send, setCallStatus, watchDisconnected]);
 
   const answerOffer = useCallback(async (msg) => {
     console.log('[webrtc] answerOffer starting for callId:', msg.callId);
+    log('offer_answered', { callType: msg.callType || null }, msg.callId);
     answeredCallIdRef.current = msg.callId;
     callIdRef.current = msg.callId;
     pendingOfferRef.current = null;
@@ -537,6 +620,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
         console.log('[webrtc] callee got media tracks:', media.stream.getTracks().map(t => t.kind));
       } catch (err) {
         console.warn('[webrtc] callee has no usable mic/camera, joining receive-only', err);
+        log('media_unavailable_receive_only', { message: err?.name || err?.message || String(err) }, msg.callId);
         setError('Microphone/camera unavailable — you can listen but the other side cannot hear you.');
       }
       if (pcRef.current !== pc || callIdRef.current !== msg.callId) {
@@ -563,6 +647,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
         sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
       });
       console.log('[webrtc] callee sent answer');
+      log('answer_sent', { candidates: localCandidatesRef.current?.length || 0 }, msg.callId);
 
       if (localCandidatesRef.current?.length) {
         for (const cand of localCandidatesRef.current) {
@@ -575,9 +660,10 @@ export default function useWebRTCCall({ selfId, peerId }) {
       }
     } catch (err) {
       console.error('[webrtc] failed to answer offer', err);
+      log('answer_failed', { message: err?.message || String(err) }, msg.callId);
       finishCall({ notify: true, reason: 'Could not connect the call. Please try again.' });
     }
-  }, [attachMedia, createPeerConnection, finishCall, flushCandidates, send]);
+  }, [attachMedia, createPeerConnection, finishCall, flushCandidates, log, send]);
 
   // ----- Incoming signaling -----
   const handleSignal = useCallback(async (msg) => {
@@ -585,11 +671,14 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
     if (msg.type === '__subscribed') {
       console.log('[webrtc] channel __subscribed, role:', roleRef.current);
+      log('channel_subscribed', { role: roleRef.current });
       // (Re)subscribed: re-announce state so a missed message is recovered.
       if (roleRef.current === 'callee' && !pcRef.current) {
+        log('ready_sent', { why: 'resubscribe' });
         send({ type: 'ready' });
       } else if (roleRef.current === 'caller' && offerPayloadRef.current &&
         pcRef.current?.signalingState === 'have-local-offer') {
+        log('offer_resent', { why: 'resubscribe' });
         send(offerPayloadRef.current);
       }
       return;
@@ -600,9 +689,15 @@ export default function useWebRTCCall({ selfId, peerId }) {
     switch (msg.type) {
       case 'ready': {
         console.log('[webrtc] RX ready, role:', roleRef.current, 'hasOffer:', !!offerPayloadRef.current, 'sigState:', pcRef.current?.signalingState);
+        log('ready_received', {
+          role: roleRef.current,
+          hasOffer: !!offerPayloadRef.current,
+          sigState: pcRef.current?.signalingState || null,
+        });
         if (roleRef.current === 'caller' && offerPayloadRef.current &&
           pcRef.current?.signalingState === 'have-local-offer') {
           console.log('[webrtc] caller sending offer in response to ready');
+          log('offer_resent', { why: 'ready' });
           send(offerPayloadRef.current);
           if (localCandidatesRef.current?.length) {
             console.log('[webrtc] caller re-sending', localCandidatesRef.current.length, 'candidates in response to ready');
@@ -619,10 +714,17 @@ export default function useWebRTCCall({ selfId, peerId }) {
       }
       case 'offer': {
         console.log('[webrtc] RX offer, role:', roleRef.current, 'hasPc:', !!pcRef.current);
+        log('offer_received', {
+          role: roleRef.current,
+          hasPc: !!pcRef.current,
+          status: statusRef.current,
+          callType: msg.callType || null,
+        }, msg.callId);
         if (pcRef.current && statusRef.current === 'connected' && msg.callId === callIdRef.current) {
           if (pcRef.current.signalingState !== 'stable') {
             // Both sides toggled the camera at once: applying this offer now would throw.
             console.warn('[webrtc] renegotiation offer ignored, signalingState:', pcRef.current.signalingState);
+            log('renegotiation_ignored', { sigState: pcRef.current.signalingState }, msg.callId);
             return;
           }
           console.log('[webrtc] handling renegotiation offer mid-call');
@@ -643,12 +745,20 @@ export default function useWebRTCCall({ selfId, peerId }) {
           }
           return;
         }
-        if (roleRef.current === 'caller') return; // we are calling; ignore peer offers (glare)
-        if (answeredCallIdRef.current === msg.callId) return; // duplicate re-send
+        if (roleRef.current === 'caller') {
+          // we are calling; ignore peer offers (glare)
+          log('offer_ignored_glare', { ourCallId: callIdRef.current, peerCallId: msg.callId }, msg.callId);
+          return;
+        }
+        if (answeredCallIdRef.current === msg.callId) {
+          log('offer_ignored_duplicate', {}, msg.callId);
+          return; // duplicate re-send
+        }
         if (roleRef.current === 'callee' && !pcRef.current) {
           await answerOffer(msg);
         } else {
           // Not accepted yet: keep it until the user accepts the ring.
+          log('offer_queued_pending', { role: roleRef.current, status: statusRef.current }, msg.callId);
           pendingOfferRef.current = { ...msg, receivedAt: Date.now() };
         }
         break;
@@ -656,11 +766,17 @@ export default function useWebRTCCall({ selfId, peerId }) {
       case 'answer': {
         const pc = pcRef.current;
         console.log('[webrtc] RX answer, role:', roleRef.current, 'sigState:', pc?.signalingState, 'callId match:', msg.callId === callIdRef.current);
+        log('answer_received', {
+          role: roleRef.current,
+          sigState: pc?.signalingState || null,
+          callIdMatch: msg.callId === callIdRef.current,
+        }, msg.callId);
         if (!pc || msg.callId !== callIdRef.current) return;
         if (pc.signalingState !== 'have-local-offer') return; // already applied
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
           console.log('[webrtc] applied answer successfully');
+          log('answer_applied', {}, msg.callId);
           await flushCandidates(msg.callId);
 
           if (localCandidatesRef.current?.length) {
@@ -675,6 +791,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
           }
         } catch (err) {
           console.error('[webrtc] failed to apply answer', err);
+          log('answer_apply_failed', { message: err?.message || String(err) }, msg.callId);
         }
         break;
       }
@@ -715,6 +832,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
       }
       case 'hangup': {
         console.log('[webrtc] RX hangup, active:', statusRef.current, 'msgCallId:', msg.callId, 'ourCallId:', callIdRef.current);
+        log('hangup_received', { active: statusRef.current, ourCallId: callIdRef.current }, msg.callId || callIdRef.current);
         // A hangup for a call that already ended must not kill the one now in flight
         // between the same two people.
         const currentCallId = callIdRef.current || pendingOfferRef.current?.callId;
@@ -728,7 +846,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
       default:
         break;
     }
-  }, [answerOffer, finishCall, flushCandidates, selfId, send]);
+  }, [answerOffer, finishCall, flushCandidates, log, selfId, send]);
 
   const handleSignalRef = useRef(handleSignal);
   handleSignalRef.current = handleSignal;
@@ -745,17 +863,27 @@ export default function useWebRTCCall({ selfId, peerId }) {
   }, [topic]);
 
   // Callee keeps asking for the offer until it arrives (covers lost/early messages).
+  // The window has to outlast the caller's own 45 s ring timeout: asking for only 30 s
+  // let the callee fall silent while the caller was still offering, so both sides waited
+  // out the dial and the call was recorded as missed.
   useEffect(() => {
     if (role !== 'callee' || callStatus !== 'connecting') return undefined;
+    const maxTries = 22; // every 2 s ≈ 44 s, matching RING_TIMEOUT_MS in ChatWindow
     let tries = 0;
     const id = setInterval(() => {
       tries += 1;
-      if (pcRef.current || tries > 15) { clearInterval(id); return; }
+      if (pcRef.current) { clearInterval(id); return; }
+      if (tries > maxTries) {
+        clearInterval(id);
+        log('offer_never_arrived', { waitedMs: maxTries * 2000 });
+        return;
+      }
       console.log('[webrtc] callee re-requesting offer (try ' + tries + ')');
+      log('ready_sent', { why: 'retry', attempt: tries });
       send({ type: 'ready' });
     }, 2000);
     return () => clearInterval(id);
-  }, [role, callStatus, send]);
+  }, [callStatus, log, role, send]);
 
   useEffect(() => { attachMedia(); }, [attachMedia, callStatus, callType, isCameraOff]);
 
@@ -778,6 +906,12 @@ export default function useWebRTCCall({ selfId, peerId }) {
   const startCall = useCallback(async (type = 'video', externalCallId) => {
     console.log('[webrtc] startCall called with type:', type);
     if (statusRef.current === 'connecting' || statusRef.current === 'connected') return null;
+    // The peer already dialled us and we hold their offer: dialling back would make both
+    // sides the caller, and each side then ignores the other's offer as glare.
+    if (pendingOfferRef.current) {
+      console.log('[webrtc] startCall declined: an incoming offer is already pending');
+      return { declined: 'incoming_offer', callId: pendingOfferRef.current.callId || null };
+    }
     cleanup();
     const callId = externalCallId || newCallId();
     callIdRef.current = callId;
@@ -788,6 +922,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setIsCameraOff(type === 'audio');
     setCallType(type);
     setCallStatus('connecting');
+    log('caller_start', { requestedType: type }, callId);
 
     // Mint TURN credentials while the user is still answering the permission prompt.
     const iceServersPromise = getIceServers();
@@ -798,12 +933,18 @@ export default function useWebRTCCall({ selfId, peerId }) {
       console.log('[webrtc] caller got media tracks:', media.stream.getTracks().map(t => t.kind));
     } catch (err) {
       console.error('[webrtc] caller getMedia error:', err);
+      log('caller_media_failed', {
+        requestedType: type,
+        name: err?.name || null,
+        message: err?.message || String(err),
+      }, callId);
       setRoleBoth(null);
       callIdRef.current = null;
       setCallStatus('idle');
       throw err;
     }
     if (callIdRef.current !== callId || statusRef.current !== 'connecting') {
+      log('caller_abandoned_after_media', {}, callId);
       media.stream.getTracks().forEach((t) => t.stop());
       return null;
     }
@@ -812,6 +953,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     setCallType(media.type);
     setIsCameraOff(media.type === 'audio');
     attachMedia();
+    if (media.degraded) log('media_degraded', { requestedType: type, gotType: media.type }, callId);
 
     const pc = createPeerConnection(callId, await iceServersPromise);
     media.stream.getTracks().forEach((track) => pc.addTrack(track, media.stream));
@@ -826,23 +968,30 @@ export default function useWebRTCCall({ selfId, peerId }) {
       callType: media.type,
       sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp },
     };
+    log('offer_sent', { callType: media.type }, callId);
     send(offerPayloadRef.current);
     return { type: media.type, degraded: !!media.degraded };
-  }, [attachMedia, cleanup, createPeerConnection, send, setCallStatus, setRoleBoth]);
+  }, [attachMedia, cleanup, createPeerConnection, log, send, setCallStatus, setRoleBoth]);
 
-  const joinCall = useCallback(async (type = 'video') => {
-    console.log('[webrtc] joinCall called with type:', type, 'role:', roleRef.current);
+  const joinCall = useCallback(async (type = 'video', expectedCallId) => {
+    console.log('[webrtc] joinCall called with type:', type, 'role:', roleRef.current, 'expectedCallId:', expectedCallId);
     if (roleRef.current === 'callee' &&
       (statusRef.current === 'connecting' || statusRef.current === 'connected')) return;
     const pendingCallId = pendingOfferRef.current?.callId;
-    cleanup(pendingCallId);
-    callIdRef.current = null;
+    // Keep the candidates already buffered for the call being entered, whether they were
+    // tagged with the pending offer or with the ringing record this join was asked to enter.
+    cleanup(expectedCallId || pendingCallId);
+    // The caller dials with the database row id as its callId, so adopting the ringing
+    // record's id here makes every later signal match and gives the trace something to
+    // hang the callee's events on before the offer shows up.
+    callIdRef.current = expectedCallId || pendingCallId || null;
     setRoleBoth('callee');
     setError(null);
     setIsMuted(false);
     setIsCameraOff(type === 'audio');
     setCallType(type === 'audio' ? 'audio' : 'video');
     setCallStatus('connecting');
+    log('callee_join', { requestedType: type, hadPendingOffer: !!pendingCallId, sourceCallId: expectedCallId || null });
     getIceServers(); // warm the cache so answerOffer does not stall on the first fetch
 
     const pending = pendingOfferRef.current;
@@ -852,9 +1001,10 @@ export default function useWebRTCCall({ selfId, peerId }) {
     } else {
       console.log('[webrtc] callee sending ready signal');
       pendingOfferRef.current = null;
+      log('ready_sent', { why: 'join' });
       send({ type: 'ready' });
     }
-  }, [answerOffer, cleanup, send, setCallStatus, setRoleBoth]);
+  }, [answerOffer, cleanup, log, send, setCallStatus, setRoleBoth]);
 
   const endCall = useCallback((notify = true) => {
     finishCall({ notify });

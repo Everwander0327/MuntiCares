@@ -20,6 +20,7 @@ import {
   markMissedCallsSeen,
   sendCallInvite,
 } from '../lib/callRecords';
+import { logCallEvent } from '../lib/callEvents';
 
 const addReadMsgIds = (userId, ids) => {
   if (!ids.length) return;
@@ -136,7 +137,7 @@ const renderHighlightedText = (text, term) => {
 
 const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartCall }) => {
   const { user: authUser } = useAuth();
-  const { startCallBroadcast, sendCallEnded, callDeclinedByPeer, callCancelledByPeer, markActiveCall } = useCalls();
+  const { startCallBroadcast, sendCallEnded, callDeclinedByPeer, callCancelledByPeer, markActiveCall, incomingCall } = useCalls();
   const { isUserOnline } = usePresence();
   const [messages, setMessages] = useState([]);
   // chat_attachments is a private bucket, so media paths are exchanged for
@@ -341,6 +342,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       URL.revokeObjectURL(selectedAttachment.previewUrl);
     }
     setSelectedAttachment(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const playNotificationSound = () => {
@@ -608,10 +612,24 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         const file = currentAttachment.file;
         const fileExt = file.name.split('.').pop() || (currentAttachment.type === 'video' ? 'mp4' : 'jpg');
         const filePath = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
+        const mimeByExt = {
+          jpg: 'image/jpeg',
+          jpeg: 'image/jpeg',
+          png: 'image/png',
+          webp: 'image/webp',
+          gif: 'image/gif',
+          heic: 'image/heic',
+          mp4: 'video/mp4',
+          webm: 'video/webm',
+          mov: 'video/quicktime',
+          ogg: 'video/ogg',
+          '3gp': 'video/3gpp',
+        };
+        const contentType = file.type || mimeByExt[fileExt.toLowerCase()] || (currentAttachment.type === 'video' ? 'video/mp4' : 'image/jpeg');
 
         const { error: uploadError } = await supabase.storage
           .from('chat_attachments')
-          .upload(filePath, file, { contentType: file.type, upsert: true });
+          .upload(filePath, file, { contentType, upsert: true });
 
         if (uploadError) throw uploadError;
 
@@ -621,6 +639,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         await sendMessage(finalContent, { messageType: currentAttachment.type });
       } catch (err) {
         console.error('Failed to upload attachment:', err);
+        setSelectedAttachment(currentAttachment);
+        setNewMessage(msgText);
         toast.error('Failed to upload file. Please try again.');
       } finally {
         setUploadingAttachment(false);
@@ -634,7 +654,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     const pending = [];
     messages.forEach(m => {
       const isMedia = m.message_type === 'image' || m.message_type === 'video' ||
-        (m.content && /\.(jpg|jpeg|png|webp|gif|heic|mp4|webm|mov)(\?.*)?$/i.test(m.content.split('\n')[0]));
+        (m.content && /\.(jpg|jpeg|png|webp|gif|heic|mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(m.content.split('\n')[0]));
       if (!isMedia) return;
       const ref = (m.content || '').split('\n')[0]?.trim();
       if (!ref || /^https?:/i.test(ref)) return;
@@ -643,15 +663,30 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     if (pending.length === 0) return undefined;
 
     let cancelled = false;
+    const unique = Array.from(new Set(pending));
     supabase.storage
       .from('chat_attachments')
-      .createSignedUrls([...new Set(pending)], 3600)
+      .createSignedUrls(unique, 3600)
       .then(({ data, error }) => {
-        if (cancelled || error || !data) return;
+        if (cancelled) return;
+        if (error || !data) {
+          console.warn('[chat] createSignedUrls failed:', error?.message);
+          setMediaUrls(prev => {
+            const next = { ...prev };
+            unique.forEach(p => { if (!next[p]) next[p] = 'ERROR'; });
+            return next;
+          });
+          return;
+        }
         setMediaUrls(prev => {
           const next = { ...prev };
           data.forEach((entry, i) => {
-            if (entry?.signedUrl) next[pending[i]] = entry.signedUrl;
+            const key = entry?.path || unique[i];
+            if (entry?.signedUrl && key) {
+              next[key] = entry.signedUrl;
+            } else if (key && !next[key]) {
+              next[key] = 'ERROR';
+            }
           });
           return next;
         });
@@ -693,10 +728,25 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       { messageType: 'call', callId },
     );
     startCallBroadcast(otherUser.id, currentUser.name, type, callId);
-    sendCallInvite(callId);
+    logCallEvent(callId, currentUser.id, 'invite_broadcast', { type, calleeId: otherUser.id });
+    sendCallInvite(callId, currentUser.id);
 
     try {
-      await rtcStartCall(type, callId);
+      const started = await rtcStartCall(type, callId);
+      if (started?.declined === 'incoming_offer') {
+        // The peer dialled us at the same moment. Stand our dial down and answer
+        // theirs, otherwise both sides hold the caller role and each ignores the
+        // other's offer as glare until the ring times out. Their call record stays
+        // the live one, so this device can still report answered/ended on it.
+        markCallMissed(callId);
+        const peerCallId = started.callId || null;
+        activeCallIdRef.current = peerCallId;
+        markActiveCall(peerCallId);
+        callConnectedRef.current = false;
+        rtcJoinCall(type, peerCallId);
+        refreshCallRecords();
+        return;
+      }
       refreshCallRecords();
     } catch (err) {
       console.error('Failed to start call:', err);
@@ -704,7 +754,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       toast.error('Could not access microphone/camera. Please check permissions.');
       rtcEndCall();
     }
-  }, [currentUser, otherUser?.id, refreshCallRecords, rtcEndCall, rtcStartCall, sendMessage, startCallBroadcast, markActiveCall]);
+  }, [currentUser, otherUser?.id, refreshCallRecords, rtcEndCall, rtcJoinCall, rtcStartCall, sendMessage, startCallBroadcast, markActiveCall]);
 
   const handleEndCall = useCallback((notify = true) => {
     const callId = activeCallIdRef.current;
@@ -723,14 +773,19 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     rtcResetCall();
   }, [rtcResetCall]);
 
+  // Dialling while the peer's invite is ringing makes both sides the caller, and each
+  // side then ignores the other's offer as glare until the ring times out. The answer
+  // belongs on the incoming-call overlay, not on these buttons.
+  const ringingFromPeer = Boolean(incomingCall && incomingCall.sender_id === otherUser?.id);
+
   const lastJoinedCallRef = useRef(null);
   useEffect(() => {
     if (autoStartCall?.active && otherUser?.id && currentUser?.id) {
       const callKey = `${autoStartCall.type}_${autoStartCall.ts || 'default'}`;
       if (lastJoinedCallRef.current === callKey) return undefined;
-      lastJoinedCallRef.current = callKey;
       const type = autoStartCall.type || 'video';
       let cancelled = false;
+      logCallEvent(autoStartCall.callId, currentUser.id, 'callee_deep_link', { type });
 
       // A push deep link can land here after the caller already gave up, so confirm
       // the call is still ringing before putting the callee into a dead connect loop.
@@ -748,7 +803,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         }
         if (cancelled) return;
         callConnectedRef.current = false;
-        rtcJoinCall(type);
+        // Claimed only when the join really fires. Marking it before the fetch meant an
+        // effect re-run during that await cancelled this closure and left the ref set,
+        // so the callee never entered a call that was ringing right in front of them.
+        lastJoinedCallRef.current = callKey;
+        rtcJoinCall(type, autoStartCall.callId || null);
       })();
 
       return () => { cancelled = true; };
@@ -1232,8 +1291,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           <button
             type="button"
             onClick={() => handleStartCall('audio')}
-            className="neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-success transition-all cursor-pointer shadow-sm"
-            title="Start Voice Consultation"
+            disabled={ringingFromPeer}
+            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-success transition-all shadow-sm ${
+              ringingFromPeer ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+            }`}
+            title={ringingFromPeer ? 'Answer the incoming call first' : 'Start Voice Consultation'}
           >
             <Phone className="w-4 h-4 stroke-[2.2]" />
           </button>
@@ -1241,8 +1303,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           <button
             type="button"
             onClick={() => handleStartCall('video')}
-            className="neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-link transition-all cursor-pointer shadow-sm"
-            title="Start Teleconsultation (Video)"
+            disabled={ringingFromPeer}
+            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-link transition-all shadow-sm ${
+              ringingFromPeer ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+            }`}
+            title={ringingFromPeer ? 'Answer the incoming call first' : 'Start Teleconsultation (Video)'}
           >
             <Video className="w-4.5 h-4.5 fill-current" />
           </button>
@@ -1352,6 +1417,21 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                                   </div>
                                 );
                               }
+                              if (mediaUrl === 'ERROR') {
+                                return (
+                                  <div className="space-y-2 max-w-sm">
+                                    <div className="w-56 h-32 rounded-xl neu-inset flex flex-col items-center justify-center p-3 text-center text-xs text-tertiary">
+                                      <AlertCircle className="w-5 h-5 text-danger mb-1" />
+                                      <span>Failed to load media</span>
+                                    </div>
+                                    {caption && (
+                                      <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
+                                        {renderHighlightedText(caption, searchMessageTerm)}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              }
                               return (
                                 <div className="space-y-2 max-w-sm">
                                   {isImage ? (
@@ -1406,7 +1486,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                                   activeCallIdRef.current = null;
                                   markActiveCall(null);
                                 }
-                                rtcJoinCall(callTypeOf(msg, callRecordsById[msg.call_id]));
+                                rtcJoinCall(
+                                  callTypeOf(msg, callRecordsById[msg.call_id]),
+                                  msg.call_id || null,
+                                );
                               }}
                             />
                           )}
@@ -1565,7 +1648,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             const sharedMedia = messages.filter(m =>
               m.message_type === 'image' ||
               m.message_type === 'video' ||
-              (m.content && /\.(jpg|jpeg|png|webp|gif|heic|mp4|webm|mov)(\?.*)?$/i.test(m.content.split('\n')[0]))
+              (m.content && /\.(jpg|jpeg|png|webp|gif|heic|mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(m.content.split('\n')[0]))
             );
 
             return (
@@ -1751,24 +1834,29 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                         {sharedMedia.slice(0, 9).map((m, idx) => {
                           const ref = (m.content || '').split('\n')[0]?.trim();
                           const mediaUrl = /^https?:/i.test(ref) ? ref : mediaUrls[ref];
-                          const isVid = m.message_type === 'video' || /\.(mp4|webm|mov)(\?.*)?$/i.test(ref);
+                          const isVid = m.message_type === 'video' || /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(ref);
+                          const isError = mediaUrl === 'ERROR';
                           return (
                             <div
                               key={m.id || idx}
-                              onClick={() => mediaUrl && setLightboxMedia({ url: mediaUrl, type: isVid ? 'video' : 'image' })}
+                              onClick={() => mediaUrl && !isError && setLightboxMedia({ url: mediaUrl, type: isVid ? 'video' : 'image' })}
                               className="aspect-square rounded-xl overflow-hidden bg-black/10 border border-slate-200/80 dark:border-white/10 cursor-pointer relative group flex items-center justify-center"
                             >
                               {isVid ? (
                                 <div className="w-full h-full bg-slate-900 text-white flex items-center justify-center text-xs">
                                   🎬
                                 </div>
-                              ) : mediaUrl ? (
+                              ) : mediaUrl && !isError ? (
                                 <img
                                   src={mediaUrl}
                                   alt="Shared media"
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                   loading="lazy"
                                 />
+                              ) : isError ? (
+                                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-danger text-xs font-bold">
+                                  ⚠️
+                                </div>
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
                                   <Loader2 className="w-4 h-4 animate-spin text-link" />

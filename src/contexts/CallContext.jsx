@@ -2,7 +2,9 @@ import { createContext, useContext, useState, useEffect, useRef, useCallback } f
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
-import { markCallDeclined, markCallMissed } from '@/features/chat/lib/callRecords';
+import toast from 'react-hot-toast';
+import { markCallDeclined, markCallMissed, fetchRingingCallForCallee } from '@/features/chat/lib/callRecords';
+import { logCallEvent } from '@/features/chat/lib/callEvents';
 import { CALL_INVITE_EVENT } from '@/lib/pushNotifications';
 
 const CallContext = createContext(null);
@@ -29,17 +31,43 @@ export const CallProvider = ({ children }) => {
   /*
    * A call can be announced twice — once by the realtime invite and once by the push
    * that woke the app. Presenting the same callId twice would restart the ringtone.
+   *
+   * refusedCallIdsRef: the ringing row stays open until the 5-minute sweep closes it, so
+   * a declined or expired call must not be re-presented by the recovery poll below.
    */
-  const presentIncomingCall = useCallback(({ senderId, senderName, callType, callId }) => {
+  const presentedCallIdRef = useRef(null);
+  const refusedCallIdsRef = useRef(new Set());
+  // Mirror of incomingCall for the event handlers below: they must compare and clear the
+  // ring without re-subscribing the calls channel every time the ring changes.
+  const incomingCallRef = useRef(null);
+
+  const setRing = useCallback((next) => {
+    incomingCallRef.current = next;
+    presentedCallIdRef.current = next?.callId || null;
+    setIncomingCall(next);
+  }, []);
+
+  const refuseCall = useCallback((callId) => {
+    if (callId) {
+      if (refusedCallIdsRef.current.size > 50) refusedCallIdsRef.current.clear();
+      refusedCallIdsRef.current.add(callId);
+    }
+    setRing(null);
+  }, [setRing]);
+
+  const presentIncomingCall = useCallback(({ senderId, senderName, callType, callId, source }) => {
     if (!senderId) return;
+    if (callId && refusedCallIdsRef.current.has(callId)) return;
     const next = {
       sender_id: senderId,
       sender_name: senderName || '',
       callType: callType || 'video',
       callId: callId || null,
     };
-    setIncomingCall((current) => (current?.callId && current.callId === next.callId ? current : next));
-  }, []);
+    if (next.callId && presentedCallIdRef.current === next.callId) return;
+    setRing(next);
+    if (next.callId) logCallEvent(next.callId, user?.id, 'ring_presented', { source: source || 'broadcast' });
+  }, [setRing, user?.id]);
 
   useEffect(() => {
     const onPushInvite = (event) => presentIncomingCall(event.detail);
@@ -67,7 +95,7 @@ export const CallProvider = ({ children }) => {
     channel
       .on('broadcast', { event: 'incoming_call' }, (payload) => {
         const { sender_id, sender_name, call_type, call_id } = payload.payload;
-        presentIncomingCall({ senderId: sender_id, senderName: sender_name, callType: call_type, callId: call_id });
+        presentIncomingCall({ senderId: sender_id, senderName: sender_name, callType: call_type, callId: call_id, source: 'broadcast' });
       })
       .on('broadcast', { event: 'call_declined' }, (payload) => {
         const callId = payload.payload?.call_id || null;
@@ -78,7 +106,8 @@ export const CallProvider = ({ children }) => {
         const callId = payload.payload?.call_id || null;
         if (callId && activeCallIdRef.current && callId !== activeCallIdRef.current) return;
         // Only drop the ring when it belongs to the call that just ended.
-        setIncomingCall((current) => (!current || !callId || current.callId === callId ? null : current));
+        const current = incomingCallRef.current;
+        if (!current || !callId || current.callId === callId) setRing(null);
         if (activeCallIdRef.current && (!callId || callId === activeCallIdRef.current)) {
           activeCallIdRef.current = null;
         }
@@ -87,7 +116,56 @@ export const CallProvider = ({ children }) => {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id, presentIncomingCall, flashNotice]);
+  }, [user?.id, presentIncomingCall, flashNotice, setRing]);
+
+  /*
+   * Recovery for the case the websocket can never cover. Supabase broadcast is
+   * fire-and-forget: an invite that left while this user's tab was closed, backgrounded
+   * or still subscribing is gone for good, and nothing else ever tells them they were
+   * called. That is what most of the recorded 'missed' calls are. The ringing row is the
+   * only part of an invite that outlives the moment, so re-read it on mount, whenever the
+   * app comes back to the foreground, and on a slow interval while it is open.
+   */
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    let disposed = false;
+    let running = false;
+    const recover = async () => {
+      // Do not ring over a call this device is already inside or already showing, and do
+      // not let the interval, focus and visibility fires stack duplicate queries.
+      if (disposed || running || incomingCallRef.current || activeCallIdRef.current) return;
+      running = true;
+      try {
+        const row = await fetchRingingCallForCallee(user.id);
+        if (disposed || !row) return;
+        presentIncomingCall({
+          senderId: row.caller_id,
+          senderName: row.callerName,
+          callType: row.call_type,
+          callId: row.id,
+          source: 'recovery',
+        });
+      } finally {
+        running = false;
+      }
+    };
+
+    recover();
+    const interval = setInterval(recover, 10000);
+    const onAwake = () => {
+      if (document.visibilityState === 'visible') recover();
+    };
+    window.addEventListener('focus', onAwake);
+    document.addEventListener('visibilitychange', onAwake);
+
+    return () => {
+      disposed = true;
+      clearInterval(interval);
+      window.removeEventListener('focus', onAwake);
+      document.removeEventListener('visibilitychange', onAwake);
+    };
+  }, [presentIncomingCall, user?.id]);
 
   const getPeerChannel = useCallback((targetUserId) => {
     const topic = `calls_${targetUserId}`;
@@ -135,25 +213,44 @@ export const CallProvider = ({ children }) => {
     }
   }, [getPeerChannel, user]);
 
-  const acceptCall = useCallback(() => {
+  const acceptCall = useCallback(async () => {
     if (!incomingCall || !user) return;
-    const role = user.role;
     // The overlay sits above ProtectedRoute, so it can be tapped before the
-    // database-backed role has arrived. Navigating then would target /null/messages.
-    if (!role) return;
+    // database-backed role has arrived, and /null/messages is not a route. Resolving
+    // the role here is what makes that tap still join: returning quietly was a callee
+    // who looks at a ringing screen and does nothing while the caller's ring runs out.
+    let role = user.role;
+    if (!role) {
+      const { data } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+      role = data?.role || null;
+    }
+    if (!role) {
+      toast.error('Still signing you in — please tap Accept once more.');
+      return;
+    }
+    if (incomingCall.callId) logCallEvent(incomingCall.callId, user.id, 'call_accepted', { role });
     const callType = incomingCall.callType || 'video';
     const callParam = incomingCall.callId ? `&call=${incomingCall.callId}` : '';
     activeCallIdRef.current = incomingCall.callId || null;
     navigate(`/${role}/messages?partner=${incomingCall.sender_id}&name=${encodeURIComponent(incomingCall.sender_name || '')}&startCall=${callType}&ts=${Date.now()}${callParam}${callType === 'video' ? '&startVideo=1' : ''}`);
-    setIncomingCall(null);
-  }, [incomingCall, user, navigate]);
+    // Refused, not just cleared: the row keeps its 'ringing' status until the connection
+    // is recorded, and the recovery poll would otherwise re-present it over a live call.
+    refuseCall(incomingCall.callId);
+  }, [incomingCall, navigate, refuseCall, user]);
 
   const rejectCall = useCallback(() => {
     if (!incomingCall || !user) return;
-    if (incomingCall.callId) markCallDeclined(incomingCall.callId);
+    if (incomingCall.callId) {
+      markCallDeclined(incomingCall.callId);
+      logCallEvent(incomingCall.callId, user.id, 'call_declined', {});
+    }
     sendToPeer(incomingCall.sender_id, 'call_declined', { call_id: incomingCall.callId || null });
-    setIncomingCall(null);
-  }, [incomingCall, user, sendToPeer]);
+    refuseCall(incomingCall.callId);
+  }, [incomingCall, refuseCall, sendToPeer, user]);
 
   const startCallBroadcast = useCallback((targetUserId, callerName, callType = 'video', callId = null) => {
     activeCallIdRef.current = callId;
@@ -171,9 +268,14 @@ export const CallProvider = ({ children }) => {
 
   // The caller stopped ringing us (or gave up) without a broadcast reaching us.
   const expireIncomingCall = useCallback(() => {
-    if (incomingCall?.callId) markCallMissed(incomingCall.callId);
-    setIncomingCall(null);
-  }, [incomingCall]);
+    if (incomingCall?.callId) {
+      markCallMissed(incomingCall.callId);
+      logCallEvent(incomingCall.callId, user?.id, 'ring_expired', {});
+    }
+    // The row stays 'ringing' until the sweep closes it, so refuse it here or the
+    // recovery poll would hand the same dead dial back every 10 seconds.
+    refuseCall(incomingCall?.callId);
+  }, [incomingCall, refuseCall, user?.id]);
 
   const markActiveCall = useCallback((callId) => {
     activeCallIdRef.current = callId || null;
