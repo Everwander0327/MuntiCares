@@ -325,7 +325,7 @@ const NotificationBell = () => {
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: msgData } = await supabase
         .from('messages')
-        .select('id, sender_id, content, created_at, is_read, sender:sender_id(full_name)')
+        .select('id, sender_id, content, created_at, is_read, message_type, sender:sender_id(full_name)')
         .eq('receiver_id', user.id)
         .eq('is_read', false)
         .gte('created_at', oneDayAgo)
@@ -343,11 +343,23 @@ const NotificationBell = () => {
           const senderName = msg.sender?.full_name || 'Someone';
           if (!seenSenders.has(msg.sender_id)) {
             seenSenders.add(msg.sender_id);
+            let previewText = msg.content || '';
+            const isImg = msg.message_type === 'image' || (msg.content && /\.(jpg|jpeg|png|webp|gif|heic)(\?.*)?$/i.test(msg.content.split('\n')[0]));
+            const isVid = msg.message_type === 'video' || (msg.content && /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(msg.content.split('\n')[0]));
+            if (isImg) {
+              const cap = msg.content?.split('\n').slice(1).join('\n').trim();
+              previewText = cap ? `📷 ${cap}` : '📷 Photo';
+            } else if (isVid) {
+              const cap = msg.content?.split('\n').slice(1).join('\n').trim();
+              previewText = cap ? `🎥 ${cap}` : '🎥 Video';
+            } else if (msg.message_type === 'call') {
+              previewText = 'Consultation call';
+            }
             notifs.push({
               id: `msg-${msg.id}`,
               type: 'new_message',
               title: `New Message from ${senderName}`,
-              message: msg.content?.substring(0, 80),
+              message: previewText.substring(0, 80),
               time: msg.created_at,
               link: user.role === 'patient' ? '/patient/messages' : '/provider/messages',
             });

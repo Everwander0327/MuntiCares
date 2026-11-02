@@ -28,11 +28,20 @@ const getLastMessagePreview = (msg, userId, callRecord) => {
   if (msg.message_type === 'call') {
     return { text: `${callRecord?.call_type === 'audio' ? 'Voice' : 'Video'} consultation`, isYou };
   }
-  if (msg.message_type === 'image') {
-    return { text: 'Photo attachment', isYou };
+  const isImage = msg.message_type === 'image' || (msg.content && /\.(jpg|jpeg|png|webp|gif|heic)(\?.*)?$/i.test(msg.content.split('\n')[0]));
+  if (isImage) {
+    const lines = (msg.content || '').split('\n');
+    const caption = lines.slice(1).join('\n').trim();
+    return { text: caption ? `📷 ${caption}` : '📷 Photo', isYou };
   }
-  if (msg.message_type === 'video') {
-    return { text: 'Video attachment', isYou };
+  const isVideo = msg.message_type === 'video' || (msg.content && /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(msg.content.split('\n')[0]));
+  if (isVideo) {
+    const lines = (msg.content || '').split('\n');
+    const caption = lines.slice(1).join('\n').trim();
+    return { text: caption ? `🎥 ${caption}` : '🎥 Video', isYou };
+  }
+  if (msg.message_type === 'file') {
+    return { text: '📎 Attachment', isYou };
   }
   // Chat rows written before calls were recorded carry only their emoji, which is how
   // this list came to label a voice consultation as "Video call started".
@@ -110,7 +119,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
         const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
         const { data: msgData } = await supabase
           .from('messages')
-          .select('id, sender_id, receiver_id, content, created_at')
+          .select('id, sender_id, receiver_id, content, created_at, message_type')
           .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
           .gte('created_at', yesterday)
           .order('created_at', { ascending: false })
@@ -150,7 +159,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data } = await supabase
         .from('messages')
-        .select('id, sender_id, receiver_id, content, created_at, is_read')
+        .select('id, sender_id, receiver_id, content, created_at, is_read, message_type')
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .gte('created_at', yesterday)
         .order('created_at', { ascending: false })
@@ -188,6 +197,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
     const channel = supabase
       .channel(`conversation-list-${user.id}-${Math.random().toString(36).slice(2, 9)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, fetchUnreadCounts)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `sender_id=eq.${user.id}` }, fetchUnreadCounts)
       .subscribe();
 
     fetchUnreadCounts();
