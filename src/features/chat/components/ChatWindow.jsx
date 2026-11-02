@@ -633,7 +633,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   useEffect(() => {
     const pending = [];
     messages.forEach(m => {
-      if (m.message_type !== 'image' && m.message_type !== 'video') return;
+      const isMedia = m.message_type === 'image' || m.message_type === 'video' ||
+        (m.content && /\.(jpg|jpeg|png|webp|gif|heic|mp4|webm|mov)(\?.*)?$/i.test(m.content.split('\n')[0]));
+      if (!isMedia) return;
       const ref = (m.content || '').split('\n')[0]?.trim();
       if (!ref || /^https?:/i.test(ref)) return;
       if (!mediaUrls[ref]) pending.push(ref);
@@ -1747,20 +1749,30 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     ) : (
                       <div className="grid grid-cols-3 gap-1.5">
                         {sharedMedia.slice(0, 9).map((m, idx) => {
-                          const url = m.content.split('\n')[0];
-                          const isVid = m.message_type === 'video' || /\.(mp4|webm|mov)(\?.*)?$/i.test(url);
+                          const ref = (m.content || '').split('\n')[0]?.trim();
+                          const mediaUrl = /^https?:/i.test(ref) ? ref : mediaUrls[ref];
+                          const isVid = m.message_type === 'video' || /\.(mp4|webm|mov)(\?.*)?$/i.test(ref);
                           return (
                             <div
                               key={m.id || idx}
-                              onClick={() => setLightboxMedia({ url, type: isVid ? 'video' : 'image' })}
-                              className="aspect-square rounded-xl overflow-hidden bg-black/10 border border-slate-200/80 dark:border-white/10 cursor-pointer relative group"
+                              onClick={() => mediaUrl && setLightboxMedia({ url: mediaUrl, type: isVid ? 'video' : 'image' })}
+                              className="aspect-square rounded-xl overflow-hidden bg-black/10 border border-slate-200/80 dark:border-white/10 cursor-pointer relative group flex items-center justify-center"
                             >
                               {isVid ? (
                                 <div className="w-full h-full bg-slate-900 text-white flex items-center justify-center text-xs">
                                   🎬
                                 </div>
+                              ) : mediaUrl ? (
+                                <img
+                                  src={mediaUrl}
+                                  alt="Shared media"
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                  loading="lazy"
+                                />
                               ) : (
-                                <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+                                  <Loader2 className="w-4 h-4 animate-spin text-link" />
+                                </div>
                               )}
                             </div>
                           );
@@ -1805,11 +1817,20 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               <X className="w-5 h-5" />
               <span>Close</span>
             </button>
-            <img
-              src={lightboxMedia.url}
-              alt="Enlarged"
-              className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl"
-            />
+            {lightboxMedia.type === 'video' ? (
+              <video
+                src={lightboxMedia.url}
+                controls
+                autoPlay
+                className="max-h-[85vh] max-w-full rounded-2xl shadow-2xl"
+              />
+            ) : (
+              <img
+                src={lightboxMedia.url}
+                alt="Enlarged"
+                className="max-h-[85vh] max-w-full rounded-2xl object-contain shadow-2xl"
+              />
+            )}
           </div>
         </div>
       )}
