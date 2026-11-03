@@ -5,7 +5,7 @@ import {
   ARRIVAL_OVERRIDE_REASON,
 } from '../../tracking/services/trackingService';
 import ArrivalOverrideDialog from '@/features/tracking/components/ArrivalOverrideDialog';
-import { parseLocalDate, slotsOverlap } from '@/lib/localDate';
+import { parseLocalDate, slotsOverlap, formatSlotLabel } from '@/lib/localDate';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
@@ -84,6 +84,7 @@ const ProviderRequests = () => {
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState({});
   const [updatingVisitId, setUpdatingVisitId] = useState(null);
+  const [extendingVisitId, setExtendingVisitId] = useState(null);
   const [arrivalOverride, setArrivalOverride] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
@@ -94,7 +95,7 @@ const ProviderRequests = () => {
     try {
       const { data, error } = await supabase
         .from('requests')
-        .select('id, patient_id, service, date, time, notes, status, created_at, patient:patient_id(full_name, avatar_url)')
+        .select('id, patient_id, service, date, time, duration_minutes, notes, status, created_at, patient:patient_id(full_name, avatar_url)')
         .eq('provider_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -117,7 +118,7 @@ const ProviderRequests = () => {
         let timeLabel = '';
         try {
           if (r.time) {
-            timeLabel = new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            timeLabel = formatSlotLabel(r.time, r.duration_minutes || 30);
           }
         } catch { timeLabel = r.time || ''; }
 
@@ -127,6 +128,7 @@ const ProviderRequests = () => {
           patient: r.patient?.full_name || 'Unknown Patient',
           avatarUrl: r.patient?.avatar_url || '',
           service: r.service,
+          durationMinutes: r.duration_minutes || 30,
           date: parseLocalDate(r.date)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unscheduled',
           time: timeLabel,
           notes: r.notes || '',
@@ -176,7 +178,7 @@ const ProviderRequests = () => {
       if (action === 'accepted') {
         const { data: target } = await supabase
           .from('requests')
-          .select('date, time, status')
+          .select('date, time, status, duration_minutes')
           .eq('id', id)
           .maybeSingle();
 
@@ -189,12 +191,12 @@ const ProviderRequests = () => {
         // The slot may have been taken while the request waited.
         const { data: held } = await supabase
           .from('requests')
-          .select('id, time')
+          .select('id, time, duration_minutes')
           .eq('provider_id', user.id)
           .eq('date', target.date)
           .in('status', ['Accepted', 'On The Way', 'Arrived'])
           .neq('id', id);
-        if ((held || []).some(h => slotsOverlap(target.date, target.time, target.date, h.time))) {
+        if ((held || []).some(h => slotsOverlap(target.date, target.time, target.date, h.time, target.duration_minutes || 30, h.duration_minutes || 30))) {
           toast.error('You already have a visit accepted for that time.');
           fetchAll();
           return;
@@ -209,7 +211,14 @@ const ProviderRequests = () => {
         .eq('status', 'Pending')
         .select('id');
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23P01' || error.code === '23505') {
+          toast.error('This time slot conflicts with an existing accepted visit.');
+          fetchAll();
+          return;
+        }
+        throw error;
+      }
       if (!updated?.length) {
         toast.error('This request was handled already.');
         fetchAll();
@@ -259,7 +268,14 @@ const ProviderRequests = () => {
         .eq('status', fromStatus)
         .select('id');
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23P01' || error.code === '23505') {
+          toast.error('This time slot conflicts with an existing accepted visit.');
+          fetchAll();
+          return;
+        }
+        throw error;
+      }
       if (!updated?.length) {
         toast.error(`This visit is no longer "${fromStatus}".`);
         fetchAll();
@@ -272,6 +288,31 @@ const ProviderRequests = () => {
       toast.error('Failed to update visit status.');
     } finally {
       setUpdatingVisitId(null);
+    }
+  };
+
+  // Provider can extend the duration of an active visit by 30 minutes via RPC
+  const handleExtendDuration = async (id, patientName) => {
+    setExtendingVisitId(id);
+    try {
+      const { data, error } = await supabase.rpc('provider_extend_request_duration', {
+        p_request_id: id,
+        p_additional_minutes: 30
+      });
+
+      if (error) throw error;
+      if (!data?.ok) {
+        toast.error(data?.message || 'Could not extend duration.');
+        return;
+      }
+
+      toast.success(`Visit extended to ${data.new_duration_minutes} min (ends at ${data.end_time})!`);
+      fetchAll();
+    } catch (err) {
+      console.error('Error extending visit duration:', err);
+      toast.error(err.message || 'Failed to extend visit.');
+    } finally {
+      setExtendingVisitId(null);
     }
   };
 
@@ -629,6 +670,23 @@ const ProviderRequests = () => {
                             <span>Decline</span>
                           </button>
                         </div>
+                      )}
+
+                      {/* Active In-Progress Visits: Duration Extension Button */}
+                      {['Accepted', 'On The Way', 'Arrived'].includes(req.status) && (
+                        <button
+                          type="button"
+                          disabled={extendingVisitId === req.id || updatingVisitId === req.id}
+                          onClick={() => handleExtendDuration(req.id, req.patient)}
+                          className="neu-btn px-3 py-2 rounded-xl text-xs font-bold text-link hover:text-primary transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
+                          title="Extend visit duration by 30 minutes via RPC"
+                        >
+                          {extendingVisitId === req.id ? (
+                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Extending...</>
+                          ) : (
+                            <><Clock className="w-3.5 h-3.5" /> +30m Extend</>
+                          )}
+                        </button>
                       )}
 
                       {/* Active In-Progress Visits: Progression Stepper Button */}

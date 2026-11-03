@@ -17,7 +17,8 @@ import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
 import { ensurePatientCoords } from '@/features/tracking/services/geocoding';
 import { DEFAULT_CONSENT_PERMS } from '@/features/patient/utils/consent';
-import { slotsOverlap, toLocalDateKey } from '@/lib/localDate';
+import { slotsOverlap, toLocalDateKey, formatSlotLabel } from '@/lib/localDate';
+import { getServiceDurationMinutes, getServiceSlotsCount } from '@/config/constants';
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
@@ -63,7 +64,6 @@ const PatientProviders = () => {
   const [sheetTab, setSheetTab] = useState('overview');
   const [showAllServices, setShowAllServices] = useState(false);
   const [openServiceMenu, setOpenServiceMenu] = useState(false);
-  const [openTimeMenu, setOpenTimeMenu] = useState(false);
   const { register, handleSubmit, formState: { errors }, watch, setValue, getValues, reset } = useForm({
     resolver: zodResolver(bookingSchema),
     defaultValues: { service: '', date: '', time: '', notes: '', consent: false },
@@ -75,9 +75,40 @@ const PatientProviders = () => {
   const [patientHome, setPatientHome] = useState(null);
   const [visitDestination, setVisitDestination] = useState(null);
   const [destinationModalOpen, setDestinationModalOpen] = useState(false);
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const watchedDate = watch('date');
   const watchedService = watch('service');
   const watchedTime = watch('time');
+
+  const serviceDurationMinutes = useMemo(() => getServiceDurationMinutes(watchedService), [watchedService]);
+  const serviceSlotsCount = useMemo(() => getServiceSlotsCount(watchedService), [watchedService]);
+
+  const dateOptions = useMemo(() => {
+    const list = [];
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + i);
+      const key = toLocalDateKey(d);
+      const isToday = i === 0;
+      const isTomorrow = i === 1;
+
+      if (isToday && currentHour >= WORKING_HOURS_END) {
+        continue;
+      }
+
+      const label = isToday
+        ? `Today (${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
+        : isTomorrow
+          ? `Tomorrow (${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })})`
+          : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+      list.push({ key, label });
+    }
+    return list;
+  }, []);
 
   const [sortBy, setSortBy] = useState('popular');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -278,23 +309,43 @@ const PatientProviders = () => {
         // time showing as free here must not be one someone is already waiting on.
         const { data: existingBookings } = await supabase
           .from('requests')
-          .select('time')
+          .select('id, time, duration_minutes')
           .eq('provider_id', selectedProvider.id)
           .eq('date', watchedDate)
           .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
 
         if (cancelled) return;
 
-        const bookedTimes = (existingBookings || []).map(b => b.time).filter(Boolean);
-
         const todayStr = toLocalDateKey();
-        const currentHour = new Date().getHours();
+        const now = new Date();
+        const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+
         const slots = [];
-        for (let hour = WORKING_HOURS_START; hour < WORKING_HOURS_END; hour++) {
-          const time = `${String(hour).padStart(2, '0')}:00`;
-          const isBooked = bookedTimes.some(bt => slotsOverlap(watchedDate, time, watchedDate, bt));
-          const isPast = watchedDate < todayStr || (watchedDate === todayStr && hour <= currentHour);
-          slots.push({ time, available: !isBooked && !isPast });
+        const intervalMinutes = 30;
+        const startMinutes = WORKING_HOURS_START * 60;
+        const endMinutes = WORKING_HOURS_END * 60;
+
+        for (let m = startMinutes; m < endMinutes; m += intervalMinutes) {
+          // A contiguous booking cannot cross clinic closing hours (5:00 PM)
+          if (m + serviceDurationMinutes > endMinutes) continue;
+
+          const h = Math.floor(m / 60);
+          const min = m % 60;
+          const time = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+          const isBooked = (existingBookings || []).some(b =>
+            slotsOverlap(watchedDate, time, watchedDate, b.time, serviceDurationMinutes, b.duration_minutes || 30)
+          );
+          const isPast = watchedDate < todayStr || (watchedDate === todayStr && m <= currentTotalMinutes);
+          const label = formatSlotLabel(time, serviceDurationMinutes);
+
+          slots.push({
+            time,
+            label,
+            durationMinutes: serviceDurationMinutes,
+            available: !isBooked && !isPast,
+            isPast,
+            isBooked,
+          });
         }
 
         if (cancelled) return;
@@ -309,7 +360,7 @@ const PatientProviders = () => {
 
     fetchAvailableSlots();
     return () => { cancelled = true; };
-  }, [selectedProvider, watchedDate]);
+  }, [selectedProvider, watchedDate, serviceDurationMinutes]);
 
   // Toggle body class when modals open to hide bottom nav
   useEffect(() => {
@@ -389,9 +440,20 @@ const PatientProviders = () => {
         });
       });
     }
+    const initialDate = (() => {
+      const now = new Date();
+      if (now.getHours() >= WORKING_HOURS_END) {
+        const tmr = new Date(now);
+        tmr.setDate(tmr.getDate() + 1);
+        return toLocalDateKey(tmr);
+      }
+      return toLocalDateKey(now);
+    })();
+
+    setShowCustomDatePicker(false);
     reset({
       service: presetService || provider.services?.[0] || 'General Care',
-      date: new Date().toLocaleDateString('en-CA'),
+      date: initialDate,
       time: '',
       notes: '',
       consent: false,
@@ -479,12 +541,14 @@ const PatientProviders = () => {
 
       const { data: conflict } = await supabase
         .from('requests')
-        .select('id, time')
+        .select('id, time, duration_minutes')
         .eq('provider_id', selectedProvider.id)
         .eq('date', values.date)
         .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
 
-      const hasConflict = (conflict || []).some(c => slotsOverlap(values.date, values.time, values.date, c.time));
+      const hasConflict = (conflict || []).some(c =>
+        slotsOverlap(values.date, values.time, values.date, c.time, serviceDurationMinutes, c.duration_minutes || 30)
+      );
 
       if (hasConflict) {
         toast.error('This time slot has just been taken. Please choose another.');
@@ -554,6 +618,7 @@ const PatientProviders = () => {
           patient_id: user.id,
           provider_id: providerId,
           service: values.service,
+          duration_minutes: serviceDurationMinutes,
           date: values.date,
           time: values.time + ':00',
           status: 'Pending',
@@ -567,9 +632,9 @@ const PatientProviders = () => {
         }]);
 
       if (reqError) {
-        // The requests_slot_exclusive unique index is the authority on slot claims:
-        // two patients submitting the same check-then-insert at once cannot both win.
-        if (reqError.code === '23505') {
+        // The exclusion constraint / unique index is the server authority on slot exclusivity:
+        // concurrent bookings overlapping in time are rejected with 23P01 (exclusion) or 23505 (unique).
+        if (reqError.code === '23505' || reqError.code === '23P01') {
           toast.error('This time slot has just been taken. Please choose another.');
           setBookingLoading(false);
           setBookingStep('form');
@@ -974,7 +1039,7 @@ const PatientProviders = () => {
               }}
             >
               <motion.div 
-                className="neu-flat rounded-t-[2.25rem] sm:rounded-[2.25rem] w-full max-w-lg p-5 sm:p-7 pb-[max(1.5rem,env(safe-area-inset-bottom))] relative max-h-[92dvh] overflow-y-auto no-scrollbar transform-gpu will-change-transform shadow-2xl border-t sm:border border-white/60 dark:border-white/10"
+                className="neu-flat rounded-t-[2.25rem] sm:rounded-[2.25rem] w-full max-w-lg p-5 sm:p-7 pb-[max(1.5rem,env(safe-area-inset-bottom))] relative max-h-[92dvh] overflow-y-auto no-scrollbar shadow-2xl border-t sm:border border-white/60 dark:border-white/10"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
@@ -1035,7 +1100,6 @@ const PatientProviders = () => {
                         type="button"
                         onClick={() => {
                           setOpenServiceMenu(prev => !prev);
-                          setOpenTimeMenu(false);
                         }}
                         className="w-full neu-flat-sm rounded-xl p-2.5 px-3.5 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none hover:border-primary/30"
                       >
@@ -1085,123 +1149,171 @@ const PatientProviders = () => {
                       )}
                     </div>
 
-                    {/* 2-Column Side-by-Side: Date & Time */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      {/* Date Selection */}
-                      <div className="space-y-1">
-                        <label htmlFor="booking-date" className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                          Appointment Date
+                    {/* Schedule Card (Unified Date & 30-min Time Slots - Design 3) */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
+                          Appointment Schedule
                         </label>
-                        <div className="neu-flat-sm rounded-xl p-2.5 px-3 flex items-center">
-                          <input
-                            id="booking-date"
-                            type="date"
-                            min={new Date().toLocaleDateString('en-CA')}
-                            {...register('date', { onChange: () => { setValue('time', ''); setOpenTimeMenu(false); } })}
-                            className={`w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none cursor-pointer ${
-                              errors.date ? 'text-danger' : ''
-                            }`}
-                          />
-                        </div>
-                        {errors.date && (
-                          <p className="text-xs font-medium text-danger ml-1">{errors.date.message}</p>
+                        {watchedTime && (
+                          <span className="text-2xs font-bold text-link">
+                            Selected: {new Date(`2000-01-01T${watchedTime}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          </span>
                         )}
                       </div>
 
-                      {/* Time Selection */}
-                      <div className="space-y-1 relative z-20">
-                        <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                          Appointment Time
-                        </label>
-                        
-                        {!watchedDate ? (
-                          <div className="neu-flat-sm p-2.5 px-3 rounded-xl text-center">
-                            <p className="text-xs text-tertiary dark:text-tertiary">Pick date first</p>
+                      <div className="neu-flat-sm rounded-2xl p-3.5 sm:p-4 space-y-3 border border-slate-200/80 dark:border-white/5">
+                        {/* Date Header inside Card */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-200/60 dark:border-white/5">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-primary/10 text-link flex items-center justify-center shrink-0">
+                              <Calendar className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block">
+                                Date
+                              </span>
+                              <select
+                                value={watchedDate || ''}
+                                onChange={(e) => {
+                                  setValue('date', e.target.value, { shouldValidate: true });
+                                  setValue('time', '');
+                                }}
+                                className="bg-transparent text-xs sm:text-sm font-bold text-slate-900 dark:text-white outline-none cursor-pointer truncate max-w-[210px] sm:max-w-xs"
+                              >
+                                {dateOptions.map(opt => (
+                                  <option key={opt.key} value={opt.key} className="dark:bg-slate-900 text-slate-900 dark:text-white">
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
-                        ) : loadingSlots ? (
-                          <div className="neu-flat-sm p-2.5 px-3 rounded-xl text-center">
-                            <p className="text-xs font-medium text-link">Loading times...</p>
-                          </div>
-                        ) : (
-                          <>
+
+                          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                            {watchedDate && !loadingSlots && availableSlots.length > 0 && (() => {
+                              const freeCount = availableSlots.filter(s => s.available).length;
+                              const allPast = availableSlots.every(s => s.isPast);
+                              if (freeCount > 0) {
+                                return (
+                                  <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-success border border-emerald-200/50 dark:border-emerald-800/30">
+                                    {freeCount} open
+                                  </span>
+                                );
+                              }
+                              if (allPast) {
+                                return (
+                                  <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                    Clinic closed
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 border border-amber-200/50">
+                                  Fully booked
+                                </span>
+                              );
+                            })()}
+
                             <button
                               type="button"
-                              onClick={() => {
-                                setOpenTimeMenu(prev => !prev);
-                                setOpenServiceMenu(false);
-                              }}
-                              className="w-full neu-flat-sm rounded-xl p-2.5 px-3 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none hover:border-primary/30"
+                              onClick={() => setShowCustomDatePicker(prev => !prev)}
+                              className="text-2xs font-bold text-link hover:underline cursor-pointer"
                             >
-                              <span className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white truncate">
-                                {watchedTime ? (
-                                  new Date(`2000-01-01T${watchedTime}:00`).toLocaleTimeString('en-US', {
-                                    hour: 'numeric',
-                                    minute: '2-digit',
-                                  })
-                                ) : (
-                                  <span className="text-tertiary font-normal">Choose slot...</span>
-                                )}
-                              </span>
-                              <ChevronDown className={`w-4 h-4 text-tertiary transition-transform duration-200 shrink-0 ${openTimeMenu ? 'rotate-180 text-link' : ''}`} />
+                              {showCustomDatePicker ? 'Hide' : 'Pick date'}
                             </button>
+                          </div>
+                        </div>
 
-                            {/* Custom Dropdown List for Times */}
-                            <AnimatePresence>
-                              {openTimeMenu && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: -4 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, y: -4 }}
-                                  transition={{ duration: 0.15 }}
-                                  className="absolute left-0 right-0 top-full mt-1 bg-surface-shell rounded-2xl p-1.5 z-40 shadow-xl border border-white/60 dark:border-white/10 space-y-1 max-h-52 overflow-y-auto"
-                                >
-                                  {availableSlots.length === 0 ? (
-                                    <div className="p-2.5 text-center text-xs text-tertiary">
-                                      No available slots.
-                                    </div>
-                                  ) : (
-                                    availableSlots.map(slot => {
-                                      const isSelected = watchedTime === slot.time;
-                                      const timeLabel = new Date(`2000-01-01T${slot.time}:00`).toLocaleTimeString('en-US', {
-                                        hour: 'numeric',
-                                        minute: '2-digit',
-                                      });
+                        {/* Optional custom date picker toggle */}
+                        {showCustomDatePicker && (
+                          <div className="neu-inset rounded-xl p-2 px-3 flex items-center animate-in fade-in duration-150">
+                            <input
+                              type="date"
+                              min={new Date().toLocaleDateString('en-CA')}
+                              value={watchedDate || ''}
+                              onChange={(e) => {
+                                setValue('date', e.target.value, { shouldValidate: true });
+                                setValue('time', '');
+                              }}
+                              className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-white outline-none cursor-pointer"
+                            />
+                          </div>
+                        )}
 
-                                      return (
-                                        <button
-                                          key={slot.time}
-                                          type="button"
-                                          disabled={!slot.available}
-                                          onClick={() => {
-                                            setValue('time', slot.time, { shouldValidate: true });
-                                            setOpenTimeMenu(false);
-                                          }}
-                                          className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between transition-colors outline-none select-none ${
-                                            !slot.available
-                                              ? 'opacity-40 cursor-not-allowed text-tertiary line-through'
-                                              : isSelected
-                                                ? 'bg-primary text-white font-bold cursor-pointer'
-                                                : 'text-slate-800 dark:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 cursor-pointer'
-                                          }`}
-                                        >
-                                          <span className="text-xs font-semibold">{timeLabel}</span>
-                                          <span className={`text-2xs font-bold ${isSelected ? 'text-white' : slot.available ? 'text-success' : 'text-tertiary'}`}>
-                                            {slot.available ? 'Available' : 'Booked'}
-                                          </span>
-                                        </button>
-                                      );
-                                    })
-                                  )}
-                                </motion.div>
+                        {/* Interval / Multi-Slot Linked Block Chips */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block">
+                              {serviceDurationMinutes > 30
+                                ? `Time Slot (${serviceDurationMinutes}-min block)`
+                                : 'Time Slot (30-min intervals)'}
+                            </span>
+                            {serviceDurationMinutes > 30 && (
+                              <span className="text-2xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-link">
+                                {serviceSlotsCount} contiguous slots
+                              </span>
+                            )}
+                          </div>
+
+                          {!watchedDate ? (
+                            <div className="p-3 text-center text-xs text-tertiary">
+                              Select a date above to view available slots.
+                            </div>
+                          ) : loadingSlots ? (
+                            <div className="p-3 text-center text-xs font-medium text-link animate-pulse">
+                              Loading available time slots...
+                            </div>
+                          ) : availableSlots.length === 0 ? (
+                            <div className="p-3 text-center text-xs text-tertiary">
+                              No slots available for this date.
+                            </div>
+                          ) : (
+                            <>
+                              {availableSlots.every(s => !s.available) && (
+                                <div className="p-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 font-medium">
+                                  {availableSlots.every(s => s.isPast)
+                                    ? 'Clinic working hours for today have ended (9:00 AM – 5:00 PM). Please select tomorrow or an upcoming date.'
+                                    : 'All time slots are booked for this date. Please choose another date.'}
+                                </div>
                               )}
-                            </AnimatePresence>
-                          </> 
-                        )}
 
-                        {errors.time && (
-                          <p className="text-xs font-medium text-danger ml-1">{errors.time.message}</p>
-                        )}
+                              <div className={`grid gap-1.5 max-h-56 overflow-y-auto pr-0.5 ${
+                                serviceDurationMinutes > 30 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-4'
+                              }`}>
+                                {availableSlots.map(slot => {
+                                  const isSelected = watchedTime === slot.time;
+
+                                  return (
+                                    <button
+                                      key={slot.time}
+                                      type="button"
+                                      disabled={!slot.available}
+                                      onClick={() => setValue('time', slot.time, { shouldValidate: true })}
+                                      className={`py-2 px-1.5 rounded-xl text-xs font-bold text-center transition-all outline-none select-none ${
+                                        !slot.available
+                                          ? 'bg-slate-100/60 dark:bg-slate-800/40 text-slate-400 dark:text-slate-600 border border-slate-200/50 dark:border-white/5 cursor-not-allowed'
+                                          : isSelected
+                                            ? 'bg-primary text-white shadow-md shadow-primary/25 cursor-pointer ring-2 ring-primary/40'
+                                            : 'neu-flat-sm text-slate-800 dark:text-slate-100 hover:border-primary/40 hover:text-link cursor-pointer active:scale-95'
+                                      }`}
+                                    >
+                                      {slot.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
+
+                      {errors.date && (
+                        <p className="text-xs font-medium text-danger ml-1">{errors.date.message}</p>
+                      )}
+                      {errors.time && (
+                        <p className="text-xs font-medium text-danger ml-1">{errors.time.message}</p>
+                      )}
                     </div>
 
                     {/* Visit Location */}
@@ -1343,7 +1455,13 @@ const PatientProviders = () => {
                       <div>
                         <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">Time</span>
                         <p className="font-bold text-slate-800 dark:text-slate-200 mt-0.5">
-                          {new Date(`2000-01-01T${vals.time}:00`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          {formatSlotLabel(vals.time, serviceDurationMinutes)}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary">Duration</span>
+                        <p className="font-bold text-link mt-0.5">
+                          {serviceDurationMinutes} mins ({serviceSlotsCount} {serviceSlotsCount === 1 ? 'slot' : 'slots'})
                         </p>
                       </div>
                       <div className="col-span-2">

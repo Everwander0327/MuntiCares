@@ -15,6 +15,7 @@ import {
   ARRIVAL_OVERRIDE_REASON,
 } from '@/features/tracking/services/trackingService';
 import toast from 'react-hot-toast';
+import { formatSlotLabel } from '@/lib/localDate';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -57,7 +58,7 @@ const ProviderSchedule = () => {
       try {
         const { data, error } = await supabase
           .from('requests')
-          .select('id, patient_id, service, date, time, status, notes, patient:patient_id(full_name, avatar_url)')
+          .select('id, patient_id, service, date, time, duration_minutes, status, notes, patient:patient_id(full_name, avatar_url)')
           .eq('provider_id', user.id)
           .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed']);
 
@@ -78,7 +79,7 @@ const ProviderSchedule = () => {
           const profile = patientProfiles?.find(p => p.user_id === r.patient_id);
           let timeStr = '';
           try {
-            timeStr = new Date(`2000-01-01T${r.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            timeStr = formatSlotLabel(r.time, r.duration_minutes || 30);
           } catch { timeStr = r.time; }
 
           return {
@@ -90,6 +91,7 @@ const ProviderSchedule = () => {
             date: r.date,
             time: r.time,
             timeLabel: timeStr,
+            durationMinutes: r.duration_minutes || 30,
             status: r.status,
             notes: r.notes || '',
             address: profile?.address || 'Address not provided',
@@ -522,6 +524,9 @@ const ProviderSchedule = () => {
                             <div className="flex items-center gap-1.5 font-semibold">
                               <Clock className="w-3.5 h-3.5 text-link shrink-0" />
                               <span>{appt.timeLabel}</span>
+                              <span className="text-2xs font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-link">
+                                {appt.durationMinutes}m
+                              </span>
                             </div>
                             <div className="flex items-center gap-1.5 min-w-0 font-medium">
                               <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
