@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reset your MuntiCares password</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#F4F8FC;-webkit-text-size-adjust:100%;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
+      Choose a new password for your MuntiCares account.
+    </div>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#F4F8FC;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#FFFFFF;border:1px solid #D2E0EE;border-radius:16px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+            <tr>
+              <td style="background-color:#2F6FB5;padding:28px 32px;">
+                <span style="display:inline-block;font-size:22px;font-weight:800;letter-spacing:-0.4px;color:#FFFFFF;">
+                  MuntiCares
+                </span>
+                <span style="display:block;margin-top:4px;font-size:12px;color:#DDEBF8;">
+                  Home care, right at your doorstep
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3;color:#17283B;font-weight:800;">
+                  Reset your password
+                </h1>
+                <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#475569;">
+                  We received a request to reset the password for
+                  <strong style="color:#17283B;">{{ .Email }}</strong>. Choose a new one using the button below.
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
+                  <tr>
+                    <td style="border-radius:10px;background-color:#2F6FB5;">
+                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#FFFFFF;text-decoration:none;border-radius:10px;">
+                        Choose a new password
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#64748B;">
+                  This link expires in 1 hour and can only be used once.
+                </p>
+                <p style="margin:0 0 24px;font-size:13px;line-height:1.6;color:#64748B;">
+                  If the button does not work, copy this address into your browser:
+                </p>
+                <p style="margin:0 0 24px;font-size:12px;line-height:1.5;word-break:break-all;color:#2F6FB5;">
+                  <a href="{{ .ConfirmationURL }}" style="color:#2F6FB5;">{{ .ConfirmationURL }}</a>
+                </p>
+                <div style="height:1px;background-color:#E2E8F0;margin:0 0 20px;"></div>
+                <p style="margin:0;font-size:13px;line-height:1.6;color:#64748B;">
+                  Did not request this? Ignore this email — your password will stay the same. If requests keep arriving, contact MuntiCares support.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color:#F8FAFC;border-top:1px solid #E2E8F0;padding:20px 32px;">
+                <p style="margin:0 0 4px;font-size:12px;line-height:1.5;color:#64748B;">
+                  MuntiCares · Muntinlupa City, Philippines
+                </p>
+                <p style="margin:0;font-size:12px;line-height:1.5;color:#94A3B8;">
+                  You received this email because a password reset was requested for this address.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
