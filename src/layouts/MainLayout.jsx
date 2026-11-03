@@ -3,7 +3,7 @@ import { Navbar, Footer, ScrollProgress } from '@/shared/navigation';
 
 const MainLayout = () => {
   const location = useLocation();
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register' || location.pathname === '/reset-password';
 
   return (
     <div className="min-h-[100dvh] flex flex-col overflow-x-hidden w-full max-w-full">

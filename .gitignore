@@ -30,6 +30,7 @@ supabase_schema.sql
 .agents
 .vercel
 .env*
+!.env.example
 test-results/
 
 .design-qa/

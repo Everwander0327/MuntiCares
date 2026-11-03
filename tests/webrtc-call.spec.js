@@ -1,10 +1,20 @@
 import { test, expect } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * End-to-end test for the native WebRTC voice / video call feature.
  *
  * Two isolated browser contexts (patient + provider) talk to each other through
  * Supabase Realtime signaling. Chrome's fake media devices supply camera + mic.
+ *
+ * Run requirements (this suite SKIPS unless all are met):
+ *  - The dev server at http://localhost:5173 is running with VITE_SUPABASE_* pointing
+ *    at the SAME Supabase project as the E2E credentials below.
+ *  - Two real accounts exist in that project: one provider and one patient
+ *    (E2E_PROVIDER_EMAIL/E2E_PROVIDER_PASSWORD, E2E_PATIENT_EMAIL/E2E_PATIENT_PASSWORD).
+ *  - Realtime is enabled (it is by default).
+ *  - For video across networks, the `ice-servers` edge function is deployed on the
+ *    project; otherwise the call falls back to STUN and may fail over restrictive NATs.
  *
  * Verifies:
  *  - The callee receives exactly one incoming-call prompt and can accept it.
@@ -15,19 +25,39 @@ import { test, expect } from '@playwright/test';
  *  - Hang-up on one side ends the session on the other side.
  */
 
-const PROVIDER = {
-  id: '426a5992-c6c6-4171-8136-001f4b25e201',
-  email: 'johnlawrence@gmail.com',
-  full_name: 'John Lawrence Soriano',
-  role: 'provider',
-};
+const SUPABASE_URL = process.env.E2E_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.E2E_SUPABASE_ANON_KEY;
+const PROVIDER_EMAIL = process.env.E2E_PROVIDER_EMAIL;
+const PROVIDER_PASSWORD = process.env.E2E_PROVIDER_PASSWORD;
+const PATIENT_EMAIL = process.env.E2E_PATIENT_EMAIL;
+const PATIENT_PASSWORD = process.env.E2E_PATIENT_PASSWORD;
 
-const PATIENT = {
-  id: '91e0b115-e381-402a-a930-61e85c4989b0',
-  email: 'andrew@gmail.com',
-  full_name: 'Andrew Ymson',
-  role: 'patient',
-};
+const enabled = Boolean(
+  SUPABASE_URL
+  && SUPABASE_ANON_KEY
+  && PROVIDER_EMAIL
+  && PROVIDER_PASSWORD
+  && PATIENT_EMAIL
+  && PATIENT_PASSWORD
+);
+
+let providerClient;
+let patientClient;
+let providerUser;
+
+async function loginAs(page, email, password) {
+  await page.goto('/login');
+  await page.getByLabel('Email Address', { exact: true }).fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 20000 });
+}
+
+async function signIn(client, email, password) {
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data.user;
+}
 
 test.use({
   launchOptions: {
@@ -49,11 +79,6 @@ const attachLogging = (page, label, sink) => {
     }
   });
   page.on('pageerror', (err) => sink.push(`[${label}] PAGEERROR: ${err.message}`));
-};
-
-const login = async (page, user) => {
-  await page.goto('/');
-  await page.evaluate((u) => localStorage.setItem('munticares_user', JSON.stringify(u)), user);
 };
 
 const countCallStartMessages = (page) =>
@@ -85,13 +110,13 @@ async function runCall(browser, callType) {
   attachLogging(provider, 'provider', logs);
 
   try {
-    await login(patient, PATIENT);
-    await login(provider, PROVIDER);
+    await loginAs(patient, PATIENT_EMAIL, PATIENT_PASSWORD);
+    await loginAs(provider, PROVIDER_EMAIL, PROVIDER_PASSWORD);
 
     // Provider idles on the messages list (global CallProvider listens for calls).
     await provider.goto('/provider/messages');
     // Patient opens the chat with the provider.
-    await patient.goto(`/patient/messages?partner=${PROVIDER.id}&name=${encodeURIComponent(PROVIDER.full_name)}`);
+    await patient.goto(`/patient/messages?partner=${providerUser.id}&name=${encodeURIComponent(providerUser.full_name)}`);
 
     const startBtnTitle = callType === 'video' ? 'Start Teleconsultation (Video)' : 'Start Voice Consultation';
     const startBtn = patient.getByTitle(startBtnTitle);
@@ -148,6 +173,34 @@ async function runCall(browser, callType) {
 }
 
 test.describe('Native WebRTC calls', () => {
+  test.skip(!enabled, 'Set E2E_SUPABASE_URL, E2E_SUPABASE_ANON_KEY, E2E_PROVIDER_*, and E2E_PATIENT_* to run against staging.');
+
+  test.beforeAll(async () => {
+    providerClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    patientClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const provider = await signIn(providerClient, PROVIDER_EMAIL, PROVIDER_PASSWORD);
+    await signIn(patientClient, PATIENT_EMAIL, PATIENT_PASSWORD);
+
+    const { data: providerProfile, error: profileError } = await providerClient
+      .from('users')
+      .select('id, full_name')
+      .eq('id', provider.id)
+      .maybeSingle();
+    if (profileError) throw profileError;
+
+    providerUser = { id: provider.id, full_name: providerProfile?.full_name || '' };
+  });
+
+  test.afterAll(async () => {
+    await providerClient?.auth.signOut();
+    await patientClient?.auth.signOut();
+  });
+
   test('video call connects both ways without looping', async ({ browser }) => {
     await runCall(browser, 'video');
   });

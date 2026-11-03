@@ -124,6 +124,9 @@ export const AuthProvider = ({ children }) => {
       if (error.message.includes('Invalid login credentials')) {
         throw new Error('Invalid email or password');
       }
+      if (error.message.toLowerCase().includes('email not confirmed')) {
+        throw new Error('Confirm your email address first — open the link we sent to your inbox.');
+      }
       throw new Error(error.message);
     }
 
@@ -145,6 +148,7 @@ export const AuthProvider = ({ children }) => {
       email: normalizedEmail,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           full_name: fullName,
           role: role || 'patient',
@@ -160,7 +164,13 @@ export const AuthProvider = ({ children }) => {
       throw new Error(error.message);
     }
 
-    return data.user;
+    // With email confirmation enabled Supabase returns a user with no identities for an
+    // address that is already registered instead of an error, to avoid leaking which
+    // addresses exist. The caller shows "check your email" for both cases.
+    return {
+      user: data.user,
+      needsConfirmation: !data.session,
+    };
   }, []);
 
   const setPassword = useCallback(async ({ password }) => {

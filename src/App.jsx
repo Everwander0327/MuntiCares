@@ -21,7 +21,8 @@ const PatientTrackingMonitor = lazy(() => import('@/features/tracking/components
 
 // Pages (eager — critical path)
 import { LandingPage } from '@/features/landing';
-import { AuthPage } from '@/features/auth';
+import { AuthPage, ResetPassword } from '@/features/auth';
+import { PrivacyPolicy, TermsOfService } from '@/features/legal';
 
 // Dashboard pages (lazy — only loaded after login)
 const PatientDashboard = lazy(() => import('@/features/patient/pages/Dashboard'));
@@ -80,6 +81,9 @@ function AppContent() {
             <Route index element={<AnimatedPage><LandingPage /></AnimatedPage>} />
             <Route path="login" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
             <Route path="register" element={<AnimatedPage><AuthPage /></AnimatedPage>} />
+            <Route path="reset-password" element={<AnimatedPage><ResetPassword /></AnimatedPage>} />
+            <Route path="privacy" element={<AnimatedPage><PrivacyPolicy /></AnimatedPage>} />
+            <Route path="terms" element={<AnimatedPage><TermsOfService /></AnimatedPage>} />
           </Route>
 
           {/* Dashboard Routes with Persistent Shell (Top Bar & Bottom Nav stay mounted) */}

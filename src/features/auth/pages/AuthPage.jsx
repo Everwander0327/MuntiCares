@@ -200,7 +200,7 @@ const AuthPage = () => {
     setError('');
     setLoading(true);
     try {
-      await register({
+      const result = await register({
         email: data.email,
         password: data.password,
         fullName: data.fullName,
@@ -208,7 +208,11 @@ const AuthPage = () => {
         privacyAcceptedAt: new Date().toISOString(),
       });
       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-      toast.success('Account created! You can now sign in.');
+      if (result?.needsConfirmation) {
+        toast.success('Account created. Check your email to confirm it, then sign in.');
+      } else {
+        toast.success('Account created! You can now sign in.');
+      }
       setMode('login');
       setError('');
     } catch (err) {
@@ -309,7 +313,7 @@ const AuthPage = () => {
               <FormCheckbox label="Remember me" labelClassName="text-slate-800 dark:text-slate-200" {...loginForm.register('remember')} />
               <button
                 type="button"
-                onClick={() => toast('Password reset coming soon')}
+                onClick={() => navigate('/reset-password')}
                 className="text-xs text-link font-bold hover:underline transition-all cursor-pointer"
               >
                 Forgot Password?
