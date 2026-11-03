@@ -478,8 +478,8 @@ const AuthPage = () => {
       {/* 50/50 Desktop Split-Screen Architecture */}
       <div className="w-full flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)]">
         
-        {/* Left Column: Landing Page Hero Section Content (Theme-Aware, Vertically Centered) */}
-        <div className="lg:col-span-6 relative overflow-hidden bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white p-8 sm:p-12 lg:p-16 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-slate-800 transition-colors duration-200">
+        {/* Left Column: Landing Page Hero Section Content (Theme-Aware, Vertically Centered, Desktop Only) */}
+        <div className="hidden lg:flex lg:col-span-6 relative overflow-hidden bg-secondary text-slate-900 dark:bg-slate-950 dark:text-white p-8 sm:p-12 lg:p-16 flex-col justify-center border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-slate-800 transition-colors duration-200">
           {/* Cinematic backdrop with theme-aware wash (Exact Hero Section Background) */}
           <div className="absolute inset-0 z-0 pointer-events-none" aria-hidden="true">
             <div ref={bgRef} className="h-full w-full">
@@ -512,8 +512,8 @@ const AuthPage = () => {
         </div>
 
         {/* Right Column: Clean Authentication Form */}
-        <div className="lg:col-span-6 bg-secondary dark:bg-slate-950 flex items-center justify-center p-6 sm:p-10 lg:p-12">
-          <div className="w-full max-w-md mx-auto space-y-5">
+        <div className="col-span-1 lg:col-span-6 bg-secondary dark:bg-slate-950 flex items-center justify-center p-4 py-8 sm:p-8 lg:p-12">
+          <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-5">
             
             {/* Top Switcher: Clean Segment Control */}
             {!pendingSetPassword && (
