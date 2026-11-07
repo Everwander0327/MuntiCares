@@ -1,4 +1,14 @@
 User-agent: *
-Allow: /
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /reset-password
+Allow: /privacy
+Allow: /terms
+# Authenticated areas hold no crawlable content and must not be indexed.
+Disallow: /onboarding
+Disallow: /patient/
+Disallow: /provider/
+Disallow: /admin/
 
-Sitemap: https://munti-cares.vercel.app/sitemap.xml
+Sitemap: https://munti-cares-alpha.vercel.app/sitemap.xml

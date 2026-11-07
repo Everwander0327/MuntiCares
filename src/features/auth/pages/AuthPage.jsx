@@ -13,6 +13,7 @@ import confetti from 'canvas-confetti';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { FormInput, FormCheckbox } from '@/shared/ui';
+import { PageMeta } from '@/shared/components';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
@@ -475,6 +476,13 @@ const AuthPage = () => {
 
   return (
     <main ref={pageRef} className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full flex flex-col justify-center">
+      <PageMeta
+        title={mode === 'register' ? 'Create your MuntiCares account' : 'Sign in to MuntiCares'}
+        description={mode === 'register'
+          ? 'Create a MuntiCares account to book verified home care providers across the 9 barangays of Muntinlupa City.'
+          : 'Sign in to manage your MuntiCares home care bookings, messages, and visit tracking in Muntinlupa City.'}
+        path={mode === 'register' ? '/register' : '/login'}
+      />
       {/* 50/50 Desktop Split-Screen Architecture */}
       <div className="w-full flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)]">
         

@@ -2,3 +2,4 @@ export { default as AnimatedPage, StaggerContainer, StaggerItem, pageVariants, s
 export { default as ProfilePhotoUpload } from './ProfilePhotoUpload';
 export { default as FhirExportModal } from './FhirExportModal';
 export { default as ReviewCard, cleanReviewText } from './ReviewCard';
+export { default as PageMeta } from './PageMeta';

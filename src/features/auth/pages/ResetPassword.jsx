@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { FormInput } from '@/shared/ui';
+import { PageMeta } from '@/shared/components';
 
 const requestSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -93,6 +94,11 @@ const ResetPassword = () => {
 
   return (
     <main className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full bg-secondary dark:bg-slate-950 flex items-center justify-center p-6 sm:p-10">
+      <PageMeta
+        title="Reset your password — MuntiCares"
+        description="Request a MuntiCares password reset link and choose a new password for your home care account."
+        path="/reset-password"
+      />
       <div className="w-full max-w-md rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-5 sm:p-7 shadow-xl">
         <div className="mb-4 text-center">
           <h2 className="font-display font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white tracking-tight">

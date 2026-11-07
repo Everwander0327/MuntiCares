@@ -3,14 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQsIDQpIj4KICAgIDxwYXRoIGQ9Ik0xOSAxNGMxLjQ5LTEuNDYgMy0zLjIxIDMtNS41QTUuNSA1LjUgMCAwIDAgMTYuNSAzYy0xLjc2IDAtMyAuNS00LjUgMi0xLjUtMS41LTIuNzQtMi00LjUtMkE1LjUgNS41IDAgMCAwIDIgOC41YzAgMi4zIDEuNSA0LjA1IDMgNS41bDcgN1oiIGZpbGw9IiNmZmYiLz4KICA8L2c+Cjwvc3ZnPgo=" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQsIDQpIj4KICAgIDxwYXRoIGQ9Ik0xOSAxNGMxLjQ5LTEuNDYgMy0zLjIxIDMtNS41QTUuNSA1LjUgMCAwIDAgMTYuNSAzYy0xLjc2IDAtMyAuNS00LjUgMi0xLjUtMS41LTIuNzQtMi00LjUtMkE1LjUgNS41IDAgMCAwIDIgOC41YzAgMi4zIDEuNSA0LjA1IDMgNS41bDcgN1oiIGZpbGw9IiNmZmYiLz4KICA8L2c+Cjwvc3ZnPgo=" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600;700;800&family=Lexend:wght@500;600;700;800&display=swap" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F4F8FC" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E1620" media="(prefers-color-scheme: dark)" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <meta name="description" content="MuntiCares — Connecting Muntinlupa City residents with trusted, verified home care providers. Fast, secure, and patient-first." />
     <meta name="keywords" content="home care Muntinlupa, caregiver, elderly care, home health, MuntiCares, verified providers, Muntinlupa City healthcare" />
+    <link rel="canonical" href="https://munti-cares-alpha.vercel.app/" />
 
     <!-- Prevent FOUC -->
     <script>
@@ -23,32 +28,113 @@
     </script>
 
     <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MuntiCares" />
+    <meta property="og:locale" content="en_PH" />
     <meta property="og:title" content="MuntiCares — Home Care, Right at Your Doorstep" />
     <meta property="og:description" content="Connecting Muntinlupa City residents with trusted, verified home care providers. Fast, secure, and patient-first." />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://munti-cares.vercel.app" />
+    <meta property="og:url" content="https://munti-cares-alpha.vercel.app/" />
+    <meta property="og:image" content="https://munti-cares-alpha.vercel.app/images/landing/feature-verified.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="670" />
+    <meta property="og:image:alt" content="A verified MuntiCares health professional arriving at a home in Muntinlupa City" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="MuntiCares — Home Care, Right at Your Doorstep" />
     <meta name="twitter:description" content="Connecting Muntinlupa City residents with trusted, verified home care providers." />
+    <meta name="twitter:image" content="https://munti-cares-alpha.vercel.app/images/landing/feature-verified.jpg" />
 
     <!-- Structured Data -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "LocalBusiness",
-        "name": "MuntiCares",
-        "description": "Home care provider marketplace connecting Muntinlupa City residents with trusted, verified caregivers.",
-        "url": "https://munti-cares.vercel.app",
-        "areaServed": {
-          "@type": "City",
-          "name": "Muntinlupa City"
-        },
-        "contactPoint": {
-          "@type": "ContactPoint",
-          "contactType": "customer support"
-        }
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://munti-cares-alpha.vercel.app/#website",
+            "name": "MuntiCares",
+            "url": "https://munti-cares-alpha.vercel.app/",
+            "inLanguage": "en-PH",
+            "publisher": { "@id": "https://munti-cares-alpha.vercel.app/#business" }
+          },
+          {
+            "@type": "MedicalBusiness",
+            "@id": "https://munti-cares-alpha.vercel.app/#business",
+            "name": "MuntiCares",
+            "description": "Home care marketplace connecting Muntinlupa City residents with verified caregivers for elderly care, post-surgery care, physical therapy, companion care, and medication management.",
+            "url": "https://munti-cares-alpha.vercel.app/",
+            "image": "https://munti-cares-alpha.vercel.app/images/landing/feature-verified.jpg",
+            "email": "munticares@gmail.com",
+            "priceRange": "PHP",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Muntinlupa City",
+              "addressRegion": "Metro Manila",
+              "addressCountry": "PH"
+            },
+            "areaServed": [
+              { "@type": "City", "name": "Muntinlupa City" },
+              { "@type": "AdministrativeArea", "name": "Alabang" },
+              { "@type": "AdministrativeArea", "name": "Ayala Alabang" },
+              { "@type": "AdministrativeArea", "name": "Bayanan" },
+              { "@type": "AdministrativeArea", "name": "Buli" },
+              { "@type": "AdministrativeArea", "name": "Cupang" },
+              { "@type": "AdministrativeArea", "name": "Poblacion" },
+              { "@type": "AdministrativeArea", "name": "Putatan" },
+              { "@type": "AdministrativeArea", "name": "Sucat" },
+              { "@type": "AdministrativeArea", "name": "Tunasan" }
+            ],
+            "openingHoursSpecification": [{
+              "@type": "OpeningHoursSpecification",
+              "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+              "opens": "09:00",
+              "closes": "17:00"
+            }],
+            "hasOfferCatalog": {
+              "@type": "OfferCatalog",
+              "name": "Home care services",
+              "itemListElement": [
+                { "@type": "Offer", "itemOffered": { "@type": "MedicalTherapy", "name": "Elderly Care", "description": "Compassionate, professional care for senior family members in the comfort of their homes." } },
+                { "@type": "Offer", "itemOffered": { "@type": "MedicalTherapy", "name": "Post-Surgery Care", "description": "Recovery assistance after medical procedures, including wound care and mobility support." } },
+                { "@type": "Offer", "itemOffered": { "@type": "MedicalTherapy", "name": "Physical Therapy", "description": "In-home rehabilitation sessions tailored to your recovery goals and schedule." } },
+                { "@type": "Offer", "itemOffered": { "@type": "MedicalTherapy", "name": "Companion Care", "description": "Social support and daily companionship to improve quality of life and mental well-being." } },
+                { "@type": "Offer", "itemOffered": { "@type": "MedicalTherapy", "name": "Medication Management", "description": "Organized medication scheduling, reminders, and monitoring for peace of mind." } }
+              ]
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://munti-cares-alpha.vercel.app/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How are providers verified?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Every provider on MuntiCares undergoes a rigorous background check, credential verification, and in-person interview before being approved. We also review licenses, certifications, and conduct regular reference checks to ensure the highest standards of care." }
+              },
+              {
+                "@type": "Question",
+                "name": "What areas of Muntinlupa do you serve?",
+                "acceptedAnswer": { "@type": "Answer", "text": "We currently serve all 9 barangays of Muntinlupa City: Alabang, Ayala Alabang, Bayanan, Buli, Cupang, Poblacion, Putatan, Sucat, and Tunasan. We are actively expanding to nearby cities." }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I switch providers if I'm not satisfied?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Absolutely. You can request a different provider at any time. We encourage you to find the right match for your needs, and our support team is happy to help facilitate a smooth transition." }
+              },
+              {
+                "@type": "Question",
+                "name": "Is my health data private?",
+                "acceptedAnswer": { "@type": "Answer", "text": "Yes. We take data privacy seriously. MuntiCares is fully compliant with the Data Privacy Act of 2012. You have full control over who can access your health records, and all data is encrypted end-to-end." }
+              },
+              {
+                "@type": "Question",
+                "name": "What if I need urgent care?",
+                "acceptedAnswer": { "@type": "Answer", "text": "For life-threatening emergencies, please call 911 or your local emergency hotline immediately. For urgent but non-emergency care needs, you can book a provider on our platform with same-day availability in many cases." }
+              }
+            ]
+          }
+        ]
       }
     </script>
 

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { PageMeta } from '@/shared/components';
 
 const Section = ({ title, children }) => (
   <section>
@@ -9,6 +10,11 @@ const Section = ({ title, children }) => (
 
 const PrivacyPolicy = () => (
   <div className="bg-secondary dark:bg-slate-950 min-h-[calc(100dvh-4rem)] py-10 px-4 sm:px-6">
+    <PageMeta
+      title="Privacy Policy — MuntiCares"
+      description="How MuntiCares collects, stores, and shares home care health data in Muntinlupa City, and the controls you have under the Data Privacy Act of 2012."
+      path="/privacy"
+    />
     <div className="max-w-3xl mx-auto">
       <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white tracking-tight">
         Privacy Policy

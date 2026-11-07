@@ -2,6 +2,9 @@
  * MuntiCares Application Constants & Configuration
  */
 
+export const SITE_URL =
+  import.meta.env.VITE_SITE_URL || 'https://munti-cares-alpha.vercel.app';
+
 export const MUNTINLUPA_BARANGAYS = [
   'Alabang',
   'Bayanan',
