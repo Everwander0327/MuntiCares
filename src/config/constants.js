@@ -3,7 +3,7 @@
  */
 
 export const SITE_URL =
-  import.meta.env.VITE_SITE_URL || 'https://munti-cares-alpha.vercel.app';
+  import.meta.env.VITE_SITE_URL || 'https://munti-cares.vercel.app';
 
 export const MUNTINLUPA_BARANGAYS = [
   'Alabang',

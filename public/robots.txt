@@ -11,4 +11,4 @@ Disallow: /patient/
 Disallow: /provider/
 Disallow: /admin/
 
-Sitemap: https://munti-cares-alpha.vercel.app/sitemap.xml
+Sitemap: https://munti-cares.vercel.app/sitemap.xml
