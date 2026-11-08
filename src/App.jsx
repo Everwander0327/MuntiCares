@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CallProvider } from '@/contexts/CallContext';
 import { IncomingCallOverlay } from '@/features/chat';
 import { useCallPushNotifications } from '@/lib/pushNotifications';
+import SeoManager from '@/components/SeoManager';
 
 // Layouts
 import MainLayout from '@/layouts/MainLayout';
@@ -71,6 +72,7 @@ function AppContent() {
   return (
     <CallProvider>
       <IncomingCallOverlay />
+      <SeoManager />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname.split('/')[1] || 'public'}>
           {/* Standalone Onboarding Route (No Landing Navbar/Footer) */}
