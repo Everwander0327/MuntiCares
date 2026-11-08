@@ -6,7 +6,7 @@ export function buildRobotsTxt(siteUrl) {
   return [
     'User-agent: *',
     'Allow: /',
-    ...NOINDEX_PREFIXES.map((prefix) => `Disallow: ${prefix}/`),
+    ...NOINDEX_PREFIXES.flatMap((prefix) => [`Disallow: ${prefix}`, `Disallow: ${prefix}/`]),
     '',
     `Sitemap: ${base}/sitemap.xml`,
     '',

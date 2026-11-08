@@ -33,6 +33,13 @@ describe('getPageMeta', () => {
   it('noindexes unknown paths', () => {
     expect(getPageMeta('/does-not-exist', U).robots).toBe('noindex, nofollow');
   });
+
+  it('normalizes uppercase public paths and trailing-slash siteUrl', () => {
+    const meta = getPageMeta('/Privacy/', `${U}/`);
+    expect(meta.canonical).toBe(`${U}/privacy`);
+    expect(meta.robots).toBe('index, follow');
+    expect(meta.title).toBe('Privacy Policy | MuntiCares');
+  });
 });
 
 describe('normalizeSiteUrl', () => {

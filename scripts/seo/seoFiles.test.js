@@ -8,8 +8,11 @@ describe('buildRobotsTxt', () => {
   it('points to the sitemap and disallows private areas', () => {
     const txt = buildRobotsTxt(U);
     expect(txt).toContain('Sitemap: https://x.app/sitemap.xml');
+    expect(txt).toContain('Disallow: /patient\n');
     expect(txt).toContain('Disallow: /patient/');
+    expect(txt).toContain('Disallow: /provider\n');
     expect(txt).toContain('Disallow: /provider/');
+    expect(txt).toContain('Disallow: /admin\n');
     expect(txt).toContain('Disallow: /admin/');
   });
 
