@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import basicSsl from '@vitejs/plugin-basic-ssl'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { seoPlugin } from './scripts/seo/seoPlugin.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -15,6 +16,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    seoPlugin(),
     ...(process.env.VITE_HTTPS === 'true' ? [basicSsl()] : []),
   ],
   server: {
@@ -39,6 +41,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
-    include: ['src/**/*.{test,spec}.{js,jsx}'],
+    include: ['src/**/*.{test,spec}.{js,jsx}', 'scripts/**/*.test.js'],
   },
 })
