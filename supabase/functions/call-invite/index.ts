@@ -112,6 +112,9 @@ const sendTo = async (
           kind: "call_invite",
           call_id: call.id,
           sender_id: call.caller_id,
+          // Lets the client discard an invite that arrives on a shared handset signed
+          // in as a different account, so a call for A cannot ring B's device.
+          receiver_id: call.callee_id,
           sender_name: senderName ?? "",
           call_type: call.call_type,
         },

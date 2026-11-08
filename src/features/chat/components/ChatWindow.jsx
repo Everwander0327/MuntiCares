@@ -235,6 +235,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   };
   const [consentId, setConsentId] = useState(null);
   const [consentEnabled, setConsentEnabled] = useState(true);
+  const isPatientView = (currentUser?.role || authUser?.role) === 'patient';
 
   const handleToggleConsent = async () => {
     const nextVal = !consentEnabled;
@@ -244,19 +245,23 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       const patId = isPatient ? currentUser.id : otherUser.id;
       const provId = isPatient ? otherUser.id : currentUser.id;
 
+      let error = null;
       if (consentId) {
-        await supabase
+        ({ error } = await supabase
           .from('consent_access')
           .update({ is_enabled: nextVal })
-          .eq('id', consentId);
+          .eq('id', consentId));
       } else {
-        const { data } = await supabase
+        const { data, error: insertError } = await supabase
           .from('consent_access')
           .insert([{ patient_id: patId, provider_id: provId, is_enabled: nextVal }])
           .select()
           .maybeSingle();
+        error = insertError;
         if (data) setConsentId(data.id);
       }
+
+      if (error) throw error;
       toast.success(nextVal ? 'Consent access granted' : 'Consent access revoked');
     } catch (err) {
       console.error('Failed to toggle consent:', err);
@@ -1776,7 +1781,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     )}
                   </div>
 
-                  {/* 2. ON/OFF CONSENT ACCESS TOGGLE BUTTON */}
+                  {/* 2. ON/OFF CONSENT ACCESS TOGGLE BUTTON (patient only) */}
+                  {isPatientView && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Legal & Consent</span>
@@ -1802,6 +1808,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       </div>
                     </button>
                   </div>
+                  )}
 
                   {/* 3. ACTIVE APPOINTMENT IF ANY */}
                   {activeRequest && (

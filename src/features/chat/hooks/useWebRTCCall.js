@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { logCallEvent } from '../lib/callEvents';
+import { isCallActive, stopStreamTracks } from '../lib/callLifecycle';
 
 /**
  * Native WebRTC 1-on-1 call hook (voice or video) using Supabase Realtime broadcast
@@ -1048,6 +1049,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
 
     // Call started as audio or has no video track yet -> acquire camera on demand!
     try {
+      const callId = callIdRef.current;
       console.log('[webrtc] acquiring camera track for toggleCamera...');
       let vStream = null;
       try {
@@ -1057,6 +1059,12 @@ export default function useWebRTCCall({ selfId, peerId }) {
       } catch (err1) {
         console.warn('[webrtc] front-facing camera failed, retrying generic video...', err1);
         vStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      }
+      if (!isCallActive(statusRef.current, callIdRef.current, callId)) {
+        // The call ended (or was replaced) while the camera prompt was up; the
+        // late track would otherwise outlive cleanup and keep the indicator lit.
+        stopStreamTracks(vStream);
+        return;
       }
       const newTrack = vStream?.getVideoTracks()?.[0];
       if (!newTrack) return;
@@ -1091,6 +1099,7 @@ export default function useWebRTCCall({ selfId, peerId }) {
     const nextFacing = facingModeRef.current === 'user' ? 'environment' : 'user';
     console.log('[webrtc] switchCamera to:', nextFacing);
     try {
+      const callId = callIdRef.current;
       let vStream = null;
       try {
         vStream = await navigator.mediaDevices.getUserMedia({
@@ -1108,6 +1117,10 @@ export default function useWebRTCCall({ selfId, peerId }) {
             height: { ideal: 720 },
           },
         });
+      }
+      if (!isCallActive(statusRef.current, callIdRef.current, callId)) {
+        stopStreamTracks(vStream);
+        return;
       }
       const newTrack = vStream?.getVideoTracks()?.[0];
       if (!newTrack) {

@@ -27,6 +27,7 @@ import {
   parseEmergencyContact,
 } from '@/features/patient/utils/patientProfile';
 import { buildOnboardingDraft } from '@/features/patient/utils/onboardingDraft';
+import { resolveOnboardingMedicalFields } from '@/features/patient/utils/onboardingHydrate';
 
 // The map chunk pulls in MapLibre; it is only needed from step 2 onward.
 const ModernLocationPicker = lazy(() => import('@/features/tracking/components/ModernLocationPicker'));
@@ -261,17 +262,6 @@ export default function Onboarding({ isPreview = false }) {
               setCoords({ lat: Number(patData.latitude), lng: Number(patData.longitude) });
               setPinStatus('resolved');
             }
-
-            let notes = patData.medical_notes || '';
-            let dob = patData.date_of_birth ? String(patData.date_of_birth).slice(0, 10) : '';
-            const dobMatch = notes.match(/^DOB:\s*(\d{4}-\d{2}-\d{2})(?:\s*\|\s*)?/);
-            if (dobMatch) {
-              if (!dob) dob = dobMatch[1];
-              notes = notes.slice(dobMatch[0].length);
-            }
-            setDateOfBirth(dob);
-            setMedicalHistory(notes);
-            setPrivacyConsent(Boolean(patData.privacy_consent_at));
           }
         }
 
@@ -280,12 +270,23 @@ export default function Onboarding({ isPreview = false }) {
           .select('*')
           .eq('patient_id', user.id);
         if (histError) throw histError;
-        if (mounted && !hasDraft && histRows?.[0]) {
-          const history = histRows[0];
-          if (history.allergies) setAllergies(history.allergies);
-          if (history.chronic_conditions) setChronicConditions(history.chronic_conditions);
-          if (history.medications) setMedications(history.medications);
-          if (history.blood_type) setBloodType(history.blood_type);
+
+        // Medical fields hydrate from the database unless the current draft
+        // explicitly contains them (i.e. the patient consented), so a leftover
+        // pre-consent draft never blanks out stored clinical data on save.
+        if (mounted) {
+          const medical = resolveOnboardingMedicalFields({
+            draft,
+            patData,
+            history: histRows?.[0],
+          });
+          setDateOfBirth(medical.dateOfBirth);
+          setMedicalHistory(medical.medicalHistory);
+          setPrivacyConsent(medical.privacyConsent);
+          setAllergies(medical.allergies);
+          setChronicConditions(medical.chronicConditions);
+          setMedications(medical.medications);
+          setBloodType(medical.bloodType);
         }
       } catch (err) {
         if (mounted) {

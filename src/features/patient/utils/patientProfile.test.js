@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { isMissingColumnError, parseEmergencyContact } from './patientProfile';
+import {
+  isMissingColumnError,
+  parseEmergencyContact,
+  shouldSkipMedicalHistoryWrite,
+} from './patientProfile';
 
 describe('parseEmergencyContact', () => {
   it('splits the legacy "Name - Phone" format', () => {
@@ -29,5 +33,17 @@ describe('isMissingColumnError', () => {
   it('ignores unrelated failures', () => {
     expect(isMissingColumnError({ code: '23505', message: 'duplicate key' })).toBe(false);
     expect(isMissingColumnError(null)).toBe(false);
+  });
+});
+
+describe('shouldSkipMedicalHistoryWrite', () => {
+  it('never skips when the history was loaded', () => {
+    expect(shouldSkipMedicalHistoryWrite(true, true)).toBe(false);
+    expect(shouldSkipMedicalHistoryWrite(true, false)).toBe(false);
+  });
+
+  it('skips only when an existing row could be clobbered', () => {
+    expect(shouldSkipMedicalHistoryWrite(false, true)).toBe(true);
+    expect(shouldSkipMedicalHistoryWrite(false, false)).toBe(false);
   });
 });

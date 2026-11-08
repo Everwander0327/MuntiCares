@@ -1,6 +1,8 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { clearPushToken } from '@/lib/pushNotifications';
+import { buildAuthUser } from './authProfile';
+import { buildAuthRedirect } from '@/lib/authRedirect';
 
 const defaultAuthValue = {
   user: null,
@@ -19,6 +21,7 @@ export const useAuth = () => useContext(AuthContext) || defaultAuthValue;
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const sessionRef = useRef(null);
 
   const fetchUserProfile = useCallback(async (authUser) => {
     if (!authUser?.id) return null;
@@ -31,6 +34,9 @@ export const AuthProvider = ({ children }) => {
 
       if (error) {
         console.warn('[auth] Failed to fetch user profile:', error.message);
+        // Keep role unknown so ProtectedRoute/AuthPage show a spinner instead of
+        // redirecting a provider into the patient dashboard on a transient outage.
+        return buildAuthUser(authUser, null, true);
       }
 
       if (profile?.is_banned) {
@@ -38,27 +44,21 @@ export const AuthProvider = ({ children }) => {
         return null;
       }
 
-      return {
-        id: authUser.id,
-        email: authUser.email,
-        // Role comes from the database only. auth.users.user_metadata is writable by
-        // the account owner through supabase.auth.updateUser(), so trusting it lets
-        // anyone grant themselves provider or admin UI.
-        role: profile?.role || 'patient',
-        full_name: profile?.full_name || authUser.user_metadata?.full_name || '',
-        avatar_url: profile?.avatar_url || authUser.user_metadata?.avatar_url || '',
-        is_banned: profile?.is_banned || false,
-      };
+      // The auth identity survives an admin "permanent delete" that only removed the
+      // public.users row. Fail closed: sign out rather than synthesizing a patient.
+      if (!profile) {
+        console.warn('[auth] No user profile found; signing out.');
+        await supabase?.auth?.signOut?.();
+        return null;
+      }
+
+      // Role comes from the database only. auth.users.user_metadata is writable by
+      // the account owner through supabase.auth.updateUser(), so trusting it lets
+      // anyone grant themselves provider or admin UI.
+      return buildAuthUser(authUser, profile);
     } catch (e) {
       console.warn('[auth] Exception fetching profile:', e);
-      return {
-        id: authUser.id,
-        email: authUser.email,
-        role: 'patient',
-        full_name: authUser.user_metadata?.full_name || '',
-        avatar_url: authUser.user_metadata?.avatar_url || '',
-        is_banned: false,
-      };
+      return buildAuthUser(authUser, null, true);
     }
   }, []);
 
@@ -71,6 +71,8 @@ export const AuthProvider = ({ children }) => {
     if (supabase?.auth?.onAuthStateChange) {
       const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
         if (!isMounted) return;
+
+        sessionRef.current = session;
 
         if (session?.user) {
           // Render continuity while the profile query runs. The role stays unknown
@@ -86,10 +88,16 @@ export const AuthProvider = ({ children }) => {
           setUser((prev) => prev || quickUser);
           setAuthInitialized(true);
 
+          const sessionAtFetch = session;
           setTimeout(async () => {
             if (!isMounted) return;
+            // The session may have changed (sign-out / different account) while the
+            // profile query was in flight. Dropping the stale result prevents a
+            // previous user's profile from being committed over the current session.
+            if (sessionRef.current?.user?.id !== sessionAtFetch.user.id) return;
             const profile = await fetchUserProfile(session.user);
             if (!isMounted) return;
+            if (sessionRef.current?.user?.id !== sessionAtFetch.user.id) return;
             // null means the account is banned and has just been signed out.
             setUser(profile || null);
           }, 0);
@@ -132,7 +140,7 @@ export const AuthProvider = ({ children }) => {
 
     const profile = await fetchUserProfile(data.user);
     if (!profile) {
-      throw new Error('Account is banned');
+      throw new Error('This account is no longer available.');
     }
     setUser(profile);
     return profile;
@@ -148,7 +156,7 @@ export const AuthProvider = ({ children }) => {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: buildAuthRedirect('/login'),
         data: {
           full_name: fullName,
           role: role || 'patient',

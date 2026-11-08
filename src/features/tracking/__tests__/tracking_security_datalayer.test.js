@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { normalizeLocation, subscribeToProvider, startPublishing } from '../services/trackingService';
+import { normalizeLocation, subscribeToProvider, startPublishing, trackingChannelConfig, isTransientSessionStartError } from '../services/trackingService';
 import { getRoute, getCircuitBreakerStatus, resetCircuitBreaker } from '../services/routing';
 
 // Mock Supabase Realtime channel
@@ -217,6 +217,87 @@ describe('startPublishing Realtime resilience', () => {
     // Clean up
     await pub.stop();
     sub();
+  });
+});
+
+describe('Tracking channel privacy', () => {
+  it('marks the channel private for every broadcast config', () => {
+    expect(trackingChannelConfig({ self: false, ack: false })).toEqual({
+      config: { broadcast: { self: false, ack: false }, private: true },
+    });
+    expect(trackingChannelConfig({ self: false })).toEqual({
+      config: { broadcast: { self: false }, private: true },
+    });
+    expect(trackingChannelConfig()).toEqual({
+      config: { broadcast: {}, private: true },
+    });
+  });
+
+  it('creates private channels for both publisher and subscriber', async () => {
+    const { supabase } = await import('@/lib/supabase');
+    const reqId = 'priv-test-1';
+
+    const sub = subscribeToProvider(reqId, { onLocation: vi.fn() });
+    expect(supabase.channel).toHaveBeenCalledWith(
+      `tracking:${reqId}`,
+      expect.objectContaining({ config: expect.objectContaining({ private: true }) })
+    );
+    sub();
+
+    const pub = await startPublishing({
+      requestId: reqId,
+      destination: { lat: 14.4, lng: 121.0 },
+      onFix: vi.fn(),
+      onError: vi.fn(),
+    });
+    const pubCall = vi.mocked(supabase.channel).mock.calls.find(
+      ([name]) => name === `tracking:${reqId}`
+    );
+    expect(pubCall[1]).toEqual(expect.objectContaining({ config: expect.objectContaining({ private: true }) }));
+    await pub.stop();
+  });
+});
+
+describe('Tracking session start recovery', () => {
+  it('classifies network/fetch failures as transient', () => {
+    expect(isTransientSessionStartError({ message: 'FetchError: Failed to fetch', code: '' })).toBe(true);
+    expect(isTransientSessionStartError(new TypeError('NetworkError when attempting to fetch resource'))).toBe(true);
+  });
+
+  it('classifies coded server responses as non-transient', () => {
+    expect(isTransientSessionStartError({ code: '42501', message: 'Not allowed' })).toBe(false);
+    expect(isTransientSessionStartError({ code: 'P0002', message: 'Not found' })).toBe(false);
+    expect(isTransientSessionStartError({ code: 'P0001', message: 'raise exception' })).toBe(false);
+  });
+
+  it('stops cleanly and reports a clear error when session start keeps failing', async () => {
+    vi.useFakeTimers();
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      vi.mocked(supabase.rpc).mockResolvedValue({
+        data: null,
+        error: { message: 'FetchError: Failed to fetch', code: '' },
+      });
+      const onError = vi.fn();
+      const pubPromise = startPublishing({
+        requestId: 'retry-fail-1',
+        destination: { lat: 14.4, lng: 121.0 },
+        onFix: vi.fn(),
+        onError,
+      });
+
+      await vi.advanceTimersByTimeAsync(5000);
+      const pub = await pubPromise;
+
+      expect(pub).toBeDefined();
+      expect(onError).toHaveBeenCalled();
+      const errMsg = onError.mock.calls[0][0]?.message || '';
+      expect(errMsg).not.toContain('Retrying');
+      // The transient RPC was retried with backoff before giving up.
+      expect(vi.mocked(supabase.rpc).mock.calls.length).toBeGreaterThan(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

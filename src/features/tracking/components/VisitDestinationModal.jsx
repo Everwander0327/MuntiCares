@@ -162,7 +162,7 @@ export default function VisitDestinationModal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-[var(--trk-map-scrim)] p-0 sm:p-4 md:p-6 backdrop-blur-sm"
+          className="pointer-events-auto fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-[var(--trk-map-scrim)] p-0 sm:p-4 md:p-6 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

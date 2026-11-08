@@ -663,6 +663,7 @@ const PatientProfileView = () => {
         onClose={() => { setChartOpen(false); fetchData(); }}
         patientId={id}
         patientName={patient.full_name}
+        patientAvatar={patient.avatar_url}
       />
 
       <FhirExportModal

@@ -39,6 +39,16 @@ function buildObservationCode(code, display, system = 'http://loinc.org') {
   };
 }
 
+function toFiniteNumber(value) {
+  if (value == null) return null;
+  const n = typeof value === 'number' ? value : parseFloat(String(value).trim());
+  return Number.isFinite(n) ? n : null;
+}
+
+const VITAL_SIGNS_CATEGORY = [
+  { coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] },
+];
+
 export function buildVitalSignObservations(visitNotes, patientId) {
   if (!visitNotes?.length) return [];
 
@@ -56,69 +66,87 @@ export function buildVitalSignObservations(visitNotes, patientId) {
 
     if (note.vitals_bp) {
       const parts = note.vitals_bp.split('/');
-      const systolic = parts[0]?.trim();
-      const diastolic = parts[1]?.trim();
-      observations.push({
-        ...base,
-        resourceType: 'Observation',
-        id: `${note.id}-bp`,
-        code: buildObservationCode('85354-9', 'Blood pressure panel'),
-        category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] }],
-        component: [
-          {
-            code: buildObservationCode('8480-6', 'Systolic blood pressure'),
-            valueQuantity: { value: parseFloat(systolic) || 0, unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
-          },
-          {
-            code: buildObservationCode('8462-4', 'Diastolic blood pressure'),
-            valueQuantity: { value: parseFloat(diastolic) || 0, unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
-          },
-        ],
-      });
+      const systolic = toFiniteNumber(parts[0]);
+      const diastolic = toFiniteNumber(parts[1]);
+      const component = [];
+      if (systolic != null) {
+        component.push({
+          code: buildObservationCode('8480-6', 'Systolic blood pressure'),
+          valueQuantity: { value: systolic, unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
+        });
+      }
+      if (diastolic != null) {
+        component.push({
+          code: buildObservationCode('8462-4', 'Diastolic blood pressure'),
+          valueQuantity: { value: diastolic, unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' },
+        });
+      }
+      if (component.length > 0) {
+        observations.push({
+          ...base,
+          resourceType: 'Observation',
+          id: `${note.id}-bp`,
+          code: buildObservationCode('85354-9', 'Blood pressure panel'),
+          category: VITAL_SIGNS_CATEGORY,
+          component,
+        });
+      }
     }
 
     if (note.vitals_temp) {
-      observations.push({
-        ...base,
-        resourceType: 'Observation',
-        id: `${note.id}-temp`,
-        code: buildObservationCode('8310-5', 'Body temperature'),
-        category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] }],
-        valueQuantity: { value: parseFloat(note.vitals_temp) || 0, unit: '°C', system: 'http://unitsofmeasure.org', code: 'Cel' },
-      });
+      const value = toFiniteNumber(note.vitals_temp);
+      if (value != null) {
+        observations.push({
+          ...base,
+          resourceType: 'Observation',
+          id: `${note.id}-temp`,
+          code: buildObservationCode('8310-5', 'Body temperature'),
+          category: VITAL_SIGNS_CATEGORY,
+          valueQuantity: { value, unit: '°C', system: 'http://unitsofmeasure.org', code: 'Cel' },
+        });
+      }
     }
 
     if (note.vitals_hr) {
-      observations.push({
-        ...base,
-        resourceType: 'Observation',
-        id: `${note.id}-hr`,
-        code: buildObservationCode('8867-4', 'Heart rate'),
-        category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] }],
-        valueQuantity: { value: parseFloat(note.vitals_hr) || 0, unit: 'bpm', system: 'http://unitsofmeasure.org', code: '/min' },
-      });
+      const value = toFiniteNumber(note.vitals_hr);
+      if (value != null) {
+        observations.push({
+          ...base,
+          resourceType: 'Observation',
+          id: `${note.id}-hr`,
+          code: buildObservationCode('8867-4', 'Heart rate'),
+          category: VITAL_SIGNS_CATEGORY,
+          valueQuantity: { value, unit: 'bpm', system: 'http://unitsofmeasure.org', code: '/min' },
+        });
+      }
     }
 
     if (note.vitals_spo2) {
-      observations.push({
-        ...base,
-        resourceType: 'Observation',
-        id: `${note.id}-spo2`,
-        code: buildObservationCode('59408-5', 'Oxygen saturation in Arterial blood'),
-        category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'vital-signs' }] }],
-        valueQuantity: { value: parseFloat(note.vitals_spo2) || 0, unit: '%', system: 'http://unitsofmeasure.org', code: '%' },
-      });
+      const value = toFiniteNumber(note.vitals_spo2);
+      if (value != null) {
+        observations.push({
+          ...base,
+          resourceType: 'Observation',
+          id: `${note.id}-spo2`,
+          code: buildObservationCode('59408-5', 'Oxygen saturation in Arterial blood'),
+          category: VITAL_SIGNS_CATEGORY,
+          valueQuantity: { value, unit: '%', system: 'http://unitsofmeasure.org', code: '%' },
+        });
+      }
     }
 
     if (note.pain_scale != null && note.pain_scale !== '') {
-      observations.push({
-        ...base,
-        resourceType: 'Observation',
-        id: `${note.id}-pain`,
-        code: buildObservationCode('38221-8', 'Pain severity'),
-        category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'survey' }] }],
-        valueQuantity: { value: parseInt(note.pain_scale) || 0, unit: '{score}', system: 'http://unitsofmeasure.org', code: '{score}' },
-      });
+      const value = toFiniteNumber(note.pain_scale);
+      if (value != null) {
+        observations.push({
+          ...base,
+          resourceType: 'Observation',
+          id: `${note.id}-pain`,
+          code: buildObservationCode('38221-8', 'Pain severity'),
+          category: [{ coding: [{ system: 'http://terminology.hl7.org/CodeSystem/observation-category', code: 'survey' }] }],
+          valueQuantity: { value, unit: '{score}', system: 'http://unitsofmeasure.org', code: '{score}' },
+        });
+      }
     }
   });
 

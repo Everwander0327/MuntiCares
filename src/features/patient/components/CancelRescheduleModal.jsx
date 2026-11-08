@@ -38,8 +38,8 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
   // Compute request duration in minutes (from request or fallback from service name)
   const reqDuration = useMemo(() => {
-    return request?.duration_minutes || getServiceDurationMinutes(request?.service);
-  }, [request?.duration_minutes, request?.service]);
+    return request?.durationMinutes ?? request?.duration_minutes ?? getServiceDurationMinutes(request?.service);
+  }, [request?.durationMinutes, request?.duration_minutes, request?.service]);
 
   useEffect(() => {
     if (mode !== 'reschedule' || !newDate || !request?.providerId) {

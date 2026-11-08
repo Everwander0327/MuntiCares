@@ -1026,7 +1026,7 @@ const PatientProviders = () => {
               bookingTriggerRef.current.focus();
             }}
             onInteractOutside={(event) => {
-              if (bookingStep !== 'form') event.preventDefault();
+              if (bookingStep !== 'form' || destinationModalOpen) event.preventDefault();
             }}
           >
             <motion.div 

@@ -48,7 +48,7 @@ const getStatusStyle = (status) => {
 
 const RequestCard = ({ 
   id, providerId, patientId, provider, providerAvatarUrl, service, date, time, 
-  status, location, originalNotes, onRateProvider, isRated, 
+  status, location, originalNotes, durationMinutes, onRateProvider, isRated, 
   onManageRequest, onPreSession, presessionSubmitted, onTrack
 }) => {
   const statusTheme = getStatusStyle(status);
@@ -188,7 +188,7 @@ const RequestCard = ({
           {['Pending', 'Accepted'].includes(status) && (
             <button
               type="button"
-              onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, date, time, originalNotes })}
+              onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, service, date, time, originalNotes, durationMinutes })}
               className="col-span-1 neu-btn justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-[#BC3030] dark:text-[#F4918B] flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform order-3"
             >
               <XCircle className="w-3.5 h-3.5 shrink-0" />
@@ -571,6 +571,7 @@ const PatientRequests = () => {
                 status={req.status}
                 location={req.location}
                 originalNotes={req.originalNotes}
+                durationMinutes={req.durationMinutes}
                 isRated={!!ratedRequests[req.id]}
                 presessionSubmitted={!!presessionSubmitted[req.id]}
                 onRateProvider={setSelectedReviewReq}

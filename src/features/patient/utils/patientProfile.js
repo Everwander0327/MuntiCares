@@ -17,3 +17,11 @@ export const isMissingColumnError = (error) =>
   error?.code === 'PGRST204' ||
   error?.code === '42703' ||
   /column .* does not exist/i.test(error?.message || '');
+
+/**
+ * When the medical history could not be loaded, saving would clobber the
+ * stored row with the blank form fields. Skip the write only in that case
+ * and only when a row already exists to protect.
+ */
+export const shouldSkipMedicalHistoryWrite = (historyLoaded, hasExisting) =>
+  !historyLoaded && hasExisting;

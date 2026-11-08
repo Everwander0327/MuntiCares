@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { markPresessionSubmitted } from '@/features/patient/utils/localState';
+import { buildPreSessionNotesSummary, mergePreSessionNotes } from '@/features/patient/utils/preSessionNotes';
 
 const CHECKLIST_ITEMS = [
   { key: 'id', label: 'Prepare your medical ID or identification card' },
@@ -99,6 +100,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
     try {
       const uploadedUrls = [];
       const failedUploads = [];
+      const failedDocRows = [];
 
       // 1. Upload files to Supabase Storage
       for (const file of files) {
@@ -125,7 +127,10 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
               document_title: `[Pre-Session] ${file.name}`,
               file_path: fileName
             }]);
-          if (docError) console.warn('patient_documents row not created:', docError);
+          if (docError) {
+            console.warn('patient_documents row not created:', docError);
+            failedDocRows.push(file.name);
+          }
         }
       }
 
@@ -136,26 +141,24 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
       }
 
       // 2. Append pre-session data to the request notes
-      const notesSummary = [
-        symptomNotes.trim() ? `[Pre-session Symptoms] ${symptomNotes.trim()}` : '',
-        vitals.bp ? `BP: ${vitals.bp}` : '',
-        vitals.temp ? `Temp: ${vitals.temp}°C` : '',
-        vitals.hr ? `HR: ${vitals.hr} bpm` : '',
-        vitals.weight ? `Weight: ${vitals.weight} kg` : '',
-        uploadedUrls.length > 0 ? `[${uploadedUrls.length} file(s) uploaded]` : ''
-      ].filter(Boolean).join(' | ');
+      const notesSummary = buildPreSessionNotesSummary({
+        symptomNotes,
+        vitals,
+        uploadedCount: uploadedUrls.length,
+      });
 
       if (notesSummary) {
-        const { data: currentReq } = await supabase
+        const { data: currentReq, error: fetchError } = await supabase
           .from('requests')
           .select('notes')
           .eq('id', request.id)
           .single();
 
-        const existingNotes = currentReq?.notes || '';
+        if (fetchError) throw fetchError;
+
         const { error: notesError } = await supabase
           .from('requests')
-          .update({ notes: existingNotes ? `${existingNotes}\n${notesSummary}` : notesSummary })
+          .update({ notes: mergePreSessionNotes(currentReq?.notes || '', notesSummary) })
           .eq('id', request.id);
 
         if (notesError) throw notesError;
@@ -163,6 +166,8 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
 
       if (failedUploads.length > 0) {
         toast.error(`${failedUploads.length} file(s) were not uploaded.`);
+      } else if (failedDocRows.length > 0) {
+        toast('Some files were uploaded but could not be saved to your document list.', { icon: '⚠️' });
       } else {
         toast.success('Pre-session info submitted successfully!');
       }

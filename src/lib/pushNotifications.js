@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { supabase } from '@/lib/supabase';
+import { inviteFromPayload, shouldDeliverInvite } from './pushInvite';
 
 /*
  * FCM registration for call invites.
@@ -23,16 +24,6 @@ const TOKEN_STORAGE_KEY = 'munticares_push_token';
 const emitInvite = (detail) => {
   if (!detail?.senderId) return;
   window.dispatchEvent(new CustomEvent(CALL_INVITE_EVENT, { detail }));
-};
-
-const inviteFromPayload = (data) => {
-  if (!data || data.kind !== 'call_invite') return null;
-  return {
-    senderId: data.sender_id,
-    senderName: data.sender_name || '',
-    callType: data.call_type === 'audio' ? 'audio' : 'video',
-    callId: data.call_id || null,
-  };
 };
 
 async function saveToken(userId, deviceToken) {
@@ -95,10 +86,12 @@ export function useCallPushNotifications(user) {
           attach('registration', ({ value }) => saveTokenSafe(userId, value)),
           attach('registrationError', (err) => console.warn('[push] registration error:', err?.error || err)),
           attach('pushNotificationReceived', (notification) => {
-            emitInvite(inviteFromPayload(notification?.data));
+            const invite = inviteFromPayload(notification?.data);
+            if (shouldDeliverInvite(invite, userId)) emitInvite(invite);
           }),
           attach('pushNotificationActionPerformed', (action) => {
-            emitInvite(inviteFromPayload(action?.notification?.data));
+            const invite = inviteFromPayload(action?.notification?.data);
+            if (shouldDeliverInvite(invite, userId)) emitInvite(invite);
           }),
         ]);
         if (disposed) return;

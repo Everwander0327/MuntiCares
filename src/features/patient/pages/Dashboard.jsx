@@ -1,6 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Clock, CheckCircle2, Search, FileText, Calendar, Navigation, Home, Stethoscope, MessageSquare, RefreshCw, ArrowRight } from 'lucide-react';
+import { 
+  Clock, 
+  CheckCircle2, 
+  Search, 
+  FileText, 
+  Calendar, 
+  Navigation, 
+  Home, 
+  Stethoscope, 
+  MessageSquare, 
+  MessageCircle, 
+  RefreshCw, 
+  ArrowRight,
+  ChevronRight
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import usePatientRequests from '@/hooks/usePatientRequests';
@@ -351,7 +365,7 @@ const PatientDashboard = () => {
         {/* Top Section: Community Highlights Carousel (Left) and Quick Actions Card (Right) */}
         <h1 className="sr-only">Dashboard</h1>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
-          {/* Highlights Hero Card (lg:col-span-7) - Image completely covers the entire card */}
+          {/* Highlights Hero Card (lg:col-span-7) */}
           <section
             className="lg:col-span-7 neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden relative flex flex-col justify-between min-h-[380px] sm:min-h-[440px] lg:min-h-[480px]"
             onMouseEnter={() => setCarouselHeld(true)}
@@ -361,7 +375,7 @@ const PatientDashboard = () => {
               if (!event.currentTarget.contains(event.relatedTarget)) setCarouselHeld(false);
             }}
           >
-            {/* Full-Bleed Carousel Track - Image occupies 100% of the entire card */}
+            {/* Full-Bleed Carousel Track */}
             <div className="absolute inset-0 z-0">
               <div
                 ref={carouselTrackRef}
@@ -391,19 +405,14 @@ const PatientDashboard = () => {
                       draggable={false}
                       className="w-full h-full object-cover pointer-events-none"
                     />
-                    {/* Deep gradient overlay spanning the whole card for high contrast */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
 
-                    {/* Content: Event Eyebrow, Title & Description (Direct coordinate anchoring to guarantee perfect gap) */}
-                    <div className="absolute left-5 right-5 sm:left-7 sm:right-7 md:left-8 md:right-8 bottom-12 sm:bottom-14 pointer-events-none">
+                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-28 sm:pb-32 lg:pb-36">
                       <div className="space-y-1.5 sm:space-y-2 max-w-xl">
-                        <span className="text-2xs sm:text-xs font-extrabold uppercase tracking-widest text-sky-400 dark:text-[#8CBDF0] drop-shadow-md">
-                          Recent Event
-                        </span>
                         <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
                           {slide.title}
                         </h3>
-                        <p className="text-xs sm:text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-md font-medium">
+                        <p className="text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
                           {slide.description}
                         </p>
                       </div>
@@ -413,43 +422,64 @@ const PatientDashboard = () => {
               </div>
             </div>
 
-            {/* Overlaid Bottom Controls: Clean Story Progress Bars (Fixed at bottom) */}
-            <div className="absolute left-5 right-5 sm:left-7 sm:right-7 md:left-8 md:right-8 bottom-4 sm:bottom-5 z-10 pointer-events-auto">
-              <div className="flex items-center gap-2 w-full max-w-xs sm:max-w-sm">
-                {muntiHighlights.map((_, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      scrollToSlide(idx);
-                    }}
-                    aria-label={`Go to slide ${idx + 1}`}
-                    className="h-1.5 flex-1 rounded-full transition-all duration-300 cursor-pointer overflow-hidden bg-white/25 hover:bg-white/40"
-                  >
-                    <span
-                      className={`block h-full rounded-full transition-all duration-300 ${
-                        currentSlide === idx ? 'bg-[#8CBDF0] w-full' : 'w-0'
+            {/* Bottom Controls: Dots + Action Buttons */}
+            <div className="relative z-10 p-4 sm:p-6 space-y-3 mt-auto">
+              <div className="flex items-center justify-center">
+                <div className="flex items-center gap-1.5 py-1">
+                  {muntiHighlights.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        scrollToSlide(idx);
+                      }}
+                      aria-label={`Go to slide ${idx + 1}`}
+                      className={`h-1 rounded-full transition-all duration-300 cursor-pointer ${
+                        currentSlide === idx ? 'w-3.5 bg-white shadow-sm' : 'w-1 bg-white/40 hover:bg-white/80'
                       }`}
                     />
-                  </button>
-                ))}
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 sm:gap-3.5 w-full">
+                <Link
+                  to="/patient/providers"
+                  className="neu-btn-primary w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer shadow-lg shadow-blue-950/40 text-white"
+                >
+                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-white" />
+                  <span className="truncate">Find a Provider</span>
+                </Link>
+                <Link
+                  to="/patient/requests"
+                  className="btn-glass-neu-secondary w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer text-white"
+                >
+                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white shrink-0" />
+                  <span className="truncate">My Requests</span>
+                </Link>
               </div>
             </div>
           </section>
 
-          {/* Quick Actions Card with Combined Horizontal Stats on Top (lg:col-span-5) */}
-          <div className="lg:col-span-5 neu-flat rounded-2xl sm:rounded-[2.25rem] p-5 sm:p-6 flex flex-col justify-start gap-5">
+          {/* Quick Actions Card with Combined Request Status on Top (lg:col-span-5) */}
+          <div className="lg:col-span-5 neu-flat rounded-2xl sm:rounded-[2.25rem] p-4 sm:p-6 flex flex-col justify-start gap-4 sm:gap-5">
             <div>
-              {/* Horizontal Stats Row on Top: Clean Minimalist Hierarchy */}
-              <div className="mb-4 pb-4 border-b border-surface-border">
-                <div className="mb-2.5">
-                  <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-txt-secondary dark:text-txt-darkSecondary">
+              {/* Horizontal Status Strip */}
+              <div className="mb-3.5 pb-3.5 border-b border-slate-200/60 dark:border-white/5">
+                <div className="flex items-center justify-between mb-2.5">
+                  <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary">
                     Request Status
                   </h4>
+                  <Link
+                    to="/patient/requests"
+                    className="text-xs font-bold text-link hover:text-primary-600 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-0.5"
+                  >
+                    View all &rarr;
+                  </Link>
                 </div>
 
-                {/* Slim active-visit banner or empty state (No dots) */}
+                {/* Priority Active Card with Live Beacon or Clean Empty State */}
                 {activeVisit ? (
                   <Link
                     to="/patient/requests"
@@ -466,131 +496,144 @@ const PatientDashboard = () => {
                         });
                       }
                     }}
-                    className="group mb-3 flex w-full items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.07] px-3.5 py-2.5 transition-colors hover:bg-emerald-500/[0.12] dark:bg-emerald-500/10 dark:hover:bg-emerald-500/15"
+                    className="mb-3 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl flex flex-col gap-1.5 sm:gap-2 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/25 dark:border-emerald-500/30 transition-all group cursor-pointer shadow-2xs"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="text-2xs font-extrabold uppercase tracking-wider text-success dark:text-emerald-300">
-                        {activeVisit.status}
-                      </p>
-                      <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100 mt-0.5">
-                        {activeVisit.provider} — {activeVisit.service}
-                      </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-2xs font-black text-success dark:text-success-dark uppercase tracking-wider">
+                          {activeVisit.status} Visit
+                        </span>
+                      </div>
+                      <span className="text-2xs sm:text-xs font-bold text-success dark:text-success-dark neu-flat-sm px-2 py-0.5 rounded-md">
+                        {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track live →' : (activeVisit.time || 'Today')}
+                      </span>
                     </div>
-                    <span className="flex shrink-0 items-center gap-1 text-xs font-bold text-success dark:text-emerald-300">
-                      {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track live' : (activeVisit.time || 'Today')} &rarr;
-                    </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-bold text-[#17283B] dark:text-[#E6EEF6] truncate group-hover:text-link transition-colors">
+                          {activeVisit.provider}
+                        </p>
+                        <p className="text-2xs sm:text-xs text-txt-secondary dark:text-txt-darkSecondary truncate">
+                          {activeVisit.service || 'Home Consultation'}
+                        </p>
+                      </div>
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl neu-flat-sm flex items-center justify-center text-txt-secondary group-hover:text-link group-hover:scale-105 transition-all shrink-0">
+                        <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </div>
+                    </div>
                   </Link>
                 ) : (
-                  <div className="mb-3 px-3.5 py-2.5 rounded-xl flex items-center justify-between gap-2 border border-slate-200/80 dark:border-white/5 bg-slate-50/60 dark:bg-slate-800/40 text-xs">
-                    <p className="font-medium text-txt-secondary dark:text-txt-darkSecondary truncate">
-                      No visits scheduled today
-                    </p>
+                  <div className="mb-3 px-3 py-2.5 rounded-xl sm:rounded-2xl flex items-center justify-between gap-2 bg-slate-100/70 dark:bg-slate-800/40 border border-slate-200/50 dark:border-white/5 text-tertiary">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
+                      <p className="text-2xs sm:text-xs font-semibold text-tertiary dark:text-tertiary truncate">
+                        No visits scheduled today
+                      </p>
+                    </div>
                     <Link
                       to="/patient/providers"
-                      className="font-bold text-link hover:underline shrink-0"
+                      className="text-2xs sm:text-xs font-bold text-link hover:underline shrink-0"
                     >
                       Book a visit
                     </Link>
                   </div>
                 )}
 
-                {/* Unified Cohesive Metric Segment with Colored Numbers */}
-                <div className="grid grid-cols-3 divide-x divide-slate-200/70 dark:divide-white/10 rounded-2xl border border-slate-200/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-800/30 p-3 text-center">
-                  <div className="px-2">
-                    <p className="text-xl sm:text-2xl font-display font-black text-[#2F6FB5] dark:text-[#8CBDF0] leading-none">
+                {/* 3 Separate Neumorphic Stat Cards */}
+                <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                  <div className="flex flex-col items-center justify-center text-center p-2 sm:p-3 rounded-xl sm:rounded-2xl neu-flat-sm select-text">
+                    <p className="text-lg sm:text-2xl font-display font-black text-link dark:text-primary-300 leading-none">
                       {stats.active}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-black text-link dark:text-primary-300 uppercase tracking-wider mt-1 sm:mt-1.5">
                       Active
                     </p>
                   </div>
-                  <div className="px-2">
-                    <p className="text-xl sm:text-2xl font-display font-black text-[#2C7A55] dark:text-[#7DD3A3] leading-none">
-                      {stats.accepted}
-                    </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
-                      Accepted
-                    </p>
-                  </div>
-                  <div className="px-2">
-                    <p className="text-xl sm:text-2xl font-display font-black text-[#9C5A06] dark:text-[#F1BD6B] leading-none">
+
+                  <div className="flex flex-col items-center justify-center text-center p-2 sm:p-3 rounded-xl sm:rounded-2xl neu-flat-sm select-text">
+                    <p className="text-lg sm:text-2xl font-display font-black text-warning dark:text-warning-dark leading-none">
                       {stats.pending}
                     </p>
-                    <p className="text-2xs sm:text-xs font-extrabold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider mt-1.5">
+                    <p className="text-2xs sm:text-xs font-black text-warning dark:text-warning-dark uppercase tracking-wider mt-1 sm:mt-1.5">
                       Pending
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-center justify-center text-center p-2 sm:p-3 rounded-xl sm:rounded-2xl neu-flat-sm select-text">
+                    <p className="text-lg sm:text-2xl font-display font-black text-success dark:text-success-dark leading-none">
+                      {stats.accepted}
+                    </p>
+                    <p className="text-2xs sm:text-xs font-black text-success dark:text-success-dark uppercase tracking-wider mt-1 sm:mt-1.5">
+                      Confirmed
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Quick Actions List (Clean Minimalist — Zero Icons) */}
-              <div className="mb-2.5">
-                <h3 className="text-xs font-display font-extrabold uppercase tracking-wider text-txt-secondary dark:text-txt-darkSecondary">
+              {/* Quick Actions List with Rounded Icon Badges */}
+              <div className="flex items-center justify-between mb-2 sm:mb-2.5">
+                <h3 className="text-sm sm:text-base font-display font-extrabold text-slate-900 dark:text-white">
                   Quick Actions
                 </h3>
               </div>
-              <div className="space-y-2">
+
+              <div className="space-y-2 sm:space-y-2.5">
                 <Link
                   to="/patient/providers"
-                  className="group neu-btn p-3 px-3.5 rounded-xl flex items-center justify-between transition-all hover:border-primary/40"
+                  className="group neu-btn p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center gap-2.5 sm:gap-3 transition-all text-slate-800 dark:text-slate-200 active:scale-[0.99]"
                 >
-                  <div className="min-w-0 flex-1 pr-3">
-                    <span className="block text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-link transition-colors">
-                      Find a Provider
-                    </span>
-                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate mt-0.5">
-                      Browse verified caregivers
-                    </span>
+                  <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-link shrink-0 group-hover:scale-105 transition-transform">
+                    <Search className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-bold text-txt-secondary group-hover:text-link group-hover:translate-x-0.5 transition-transform shrink-0">
-                    &rarr;
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-xs sm:text-[13px] font-bold">Find a Provider</span>
+                    <span className="block text-2xs sm:text-xs text-tertiary truncate">Browse verified caregivers</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
 
                 <Link
                   to="/patient/requests"
-                  className="group neu-btn p-3 px-3.5 rounded-xl flex items-center justify-between transition-all hover:border-primary/40"
+                  className="group neu-btn p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center gap-2.5 sm:gap-3 transition-all text-slate-800 dark:text-slate-200 active:scale-[0.99]"
                 >
-                  <div className="min-w-0 flex-1 pr-3">
-                    <span className="block text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-link transition-colors">
-                      View Requests
-                    </span>
-                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate mt-0.5">
-                      Track appointments status
-                    </span>
+                  <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-link shrink-0 group-hover:scale-105 transition-transform">
+                    <FileText className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-bold text-txt-secondary group-hover:text-link group-hover:translate-x-0.5 transition-transform shrink-0">
-                    &rarr;
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-xs sm:text-[13px] font-bold">
+                      My Requests {stats.pending > 0 && `(${stats.pending})`}
+                    </span>
+                    <span className="block text-2xs sm:text-xs text-tertiary truncate">Track appointment status</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
 
                 <Link
                   to="/patient/messages"
-                  className="group neu-btn p-3 px-3.5 rounded-xl flex items-center justify-between transition-all hover:border-primary/40"
+                  className="group neu-btn p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center gap-2.5 sm:gap-3 transition-all text-slate-800 dark:text-slate-200 active:scale-[0.99]"
                 >
-                  <div className="min-w-0 flex-1 pr-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-link transition-colors">
-                        Messages
+                  <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-link shrink-0 group-hover:scale-105 transition-transform relative">
+                    <MessageCircle className="w-4 h-4" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white rounded-full text-xs font-extrabold flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
-                      {unreadCount > 0 && (
-                        <span className="px-1.5 py-0.2 rounded-full bg-danger text-white text-2xs font-extrabold">
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <span className="block text-xs text-txt-secondary dark:text-txt-darkSecondary truncate mt-0.5">
-                      Direct chat with providers
-                    </span>
+                    )}
                   </div>
-                  <span className="text-xs font-bold text-txt-secondary group-hover:text-link group-hover:translate-x-0.5 transition-transform shrink-0">
-                    &rarr;
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="block text-xs sm:text-[13px] font-bold">
+                      Messages {unreadCount > 0 && `(${unreadCount})`}
+                    </span>
+                    <span className="block text-2xs sm:text-xs text-tertiary truncate">Direct chat with providers</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
               </div>
             </div>
-
-
           </div>
         </div>
 

@@ -8,15 +8,15 @@ const MobileNavItem = ({ icon, label, to, active, badge, prominent }) => {
       <Link to={to} className="flex-1 flex justify-center">
         <motion.div
           whileTap={{ scale: 0.94 }}
-          className="flex flex-col items-center gap-0.5 -mt-6 transition-all relative select-none"
+          className="flex flex-col items-center -mt-5 transition-all relative select-none"
         >
-          <div className={`relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ring-[3px] ring-white dark:ring-slate-800 ${
+          <div className={`relative w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center transition-all duration-300 border-2 border-white dark:border-[#0D1622] ${
             active 
-              ? 'neu-inset-deep text-link shadow-inner scale-95 translate-y-1 ring-primary/30' 
-              : 'neu-btn-primary text-white shadow-xl'
+              ? 'neu-btn-primary shadow-lg shadow-blue-900/50 ring-2 ring-primary/40 scale-105' 
+              : 'neu-btn-primary shadow-lg shadow-blue-900/40 hover:scale-105'
           }`}>
             {React.cloneElement(icon, {
-              className: `w-7 h-7 transition-colors ${active ? 'text-link' : 'text-white'}`
+              className: 'w-5 h-5 text-white'
             })}
             <AnimatePresence>
               {badge > 0 && (
@@ -25,32 +25,36 @@ const MobileNavItem = ({ icon, label, to, active, badge, prominent }) => {
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
                   transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                  className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-danger rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center text-xs font-black text-white px-0.5 shadow-md"
+                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A] rounded-full border-2 border-white dark:border-[#0D1622] flex items-center justify-center text-[10px] font-black px-1 shadow-md"
                 >
                   {badge > 9 ? '9+' : badge}
                 </motion.span>
               )}
             </AnimatePresence>
           </div>
-          <span className={`text-2xs uppercase tracking-wide mt-0.5 transition-colors ${active ? 'font-black text-link' : 'font-extrabold text-link'}`}>{label}</span>
+          <span className={`text-[9px] uppercase tracking-tight mt-1 transition-colors font-black ${
+            active ? 'text-link dark:text-[#8CBDF0]' : 'text-link dark:text-[#8CBDF0]'
+          }`}>
+            {label}
+          </span>
         </motion.div>
       </Link>
     );
   }
 
   return (
-    <Link to={to} className="flex-1">
+    <Link to={to} className="flex-1 flex justify-center">
       <motion.div
         whileTap={{ scale: 0.92 }}
-        className="flex flex-col items-center gap-1 py-1 px-1 transition-all relative select-none"
+        className="flex flex-col items-center gap-1 py-1 px-0.5 transition-all relative select-none w-full"
       >
-        <div className={`relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${
+        <div className={`relative w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 ${
           active
-            ? 'neu-inset text-link font-bold shadow-inner ring-1 ring-primary/20 dark:ring-primary/30 translate-y-0.5'
-            : 'neu-flat-sm text-tertiary dark:text-tertiary hover:text-link'
+            ? 'neu-inset text-link dark:text-[#8CBDF0] font-bold shadow-inner ring-1 ring-primary/20 dark:ring-primary/30 translate-y-0.5'
+            : 'text-txt-secondary dark:text-txt-darkSecondary hover:text-link dark:hover:text-[#8CBDF0]'
         }`}>
           {React.cloneElement(icon, {
-            className: `w-4 h-4 transition-colors ${active ? 'text-link' : ''}`
+            className: `w-4 h-4 transition-colors ${active ? 'text-link dark:text-[#8CBDF0]' : ''}`
           })}
           <AnimatePresence>
             {badge > 0 && (
@@ -59,14 +63,16 @@ const MobileNavItem = ({ icon, label, to, active, badge, prominent }) => {
                 animate={{ scale: 1 }}
                 exit={{ scale: 0 }}
                 transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                className="absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] bg-danger rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center text-xs font-extrabold text-white px-0.5 shadow-sm"
+                className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A] rounded-full border-2 border-white dark:border-[#16212E] flex items-center justify-center text-[10px] font-black px-0.5 shadow-sm"
               >
                 {badge > 9 ? '9+' : badge}
               </motion.span>
             )}
           </AnimatePresence>
         </div>
-        <span className={`text-xs font-bold transition-colors truncate max-w-[56px] text-center ${active ? 'text-link font-extrabold' : 'text-tertiary dark:text-tertiary'}`}>
+        <span className={`text-[10px] font-bold transition-colors text-center truncate max-w-full px-0.5 ${
+          active ? 'text-link dark:text-[#8CBDF0] font-extrabold' : 'text-txt-secondary dark:text-txt-darkSecondary'
+        }`}>
           {label}
         </span>
       </motion.div>

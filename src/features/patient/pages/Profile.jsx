@@ -13,7 +13,7 @@ import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { ProfilePhotoUpload, FhirExportModal } from '@/shared/components';
 import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
 import PermanentAddressSection from '@/features/patient/components/PermanentAddressSection';
-import { isMissingColumnError, parseEmergencyContact } from '@/features/patient/utils/patientProfile';
+import { isMissingColumnError, parseEmergencyContact, shouldSkipMedicalHistoryWrite } from '@/features/patient/utils/patientProfile';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -22,6 +22,7 @@ const PatientProfile = () => {
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [documents, setDocuments] = useState([]);
   const [visitNotes, setVisitNotes] = useState([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [fhirOpen, setFhirOpen] = useState(false);
   const [fhirBundle, setFhirBundle] = useState(null);
   const [fhirLoading, setFhirLoading] = useState(false);
@@ -95,18 +96,23 @@ const PatientProfile = () => {
         } catch {} // column may not exist yet
 
         // Fetch Medical History
-        const { data: histRows } = await supabase
+        const { data: histRows, error: histError } = await supabase
           .from('medical_histories')
           .select('allergies, chronic_conditions, past_surgeries')
           .eq('patient_id', user.id);
-        const mh = histRows?.[0];
-        if (mh) {
-          setProfile(prev => ({
-            ...prev,
-            allergies: mh.allergies || '',
-            chronic_conditions: mh.chronic_conditions || '',
-            past_surgeries: mh.past_surgeries || '',
-          }));
+        if (histError) {
+          console.error('Error fetching medical history:', histError);
+        } else {
+          setHistoryLoaded(true);
+          const mh = histRows?.[0];
+          if (mh) {
+            setProfile(prev => ({
+              ...prev,
+              allergies: mh.allergies || '',
+              chronic_conditions: mh.chronic_conditions || '',
+              past_surgeries: mh.past_surgeries || '',
+            }));
+          }
         }
 
         // Fetch Documents
@@ -193,24 +199,28 @@ const PatientProfile = () => {
         .eq('patient_id', user.id);
       const hasExisting = existingMH && existingMH.length > 0;
 
-      const mhPayload = {
-        patient_id: user.id,
-        allergies: profile.allergies,
-        chronic_conditions: profile.chronic_conditions,
-        past_surgeries: profile.past_surgeries,
-      };
-
-      if (hasExisting) {
-        const { error: mhError } = await supabase
-          .from('medical_histories')
-          .update(mhPayload)
-          .eq('patient_id', user.id);
-        if (mhError) throw mhError;
+      if (shouldSkipMedicalHistoryWrite(historyLoaded, hasExisting)) {
+        toast('Medical history was not updated because your saved history could not be loaded. Please refresh and try again.', { icon: '⚠️' });
       } else {
-        const { error: mhError } = await supabase
-          .from('medical_histories')
-          .insert(mhPayload);
-        if (mhError) throw mhError;
+        const mhPayload = {
+          patient_id: user.id,
+          allergies: profile.allergies,
+          chronic_conditions: profile.chronic_conditions,
+          past_surgeries: profile.past_surgeries,
+        };
+
+        if (hasExisting) {
+          const { error: mhError } = await supabase
+            .from('medical_histories')
+            .update(mhPayload)
+            .eq('patient_id', user.id);
+          if (mhError) throw mhError;
+        } else {
+          const { error: mhError } = await supabase
+            .from('medical_histories')
+            .insert(mhPayload);
+          if (mhError) throw mhError;
+        }
       }
 
       setProfile(prev => ({ ...prev, is_profile_complete: isComplete }));

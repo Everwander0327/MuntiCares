@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
+import { buildAuthRedirect } from '@/lib/authRedirect';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 import { FormInput } from '@/shared/ui';
@@ -57,7 +58,7 @@ const ResetPassword = () => {
     setLoading(true);
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(data.email.trim().toLowerCase(), {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: buildAuthRedirect('/reset-password'),
       });
       if (resetError) throw new Error(resetError.message);
       setSent(true);

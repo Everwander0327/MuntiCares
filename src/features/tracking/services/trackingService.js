@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { startLocationWatch } from './locationSource';
 import { createGpsFilter } from './gpsFilter';
 import { haversine } from './geo';
+import { retryWithBackoff } from './retry';
 
 export const TRACKING_STATUS = 'On The Way';
 export const ARRIVAL_RADIUS_M = 50;
@@ -13,6 +14,22 @@ const HEARTBEAT_EVERY_MS = 20000;
 const FALLBACK_POLL_MS = 8000;
 
 export const trackingChannelName = (requestId) => `tracking:${requestId}`;
+
+// Private channels enforce the participant-only Realtime policies defined in the
+// tracking migration. A public broadcast channel would let anyone who guesses a
+// `tracking:<request_id>` topic read live provider GPS without being a participant.
+export const trackingChannelConfig = (broadcast = {}) => ({
+  config: { broadcast, private: true },
+});
+
+// Network failures surface from supabase.rpc as an error with no PG/HTTP code and a
+// fetch/network message. Coded responses are definitive (permission, not-found, a raised
+// exception) and must not be retried.
+export const isTransientSessionStartError = (error) => {
+  if (!error) return false;
+  if (error?.code) return false;
+  return /fetch|network|abort|timeout|econn|internet|socket/i.test(String(error?.message || ''));
+};
 
 function makeSessionId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -230,11 +247,9 @@ export async function startPublishing({
   let trailingPersistTimer = null;
   let stopWatch = async () => {};
 
-  const channel = supabase.channel(trackingChannelName(requestId), {
-    config: {
-      broadcast: { self: false, ack: false },
-    },
-  });
+  const channel = supabase.channel(trackingChannelName(requestId), trackingChannelConfig({
+    broadcast: { self: false, ack: false },
+  }));
 
   const sendBroadcast = async (event, payload) => {
     try {
@@ -354,17 +369,31 @@ export async function startPublishing({
         p_takeover: Boolean(takeover),
       };
 
-      let { data, error } = await supabase.rpc('start_tracking_session', rpcPayload);
+      const { data, error } = await retryWithBackoff(
+        async () => {
+          let res = await supabase.rpc('start_tracking_session', rpcPayload);
 
-      // If database only has the older 2-arg signature without p_takeover, retry with 2 args:
-      if (error && error.code === 'PGRST202') {
-        const fallbackRes = await supabase.rpc('start_tracking_session', {
-          p_request_id: requestId,
-          p_session_id: sessionId,
-        });
-        data = fallbackRes.data;
-        error = fallbackRes.error;
-      }
+          // If database only has the older 2-arg signature without p_takeover, retry with 2 args:
+          if (res.error && res.error.code === 'PGRST202') {
+            res = await supabase.rpc('start_tracking_session', {
+              p_request_id: requestId,
+              p_session_id: sessionId,
+            });
+          }
+
+          // Transient (network) failures are thrown so the retry loop backs off;
+          // coded outcomes are returned for classification below.
+          if (res.error && isTransientSessionStartError(res.error)) throw res.error;
+          return res;
+        },
+        {
+          maxAttempts: 3,
+          baseDelayMs: 1000,
+          shouldRetry: (err) => isTransientSessionStartError(err),
+          onRetry: (attempt, err) =>
+            console.warn('[tracking] session start failed, retrying', attempt, err?.message),
+        }
+      );
 
       // If ambiguous overload (PGRST203) or missing function (PGRST202 / 404):
       if (error && (error.code === 'PGRST203' || error.code === 'PGRST202' || error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('best candidate'))) {
@@ -428,7 +457,10 @@ export async function startPublishing({
         await stop('not_on_the_way');
         return;
       }
-      onError?.(err instanceof Error ? err : new Error('Unable to start live tracking session. Retrying…'));
+      // A session could not be established after retrying; stop cleanly so the
+      // publisher never broadcasts/persists locations the database would reject.
+      await stop('session_failed');
+      onError?.(err instanceof Error ? err : new Error('Unable to start live tracking session. Please try again.'));
     }
   };
 
@@ -715,9 +747,9 @@ export function subscribeToProvider(requestId, listener = {}) {
     };
 
     const channel = supabase
-      .channel(trackingChannelName(requestId), {
-        config: { broadcast: { self: false } },
-      })
+      .channel(trackingChannelName(requestId), trackingChannelConfig({
+        broadcast: { self: false },
+      }))
       .on('broadcast', { event: 'location' }, ({ payload }) => {
         if (payload) acceptLocation(payload);
       })

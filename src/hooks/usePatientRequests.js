@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { supabase } from '../lib/supabase';
 import { playToastSound } from '../lib/audio';
+import { formatRequestRow, mergeRequestRow } from './patientRequestRows';
 
 const LAST_NOTIFIED_STATUS = new Map();
 
@@ -71,27 +72,7 @@ export default function usePatientRequests(patientId) {
         });
       }
 
-      const formatted = (data || []).map(req => ({
-        id: req.id,
-        patientId: req.patient_id,
-        providerId: req.provider_id,
-        provider: req.provider?.full_name || 'Unknown',
-        providerAvatarUrl: req.provider?.avatar_url || '',
-        service: req.service,
-        date: req.date,
-        time: req.time,
-        status: req.status,
-        location: locationMap[req.provider_id] || req.provider?.location || 'Muntinlupa City',
-        originalNotes: req.notes || '',
-        destLat: req.dest_lat ?? null,
-        destLng: req.dest_lng ?? null,
-        destAddress: req.dest_address ?? null,
-        destSource: req.dest_source ?? null,
-        destVersion: req.dest_version ?? 0,
-        destUpdatedAt: req.dest_updated_at ?? null,
-        routeStartedAt: req.route_started_at ?? null,
-        arrivedAt: req.arrived_at ?? null,
-      }));
+      const formatted = (data || []).map((req) => formatRequestRow(req, locationMap));
 
       setRequests(formatted);
     } catch (err) {
@@ -141,28 +122,7 @@ export default function usePatientRequests(patientId) {
 
             // Preserve joined provider fields (full_name, avatar_url, location) since
             // Supabase Realtime postgres_changes payloads do not include foreign table joins.
-            setRequests(prev => prev.map(r => r.id === newRow.id ? {
-              ...r,
-              id: newRow.id,
-              patientId: newRow.patient_id ?? r.patientId,
-              providerId: newRow.provider_id ?? r.providerId,
-              provider: resolvedProvider,
-              providerAvatarUrl: newRow.provider?.avatar_url || r.providerAvatarUrl || '',
-              service: newRow.service ?? r.service,
-              date: newRow.date ?? r.date,
-              time: newRow.time ?? r.time,
-              status: newRow.status ?? r.status,
-              location: newRow.provider?.location || (r.location && r.location !== 'Unknown' ? r.location : 'Muntinlupa City'),
-              originalNotes: newRow.notes ?? r.originalNotes ?? '',
-              destLat: newRow.dest_lat !== undefined ? newRow.dest_lat : r.destLat,
-              destLng: newRow.dest_lng !== undefined ? newRow.dest_lng : r.destLng,
-              destAddress: newRow.dest_address !== undefined ? newRow.dest_address : r.destAddress,
-              destSource: newRow.dest_source !== undefined ? newRow.dest_source : r.destSource,
-              destVersion: newRow.dest_version !== undefined ? newRow.dest_version : r.destVersion,
-              destUpdatedAt: newRow.dest_updated_at !== undefined ? newRow.dest_updated_at : r.destUpdatedAt,
-              routeStartedAt: newRow.route_started_at !== undefined ? newRow.route_started_at : r.routeStartedAt,
-              arrivedAt: newRow.arrived_at !== undefined ? newRow.arrived_at : r.arrivedAt,
-            } : r));
+            setRequests(prev => prev.map(r => r.id === newRow.id ? mergeRequestRow(r, newRow) : r));
           } else if (type === 'DELETE') {
             const oldRow = payload.old || payload.record || payload;
             if (!oldRow) return;

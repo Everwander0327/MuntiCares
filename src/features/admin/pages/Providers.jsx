@@ -8,6 +8,7 @@ import useSort from '@/hooks/useSort';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import { exportToCSV, formatDataForExport } from '@/lib/exportUtils';
+import { canApproveProvider } from '@/features/admin/utils/providerEligibility';
 
 const PAGE_SIZE = 10;
 
@@ -97,6 +98,10 @@ const AdminProviders = () => {
   }, [selectedProvider]);
 
   const handleApprove = async (provider) => {
+    if (!canApproveProvider(provider)) {
+      toast.error('This provider cannot be approved until their profile is complete.');
+      return;
+    }
     setActionLoading(true);
     try {
       const { error } = await supabase
@@ -257,9 +262,9 @@ const AdminProviders = () => {
 
   const handleBulkApprove = async () => {
     if (!selectedIds.size) return;
-    const selected = providers.filter(p => selectedIds.has(p.id) && !p.is_banned);
+    const selected = providers.filter(p => selectedIds.has(p.id) && canApproveProvider(p));
     if (!selected.length) {
-      toast.error('Cannot approve banned providers. Unban them first.');
+      toast.error('No eligible providers selected. Only complete, unbanned, pending providers can be approved.');
       return;
     }
     if (!window.confirm(`Approve ${selected.length} provider(s)?`)) return;

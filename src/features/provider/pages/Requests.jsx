@@ -6,12 +6,12 @@ import {
 } from '../../tracking/services/trackingService';
 import ArrivalOverrideDialog from '@/features/tracking/components/ArrivalOverrideDialog';
 import { parseLocalDate, slotsOverlap, formatSlotLabel } from '@/lib/localDate';
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   Check, X, MapPin, Calendar, Clock, CheckCircle2, Loader2, 
   Search, Navigation, Home, MessageSquare, 
-  ChevronLeft, ChevronRight, Filter
+  ChevronLeft, ChevronRight, ChevronDown, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,13 +38,13 @@ const getStatusBadge = (status) => {
   switch (status) {
     case 'Completed':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-success dark:text-success-dark bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 shadow-sm">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-success dark:text-success-dark bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30">
           Completed
         </span>
       );
     case 'Pending':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-warning dark:text-warning-dark bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 shadow-sm">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-warning dark:text-warning-dark bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30">
           Pending
         </span>
       );
@@ -52,25 +52,25 @@ const getStatusBadge = (status) => {
     case 'On The Way':
     case 'Arrived':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-link dark:text-primary-300 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30 shadow-sm">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-link dark:text-primary-300 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30">
           {status}
         </span>
       );
     case 'Rejected':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-danger dark:text-danger-dark bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 shadow-sm">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-danger dark:text-danger-dark bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30">
           Rejected
         </span>
       );
     case 'Cancelled':
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/50 dark:border-white/10 shadow-sm">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/50 dark:border-white/10">
           Cancelled
         </span>
       );
     default:
       return (
-        <span className="neu-flat-sm inline-flex items-center px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-tertiary bg-slate-200/50">
+        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-tertiary bg-slate-200/50">
           {status}
         </span>
       );
@@ -79,6 +79,8 @@ const getStatusBadge = (status) => {
 
 const ProviderRequests = () => {
   const [filter, setFilter] = useState('All'); // 'All' | 'Pending' | 'Active' | 'Completed' | 'History'
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const filterDropdownRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -378,6 +380,21 @@ const ProviderRequests = () => {
     setCurrentPage(1);
   }, [filter, searchTerm]);
 
+  // Close mobile filter dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target)) {
+        setShowFilterDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
   const totalPages = Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage));
   const paginatedRequests = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -401,321 +418,473 @@ const ProviderRequests = () => {
 
   return (
     <DashboardLayout role="provider">
-      <div className="flex-1 flex flex-col justify-between space-y-4 sm:space-y-6 relative w-full max-w-full pb-10">
+      <div className="flex-1 flex flex-col space-y-4 sm:space-y-5 relative w-full max-w-full pb-10">
 
-        {/* HEADER SECTION: Unified Neumorphic Card with Stats & Sunken Search */}
-        <section className="neu-flat p-3.5 sm:p-6 md:p-8 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-5 relative z-30">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-            <div>
-              <h1 className="font-display font-extrabold tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
-                Incoming & Active Requests
-              </h1>
-              <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 sm:mt-1 max-w-xl">
-                Review bookings, update home visits, and coordinate patient consultations across Muntinlupa.
-              </p>
-            </div>
-
-            {/* Quick Filter Pills with scroll on small screens */}
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar -mx-1 px-1 sm:mx-0 sm:px-0 sm:flex-wrap">
-              <button
-                type="button"
-                onClick={() => setFilter(filter === 'Pending' ? 'All' : 'Pending')}
-                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                  filter === 'Pending'
-                    ? 'neu-pressed text-warning dark:text-warning-dark border border-amber-500/40 bg-amber-500/15'
-                    : 'neu-btn text-warning dark:text-warning-dark hover:text-warning'
-                }`}
-                title="Filter Pending requests"
-              >
-                <Clock className="w-3 h-3 text-warning shrink-0" />
-                <span>{stats.pending} Pending</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilter(filter === 'Active' ? 'All' : 'Active')}
-                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                  filter === 'Active'
-                    ? 'neu-pressed text-link dark:text-primary-300 border border-blue-500/40 bg-blue-500/15'
-                    : 'neu-btn text-link dark:text-primary-300 hover:text-blue-700'
-                }`}
-                title="Filter Active / In-progress visits"
-              >
-                <Navigation className="w-3 h-3 text-link shrink-0" />
-                <span>{stats.active} Active</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilter(filter === 'Completed' ? 'All' : 'Completed')}
-                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                  filter === 'Completed'
-                    ? 'neu-pressed text-success dark:text-success-dark border border-emerald-500/40 bg-emerald-500/15'
-                    : 'neu-btn text-success dark:text-success-dark hover:text-success'
-                }`}
-                title="Filter Completed visits"
-              >
-                <CheckCircle2 className="w-3 h-3 text-success shrink-0" />
-                <span>{stats.completed} Completed</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilter(filter === 'History' ? 'All' : 'History')}
-                className={`px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                  filter === 'History'
-                    ? 'neu-pressed text-slate-600 dark:text-slate-300 border border-slate-500/40 bg-slate-500/15'
-                    : 'neu-btn text-slate-600 dark:text-slate-300 hover:text-slate-800'
-                }`}
-                title="Filter History (Rejected, Cancelled, Completed)"
-              >
-                <Filter className="w-3 h-3 text-tertiary shrink-0" />
-                <span>{stats.history} History</span>
-              </button>
-
-              {filter !== 'All' && (
-                <button
-                  type="button"
-                  onClick={() => setFilter('All')}
-                  className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-extrabold text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer flex items-center gap-1 shrink-0"
-                  title="Clear filter and show all"
-                >
-                  <X className="w-3 h-3" />
-                  <span>Show All</span>
-                </button>
-              )}
-            </div>
+        {/* HEADER SECTION: Option 1 (Healthie Clinical Queue) with Integrated Toolbar */}
+        <section className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-4">
+          <div>
+            <h1 className="font-display font-extrabold tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
+              Incoming & Active Requests
+            </h1>
+            <p className="text-xs sm:text-sm text-tertiary mt-0.5 sm:mt-1 max-w-xl">
+              Review bookings, update home visits, and coordinate patient consultations across Muntinlupa.
+            </p>
           </div>
 
-          {/* Sunken Search Box */}
-          <div className="flex items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
-            <div className="relative flex-1 min-w-0">
-              <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[42px] sm:h-[50px] border border-slate-200/50 dark:border-white/5">
-                <Search className="w-4 h-4 text-link ml-1.5 sm:ml-2 shrink-0" />
+          {/* Integrated Toolbar: Desktop Tabs (hidden md:flex) + Mobile Side-by-Side Toolbar (md:hidden) */}
+          <div className="pt-3 border-t border-slate-200/50 dark:border-white/5">
+            
+            {/* MOBILE (< md): Searchbox + Neumorphic Filter Dropdown side-by-side in 1 Row */}
+            <div className="md:hidden flex items-center gap-2 w-full">
+              {/* Searchbox taking flexible space */}
+              <div className="neu-inset px-2.5 py-1.5 rounded-xl flex items-center gap-2 h-10 flex-1 min-w-0 border border-slate-200/50 dark:border-white/5">
+                <Search className="w-3.5 h-3.5 text-link shrink-0" />
                 <input
                   type="text"
-                  aria-label="Search requests by patient, service, or address"
-                  placeholder="Search patient, service, address..."
+                  aria-label="Search requests"
+                  placeholder="Search patient, service..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
+                  className="w-full bg-transparent border-0 px-0.5 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
                 />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="p-1 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1"
+                    className="p-0.5 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
                     title="Clear search"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
+
+              {/* Custom Neumorphic Filter Dropdown beside Searchbox (No native select) */}
+              <div className="relative shrink-0" ref={filterDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowFilterDropdown((prev) => !prev)}
+                  className={`neu-btn rounded-xl flex items-center h-10 px-2.5 sm:px-3 gap-1.5 cursor-pointer border transition-all active:scale-95 select-none ${
+                    showFilterDropdown
+                      ? 'border-link text-link neu-pressed'
+                      : 'border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-slate-100 hover:border-link'
+                  }`}
+                  aria-haspopup="listbox"
+                  aria-expanded={showFilterDropdown}
+                  title="Filter requests by status"
+                >
+                  <Filter className="w-3.5 h-3.5 text-link shrink-0" />
+                  <span className="text-xs font-bold whitespace-nowrap">
+                    {filter} ({filter === 'All' ? stats.total : filter === 'Pending' ? stats.pending : filter === 'Active' ? stats.active : filter === 'Completed' ? stats.completed : stats.history})
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-tertiary shrink-0 transition-transform duration-200 ${
+                      showFilterDropdown ? 'rotate-180 text-link' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* Neumorphic Floating Dropdown Menu */}
+                <AnimatePresence>
+                  {showFilterDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                      transition={{ duration: 0.16, ease: 'easeOut' }}
+                      className="neu-flat absolute right-0 top-full mt-2 w-48 sm:w-52 rounded-2xl p-1.5 z-50 shadow-2xl border border-white/80 dark:border-white/10 bg-surface-shell"
+                    >
+                      <div className="px-2.5 py-1.5 border-b border-slate-200/60 dark:border-white/5 mb-1 flex items-center justify-between">
+                        <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
+                          Filter Status
+                        </span>
+                        <span className="text-xs text-link font-extrabold">
+                          {filter}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1" role="listbox">
+                        {[
+                          { value: 'All', label: 'All', count: stats.total },
+                          { value: 'Pending', label: 'Pending', count: stats.pending },
+                          { value: 'Active', label: 'Active', count: stats.active },
+                          { value: 'Completed', label: 'Completed', count: stats.completed },
+                          { value: 'History', label: 'History', count: stats.history },
+                        ].map((opt) => {
+                          const isSelected = filter === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                setFilter(opt.value);
+                                setShowFilterDropdown(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'neu-inset text-link font-black bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20'
+                                  : 'text-slate-700 dark:text-slate-200 hover:text-link hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+                              }`}
+                              role="option"
+                              aria-selected={isSelected}
+                            >
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="truncate">{opt.label}</span>
+                                <span
+                                  className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
+                                    isSelected
+                                      ? 'bg-blue-500/20 text-link'
+                                      : 'bg-slate-200/70 dark:bg-slate-800 text-tertiary'
+                                  }`}
+                                >
+                                  {opt.count}
+                                </span>
+                              </div>
+                              {isSelected && (
+                                <Check className="w-3.5 h-3.5 text-link stroke-[3] shrink-0 ml-1.5" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
+
+            {/* DESKTOP / TABLET (hidden md:flex): Segmented Tabs on Left, Searchbox on Right */}
+            <div className="hidden md:flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/70 dark:bg-[#0E1724] border border-slate-200/80 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setFilter('All')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    filter === 'All'
+                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
+                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>All</span>
+                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
+                    filter === 'All' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
+                  }`}>
+                    {stats.total}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFilter('Pending')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    filter === 'Pending'
+                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
+                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>Pending</span>
+                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
+                    filter === 'Pending' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
+                  }`}>
+                    {stats.pending}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFilter('Active')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    filter === 'Active'
+                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
+                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>Active</span>
+                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
+                    filter === 'Active' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
+                  }`}>
+                    {stats.active}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFilter('Completed')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    filter === 'Completed'
+                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
+                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>Completed</span>
+                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
+                    filter === 'Completed' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
+                  }`}>
+                    {stats.completed}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFilter('History')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                    filter === 'History'
+                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
+                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <span>History</span>
+                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
+                    filter === 'History' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
+                  }`}>
+                    {stats.history}
+                  </span>
+                </button>
+              </div>
+
+              {/* Compact Integrated Search Box for Desktop */}
+              <div className="relative w-72 shrink-0">
+                <div className="neu-inset px-2.5 py-1.5 rounded-xl flex items-center gap-2 h-10 border border-slate-200/50 dark:border-white/5">
+                  <Search className="w-3.5 h-3.5 text-link shrink-0" />
+                  <input
+                    type="text"
+                    aria-label="Search requests"
+                    placeholder="Search patient, service, address..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-transparent border-0 px-0.5 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm('')}
+                      className="p-0.5 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
           </div>
         </section>
 
-        {/* SECTION HEADER & FAR-RIGHT PAGINATION */}
-        <div className="flex items-center justify-between gap-3 px-1">
-          <div className="min-w-0">
-            <h2 className="font-display font-extrabold text-sm sm:text-lg text-slate-900 dark:text-white truncate">
-              {filter === 'All' ? 'All Service Bookings' : `${filter} Requests`}
-            </h2>
-            <p className="text-sm text-tertiary mt-0.5">
-              Showing {filteredRequests.length} {filteredRequests.length === 1 ? 'request' : 'requests'}
-              {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
-            </p>
-          </div>
-
-          {/* Minimalist Far-Right Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
-                title="Previous page"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <span className="text-xs font-extrabold text-tertiary px-1 select-none">
-                {currentPage} / {totalPages}
-              </span>
-              <button
-                type="button"
-                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage >= totalPages}
-                className="neu-btn w-11 h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
-                title="Next page"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
-
         {/* REQUEST CARDS GRID */}
         {paginatedRequests.length > 0 ? (
-          <motion.div
-            className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-5"
-            variants={staggerContainer}
-            initial="initial"
-            animate="animate"
-          >
+          <>
+            <motion.div
+              className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 sm:gap-4"
+              variants={staggerContainer}
+              initial="initial"
+              animate="animate"
+            >
             <AnimatePresence mode="popLayout">
               {paginatedRequests.map((req) => (
                 <motion.div
                   key={req.id}
                   variants={staggerItem}
                   layout
-                  className="neu-flat rounded-2xl sm:rounded-[2rem] p-3.5 sm:p-6 flex flex-col justify-between space-y-3 sm:space-y-3.5 select-text transition-all"
+                  className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between space-y-3 select-text transition-all"
                 >
-                  {/* Top Bar: Patient Avatar + Name + Chat Button & Status Badge */}
-                  <div className="flex items-start justify-between gap-2.5 sm:gap-3">
-                    <Link
-                      to={`/provider/patients/${req.patientId}/profile`}
-                      className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 group"
-                    >
-                      <div className="neu-flat-sm w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-link font-black text-xs sm:text-base shrink-0 p-0.5">
-                        {req.avatarUrl ? (
-                          <img src={req.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
-                        ) : (
-                          req.patient.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="font-display font-extrabold text-slate-900 dark:text-white group-hover:text-link transition-colors text-xs sm:text-base truncate">
-                          {req.patient}
-                        </h3>
-                        <p className="text-xs sm:text-xs font-semibold text-link truncate mt-0.5">
-                          {req.service}
-                        </p>
-                      </div>
-                    </Link>
-
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                      {/* Chat with Patient Button beside the status chip */}
+                  {/* Top Bar: Patient Avatar + Name + Clean Rectangular Status Tag (No Dots, No Pills) */}
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
                       <Link
-                        to={`/provider/messages?partner=${req.patientId}&name=${encodeURIComponent(req.patient)}`}
-                        className="neu-btn min-h-11 px-2.5 rounded-xl text-xs font-bold text-link flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
-                        title="Chat with Patient"
+                        to={`/provider/patients/${req.patientId}/profile`}
+                        className="flex items-center gap-2.5 sm:gap-3 min-w-0 group"
                       >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Chat</span>
+                        <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-link font-black text-xs sm:text-sm shrink-0 p-0.5">
+                          {req.avatarUrl ? (
+                            <img src={req.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
+                          ) : (
+                            req.patient.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-display font-extrabold text-slate-900 dark:text-white group-hover:text-link transition-colors text-xs sm:text-sm truncate">
+                            {req.patient}
+                          </h3>
+                          <p className="text-2xs sm:text-xs font-semibold text-link truncate mt-0.5">
+                            {req.service}
+                          </p>
+                        </div>
                       </Link>
 
-                      {getStatusBadge(req.status)}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {getStatusBadge(req.status)}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Middle Meta Details: Date, Time, Location */}
-                  <div className="py-2 sm:py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-slate-600 dark:text-slate-300 font-medium text-sm w-full">
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        <Calendar className="w-3.5 h-3.5 text-link shrink-0" />
-                        <span>{req.date}</span>
-                      </span>
-                      {req.time && (
+                    {/* Middle Meta Details: Date, Time, Location */}
+                    <div className="mt-3 py-2 px-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs bg-slate-100/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/5">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-slate-600 dark:text-slate-300 font-medium text-xs w-full">
                         <span className="flex items-center gap-1.5 shrink-0">
-                          <Clock className="w-3.5 h-3.5 text-link shrink-0" />
-                          <span>{req.time}</span>
+                          <Calendar className="w-3.5 h-3.5 text-link shrink-0" />
+                          <span>{req.date}</span>
                         </span>
+                        {req.time && (
+                          <>
+                            <span className="text-tertiary">&bull;</span>
+                            <span className="flex items-center gap-1.5 shrink-0">
+                              <Clock className="w-3.5 h-3.5 text-link shrink-0" />
+                              <span>{req.time}</span>
+                            </span>
+                          </>
+                        )}
+                        <span className="flex items-center gap-1.5 min-w-0 ml-auto">
+                          <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
+                          <span className="truncate max-w-[150px] sm:max-w-[210px]" title={req.location}>
+                            {req.location}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Patient Notes: Clean Left Accent Line (No Sunken Inset Well) */}
+                    <div className="mt-2.5 pl-3 border-l-2 border-slate-300 dark:border-slate-700 py-0.5 space-y-0.5">
+                      <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
+                        Patient Note
+                      </p>
+                      {req.notes && req.notes.trim() ? (
+                        <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed italic">
+                          &ldquo;{req.notes}&rdquo;
+                        </p>
+                      ) : (
+                        <p className="text-xs text-tertiary italic">
+                          No additional notes provided by patient.
+                        </p>
                       )}
-                      <span className="flex items-center gap-1.5 min-w-0">
-                        <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
-                        <span className="truncate max-w-[170px] sm:max-w-none">{req.location}</span>
-                      </span>
                     </div>
                   </div>
 
-                  {/* Patient Notes (Sunken Inset Well) */}
-                  <div className="neu-inset p-2.5 sm:p-3 rounded-xl border border-slate-200/40 dark:border-white/5 space-y-1">
-                    <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                      Patient Notes
-                    </p>
-                    {req.notes && req.notes.trim() ? (
-                      <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed italic">
-                        &ldquo;{req.notes}&rdquo;
-                      </p>
-                    ) : (
-                      <p className="text-xs text-tertiary dark:text-tertiary italic">
-                        No additional notes provided by patient.
-                      </p>
+                  {/* Card Action Bar */}
+                  <div className="pt-2.5 border-t border-slate-200/50 dark:border-white/5 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/provider/messages?partner=${req.patientId}&name=${encodeURIComponent(req.patient)}`}
+                        className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-link hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center gap-1.5 shrink-0"
+                        title="Chat with Patient"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-link" />
+                        <span>Chat</span>
+                      </Link>
+                      <Link
+                        to={`/provider/patients/${req.patientId}/profile`}
+                        className="text-xs font-bold text-tertiary hover:text-link transition-colors px-1"
+                      >
+                        Profile &rarr;
+                      </Link>
+                    </div>
+
+                    {/* Action Buttons for Pending or Active visits */}
+                    {(req.status === 'Pending' || STATUS_FLOW[req.status]) && (
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {/* Pending Request: Accept / Decline */}
+                        {req.status === 'Pending' && (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              disabled={!!actionStates[req.id]}
+                              onClick={() => handleAction(req.id, 'accepted', req.patient)}
+                              className="neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Accept</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={!!actionStates[req.id]}
+                              onClick={() => handleAction(req.id, 'rejected', req.patient)}
+                              className="neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-danger hover:bg-rose-500 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              <span>Decline</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Active In-Progress Visits: Duration Extension Button */}
+                        {['Accepted', 'On The Way', 'Arrived'].includes(req.status) && (
+                          <button
+                            type="button"
+                            disabled={extendingVisitId === req.id || updatingVisitId === req.id}
+                            onClick={() => handleExtendDuration(req.id, req.patient)}
+                            className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-link hover:text-primary transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                            title="Extend visit duration by 30 minutes via RPC"
+                          >
+                            {extendingVisitId === req.id ? (
+                              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Extending...</>
+                            ) : (
+                              <><Clock className="w-3.5 h-3.5" /> +30m</>
+                            )}
+                          </button>
+                        )}
+
+                        {/* Active In-Progress Visits: Progression Stepper Button */}
+                        {STATUS_FLOW[req.status] && (
+                          <button
+                            type="button"
+                            disabled={updatingVisitId === req.id}
+                            onClick={() => handleAdvanceVisit(req.id, STATUS_FLOW[req.status].next, req.status)}
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 ${
+                              STATUS_FLOW[req.status].color
+                            }`}
+                          >
+                            {updatingVisitId === req.id ? (
+                              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...</>
+                            ) : (
+                              <>
+                                {STATUS_FLOW[req.status].icon}
+                                <span>{STATUS_FLOW[req.status].label}</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
-
-                  {/* Action Buttons for Pending or Active visits */}
-                  {(req.status === 'Pending' || STATUS_FLOW[req.status]) && (
-                    <div className="pt-2 border-t border-slate-200/40 dark:border-white/5 flex flex-wrap items-center justify-end gap-2">
-                      {/* Pending Request: Accept / Decline */}
-                      {req.status === 'Pending' && (
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                          <button
-                            type="button"
-                            disabled={!!actionStates[req.id]}
-                            onClick={() => handleAction(req.id, 'accepted', req.patient)}
-                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-1.5"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Accept</span>
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!!actionStates[req.id]}
-                            onClick={() => handleAction(req.id, 'rejected', req.patient)}
-                            className="neu-btn px-3 sm:px-4 py-2 rounded-xl text-xs font-bold text-danger hover:bg-rose-500 hover:text-white transition-all cursor-pointer flex-1 sm:flex-initial flex items-center justify-center gap-1.5"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span>Decline</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Active In-Progress Visits: Duration Extension Button */}
-                      {['Accepted', 'On The Way', 'Arrived'].includes(req.status) && (
-                        <button
-                          type="button"
-                          disabled={extendingVisitId === req.id || updatingVisitId === req.id}
-                          onClick={() => handleExtendDuration(req.id, req.patient)}
-                          className="neu-btn px-3 py-2 rounded-xl text-xs font-bold text-link hover:text-primary transition-all cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
-                          title="Extend visit duration by 30 minutes via RPC"
-                        >
-                          {extendingVisitId === req.id ? (
-                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Extending...</>
-                          ) : (
-                            <><Clock className="w-3.5 h-3.5" /> +30m Extend</>
-                          )}
-                        </button>
-                      )}
-
-                      {/* Active In-Progress Visits: Progression Stepper Button */}
-                      {STATUS_FLOW[req.status] && (
-                        <button
-                          type="button"
-                          disabled={updatingVisitId === req.id}
-                          onClick={() => handleAdvanceVisit(req.id, STATUS_FLOW[req.status].next, req.status)}
-                          className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 ${
-                            STATUS_FLOW[req.status].color
-                          }`}
-                        >
-                          {updatingVisitId === req.id ? (
-                            <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...</>
-                          ) : (
-                            <>
-                              {STATUS_FLOW[req.status].icon}
-                              <span>{STATUS_FLOW[req.status].label}</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  )}
                 </motion.div>
               ))}
             </AnimatePresence>
           </motion.div>
-        ) : (
+
+          {/* BOTTOM PAGINATION CONTROLS */}
+          {totalPages > 1 && (
+            <div className="neu-flat p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3">
+              <p className="text-2xs sm:text-xs font-semibold text-tertiary truncate">
+                Showing {paginatedRequests.length} of {filteredRequests.length} requests
+              </p>
+              <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="neu-btn px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all flex items-center gap-1 cursor-pointer"
+                  title="Previous page"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">Prev</span>
+                </button>
+                <span className="neu-inset px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-extrabold text-slate-800 dark:text-slate-200 select-none">
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="neu-btn px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all flex items-center gap-1 cursor-pointer"
+                  title="Next page"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
           <div className="neu-flat p-8 sm:p-12 rounded-2xl sm:rounded-[2.25rem] text-center">
             <EmptyState
               icon={searchTerm ? 'search' : 'inbox'}
