@@ -57,6 +57,8 @@ npm run dev:https   # sets VITE_HTTPS=true
 | `VITE_TRAFFIC_FACTOR` | no | Travel-time compensation factor (default `1.3`) |
 | `VITE_TURN_URL` / `VITE_TURN_USERNAME` / `VITE_TURN_CREDENTIAL` | no | Static TURN for local dev only. Never set these in production: production TURN credentials are minted per call by the `ice-servers` edge function. |
 | `VITE_HTTPS` | no | Set by `npm run dev:https` |
+| `VITE_SITE_URL` | no | Canonical production URL used for `<link rel="canonical">`, Open Graph, `robots.txt`, and `sitemap.xml` (default `https://munti-cares.vercel.app`) |
+| `VITE_GOOGLE_SITE_VERIFICATION` | no | Google Search Console HTML-tag verification token injected into `index.html` at build time |
 
 ## Scripts
 
@@ -102,6 +104,7 @@ Four older migration files have no recorded history in the remote migration log 
 ## Deployment
 
 - **Web**: Vercel with the SPA rewrite in `vercel.json`. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Vercel project.
+- **SEO & domain**: The official domain defaults to `https://munti-cares.vercel.app` (configured in `src/lib/seo/seoConfig.js` and overridden via `VITE_SITE_URL`). `robots.txt` and `sitemap.xml` are generated into `dist/` at build time. To verify in Google Search Console, choose the HTML tag method, set the token as `VITE_GOOGLE_SITE_VERIFICATION` in Vercel, redeploy, and submit `https://munti-cares.vercel.app/sitemap.xml`. To switch to a custom domain later, attach the domain in Vercel, update `VITE_SITE_URL` (plus Supabase Auth `site_url` / redirect URLs), and redeploy.
 - **CI**: GitHub Actions runs `lint` → `test` → `build` on push to `main`/`develop` and PRs to `main`, using repository variables for the Supabase env vars.
 - **Android**: `npm run build` then `npx cap sync android`, open `android/` in Android Studio. FCM push requires `google-services.json` (gitignored) — without it push notifications are silently disabled.
 
