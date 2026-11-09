@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Send, UserCircle, Loader2, Check, CheckCheck, Video, Phone, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, AlertCircle, SwitchCamera, RotateCw, Paperclip, X, Maximize2, User, Search } from 'lucide-react';
+import { Send, UserCircle, Loader2, Check, CheckCheck, Video, Phone, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, AlertCircle, SwitchCamera, RotateCw, Paperclip, X, Maximize2, Info, MessageSquare, Search } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCalls } from '@/contexts/CallContext';
 import { usePresence } from '@/contexts/PresenceContext';
@@ -55,11 +55,14 @@ const shouldShowTimestamp = (msg, nextMsg) => {
 // A call bubble is only joinable while its record is still ringing. Unknown records
 // (rows predating message_type, or a record past the fetch window) fall back to the
 // ringing sweep's 60-second window rather than offering a call that already ended.
+const isLegacyCallMarker = (text) => /^(\u{1F4F9}|\u{1F4DE})/u.test(text || '');
+const stripLeadingCallMarker = (text) => String(text || '').replace(/^(\u{1F4F9}|\u{1F4DE})\s*/u, '');
+
 const isCallMessage = (msg) =>
-  msg.message_type === 'call' || msg.content?.startsWith('📹') || msg.content?.startsWith('📞');
+  msg.message_type === 'call' || isLegacyCallMarker(msg.content);
 
 const callTypeOf = (msg, record) => {
-  const type = record?.call_type || (msg.content?.startsWith('📞') ? 'audio' : 'video');
+  const type = record?.call_type || (/^\u{1F4DE}/u.test(msg.content || '') ? 'audio' : 'video');
   return type === 'audio' ? 'audio' : 'video';
 };
 
@@ -191,9 +194,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   const [selectedAttachment, setSelectedAttachment] = useState(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState(null);
-  const [showProfilePanel, setShowProfilePanel] = useState(() => {
-    return typeof window !== 'undefined' ? window.innerWidth >= 1024 : true;
-  });
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [isMobileScreen, setIsMobileScreen] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   });
@@ -289,10 +290,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
     supabase
       .from('requests')
-      .select('id, status, service_type, address, scheduled_date, scheduled_time')
+      .select('id, status, service, date, time')
       .eq(myCol, currentUser.id)
       .eq(otherCol, otherUser.id)
-      .in('status', ['Accepted', 'On The Way', 'Arrived', 'In Progress', 'Completed'])
+      .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -729,7 +730,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
     const isVideo = type === 'video';
     sendMessage(
-      `${isVideo ? '📹' : '📞'} I've started a ${isVideo ? 'video' : 'voice'} consultation. Click the ${isVideo ? 'Video' : 'Phone'} icon to join!`,
+      `Started a ${isVideo ? 'video' : 'voice'} consultation. Select Join ${isVideo ? 'Video' : 'Voice'} Call below to connect.`,
       { messageType: 'call', callId },
     );
     startCallBroadcast(otherUser.id, currentUser.name, type, callId);
@@ -866,7 +867,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     if (callStatus !== 'connecting' || rtcRole !== 'caller') return undefined;
     const timeout = setTimeout(() => {
       rtcEndCall(true);
-      toast('No answer. The invitation has expired.', { icon: '⏱' });
+      toast('No answer. The invitation has expired.');
     }, RING_TIMEOUT_MS);
     return () => clearTimeout(timeout);
   }, [callStatus, rtcRole, rtcEndCall]);
@@ -940,22 +941,22 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     </button>
                   </div>
                 ) : (
-                  <div className="neu-flat p-8 sm:p-10 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl relative overflow-hidden">
-                    {/* Radar Pulse Avatar */}
+                  <div className="neu-flat p-8 sm:p-10 rounded-2xl max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl relative overflow-hidden">
+                    {/* Squircle Radar Pulse Avatar */}
                     <div className="relative w-28 h-28 mx-auto mb-5">
                       <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-primary/40"
-                        animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0, 0.6] }}
+                        className="absolute inset-0 rounded-2xl border-2 border-primary/40"
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.6, 0, 0.6] }}
                         transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
                       />
                       <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-emerald-400/40"
-                        animate={{ scale: [1, 1.25, 1], opacity: [0.6, 0, 0.6] }}
+                        className="absolute inset-0 rounded-2xl border-2 border-emerald-400/40"
+                        animate={{ scale: [1, 1.2, 1], opacity: [0.6, 0, 0.6] }}
                         transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
                       />
-                      <div className="absolute inset-1.5 rounded-full neu-flat flex items-center justify-center p-1 overflow-hidden shadow-inner">
+                      <div className="absolute inset-1.5 rounded-2xl neu-flat flex items-center justify-center p-1 overflow-hidden shadow-inner">
                         {otherUser?.photoUrl ? (
-                          <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                          <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
                         ) : (
                           <span className="text-2xl font-black text-link">
                             {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
@@ -964,8 +965,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       </div>
                     </div>
 
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-2xs font-extrabold text-link uppercase tracking-widest mb-2">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg neu-flat-sm text-2xs font-extrabold text-link uppercase tracking-widest mb-2">
                       {callType === 'audio' ? 'Connecting Voice Call' : 'Connecting Teleconsultation'}
                     </div>
 
@@ -1006,7 +1006,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       {callType === 'audio' ? 'Voice Consultation' : 'Teleconsultation Session'}
                     </h3>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase">Live</span>
                       <p className="text-xs text-success dark:text-success-dark font-mono font-bold tracking-wider">
                         {formatTime(callTimer)}
                       </p>
@@ -1061,18 +1061,18 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   <div className="flex-1 flex flex-col items-center justify-center px-6 relative w-full bg-surface-shell z-[5]">
                     <div className="relative w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center mb-6">
                       <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
-                        animate={{ scale: [1, 1.3, 1], opacity: [0.7, 0, 0.7] }}
+                        className="absolute inset-0 rounded-2xl border-2 border-emerald-500/30"
+                        animate={{ scale: [1, 1.25, 1], opacity: [0.7, 0, 0.7] }}
                         transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
                       />
                       <motion.div
-                        className="absolute inset-2 rounded-full border-2 border-primary/40"
-                        animate={{ scale: [1, 1.2, 1], opacity: [0.6, 0, 0.6] }}
+                        className="absolute inset-2 rounded-2xl border-2 border-primary/40"
+                        animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0, 0.6] }}
                         transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
                       />
-                      <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full neu-flat flex items-center justify-center overflow-hidden shadow-2xl p-1.5 border border-white/80 dark:border-white/10">
+                      <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl neu-flat flex items-center justify-center overflow-hidden shadow-2xl p-1.5 border border-white/80 dark:border-white/10">
                         {otherUser?.photoUrl ? (
-                          <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-full" />
+                          <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
                         ) : (
                           <span className="text-3xl font-black text-link">
                             {otherUser?.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'}
@@ -1083,8 +1083,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     <h3 className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white truncate max-w-xs text-center">
                       {otherUser?.name || 'Healthcare Provider'}
                     </h3>
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-2xs font-bold text-success dark:text-success-dark mt-2 uppercase tracking-widest">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg neu-flat-sm text-2xs font-bold text-success dark:text-success-dark mt-2 uppercase tracking-widest">
                       {callType === 'audio' ? 'Voice Consultation In Progress' : 'Remote camera is off'}
                     </div>
                   </div>
@@ -1198,13 +1197,13 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             {/* Ended Screen */}
             {callStatus === 'ended' && (
               <div className="flex-1 flex flex-col items-center justify-center px-6">
-                <div className="neu-flat p-8 sm:p-10 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
+                <div className="neu-flat p-8 sm:p-10 rounded-2xl max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
                   <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-tertiary">
                     <PhoneOff className="w-7 h-7" />
                   </div>
                   <h3 className="text-slate-900 dark:text-white text-xl font-display font-black">Session Concluded</h3>
                   {callTimer > 0 && (
-                    <div className="mt-2 inline-block px-3 py-1 rounded-full neu-flat-sm text-xs font-mono font-bold text-link">
+                    <div className="mt-2 inline-block px-3 py-1 rounded-lg neu-flat-sm text-xs font-mono font-bold text-link">
                       Duration: {formatTime(callTimer)}
                     </div>
                   )}
@@ -1232,9 +1231,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           exit={{ opacity: 0, scale: 0.9 }}
           className="absolute inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center"
         >
-          <div className="bg-white dark:bg-slate-800 rounded-[2.5rem] p-8 max-w-xs w-full mx-4 shadow-2xl border border-slate-100 dark:border-slate-700 text-center">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <PhoneOff className="w-9 h-9 text-danger" />
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-xs w-full mx-4 shadow-2xl border border-slate-100 dark:border-slate-700 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+              <PhoneOff className="w-8 h-8 text-danger" />
             </div>
             <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Call Declined</h2>
             <p className="text-sm text-tertiary dark:text-tertiary mt-1 font-medium">
@@ -1244,93 +1243,100 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         </motion.div>
       )}
 
-      {/* Chat Header */}
-      <div 
-        className="px-4 py-3 sm:py-3.5 neu-flat border-b border-white/60 dark:border-white/5 flex items-center gap-3 shrink-0 z-10"
+      {/* Chat Header (Option 1: Squircle Avatar + Online/Offline Tag + Labeled Action Squircles) */}
+      <div
+        className="px-4 py-3 neu-flat border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-2.5 shrink-0 z-10"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top, 0px))' }}
       >
-        {onBack && (
-          <button
-            onClick={onBack}
-            className="neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer -ml-1 text-slate-600 dark:text-slate-300 hover:text-link"
-            title="Back to conversations"
+        <div className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="neu-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer -ml-1 text-slate-600 dark:text-slate-300 hover:text-link shrink-0"
+              title="Back to conversations"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          )}
+          <Link
+            to={
+              (currentUser?.role || authUser?.role) === 'provider'
+                ? `/provider/patients/${otherUser.id}/profile`
+                : `/patient/providers/${otherUser.id}/profile`
+            }
+            className="flex items-center gap-2.5 sm:gap-3 flex-1 min-w-0 group cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-        )}
-        <Link
-          to={
-            (currentUser?.role || authUser?.role) === 'provider'
-              ? `/provider/patients/${otherUser.id}/profile`
-              : `/patient/providers/${otherUser.id}/profile`
-          }
-          className="flex items-center gap-3 flex-1 min-w-0 group cursor-pointer"
-        >
-          <div className="relative shrink-0">
-            <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-2xl overflow-hidden p-0.5 flex items-center justify-center">
+            <div className="neu-flat-sm w-10 h-10 rounded-xl overflow-hidden p-0.5 flex items-center justify-center shrink-0 border border-slate-200/80 dark:border-white/10">
               {otherUser.photoUrl ? (
-                <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+                <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
               ) : (
                 <UserCircle className="w-6 h-6 text-link" />
               )}
             </div>
-            <div 
-              className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-surface-shell transition-colors duration-300 ${
-                isUserOnline(otherUser.id) ? 'bg-emerald-500' : 'bg-slate-400'
-              }`} 
-              title={isUserOnline(otherUser.id) ? 'Online' : 'Offline'}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors leading-tight truncate">
-              {otherUser.name}
-            </h3>
-            <p className={`text-xs sm:text-xs font-bold transition-colors duration-300 ${
-              isUserOnline(otherUser.id) ? 'text-success' : 'text-tertiary dark:text-tertiary'
-            }`}>
-              {isUserOnline(otherUser.id) ? 'Active now' : 'Offline'}
-            </p>
-          </div>
-        </Link>
-        <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <h3 className="font-extrabold text-sm sm:text-base text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors leading-tight truncate">
+                  {otherUser.name}
+                </h3>
+                <span
+                  className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 border ${
+                    isUserOnline(otherUser.id)
+                      ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-slate-200/70 dark:bg-slate-800 border-slate-300/80 dark:border-white/10 text-tertiary'
+                  }`}
+                >
+                  {isUserOnline(otherUser.id) ? 'Online' : 'Offline'}
+                </span>
+              </div>
+              <p className="text-2xs text-tertiary dark:text-tertiary font-semibold truncate mt-0.5">
+                {isPatientView ? 'Healthcare Provider' : 'Patient'} &bull; Direct Consultation Channel
+              </p>
+            </div>
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <button
             type="button"
             onClick={() => handleStartCall('audio')}
             disabled={ringingFromPeer}
-            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-success transition-all shadow-sm ${
+            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-success transition-all shadow-xs ${
               ringingFromPeer ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
             }`}
             title={ringingFromPeer ? 'Answer the incoming call first' : 'Start Voice Consultation'}
           >
-            <Phone className="w-4 h-4 stroke-[2.2]" />
+            <Phone className="w-4 h-4 text-emerald-500 stroke-[2.2]" />
           </button>
 
           <button
             type="button"
             onClick={() => handleStartCall('video')}
             disabled={ringingFromPeer}
-            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-link transition-all shadow-sm ${
+            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-link transition-all shadow-xs ${
               ringingFromPeer ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
             }`}
             title={ringingFromPeer ? 'Answer the incoming call first' : 'Start Teleconsultation (Video)'}
           >
-            <Video className="w-4.5 h-4.5 fill-current" />
+            <Video className="w-4 h-4 text-link stroke-[2.2]" />
           </button>
 
           <button
             type="button"
             onClick={() => setShowProfilePanel(prev => !prev)}
-            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-sm ${
-              showProfilePanel ? 'neu-pressed text-link ring-2 ring-primary/20' : 'text-slate-700 dark:text-slate-200 hover:text-link'
+            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-xs ${
+              showProfilePanel
+                ? 'neu-pressed text-link border border-primary/40'
+                : 'text-slate-700 dark:text-slate-200 hover:text-link'
             }`}
-            title={showProfilePanel ? "Hide Profile" : "View Profile"}
+            title={showProfilePanel ? 'Hide Information' : 'Conversation Information'}
           >
-            <User className="w-4 h-4 stroke-[2.2]" />
+            <Info className="w-4 h-4 stroke-[2.2]" />
           </button>
         </div>
       </div>
 
-      {/* Chat Body: Left Feed + Right Profile Panel */}
+      {/* Chat Body: Left Feed + Right Slide-Over Dossier (Desktop) / Bottom Sheet (Mobile) */}
       <div className="flex-1 flex flex-row min-h-0 overflow-hidden relative">
         {/* Left Column: Messages Feed + Composer */}
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
@@ -1340,314 +1346,321 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             onScroll={handleScroll}
             className="flex-1 overflow-y-auto bg-slate-50/40 dark:bg-slate-900/40 min-h-0"
           >
-        <div className="px-4 md:px-6 py-4">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-24 text-tertiary">
-              <Loader2 className="w-8 h-8 text-link animate-spin mb-2" />
-              <p className="text-xs font-semibold">Loading messages...</p>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="text-center text-tertiary dark:text-tertiary mt-16">
-              <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl">
-                <span>👋</span>
-              </div>
-              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Say hello to start the conversation!</p>
-              <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">Feel free to discuss details regarding your appointment.</p>
-            </div>
-          ) : (
-            <>
-              {(() => {
-                return messages.map((msg, idx) => {
-                const isMe = msg.sender_id === currentUser.id;
-                const prevMsg = messages[idx - 1];
-                const nextMsg = messages[idx + 1];
-                const showAvatar = !prevMsg || prevMsg.sender_id !== msg.sender_id;
-                const showDate = !prevMsg || new Date(msg.created_at).toDateString() !== new Date(prevMsg.created_at).toDateString();
-                const showTime = shouldShowTimestamp(msg, nextMsg);
-                const isHighlighted = highlightedMessageId === msg.id;
+            <div className="px-4 md:px-6 py-4">
+              {loading ? (
+                <div className="flex flex-col items-center justify-center py-24 text-tertiary">
+                  <Loader2 className="w-8 h-8 text-link animate-spin mb-2" />
+                  <p className="text-xs font-semibold">Loading messages...</p>
+                </div>
+              ) : messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-16 px-4">
+                  <div className="neu-flat w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 text-link">
+                    <MessageSquare className="w-7 h-7" />
+                  </div>
+                  <h4 className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100">
+                    Start Direct Consultation
+                  </h4>
+                  <p className="text-xs text-tertiary dark:text-tertiary max-w-xs mt-1 leading-relaxed">
+                    Send a message, share care instructions, or launch a voice or video session with {otherUser.name}.
+                  </p>
+                  <div className="mt-4 px-3 py-1.5 rounded-lg neu-flat-sm border border-slate-200/80 dark:border-white/10 text-3xs font-extrabold uppercase tracking-wider text-tertiary">
+                    Messages automatically expire after 24 hours
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg, idx) => {
+                    const isMe = msg.sender_id === currentUser.id;
+                    const prevMsg = messages[idx - 1];
+                    const nextMsg = messages[idx + 1];
+                    const showAvatar = !prevMsg || prevMsg.sender_id !== msg.sender_id;
+                    const showDate = !prevMsg || new Date(msg.created_at).toDateString() !== new Date(prevMsg.created_at).toDateString();
+                    const showTime = shouldShowTimestamp(msg, nextMsg);
+                    const isHighlighted = highlightedMessageId === msg.id;
 
-                return (
-                  <React.Fragment key={msg.id}>
-                    {showDate && (
-                      <div className="flex justify-center my-4">
-                        <span className="neu-flat-sm text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary px-3.5 py-1 rounded-full">
-                          {formatDateLabel(msg.created_at)}
-                        </span>
-                      </div>
-                    )}
-                    <motion.div
-                      id={`msg-${msg.id}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4 sm:mt-5' : 'mt-2 sm:mt-2.5'} transition-all duration-300 rounded-2xl ${
-                        isHighlighted ? 'ring-4 ring-primary/60 bg-primary/10 p-1.5 -m-1.5 shadow-lg' : ''
-                      }`}
-                    >
-                      {!isMe && (
-                        <div className={`neu-flat-sm w-8 h-8 rounded-xl overflow-hidden shrink-0 mr-2.5 self-end p-0.5 ${showAvatar ? '' : 'invisible'}`}>
-                          {otherUser.photoUrl ? (
-                            <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-link font-black text-xs">
-                              {otherUser.name?.[0] || '?'}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      <div className={`max-w-[80%] md:max-w-[65%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                        <div className={`px-4 py-2.5 relative ${
-                          isMe
-                            ? 'neu-btn-primary rounded-2xl rounded-br-sm shadow-md'
-                            : 'neu-flat rounded-2xl rounded-bl-sm text-slate-800 dark:text-slate-100 font-medium'
-                        }`}>
-                          {(() => {
-                            const isImage = msg.message_type === 'image' || (msg.content && /\.(jpg|jpeg|png|webp|gif|heic)(\?.*)?$/i.test(msg.content.split('\n')[0]));
-                            const isVideo = msg.message_type === 'video' || (msg.content && /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(msg.content.split('\n')[0]));
-                            if (isImage || isVideo) {
-                              const lines = (msg.content || '').split('\n');
-                              const ref = lines[0];
-                              const mediaUrl = /^https?:/i.test(ref) ? ref : mediaUrls[ref];
-                              const caption = lines.slice(1).join('\n').trim();
-                              if (!mediaUrl) {
-                                return (
-                                  <div className="space-y-2 max-w-sm">
-                                    <div className="w-56 h-32 rounded-xl neu-inset flex items-center justify-center">
-                                      <Loader2 className="w-5 h-5 animate-spin text-link" />
-                                    </div>
-                                    {caption && (
-                                      <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
-                                        {renderHighlightedText(caption, searchMessageTerm)}
-                                      </p>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              if (mediaUrl === 'ERROR') {
-                                return (
-                                  <div className="space-y-2 max-w-sm">
-                                    <div className="w-56 h-32 rounded-xl neu-inset flex flex-col items-center justify-center p-3 text-center text-xs text-tertiary">
-                                      <AlertCircle className="w-5 h-5 text-danger mb-1" />
-                                      <span>Failed to load media</span>
-                                    </div>
-                                    {caption && (
-                                      <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
-                                        {renderHighlightedText(caption, searchMessageTerm)}
-                                      </p>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              return (
-                                <div className="space-y-2 max-w-sm">
-                                  {isImage ? (
-                                    <div
-                                      onClick={() => setLightboxMedia({ url: mediaUrl, type: 'image' })}
-                                      className="rounded-xl overflow-hidden cursor-pointer relative group bg-black/10 border border-white/20 shadow-sm"
-                                    >
-                                      <img
-                                        src={mediaUrl}
-                                        alt="Attachment"
-                                        className="w-full max-h-64 object-cover group-hover:scale-102 transition-transform duration-200"
-                                        loading="lazy"
-                                      />
-                                      <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
-                                        <Maximize2 className="w-4 h-4" />
-                                        <span>Click to view</span>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="rounded-xl overflow-hidden bg-black border border-white/20 shadow-sm">
-                                      <video
-                                        src={mediaUrl}
-                                        controls
-                                        playsInline
-                                        preload="metadata"
-                                        className="w-full max-h-64 object-contain"
-                                      />
-                                    </div>
-                                  )}
-                                  {caption && (
-                                    <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
-                                      {renderHighlightedText(caption, searchMessageTerm)}
-                                    </p>
-                                  )}
-                                </div>
-                              );
-                            }
-                            return <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{renderHighlightedText(msg.content, searchMessageTerm)}</p>;
-                          })()}
-                          {isCallMessage(msg) && (
-                            <CallBubbleAction
-                              msg={msg}
-                              record={msg.call_id ? callRecordsById[msg.call_id] : null}
-                              isMe={isMe}
-                              onJoin={() => {
-                                if (msg.call_id) {
-                                  activeCallIdRef.current = msg.call_id;
-                                  markActiveCall(msg.call_id);
-                                  callConnectedRef.current = false;
-                                } else {
-                                  // Legacy bubble: never write onto the previous call's record.
-                                  activeCallIdRef.current = null;
-                                  markActiveCall(null);
-                                }
-                                rtcJoinCall(
-                                  callTypeOf(msg, callRecordsById[msg.call_id]),
-                                  msg.call_id || null,
-                                );
-                              }}
-                            />
-                          )}
-                        </div>
-                        {showTime && (
-                          <div className="flex items-center gap-1.5 mt-1.5 px-1">
-                            <span className="text-xs text-tertiary dark:text-tertiary font-semibold tabular-nums">
-                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    return (
+                      <React.Fragment key={msg.id}>
+                        {showDate && (
+                          <div className="flex justify-center my-4">
+                            <span className="neu-flat-sm text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary px-3 py-1 rounded-lg">
+                              {formatDateLabel(msg.created_at)}
                             </span>
-                            {isMe && (
-                              <span className="text-tertiary dark:text-tertiary">{statusIcon(msg)}</span>
-                            )}
                           </div>
                         )}
-                      </div>
-                    </motion.div>
-                  </React.Fragment>
-                );
-              });
-              })()}
+                        <motion.div
+                          id={`msg-${msg.id}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showAvatar ? 'mt-4 sm:mt-5' : 'mt-2 sm:mt-2.5'} transition-all duration-300 rounded-2xl ${
+                            isHighlighted ? 'ring-4 ring-primary/60 bg-primary/10 p-1.5 -m-1.5 shadow-lg' : ''
+                          }`}
+                        >
+                          {!isMe && (
+                            <div className={`neu-flat-sm w-8 h-8 rounded-xl overflow-hidden shrink-0 mr-2.5 self-end p-0.5 ${showAvatar ? '' : 'invisible'}`}>
+                              {otherUser.photoUrl ? (
+                                <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-link font-black text-xs">
+                                  {otherUser.name?.[0] || '?'}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className={`max-w-[82%] md:max-w-[68%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                            <div className={`px-4 py-2.5 relative ${
+                              isMe
+                                ? 'neu-btn-primary rounded-2xl rounded-br-sm shadow-md'
+                                : 'neu-flat rounded-2xl rounded-bl-sm text-slate-800 dark:text-slate-100 font-medium'
+                            }`}>
+                              {(() => {
+                                const isImage = msg.message_type === 'image' || (msg.content && /\.(jpg|jpeg|png|webp|gif|heic)(\?.*)?$/i.test(msg.content.split('\n')[0]));
+                                const isVideo = msg.message_type === 'video' || (msg.content && /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(msg.content.split('\n')[0]));
+                                if (isImage || isVideo) {
+                                  const lines = (msg.content || '').split('\n');
+                                  const ref = lines[0];
+                                  const mediaUrl = /^https?:/i.test(ref) ? ref : mediaUrls[ref];
+                                  const caption = lines.slice(1).join('\n').trim();
+                                  if (!mediaUrl) {
+                                    return (
+                                      <div className="space-y-2 max-w-sm">
+                                        <div className="w-56 h-32 rounded-xl neu-inset flex items-center justify-center">
+                                          <Loader2 className="w-5 h-5 animate-spin text-link" />
+                                        </div>
+                                        {caption && (
+                                          <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
+                                            {renderHighlightedText(caption, searchMessageTerm)}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  if (mediaUrl === 'ERROR') {
+                                    return (
+                                      <div className="space-y-2 max-w-sm">
+                                        <div className="w-56 h-32 rounded-xl neu-inset flex flex-col items-center justify-center p-3 text-center text-xs text-tertiary">
+                                          <AlertCircle className="w-5 h-5 text-danger mb-1" />
+                                          <span>Failed to load media</span>
+                                        </div>
+                                        {caption && (
+                                          <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
+                                            {renderHighlightedText(caption, searchMessageTerm)}
+                                          </p>
+                                        )}
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <div className="space-y-2 max-w-sm">
+                                      {isImage ? (
+                                        <div
+                                          onClick={() => setLightboxMedia({ url: mediaUrl, type: 'image' })}
+                                          className="rounded-xl overflow-hidden cursor-pointer relative group bg-black/10 border border-white/20 shadow-sm"
+                                        >
+                                          <img
+                                            src={mediaUrl}
+                                            alt="Attachment"
+                                            className="w-full max-h-64 object-cover group-hover:scale-102 transition-transform duration-200"
+                                            loading="lazy"
+                                          />
+                                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                                            <Maximize2 className="w-4 h-4" />
+                                            <span>Click to view</span>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="rounded-xl overflow-hidden bg-black border border-white/20 shadow-sm">
+                                          <video
+                                            src={mediaUrl}
+                                            controls
+                                            playsInline
+                                            preload="metadata"
+                                            className="w-full max-h-64 object-contain"
+                                          />
+                                        </div>
+                                      )}
+                                      {caption && (
+                                        <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
+                                          {renderHighlightedText(caption, searchMessageTerm)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                }
+                                const cleanedText = stripLeadingCallMarker(msg.content);
+                                return <p className="text-sm whitespace-pre-wrap leading-relaxed select-text">{renderHighlightedText(cleanedText, searchMessageTerm)}</p>;
+                              })()}
+                              {isCallMessage(msg) && (
+                                <CallBubbleAction
+                                  msg={msg}
+                                  record={msg.call_id ? callRecordsById[msg.call_id] : null}
+                                  isMe={isMe}
+                                  onJoin={() => {
+                                    if (msg.call_id) {
+                                      activeCallIdRef.current = msg.call_id;
+                                      markActiveCall(msg.call_id);
+                                      callConnectedRef.current = false;
+                                    } else {
+                                      activeCallIdRef.current = null;
+                                      markActiveCall(null);
+                                    }
+                                    rtcJoinCall(
+                                      callTypeOf(msg, callRecordsById[msg.call_id]),
+                                      msg.call_id || null,
+                                    );
+                                  }}
+                                />
+                              )}
+                            </div>
+                            {showTime && (
+                              <div className="flex items-center gap-1.5 mt-1.5 px-1">
+                                <span className="text-xs text-tertiary dark:text-tertiary font-semibold tabular-nums">
+                                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                {isMe && (
+                                  <span className="text-tertiary dark:text-tertiary">{statusIcon(msg)}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      </React.Fragment>
+                    );
+                  })}
 
-              {/* 24-Hour Notice */}
-              <div className="flex items-center gap-3 my-6 px-4">
-                <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
-                <span className="text-2xs text-tertiary dark:text-tertiary font-bold uppercase tracking-wider select-none shrink-0">
-                  Messages disappear after 24 hours
-                </span>
-                <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
+                  {/* 24-Hour Notice */}
+                  <div className="flex items-center gap-3 my-6 px-4">
+                    <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
+                    <span className="text-2xs text-tertiary dark:text-tertiary font-bold uppercase tracking-wider select-none shrink-0">
+                      Messages disappear after 24 hours
+                    </span>
+                    <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
+                  </div>
+                </>
+              )}
+
+              {/* Typing Indicator (Squircle bars) */}
+              <AnimatePresence>
+                {isTyping && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                    className="flex justify-start mt-2"
+                  >
+                    <div className="neu-flat-sm w-8 h-8 rounded-xl overflow-hidden mr-2.5 shrink-0 p-0.5">
+                      {otherUser.photoUrl ? (
+                        <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-link font-black text-xs">
+                          {otherUser.name?.[0] || '?'}
+                        </div>
+                      )}
+                    </div>
+                    <div className="neu-flat rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
+                      <motion.div className="w-1.5 h-1.5 bg-primary rounded-xs" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                      <motion.div className="w-1.5 h-1.5 bg-primary rounded-xs" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
+                      <motion.div className="w-1.5 h-1.5 bg-primary rounded-xs" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Scroll-to-bottom button */}
+            {isScrolledUp && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                onClick={scrollToBottom}
+                className="fixed bottom-20 right-6 neu-btn w-10 h-10 rounded-xl flex items-center justify-center z-30 cursor-pointer"
+              >
+                <svg className="w-5 h-5 text-tertiary dark:text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </motion.button>
+            )}
+          </div>
+
+          {/* Attachment Preview Bar */}
+          {selectedAttachment && (
+            <div className="px-4 py-2 neu-inset border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center gap-3 min-w-0">
+                {selectedAttachment.type === 'image' ? (
+                  <img src={selectedAttachment.previewUrl} alt="" className="w-10 h-10 rounded-xl object-cover border border-primary/30 shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                    <Video className="w-4 h-4 text-link" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{selectedAttachment.name}</p>
+                  <p className="text-2xs text-link font-semibold">{selectedAttachment.size} MB &bull; Ready to send</p>
+                </div>
               </div>
-            </>
+              <button
+                type="button"
+                onClick={handleRemoveAttachment}
+                className="neu-btn w-7 h-7 rounded-xl flex items-center justify-center text-tertiary hover:text-danger transition-colors cursor-pointer shrink-0"
+                title="Remove attachment"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
 
-          {/* Typing Indicator */}
-          <AnimatePresence>
-            {isTyping && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                className="flex justify-start mt-2"
+          {/* Bottom Composer Bar (Option 1) */}
+          <div
+            className="p-3 sm:p-3.5 neu-flat border-t border-slate-200/80 dark:border-white/10 shrink-0"
+            style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
+          >
+            <form onSubmit={handleSend} className="flex gap-2 max-w-4xl mx-auto items-center">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept="image/*,video/*"
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingAttachment}
+                className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center transition-all shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 hover:text-link"
+                title="Attach photo or video"
               >
-                <div className="neu-flat-sm w-8 h-8 rounded-xl overflow-hidden mr-2.5 shrink-0 p-0.5">
-                  {otherUser.photoUrl ? (
-                    <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-link font-black text-xs">
-                      {otherUser.name?.[0] || '?'}
-                    </div>
-                  )}
-                </div>
-                <div className="neu-flat rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-1.5">
-                  <motion.div className="w-1.5 h-1.5 bg-primary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
-                  <motion.div className="w-1.5 h-1.5 bg-primary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }} />
-                  <motion.div className="w-1.5 h-1.5 bg-primary rounded-full" animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }} />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Scroll-to-bottom button */}
-        {isScrolledUp && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            onClick={scrollToBottom}
-            className="fixed bottom-20 right-6 neu-btn w-10 h-10 rounded-full flex items-center justify-center z-30 cursor-pointer"
-          >
-            <svg className="w-5 h-5 text-tertiary dark:text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-            </svg>
-          </motion.button>
-        )}
-      </div>
-
-      {/* Attachment Preview Bar */}
-      {selectedAttachment && (
-        <div className="px-4 py-2 neu-inset border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            {selectedAttachment.type === 'image' ? (
-              <img src={selectedAttachment.previewUrl} alt="" className="w-10 h-10 rounded-xl object-cover border border-primary/30 shrink-0" />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                🎬
+                <Paperclip className="w-4 h-4 stroke-[2.2]" />
+              </button>
+              <div className="neu-inset flex-1 flex items-center rounded-xl px-3.5 h-10 sm:h-11 transition-all">
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={handleTyping}
+                  placeholder={selectedAttachment ? 'Add an optional caption...' : `Write a message to ${otherUser.name}...`}
+                  className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
+                />
               </div>
-            )}
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{selectedAttachment.name}</p>
-              <p className="text-2xs text-link font-semibold">{selectedAttachment.size} MB &bull; Ready to send</p>
-            </div>
+              <button
+                type="submit"
+                disabled={(!newMessage.trim() && !selectedAttachment) || uploadingAttachment}
+                className="neu-btn-primary px-3.5 sm:px-4 h-10 sm:h-11 rounded-xl flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none shrink-0 cursor-pointer shadow-md text-xs font-black"
+                title="Send Message"
+              >
+                {uploadingAttachment ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Send</span>
+                    <Send className="w-3.5 h-3.5" />
+                  </>
+                )}
+              </button>
+            </form>
           </div>
-          <button
-            type="button"
-            onClick={handleRemoveAttachment}
-            className="neu-btn w-7 h-7 rounded-xl flex items-center justify-center text-tertiary hover:text-danger transition-colors cursor-pointer shrink-0"
-            title="Remove attachment"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* Input Area */}
-      <div 
-        className="p-3 sm:p-4 neu-flat border-t border-white/60 dark:border-white/5 shrink-0"
-        style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom, 0px))' }}
-      >
-        <form onSubmit={handleSend} className="flex gap-2 sm:gap-2.5 max-w-4xl mx-auto items-center">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileSelect}
-            accept="image/*,video/*"
-            className="hidden"
-          />
-          <div className="neu-inset flex-1 flex items-center rounded-2xl px-3.5 sm:px-4 h-[46px] sm:h-[50px] transition-all">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={handleTyping}
-              placeholder={selectedAttachment ? 'Add an optional caption...' : 'Type a message...'}
-              className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploadingAttachment}
-            className="neu-btn w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-2xl flex items-center justify-center transition-all shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 hover:text-link"
-            title="Attach photo or video"
-          >
-            <Paperclip className="w-4 h-4 stroke-[2.2]" />
-          </button>
-          <button
-            type="submit"
-            disabled={(!newMessage.trim() && !selectedAttachment) || uploadingAttachment}
-            className="neu-btn-primary w-[46px] h-[46px] sm:w-[50px] sm:h-[50px] rounded-2xl flex items-center justify-center transition-all disabled:opacity-40 disabled:pointer-events-none shrink-0 cursor-pointer shadow-md"
-            title="Send Message"
-          >
-            {uploadingAttachment ? (
-              <Loader2 className="w-4 h-4 animate-spin text-white" />
-            ) : (
-              <Send className="w-4 h-4 ml-0.5" />
-            )}
-          </button>
-        </form>
-      </div>
-
         </div>
 
-        {/* Right Column: Details Dossier (Search in Convo + Consent Access + Shared Media) */}
+        {/* Option 1 Dossier: Desktop Slide-Over Sidebar & Mobile Slide-Up Bottom Sheet */}
         <AnimatePresence>
           {showProfilePanel && (() => {
             const sharedMedia = messages.filter(m =>
@@ -1655,137 +1668,124 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               m.message_type === 'video' ||
               (m.content && /\.(jpg|jpeg|png|webp|gif|heic|mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(m.content.split('\n')[0]))
             );
+            const partnerOnline = isUserOnline(otherUser.id);
+            const profilePath =
+              (currentUser?.role || authUser?.role) === 'provider'
+                ? `/provider/patients/${otherUser.id}/profile`
+                : `/patient/providers/${otherUser.id}/profile`;
 
-            return (
-              <motion.aside
-                initial={isMobileScreen ? { opacity: 0, y: 20 } : { width: 0, opacity: 0 }}
-                animate={isMobileScreen ? { opacity: 1, y: 0 } : { width: 300, opacity: 1 }}
-                exit={isMobileScreen ? { opacity: 0, y: 20 } : { width: 0, opacity: 0 }}
-                transition={{ duration: 0.22, ease: 'easeInOut' }}
-                className={
-                  isMobileScreen
-                    ? "fixed inset-0 z-[70] bg-surface-shell flex flex-col h-[100dvh] w-screen overflow-hidden select-text"
-                    : "w-72 sm:w-80 border-l border-slate-200/80 dark:border-white/10 bg-surface-shell/50 flex flex-col h-full overflow-hidden shrink-0 z-10 select-text"
-                }
-              >
-                {/* Mobile-only Fullscreen Header */}
-                {isMobileScreen && (
-                  <div className="flex items-center gap-3 p-3.5 border-b border-slate-200/80 dark:border-white/10 bg-surface-shell shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setShowProfilePanel(false)}
-                      className="neu-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-link cursor-pointer shadow-sm"
-                      title="Back to Chat"
-                    >
-                      <ArrowLeft className="w-5 h-5 text-link" />
-                    </button>
-                    <span className="text-sm font-black text-slate-800 dark:text-white">Profile & Details</span>
-                  </div>
-                )}
-
-                {/* Scrollable details */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {/* Avatar & Name */}
-                  <div className="text-center pb-2 border-b border-slate-200/60 dark:border-white/5 space-y-1.5">
-                    <div className="neu-flat-sm w-16 h-16 rounded-2xl mx-auto overflow-hidden p-0.5 flex items-center justify-center">
+            const dossierBody = (
+              <div className="space-y-4">
+                {/* Compact Identity Card */}
+                <div className="neu-flat-sm p-3 rounded-xl flex items-center justify-between gap-3 border border-slate-200/80 dark:border-white/10">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-11 h-11 rounded-xl overflow-hidden p-0.5 flex items-center justify-center bg-slate-100 dark:bg-slate-800 shrink-0">
                       {otherUser.photoUrl ? (
-                        <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-xl" />
+                        <img src={otherUser.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                       ) : (
-                        <UserCircle className="w-12 h-12 text-link" />
+                        <UserCircle className="w-8 h-8 text-link" />
                       )}
                     </div>
-                    <div>
-                      <h4 className="font-display font-black text-sm sm:text-base text-slate-900 dark:text-white leading-tight">
+                    <div className="min-w-0">
+                      <h4 className="font-display font-black text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                         {otherUser.name}
                       </h4>
-                      <p className="text-2xs text-tertiary mt-0.5 font-medium">
+                      <p className="text-2xs text-tertiary font-semibold truncate">
                         {partnerProfile?.role ? (partnerProfile.role === 'provider' ? 'Healthcare Provider' : 'Patient') : 'Healthcare Contact'}
                       </p>
                     </div>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full neu-flat-sm text-3xs font-bold text-success">
-                      <span className={`w-2 h-2 rounded-full ${isUserOnline(otherUser.id) ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                      <span>{isUserOnline(otherUser.id) ? 'Active now' : 'Offline'}</span>
-                    </div>
                   </div>
+                  <span
+                    className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 border ${
+                      partnerOnline
+                        ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-slate-200/70 dark:bg-slate-800 border-slate-300/80 dark:border-white/10 text-tertiary'
+                    }`}
+                  >
+                    {partnerOnline ? 'Online' : 'Offline'}
+                  </span>
+                </div>
 
-                  {/* 1. SEARCH IN CONVERSATION (AT THE TOP) */}
-                  <div className="space-y-1.5">
-                    <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Search in conversation</span>
-                    <div className="neu-inset p-1.5 rounded-xl flex items-center gap-2 h-9">
-                      <Search className="w-3.5 h-3.5 text-link ml-1.5 shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="Search messages..."
-                        value={searchMessageTerm}
-                        onChange={(e) => setSearchMessageTerm(e.target.value)}
-                        className="w-full bg-transparent border-0 px-1 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none placeholder:text-tertiary"
-                      />
-                      {searchMessageTerm && (
-                        <button
-                          type="button"
-                          onClick={() => setSearchMessageTerm('')}
-                          className="text-xs text-tertiary hover:text-danger pr-1.5 cursor-pointer font-bold"
-                          title="Clear search"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-
-                    {/* OPTION 2: MATCHING MESSAGES RESULTS LIST */}
-                    {searchMessageTerm.trim() && (
-                      <div className="space-y-1 pt-1">
-                        <div className="flex items-center justify-between px-0.5">
-                          <span className="text-3xs font-black uppercase tracking-wider text-tertiary">
-                            Matching Results
-                          </span>
-                          <span className="text-3xs font-black px-1.5 py-0.2 rounded-md bg-link/15 text-link">
-                            {searchResults.length} {searchResults.length === 1 ? 'match' : 'matches'}
-                          </span>
-                        </div>
-                        {searchResults.length === 0 ? (
-                          <div className="neu-flat p-2.5 rounded-xl text-center text-2xs text-tertiary font-medium">
-                            No messages match &ldquo;{searchMessageTerm}&rdquo;
-                          </div>
-                        ) : (
-                          <div className="max-h-52 overflow-y-auto space-y-1.5 pr-0.5">
-                            {searchResults.map((msg) => {
-                              const isMe = msg.sender_id === currentUser?.id;
-                              const timeStr = new Date(msg.created_at).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              });
-                              return (
-                                <button
-                                  key={msg.id}
-                                  type="button"
-                                  onClick={() => handleJumpToMessage(msg.id)}
-                                  className="w-full text-left p-2 rounded-xl neu-btn hover:border-link/40 transition-all cursor-pointer flex flex-col gap-0.5 group shadow-sm"
-                                  title="Click to jump to this message in chat"
-                                >
-                                  <div className="flex items-center justify-between text-3xs w-full">
-                                    <span className="font-extrabold text-link">
-                                      {isMe ? 'You' : otherUser.name}
-                                    </span>
-                                    <span className="text-tertiary font-semibold">{timeStr}</span>
-                                  </div>
-                                  <p className="text-2xs text-slate-700 dark:text-slate-200 line-clamp-2 leading-tight">
-                                    {renderHighlightedText(msg.content || '', searchMessageTerm)}
-                                  </p>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                {/* 1. SEARCH IN THREAD */}
+                <div className="space-y-1.5">
+                  <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary block">
+                    Search in Thread
+                  </span>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      placeholder="Find message in conversation..."
+                      value={searchMessageTerm}
+                      onChange={(e) => setSearchMessageTerm(e.target.value)}
+                      className="w-full neu-inset rounded-xl pl-9 pr-8 h-9 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none placeholder:text-tertiary"
+                    />
+                    <Search className="w-3.5 h-3.5 text-primary absolute left-3 z-10 pointer-events-none shrink-0" />
+                    {searchMessageTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchMessageTerm('')}
+                        className="absolute right-2 z-10 text-tertiary hover:text-danger p-1 rounded-lg cursor-pointer"
+                        title="Clear search"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     )}
                   </div>
 
-                  {/* 2. ON/OFF CONSENT ACCESS TOGGLE BUTTON (patient only) */}
-                  {isPatientView && (
+                  {/* MATCHING MESSAGES RESULTS LIST */}
+                  {searchMessageTerm.trim() && (
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between px-0.5">
+                        <span className="text-3xs font-black uppercase tracking-wider text-tertiary">
+                          Matching Results
+                        </span>
+                        <span className="text-3xs font-black px-1.5 py-0.5 rounded-md bg-link/15 text-link">
+                          {searchResults.length} {searchResults.length === 1 ? 'match' : 'matches'}
+                        </span>
+                      </div>
+                      {searchResults.length === 0 ? (
+                        <div className="neu-flat p-2.5 rounded-xl text-center text-2xs text-tertiary font-medium">
+                          No messages match &ldquo;{searchMessageTerm}&rdquo;
+                        </div>
+                      ) : (
+                        <div className="max-h-44 overflow-y-auto space-y-1.5 pr-0.5">
+                          {searchResults.map((msg) => {
+                            const isMe = msg.sender_id === currentUser?.id;
+                            const timeStr = new Date(msg.created_at).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            });
+                            return (
+                              <button
+                                key={msg.id}
+                                type="button"
+                                onClick={() => handleJumpToMessage(msg.id)}
+                                className="w-full text-left p-2 rounded-xl neu-btn hover:border-link/40 transition-all cursor-pointer flex flex-col gap-0.5 group shadow-xs"
+                                title="Click to jump to this message in chat"
+                              >
+                                <div className="flex items-center justify-between text-3xs w-full">
+                                  <span className="font-extrabold text-link">
+                                    {isMe ? 'You' : otherUser.name}
+                                  </span>
+                                  <span className="text-tertiary font-semibold">{timeStr}</span>
+                                </div>
+                                <p className="text-2xs text-slate-700 dark:text-slate-200 line-clamp-2 leading-tight">
+                                  {renderHighlightedText(stripLeadingCallMarker(msg.content || ''), searchMessageTerm)}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. ON/OFF CONSENT ACCESS TOGGLE BUTTON (patient only, Squircle Switch) */}
+                {isPatientView && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Legal & Consent</span>
+                      <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Legal &amp; Consent</span>
                       <span className={`text-3xs font-black uppercase tracking-wider ${consentEnabled ? 'text-emerald-600' : 'text-slate-400 dark:text-slate-500'}`}>
                         {consentEnabled ? 'Active' : 'Revoked'}
                       </span>
@@ -1793,7 +1793,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     <button
                       type="button"
                       onClick={handleToggleConsent}
-                      className={`w-full py-2 px-3 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-sm border ${
+                      className={`w-full py-2 px-3 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-xs border ${
                         consentEnabled
                           ? 'neu-flat border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
                           : 'neu-pressed border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400'
@@ -1801,95 +1801,171 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       title={consentEnabled ? 'Click to revoke consent access' : 'Click to grant consent access'}
                     >
                       <span className="text-xs font-black">Consent Access</span>
-                      <div className={`w-10 h-5.5 flex items-center rounded-full p-0.5 transition-colors duration-200 ${
+                      <div className={`w-10 h-5 flex items-center rounded-lg p-0.5 transition-colors duration-200 ${
                         consentEnabled ? 'bg-emerald-500 justify-end' : 'bg-slate-300 dark:bg-slate-600 justify-start'
                       }`}>
-                        <div className="w-4 h-4 bg-white rounded-full shadow-md" />
+                        <div className="w-4 h-4 bg-white rounded-md shadow-xs" />
                       </div>
                     </button>
                   </div>
-                  )}
+                )}
 
-                  {/* 3. ACTIVE APPOINTMENT IF ANY */}
-                  {activeRequest && (
-                    <div className="space-y-1.5">
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Current Visit</span>
-                      <div className="neu-flat p-3 rounded-xl space-y-1 text-xs">
-                        <p className="font-extrabold text-slate-800 dark:text-slate-100">{activeRequest.service_type || 'Care Visit'}</p>
-                        <p className="text-2xs text-link font-semibold">Status: {activeRequest.status}</p>
-                        {activeRequest.scheduled_date && (
-                          <p className="text-3xs text-tertiary">
-                            {activeRequest.scheduled_date} {activeRequest.scheduled_time ? `• ${activeRequest.scheduled_time}` : ''}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 4. SHARED MEDIA & FILES */}
+                {/* 3. ACTIVE APPOINTMENT IF ANY */}
+                {activeRequest && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Shared Media & Files</span>
-                      <span className="text-3xs font-extrabold text-link">{sharedMedia.length} Items</span>
+                    <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary block">Current Visit</span>
+                    <div className="neu-flat p-3 rounded-xl space-y-1 text-xs border border-slate-200/80 dark:border-white/10">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-extrabold text-slate-800 dark:text-slate-100 truncate">
+                          {activeRequest.service || 'Care Visit'}
+                        </p>
+                        <span className="px-1.5 py-0.5 rounded-md bg-link/15 text-link text-[9px] font-black uppercase shrink-0">
+                          {activeRequest.status}
+                        </span>
+                      </div>
+                      {activeRequest.date && (
+                        <p className="text-2xs text-tertiary font-semibold">
+                          {activeRequest.date} {activeRequest.time ? `\u2022 ${activeRequest.time}` : ''}
+                        </p>
+                      )}
                     </div>
-                    {sharedMedia.length === 0 ? (
-                      <div className="neu-flat p-3 rounded-xl text-center text-3xs text-tertiary font-medium">
-                        No photos or videos shared yet
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {sharedMedia.slice(0, 9).map((m, idx) => {
-                          const ref = (m.content || '').split('\n')[0]?.trim();
-                          const mediaUrl = /^https?:/i.test(ref) ? ref : mediaUrls[ref];
-                          const isVid = m.message_type === 'video' || /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(ref);
-                          const isError = mediaUrl === 'ERROR';
-                          return (
-                            <div
-                              key={m.id || idx}
-                              onClick={() => mediaUrl && !isError && setLightboxMedia({ url: mediaUrl, type: isVid ? 'video' : 'image' })}
-                              className="aspect-square rounded-xl overflow-hidden bg-black/10 border border-slate-200/80 dark:border-white/10 cursor-pointer relative group flex items-center justify-center"
-                            >
-                              {isVid ? (
-                                <div className="w-full h-full bg-slate-900 text-white flex items-center justify-center text-xs">
-                                  🎬
-                                </div>
-                              ) : mediaUrl && !isError ? (
-                                <img
-                                  src={mediaUrl}
-                                  alt="Shared media"
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                  loading="lazy"
-                                />
-                              ) : isError ? (
-                                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-danger text-xs font-bold">
-                                  ⚠️
-                                </div>
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
-                                  <Loader2 className="w-4 h-4 animate-spin text-link" />
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
+                )}
 
-                  {/* 5. VIEW FULL PROFILE */}
-                  <div className="pt-1">
-                    <Link
-                      to={
-                        (currentUser?.role || authUser?.role) === 'provider'
-                          ? `/provider/patients/${otherUser.id}/profile`
-                          : `/patient/providers/${otherUser.id}/profile`
-                      }
-                      className="neu-btn w-full py-2.5 px-3 rounded-xl text-xs font-extrabold text-link hover:text-primary-700 flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
-                    >
-                      <span>View Full Profile</span>
-                      <span>&rarr;</span>
-                    </Link>
+                {/* 4. SHARED MEDIA & FILES */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Shared Media</span>
+                    <span className="px-1.5 py-0.5 rounded-md bg-link/15 text-link text-3xs font-black">
+                      {sharedMedia.length} {sharedMedia.length === 1 ? 'Item' : 'Items'}
+                    </span>
                   </div>
+                  {sharedMedia.length === 0 ? (
+                    <div className="neu-inset p-3 rounded-xl text-center text-2xs text-tertiary font-semibold">
+                      No photos or videos shared yet
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {sharedMedia.slice(0, 9).map((m, idx) => {
+                        const ref = (m.content || '').split('\n')[0]?.trim();
+                        const mediaUrl = /^https?:/i.test(ref) ? ref : mediaUrls[ref];
+                        const isVid = m.message_type === 'video' || /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(ref);
+                        const isError = mediaUrl === 'ERROR';
+                        return (
+                          <div
+                            key={m.id || idx}
+                            onClick={() => mediaUrl && !isError && setLightboxMedia({ url: mediaUrl, type: isVid ? 'video' : 'image' })}
+                            className="aspect-square rounded-xl overflow-hidden bg-black/10 border border-slate-200/80 dark:border-white/10 cursor-pointer relative group flex items-center justify-center"
+                          >
+                            {isVid ? (
+                              <div className="w-full h-full bg-slate-900 text-white flex items-center justify-center">
+                                <Video className="w-4 h-4 text-link" />
+                              </div>
+                            ) : mediaUrl && !isError ? (
+                              <img
+                                src={mediaUrl}
+                                alt="Shared media"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                loading="lazy"
+                              />
+                            ) : isError ? (
+                              <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-danger">
+                                <AlertCircle className="w-4 h-4" />
+                              </div>
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
+                                <Loader2 className="w-4 h-4 animate-spin text-link" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+
+            if (isMobileScreen) {
+              return (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={() => setShowProfilePanel(false)}
+                  className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-xs flex flex-col justify-end select-text"
+                >
+                  <motion.div
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-h-[82dvh] bg-surface-shell rounded-t-2xl border-t-2 border-primary/40 shadow-2xl flex flex-col overflow-hidden"
+                    style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
+                  >
+                    <div className="pt-2.5 pb-1 flex justify-center shrink-0">
+                      <div className="w-10 h-1 rounded-xs bg-slate-400/50 dark:bg-slate-600" />
+                    </div>
+                    <div className="px-4 py-2.5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0">
+                      <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
+                        Conversation Info
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowProfilePanel(false)}
+                        className="neu-btn px-2.5 py-1 rounded-lg text-2xs font-black text-slate-700 dark:text-slate-200 hover:text-danger cursor-pointer"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <div className="p-4 overflow-y-auto space-y-4 flex-1">
+                      {dossierBody}
+                      <Link
+                        to={profilePath}
+                        className="neu-btn-primary w-full py-2.5 px-3 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
+                      >
+                        <span>View Full Profile</span>
+                        <span>&rarr;</span>
+                      </Link>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              );
+            }
+
+            return (
+              <motion.aside
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 300, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className="w-72 sm:w-80 border-l border-slate-200/80 dark:border-white/10 bg-surface-shell/60 flex flex-col justify-between h-full overflow-hidden shrink-0 z-10 select-text"
+              >
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-white/10 pb-2.5">
+                    <span className="text-2xs font-black uppercase tracking-wider text-tertiary">
+                      Conversation Info
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowProfilePanel(false)}
+                      className="neu-btn px-2 py-0.5 rounded-lg text-3xs font-black text-tertiary hover:text-danger cursor-pointer"
+                    >
+                      Hide
+                    </button>
+                  </div>
+                  {dossierBody}
+                </div>
+                <div className="p-4 border-t border-slate-200/80 dark:border-white/10 shrink-0">
+                  <Link
+                    to={profilePath}
+                    className="neu-btn w-full py-2.5 px-3 rounded-xl text-xs font-black text-link hover:text-primary-700 flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                  >
+                    <span>View Full Profile</span>
+                    <span>&rarr;</span>
+                  </Link>
                 </div>
               </motion.aside>
             );

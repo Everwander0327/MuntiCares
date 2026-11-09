@@ -5,6 +5,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  Search,
+  X,
   Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -69,9 +71,12 @@ const getApptHour = (timeStr) => {
   return Math.floor(m / 60);
 };
 
-const formatHourLabel = (h) => {
+const formatHourLabel = (h, compact = false) => {
   const period = h >= 12 ? 'PM' : 'AM';
   const displayH = h % 12 === 0 ? 12 : h % 12;
+  if (compact) {
+    return `${displayH} ${period}`;
+  }
   return `${String(displayH).padStart(2, '0')}:00 ${period}`;
 };
 
@@ -212,6 +217,89 @@ const ProviderSchedule = () => {
     return days;
   }, [selectedDate]);
 
+  // Mobile shows only 4 day cards (selected day sits in the 2nd slot) so they fit without crowding
+  const [isMobileView, setIsMobileView] = useState(
+    typeof window !== 'undefined' ? window.matchMedia('(max-width: 639px)').matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const onChange = (e) => setIsMobileView(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  const mobileDays = useMemo(() => {
+    const base = selectedDate instanceof Date ? selectedDate : parseLocalDate(selectedDate);
+    return [-1, 0, 1, 2].map(offset => {
+      const d = new Date(base);
+      d.setHours(0, 0, 0, 0);
+      d.setDate(base.getDate() + offset);
+      return d;
+    });
+  }, [selectedDate]);
+
+  // Booking search (by patient name, across all current bookings)
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return appointments
+      .filter(a => (a.patient || '').toLowerCase().includes(q))
+      .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`))
+      .slice(0, 6);
+  }, [appointments, searchQuery]);
+
+  const pickSearchResult = (appt) => {
+    setSelectedDate(parseLocalDate(String(appt.date).split('T')[0]));
+    setExpandedAppts(prev => ({ ...prev, [appt.id]: true }));
+    setSearchQuery('');
+  };
+
+  const renderSearchBar = (className = '') => (
+    <div className={`relative ${className}`}>
+      <input
+        type="text"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        placeholder="Search patient"
+        aria-label="Search bookings by patient name"
+        className="neu-inset w-full text-xs font-semibold pl-10 pr-8 py-2 rounded-xl text-slate-700 dark:text-slate-200 placeholder:text-tertiary border border-primary/30 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+      />
+      <Search className="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" strokeWidth={2.5} />
+      {searchQuery && (
+        <button
+          type="button"
+          onClick={() => setSearchQuery('')}
+          className="absolute right-2 top-1/2 -translate-y-1/2 z-10 text-tertiary hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
+          aria-label="Clear search"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+      {searchQuery.trim() && (
+        <div className="absolute z-30 left-0 right-0 sm:right-auto sm:w-80 mt-1.5 neu-flat rounded-xl border border-slate-200/60 dark:border-white/10 shadow-xl p-1.5 min-w-[220px]">
+          {searchResults.length === 0 ? (
+            <p className="text-xs text-tertiary font-semibold px-2.5 py-2">No matching bookings</p>
+          ) : (
+            searchResults.map(a => (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => pickSearchResult(a)}
+                className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-primary/10 transition-colors cursor-pointer"
+              >
+                <span className="block text-xs font-black text-slate-800 dark:text-slate-100 truncate">{a.patient}</span>
+                <span className="block text-2xs text-tertiary font-semibold truncate">
+                  {parseLocalDate(String(a.date).split('T')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {a.timeLabel} - {a.status}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+
   // Appointments for currently selected day
   const selectedAppts = useMemo(() => {
     return appointments
@@ -244,22 +332,6 @@ const ProviderSchedule = () => {
   }, [selectedAppts]);
 
   // Navigation handlers
-  const prevWeek = () => {
-    setSelectedDate(prev => {
-      const d = new Date(prev);
-      d.setDate(prev.getDate() - 7);
-      return d;
-    });
-  };
-
-  const nextWeek = () => {
-    setSelectedDate(prev => {
-      const d = new Date(prev);
-      d.setDate(prev.getDate() + 7);
-      return d;
-    });
-  };
-
   const prevDay = () => {
     setSelectedDate(prev => {
       const d = new Date(prev);
@@ -396,9 +468,10 @@ const ProviderSchedule = () => {
             </p>
           </div>
 
-          {/* Quick Date Actions */}
-          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-            <div className="relative">
+          {/* Quick Date Actions: mobile = search + date; Today button only on desktop */}
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+            {renderSearchBar('flex-1 min-w-0 sm:hidden')}
+            <div className="relative shrink-0">
               <input
                 type="date"
                 value={toLocalDateKey(selectedDate)}
@@ -415,7 +488,7 @@ const ProviderSchedule = () => {
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={goToToday}
-              className={`neu-btn text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-sm ${
+              className={`hidden sm:block neu-btn text-xs font-bold px-3.5 py-2 rounded-xl transition-all cursor-pointer shadow-sm ${
                 isTodaySelected ? 'text-link font-black neu-pressed' : 'text-slate-700 dark:text-slate-200'
               }`}
             >
@@ -431,37 +504,16 @@ const ProviderSchedule = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05, duration: 0.3 }}
         >
-          {/* Week Bar Header */}
+          {/* Week Bar Header (Month and Year, clean without arrow buttons per user request) */}
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <h3 className="font-display font-black text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight">
-                {monthName} {yearNumber}
-              </h3>
-            </div>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={prevWeek}
-                className="neu-btn w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-link transition-all cursor-pointer"
-                title="Previous Week"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={nextWeek}
-                className="neu-btn w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-link transition-all cursor-pointer"
-                title="Next Week"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            <h3 className="font-display font-black text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight">
+              {monthName} {yearNumber}
+            </h3>
           </div>
 
-          {/* 7-Day Horizontal Strip */}
-          <div className="grid grid-cols-7 gap-1.5 sm:gap-2.5 overflow-x-auto pb-1 sm:pb-0">
-            {weekDays.map(day => {
+          {/* 7-Day Horizontal Strip (Spacious on mobile with clean gaps, no ugly scrollbar) */}
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 sm:gap-3 py-1">
+            {(isMobileView ? mobileDays : weekDays).map(day => {
               const dayAppts = appointments.filter(a => isSameDay(a.date, day));
               const hasAppts = dayAppts.length > 0;
               const isSelected = isSameDay(day, selectedDate);
@@ -472,7 +524,7 @@ const ProviderSchedule = () => {
                   key={toLocalDateKey(day)}
                   whileTap={{ scale: 0.94 }}
                   onClick={() => setSelectedDate(day)}
-                  className={`min-w-[46px] p-2 sm:p-3 rounded-xl sm:rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer relative ${
+                  className={`min-w-0 py-2.5 sm:py-3 px-1 sm:px-2 rounded-2xl flex flex-col items-center justify-center text-center transition-all cursor-pointer ${
                     isSelected
                       ? 'bg-primary text-white shadow-lg ring-2 ring-primary/40 font-black'
                       : isDayToday
@@ -487,16 +539,16 @@ const ProviderSchedule = () => {
                   }`}>
                     {DAYS[day.getDay()]}
                   </span>
-                  <span className={`text-sm sm:text-lg font-black block mt-0.5 ${
+                  <span className={`text-sm sm:text-base font-black block mt-0.5 ${
                     isSelected ? 'text-white' : isDayToday ? 'text-link' : 'text-slate-800 dark:text-slate-100'
                   }`}>
                     {day.getDate()}
                   </span>
 
                   {/* Visit Tag */}
-                  <div className="mt-1 sm:mt-1.5 min-h-[18px] flex items-center justify-center">
+                  <div className="mt-1 min-h-[18px] flex items-center justify-center">
                     {hasAppts ? (
-                      <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded-md inline-block ${
+                      <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${
                         isSelected
                           ? 'bg-white/20 text-white'
                           : 'bg-primary/15 text-link'
@@ -513,68 +565,62 @@ const ProviderSchedule = () => {
           </div>
         </motion.div>
 
-        {/* Day Overview and Stats Glance */}
+        {/* Day Overview Banner with Previous and Next Day buttons */}
         <motion.div
-          className="neu-flat rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+          className="neu-flat rounded-2xl p-3.5 sm:p-5 flex items-center justify-between gap-3"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.3 }}
         >
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={prevDay}
-              className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-link cursor-pointer shrink-0"
-              title="Previous Day"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="font-display font-black text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight">
-                  {selectedDayLabel}
-                </h2>
-              </div>
-              <p className="text-xs text-tertiary font-semibold mt-0.5">
-                {selectedAppts.length === 0
-                  ? 'No patient visits scheduled for this date'
-                  : `${selectedAppts.length} ${selectedAppts.length === 1 ? 'visit' : 'visits'} scheduled - ${completedCount} completed`}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={nextDay}
-              className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-link cursor-pointer shrink-0"
-              title="Next Day"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+          <button
+            type="button"
+            onClick={prevDay}
+            className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-link cursor-pointer shrink-0"
+            title="Previous Day"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <h2 className="font-display font-black text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight truncate">
+              {selectedDayLabel}
+            </h2>
+            <p className="text-xs text-tertiary font-semibold mt-0.5 truncate">
+              {selectedAppts.length === 0
+                ? 'No patient visits scheduled for this date'
+                : `${selectedAppts.length} ${selectedAppts.length === 1 ? 'visit' : 'visits'} scheduled - ${completedCount} completed`}
+            </p>
           </div>
+          {renderSearchBar('hidden sm:block w-64 lg:w-80 shrink-0')}
+          <button
+            type="button"
+            onClick={nextDay}
+            className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-link cursor-pointer shrink-0"
+            title="Next Day"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </motion.div>
 
         {/* Daily Visual Time Stream (Hourly Canvas 8:00 AM - 6:00 PM) */}
         <motion.div
-          className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4"
+          className="neu-flat rounded-2xl sm:rounded-3xl p-3 sm:p-6 space-y-3.5 sm:space-y-4"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15, duration: 0.35 }}
         >
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-white/5">
-            <div className="flex items-center gap-2">
-              <h3 className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm tracking-tight uppercase">
-                Daily Visual Time Stream
-              </h3>
-            </div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-3 border-b border-slate-200/50 dark:border-white/5">
+            <h3 className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm tracking-tight uppercase">
+              Daily Visual Time Stream
+            </h3>
             <span className="text-3xs text-tertiary font-mono">
               Operating Range: {formatHourLabel(operatingHours[0])} - {formatHourLabel(operatingHours[operatingHours.length - 1])}
             </span>
           </div>
 
           {/* Hourly Timeline Rail */}
-          <div className="space-y-4 sm:space-y-5 pt-2">
+          <div className="space-y-3.5 sm:space-y-5 pt-1 sm:pt-2">
             {operatingHours.map(hour => {
               const hourAppts = selectedAppts.filter(a => getApptHour(a.time) === hour);
-              const hourLabel = formatHourLabel(hour);
               const isCurrentHour = isTodaySelected && currentTime.getHours() === hour;
 
               // Check if this empty slot sits between earlier and later scheduled appointments (Travel Gap)
@@ -592,7 +638,7 @@ const ProviderSchedule = () => {
                 <div key={hour} className="relative group">
                   {/* Real-Time "NOW" Indicator Line */}
                   {isCurrentHour && (
-                    <div className="flex items-center gap-2 mb-2 pl-16 sm:pl-24">
+                    <div className="flex items-center gap-2 mb-2 pl-12 sm:pl-24">
                       <span className="px-2 py-0.5 rounded-md bg-danger text-white text-3xs font-black uppercase tracking-wider shrink-0 shadow-sm">
                         NOW - {currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                       </span>
@@ -600,16 +646,19 @@ const ProviderSchedule = () => {
                     </div>
                   )}
 
-                  <div className="flex items-start gap-3 sm:gap-4">
+                  <div className="flex items-start gap-2.5 sm:gap-4">
                     {/* Left Rail: Hourly Timestamp */}
-                    <div className="w-16 sm:w-24 shrink-0 text-right pt-2.5">
-                      <span className="font-mono text-xs sm:text-xs font-bold text-tertiary block">
-                        {hourLabel}
+                    <div className="w-11 sm:w-20 shrink-0 text-right pt-2">
+                      <span className="font-mono text-2xs font-bold text-tertiary block sm:hidden">
+                        {formatHourLabel(hour, true)}
+                      </span>
+                      <span className="font-mono text-xs font-bold text-tertiary hidden sm:block">
+                        {formatHourLabel(hour, false)}
                       </span>
                     </div>
 
                     {/* Right Rail: Time Slot Lane */}
-                    <div className="flex-1 min-w-0 space-y-3 pb-3 border-b border-slate-200/40 dark:border-white/5">
+                    <div className="flex-1 min-w-0 space-y-2.5 sm:space-y-3 pb-3 border-b border-slate-200/40 dark:border-white/5">
                       {hourAppts.length > 0 ? (
                         hourAppts.map(appt => {
                           const statusAction = STATUS_FLOW[appt.status];
@@ -625,7 +674,7 @@ const ProviderSchedule = () => {
                               animate={{ opacity: 1, scale: 1 }}
                               transition={{ duration: 0.25 }}
                               className={`neu-card rounded-2xl transition-all border border-slate-200/60 dark:border-white/5 shadow-md ${
-                                isExpanded ? 'p-4 sm:p-5 space-y-4' : 'p-3 sm:p-4'
+                                isExpanded ? 'p-3.5 sm:p-5 space-y-3.5 sm:space-y-4' : 'p-3 sm:p-4'
                               } ${
                                 STATUS_BORDER[appt.status] || 'border-l-4 border-l-primary'
                               }`}
@@ -633,73 +682,86 @@ const ProviderSchedule = () => {
                               {/* Top Row: Patient Info, Time Slot and Status Badge (Clickable to Toggle) */}
                               <div
                                 onClick={() => toggleApptExpand(appt.id, appt.status)}
-                                className="flex items-center justify-between gap-3 cursor-pointer select-none"
+                                className="cursor-pointer select-none space-y-2"
                               >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <Link
-                                    to={`/provider/patients/${appt.patientId}/profile`}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl neu-inset overflow-hidden flex items-center justify-center font-black text-link text-xs sm:text-sm shrink-0 p-0.5 border border-slate-200/50 dark:border-white/5 hover:ring-2 hover:ring-primary/40 transition-all"
-                                    title="View Profile"
-                                  >
-                                    {appt.avatarUrl ? (
-                                      <img
-                                        src={appt.avatarUrl}
-                                        alt=""
-                                        className="w-full h-full object-cover rounded-[10px]"
-                                      />
-                                    ) : (
-                                      appt.patient
-                                        .split(' ')
-                                        .map(n => n[0])
-                                        .join('')
-                                        .substring(0, 2)
-                                        .toUpperCase()
-                                    )}
-                                  </Link>
-                                  <div className="min-w-0">
+                                {/* Row 1: Avatar + Name & Service + Status & Chevron */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                                     <Link
                                       to={`/provider/patients/${appt.patientId}/profile`}
                                       onClick={(e) => e.stopPropagation()}
-                                      className="font-display font-black text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors text-sm sm:text-base truncate block"
+                                      className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl neu-inset overflow-hidden flex items-center justify-center font-black text-link text-xs sm:text-sm shrink-0 p-0.5 border border-slate-200/50 dark:border-white/5 hover:ring-2 hover:ring-primary/40 transition-all"
+                                      title="View Profile"
                                     >
-                                      {appt.patient}
+                                      {appt.avatarUrl ? (
+                                        <img
+                                          src={appt.avatarUrl}
+                                          alt=""
+                                          className="w-full h-full object-cover rounded-[10px]"
+                                        />
+                                      ) : (
+                                        appt.patient
+                                          .split(' ')
+                                          .map(n => n[0])
+                                          .join('')
+                                          .substring(0, 2)
+                                          .toUpperCase()
+                                      )}
                                     </Link>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                      <span className="text-xs text-link font-bold truncate">
+                                    <div className="min-w-0 flex-1">
+                                      <Link
+                                        to={`/provider/patients/${appt.patientId}/profile`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="font-display font-black text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors text-xs sm:text-sm md:text-base truncate block"
+                                      >
+                                        {appt.patient}
+                                      </Link>
+                                      <p className="text-2xs sm:text-xs text-link font-bold truncate mt-0.5">
                                         {appt.service}
-                                      </span>
-                                      <span className="text-xs text-tertiary font-medium">
-                                        - {appt.timeLabel}
-                                      </span>
+                                      </p>
                                     </div>
+                                  </div>
+
+                                  {/* Status Badge + Chevron Toggle */}
+                                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                                    <span
+                                      className={`text-3xs sm:text-2xs font-extrabold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg uppercase tracking-wider ${
+                                        STATUS_BADGE[appt.status] || 'neu-btn text-tertiary'
+                                      }`}
+                                    >
+                                      {appt.status}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleApptExpand(appt.id, appt.status);
+                                      }}
+                                      className="neu-btn w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer shrink-0"
+                                      title={isExpanded ? 'Collapse card' : 'Expand card'}
+                                    >
+                                      <ChevronDown
+                                        className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-200 ${
+                                          isExpanded ? 'rotate-180' : ''
+                                        }`}
+                                      />
+                                    </button>
                                   </div>
                                 </div>
 
-                                {/* Status Badge and Chevron Toggle */}
-                                <div className="flex items-center gap-2 shrink-0">
-                                  <span
-                                    className={`text-2xs font-extrabold px-2.5 py-1 rounded-lg uppercase tracking-wider ${
-                                      STATUS_BADGE[appt.status] || 'neu-btn text-tertiary'
-                                    }`}
-                                  >
-                                    {appt.status}
+                                {/* Row 2: Full-width Time Band (never broken across lines) */}
+                                <div className="pt-2 border-t border-slate-200/40 dark:border-white/5 flex items-center justify-between gap-2 text-2xs text-tertiary">
+                                  <div className="flex items-center gap-1.5 font-mono text-slate-700 dark:text-slate-300">
+                                    <span className="font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                                      {appt.timeLabel}
+                                    </span>
+                                    <span className="text-3xs font-extrabold px-1.5 py-0.2 rounded bg-primary/10 text-link shrink-0">
+                                      {appt.durationMinutes}m
+                                    </span>
+                                  </div>
+                                  <span className="text-3xs uppercase tracking-wider font-semibold text-tertiary select-none">
+                                    {isExpanded ? 'Tap to collapse' : 'Tap for details'}
                                   </span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      toggleApptExpand(appt.id, appt.status);
-                                    }}
-                                    className="neu-btn w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer"
-                                    title={isExpanded ? 'Collapse card' : 'Expand card'}
-                                  >
-                                    <ChevronDown
-                                      className={`w-4 h-4 transition-transform duration-200 ${
-                                        isExpanded ? 'rotate-180' : ''
-                                      }`}
-                                    />
-                                  </button>
                                 </div>
                               </div>
 
@@ -712,18 +774,18 @@ const ProviderSchedule = () => {
                                     animate={{ opacity: 1, height: 'auto' }}
                                     exit={{ opacity: 0, height: 0 }}
                                     transition={{ duration: 0.2, ease: 'easeInOut' }}
-                                    className="overflow-hidden space-y-4 pt-3 border-t border-slate-200/40 dark:border-white/5"
+                                    className="overflow-hidden space-y-3.5 sm:space-y-4 pt-3 border-t border-slate-200/40 dark:border-white/5"
                                   >
                                     {/* Patient Address and Google Maps Navigation */}
-                                    <div className="neu-inset p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                                      <div className="text-slate-700 dark:text-slate-300 min-w-0 font-medium truncate">
-                                        <span>{appt.address}</span>
+                                    <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                                      <div className="text-slate-700 dark:text-slate-300 min-w-0 font-medium text-2xs sm:text-xs">
+                                        <span className="break-words sm:truncate block">{appt.address}</span>
                                       </div>
                                       <a
                                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(appt.address)}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="neu-btn px-2.5 py-1 rounded-lg text-link hover:text-link text-xs font-bold shrink-0 self-end sm:self-auto cursor-pointer"
+                                        className="neu-btn px-2.5 py-1 rounded-lg text-link hover:text-link text-2xs sm:text-xs font-bold shrink-0 self-start sm:self-auto cursor-pointer"
                                       >
                                         <span>Open in Maps</span>
                                       </a>
@@ -731,7 +793,7 @@ const ProviderSchedule = () => {
 
                                     {/* Patient Request Notes */}
                                     {appt.notes && (
-                                      <div className="p-3 rounded-xl bg-amber-500/10 border-l-4 border-amber-500 space-y-1">
+                                      <div className="p-2.5 sm:p-3 rounded-xl bg-amber-500/10 border-l-4 border-amber-500 space-y-1">
                                         <span className="text-3xs font-black uppercase tracking-wider text-amber-500 block">
                                           Patient Request Note
                                         </span>
@@ -746,7 +808,7 @@ const ProviderSchedule = () => {
                                       <span className="text-3xs font-extrabold text-tertiary uppercase tracking-wider">
                                         Visit Lifecycle Progress
                                       </span>
-                                      <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                                      <div className="grid grid-cols-4 gap-1 sm:gap-2">
                                         {STATUS_STEPS.map((step, idx) => {
                                           const isPast = idx < currentStepIdx;
                                           const isCurrent = idx === currentStepIdx;
@@ -755,9 +817,9 @@ const ProviderSchedule = () => {
                                             return (
                                               <div
                                                 key={step.key}
-                                                className="p-2 rounded-xl neu-inset bg-emerald-500/15 border border-emerald-500/30 text-center"
+                                                className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl neu-inset bg-emerald-500/15 border border-emerald-500/30 text-center"
                                               >
-                                                <span className="text-2xs font-black text-emerald-500 block truncate">
+                                                <span className="text-3xs sm:text-2xs font-black text-emerald-500 block truncate">
                                                   {step.label}
                                                 </span>
                                               </div>
@@ -768,7 +830,7 @@ const ProviderSchedule = () => {
                                             return (
                                               <div
                                                 key={step.key}
-                                                className={`p-2 rounded-xl text-center shadow-md font-black ${
+                                                className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl text-center shadow-md font-black ${
                                                   appt.status === 'Completed'
                                                     ? 'bg-emerald-600 text-white'
                                                     : appt.status === 'On The Way'
@@ -776,7 +838,7 @@ const ProviderSchedule = () => {
                                                       : 'bg-primary text-white'
                                                 }`}
                                               >
-                                                <span className="text-2xs block truncate">
+                                                <span className="text-3xs sm:text-2xs block truncate">
                                                   {step.label}
                                                 </span>
                                               </div>
@@ -786,9 +848,9 @@ const ProviderSchedule = () => {
                                           return (
                                             <div
                                               key={step.key}
-                                              className="p-2 rounded-xl neu-btn text-center opacity-50"
+                                              className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl neu-btn text-center opacity-50"
                                             >
-                                              <span className="text-2xs font-bold text-tertiary block truncate">
+                                              <span className="text-3xs sm:text-2xs font-bold text-tertiary block truncate">
                                                 {step.label}
                                               </span>
                                             </div>
@@ -798,7 +860,7 @@ const ProviderSchedule = () => {
                                     </div>
 
                                     {/* Action Buttons Row */}
-                                    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-200/50 dark:border-white/5">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2 pt-2 border-t border-slate-200/50 dark:border-white/5">
                                       <motion.button
                                         whileTap={{ scale: 0.96 }}
                                         onClick={() =>
@@ -808,7 +870,7 @@ const ProviderSchedule = () => {
                                             avatarUrl: appt.avatarUrl,
                                           })
                                         }
-                                        className="neu-btn px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200 cursor-pointer"
+                                        className="neu-btn px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200 cursor-pointer text-center"
                                       >
                                         <span>View Patient Record</span>
                                       </motion.button>
@@ -818,7 +880,7 @@ const ProviderSchedule = () => {
                                           whileTap={{ scale: 0.96 }}
                                           disabled={isUpdating}
                                           onClick={() => handleStatusUpdate(appt.id, statusAction.next)}
-                                          className={`px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md text-white ${statusAction.color}`}
+                                          className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md text-white ${statusAction.color}`}
                                         >
                                           {isUpdating && (
                                             <Loader2 className="w-4 h-4 animate-spin" />
@@ -835,21 +897,21 @@ const ProviderSchedule = () => {
                         })
                       ) : isTravelGap ? (
                         /* Travel and Rest Window */
-                        <div className="neu-flat-sm rounded-xl p-3 border border-dashed border-amber-500/30 dark:border-amber-500/20 bg-amber-500/5 flex items-center justify-between text-2xs text-amber-500/90">
-                          <span className="font-semibold">
-                            Travel and Rest Window - Open buffer between home visits
+                        <div className="neu-flat-sm rounded-xl p-2.5 sm:p-3 border border-dashed border-amber-500/30 dark:border-amber-500/20 bg-amber-500/5 flex items-center justify-between gap-2 text-2xs text-amber-500/90">
+                          <span className="font-semibold truncate">
+                            Travel and Rest Window
                           </span>
-                          <span className="text-3xs uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15">
+                          <span className="text-3xs uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15 shrink-0">
                             Buffer
                           </span>
                         </div>
                       ) : (
                         /* Open Clinical Slot */
-                        <div className="neu-flat-sm rounded-xl p-2.5 sm:p-3 border border-dashed border-slate-200/50 dark:border-white/5 flex items-center justify-between text-2xs text-tertiary">
-                          <span className="font-medium">
-                            Available Clinical Slot - No visits scheduled
+                        <div className="neu-flat-sm rounded-xl p-2.5 sm:p-3 border border-dashed border-slate-200/50 dark:border-white/5 flex items-center justify-between gap-2 text-2xs text-tertiary">
+                          <span className="font-medium truncate">
+                            Available Clinical Slot
                           </span>
-                          <span className="text-3xs uppercase tracking-wider font-extrabold opacity-50">
+                          <span className="text-3xs uppercase tracking-wider font-extrabold opacity-50 shrink-0">
                             Available
                           </span>
                         </div>

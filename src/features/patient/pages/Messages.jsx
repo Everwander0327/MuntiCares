@@ -4,7 +4,7 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { initialsAvatar } from '@/lib/avatar';
-import { MessageCircle, Search } from 'lucide-react';
+import { MessageCircle, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
 import { useLocation } from 'react-router-dom';
@@ -156,42 +156,44 @@ const PatientMessages = () => {
   return (
     <>
       <DashboardLayout role="patient">
-        {/* ================= UNIFIED MESSENGER CONTAINER ================= */}
-        <div className="flex-1 neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col lg:flex-row h-full max-h-full min-h-0 border border-slate-200/80 dark:border-white/10 shadow-sm w-full">
-          {/* Threads List Pane (Full width on mobile, 288px-320px on desktop) */}
-          <div className="w-full lg:w-72 xl:w-80 border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-white/10 flex flex-col h-full bg-surface-shell/40 shrink-0 select-text">
-            <div className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 space-y-3 shrink-0">
-              <div className="flex items-center justify-between">
+        {/* ================= UNIFIED MESSENGER CONTAINER (OPTION 1: FOCUSED CLINICAL INBOX) ================= */}
+        <div className="flex-1 neu-flat rounded-2xl overflow-hidden flex flex-col lg:flex-row h-full max-h-full min-h-0 border border-slate-200/80 dark:border-white/10 shadow-sm w-full">
+          {/* Threads List Pane (Full width on mobile, 320px-360px on desktop) */}
+          <div className="w-full lg:w-80 xl:w-[360px] border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-white/10 flex flex-col h-full bg-surface-shell/40 shrink-0 select-text">
+            <div className="p-4 border-b border-slate-200/80 dark:border-white/10 space-y-3 shrink-0">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <h1 className="font-display font-black text-xl sm:text-2xl text-slate-900 dark:text-white">
+                  <h1 className="font-display font-black text-xl sm:text-2xl text-slate-900 dark:text-white leading-tight">
                     Messages
                   </h1>
-                  <span className="text-2xs font-extrabold uppercase tracking-wider text-link">Direct Communication</span>
+                  <span className="text-2xs font-extrabold uppercase tracking-wider text-link block">
+                    Direct Communication
+                  </span>
                 </div>
               </div>
-              <div className="neu-inset p-1.5 rounded-xl flex items-center gap-2 h-10">
-                <Search className="w-3.5 h-3.5 text-link ml-1.5 shrink-0" />
+              <div className="relative flex items-center">
                 <input
                   type="text"
                   aria-label="Search conversations"
-                  placeholder="Search conversations..."
+                  placeholder="Search provider or message..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent border-0 px-1 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none placeholder:text-tertiary"
+                  className="w-full neu-inset rounded-xl pl-9 pr-8 h-10 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none placeholder:text-tertiary"
                 />
+                <Search className="w-4 h-4 text-primary absolute left-3 z-10 pointer-events-none shrink-0" />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
-                    className="text-xs text-tertiary hover:text-danger pr-1.5 cursor-pointer font-bold"
+                    className="absolute right-2.5 z-10 text-tertiary hover:text-danger p-1 rounded-lg cursor-pointer"
                     title="Clear search"
                   >
-                    ✕
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-3 min-h-0 space-y-2">
+            <div className="flex-1 overflow-y-auto p-3 min-h-0">
               <ConversationList
                 user={user}
                 onSelect={handleSelect}
@@ -214,12 +216,12 @@ const PatientMessages = () => {
                 />
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-tertiary">
-                  <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-link">
-                    <MessageCircle className="w-8 h-8" />
+                  <div className="neu-flat w-14 h-14 rounded-2xl flex items-center justify-center mb-3 text-link">
+                    <MessageCircle className="w-7 h-7" />
                   </div>
                   <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">Select a conversation</h3>
                   <p className="text-xs text-tertiary mt-1 max-w-xs">
-                    Choose a provider from your list on the left to start or continue chatting.
+                    Choose a provider from your clinical inbox on the left to start or continue a direct consultation.
                   </p>
                 </div>
               )

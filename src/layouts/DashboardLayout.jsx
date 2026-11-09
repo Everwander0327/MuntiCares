@@ -44,7 +44,7 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
     </span>
     <span className={`font-semibold text-sm flex-1 truncate ${active ? 'font-bold text-white' : ''}`}>{label}</span>
     {badge > 0 && (
-      <span className={`min-w-[20px] h-[20px] rounded-full flex items-center justify-center text-xs font-black px-1.5 shadow-sm ${
+      <span className={`min-w-[20px] h-[20px] rounded-md flex items-center justify-center text-xs font-black px-1.5 shadow-sm ${
         active 
           ? 'bg-white dark:bg-[#08182A] text-link dark:text-[#8CBDF0]' 
           : 'bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A]'
@@ -773,7 +773,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-xs truncate group-hover:text-link dark:group-hover:text-[#8CBDF0] transition-colors">{user.name}</p>
-                      <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-link dark:text-[#8CBDF0] text-[10px] font-black rounded-full uppercase tracking-wider mt-0.5">
+                      <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-link dark:text-[#8CBDF0] text-[10px] font-black rounded-md uppercase tracking-wider mt-0.5">
                         {user.badge}
                       </span>
                     </div>
@@ -865,13 +865,15 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 className="neu-btn h-10 px-2 sm:px-2.5 rounded-xl sm:rounded-2xl flex items-center gap-2 text-link font-black shadow-sm shrink-0 hover:scale-105 transition-all cursor-pointer group"
                 title="Profile & Settings"
               >
-                <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl neu-flat-sm flex items-center justify-center text-link font-black overflow-hidden shrink-0">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-xs font-black">{user.initials}</span>
-                  )}
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-[#16212E] rounded-full" title="Online" />
+                <div className="relative w-7 h-7 sm:w-8 sm:h-8 shrink-0">
+                  <div className="w-full h-full rounded-lg sm:rounded-xl neu-flat-sm flex items-center justify-center text-link font-black overflow-hidden ring-1 ring-white/50 dark:ring-white/10">
+                    {user.avatar_url ? (
+                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover block" />
+                    ) : (
+                      <span className="text-xs font-black">{user.initials}</span>
+                    )}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#e8ecf2] dark:border-[#16212E] rounded-[3px] z-10" title="Online" />
                 </div>
                 <span className="hidden xl:inline text-xs font-bold text-[#17283B] dark:text-[#E6EEF6] group-hover:text-link dark:group-hover:text-[#8CBDF0] transition-colors truncate max-w-[100px]">
                   {user.name ? user.name.split(' ')[0] : 'Profile'}

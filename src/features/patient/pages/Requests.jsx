@@ -27,22 +27,81 @@ const staggerItem = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } },
 };
 
-const getStatusStyle = (status) => {
+const getStatusBadge = (status) => {
   switch (status) {
     case 'Accepted':
-      return { textColor: 'text-sky-600 dark:text-[#8CBDF0]' };
+      return {
+        label: 'Accepted',
+        className: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-[#8CBDF0] border-sky-200 dark:border-sky-800/40',
+      };
     case 'On The Way':
+      return {
+        label: 'On The Way',
+        className: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40',
+      };
     case 'Arrived':
-      return { textColor: 'text-emerald-600 dark:text-emerald-400' };
+      return {
+        label: 'Arrived',
+        className: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40',
+      };
     case 'Completed':
-      return { textColor: 'text-slate-600 dark:text-slate-400' };
+      return {
+        label: 'Completed',
+        className: 'bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+      };
     case 'Pending':
-      return { textColor: 'text-amber-600 dark:text-amber-400' };
+      return {
+        label: 'Pending',
+        className: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/40',
+      };
     case 'Cancelled':
-      return { textColor: 'text-slate-400 dark:text-slate-500' };
+      return {
+        label: 'Cancelled',
+        className: 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/40',
+      };
     case 'Rejected':
     default:
-      return { textColor: 'text-rose-600 dark:text-rose-400' };
+      return {
+        label: status || 'Rejected',
+        className: 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/40',
+      };
+  }
+};
+
+const getProviderInitials = (name) => {
+  if (!name) return 'PR';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const formatVisitDate = (rawDate) => {
+  if (!rawDate) return 'Date pending';
+  try {
+    const [y, m, d] = rawDate.split('-');
+    if (y && m && d) {
+      const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+      return dateObj.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+    return rawDate;
+  } catch {
+    return rawDate;
+  }
+};
+
+const formatVisitTime = (rawTime) => {
+  if (!rawTime) return '';
+  try {
+    return new Date(`2000-01-01T${rawTime.slice(0, 5)}:00`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return rawTime;
   }
 };
 
@@ -51,17 +110,21 @@ const RequestCard = ({
   status, location, originalNotes, durationMinutes, onRateProvider, isRated, 
   onManageRequest, onPreSession, presessionSubmitted, onTrack
 }) => {
-  const statusTheme = getStatusStyle(status);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+  const statusBadge = getStatusBadge(status);
+  const initials = getProviderInitials(provider);
+  const formattedDate = formatVisitDate(date);
+  const formattedTime = formatVisitTime(time);
 
   return (
     <motion.div
       variants={staggerItem}
-      className="neu-flat rounded-2xl sm:rounded-[2rem] overflow-hidden flex flex-col justify-between select-text transform-gpu will-change-transform"
+      className="neu-flat rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col justify-between select-text transform-gpu will-change-transform"
     >
       {/* Upper Content Area */}
-      <div className="p-4 sm:p-6 space-y-3 sm:space-y-3.5">
-        {/* Top Header: Provider Avatar & Info + Status Badge */}
-        <div className="flex items-start sm:items-center justify-between gap-3">
+      <div className="p-4 sm:p-5 sm:pb-4 space-y-3 sm:space-y-3.5">
+        {/* Tier 1: Provider Avatar & Info + Squircle Status Badge */}
+        <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
             {providerId ? (
               <Link
@@ -69,25 +132,36 @@ const RequestCard = ({
                 title="View Provider Profile"
                 className="relative shrink-0 group"
               >
-                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-link font-black text-sm sm:text-base overflow-hidden aspect-square ring-2 ring-transparent group-hover:ring-primary/40 transition-all">
-                  {providerAvatarUrl ? (
-                    <img src={providerAvatarUrl} alt={provider} className="w-full h-full object-cover" />
+                <div className="neu-flat-sm w-12 h-12 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-link font-black text-sm overflow-hidden aspect-square ring-2 ring-transparent group-hover:ring-primary/40 transition-all bg-white dark:bg-slate-900">
+                  {providerAvatarUrl && !avatarBroken ? (
+                    <img
+                      src={providerAvatarUrl}
+                      alt={provider}
+                      onError={() => setAvatarBroken(true)}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    (provider || 'Unknown').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                    <span>{initials}</span>
                   )}
                 </div>
               </Link>
             ) : (
               <div className="relative shrink-0">
-                <div className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-link font-black text-sm sm:text-base overflow-hidden aspect-square">
-                  {providerAvatarUrl ? (
-                    <img src={providerAvatarUrl} alt="" className="w-full h-full object-cover" />
+                <div className="neu-flat-sm w-12 h-12 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-link font-black text-sm overflow-hidden aspect-square bg-white dark:bg-slate-900">
+                  {providerAvatarUrl && !avatarBroken ? (
+                    <img
+                      src={providerAvatarUrl}
+                      alt=""
+                      onError={() => setAvatarBroken(true)}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
-                    (provider || 'Unknown').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                    <span>{initials}</span>
                   )}
                 </div>
               </div>
             )}
+
             <div className="min-w-0">
               {providerId ? (
                 <Link
@@ -101,115 +175,190 @@ const RequestCard = ({
                   {provider}
                 </h3>
               )}
-              <p className="text-xs font-semibold text-link truncate mt-0.5">
-                {service}
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="px-2 py-0.5 rounded-md bg-[#1E6FBF]/10 text-[#1E6FBF] dark:text-[#8CBDF0] text-[11px] font-extrabold truncate">
+                  {service || 'Home Care'}
+                </span>
+                <span className="text-xs text-tertiary hidden sm:inline">&bull;</span>
+                <span className="text-xs text-tertiary hidden sm:inline truncate">Muntinlupa City</span>
+              </div>
             </div>
           </div>
 
-          {/* Clean Text-Only Status (No Pill Background, No Green Dot) */}
+          {/* Authoritative Squircle Status Badge */}
           <div className="shrink-0 text-right">
-            <span className={`text-xs font-extrabold tracking-tight ${statusTheme.textColor}`}>
-              {status}
+            <span className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-extrabold border ${statusBadge.className}`}>
+              {statusBadge.label}
             </span>
           </div>
         </div>
 
-        {/* Middle Meta Details (Clean Flat Style) */}
-        <div className="py-2.5 px-3 sm:px-4 rounded-xl sm:rounded-2xl flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 text-xs bg-surface-subtle border border-surface-border">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-txt-secondary dark:text-txt-darkSecondary font-medium text-xs sm:text-xs">
-            <span className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-link shrink-0" />
-              <span>{date}</span>
+        {/* Tier 2: Clean Meta Chips (Zero Hollow Stretched Bar) */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-0.5 text-xs">
+          <span className="px-2.5 py-1.5 rounded-lg bg-surface-subtle border border-surface-border font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-link shrink-0" />
+            <span>{formattedDate}</span>
+          </span>
+          {formattedTime && (
+            <span className="px-2.5 py-1.5 rounded-lg bg-surface-subtle border border-surface-border font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-link shrink-0" />
+              <span>{formattedTime}</span>
             </span>
-            {time && (
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-link shrink-0" />
-                <span>
-                  {new Date(`2000-01-01T${time.slice(0, 5)}:00`).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </span>
-              </span>
-            )}
-            <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
-              <span className="truncate max-w-[130px] sm:max-w-none">{location || 'Muntinlupa City'}</span>
-            </span>
-          </div>
+          )}
+          <span className="px-2.5 py-1.5 rounded-lg bg-surface-subtle border border-surface-border font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 truncate max-w-full">
+            <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
+            <span className="truncate">{location || 'Muntinlupa City, Philippines'}</span>
+          </span>
         </div>
       </div>
 
-      {/* Action Buttons Flush at Bottom */}
-      <div className="px-4 sm:px-6 pb-4 sm:pb-5 pt-0">
+      {/* Tier 3: Action Buttons (50/50 Mobile Split, Zero Empty Void) */}
+      <div className="px-4 sm:px-5 pb-4 sm:pb-5 pt-2 border-t border-surface-border/70">
         <div className="grid grid-cols-2 sm:flex sm:items-center sm:justify-end gap-2">
-          {/* Chat Shortcut */}
-          {['Accepted', 'On The Way', 'Arrived'].includes(status) && (
-            <Link 
-              to={`/patient/messages?provider=${providerId}`}
-              className={`${['On The Way', 'Arrived'].includes(status) ? 'col-span-1' : 'col-span-2'} sm:col-span-1 neu-btn-primary justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform order-1`}
-            >
-              <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Chat Provider</span>
-            </Link>
-          )}
-
-          {/* Live GPS Tracker */}
+          {/* Active Live Visits: Track Live GPS & Chat */}
           {['On The Way', 'Arrived'].includes(status) && (
-            <button
-              type="button"
-              onClick={() => onTrack({ id, providerId, patientId, provider, providerAvatarUrl, service })}
-              className="col-span-1 sm:col-span-1 min-h-[44px] justify-center px-3.5 py-2.5 sm:py-2 rounded-lg text-xs font-bold text-link dark:text-[#8CBDF0] bg-white/70 dark:bg-white/[0.04] border border-primary/25 dark:border-[#8CBDF0]/25 flex items-center gap-1.5 cursor-pointer hover:bg-primary/5 dark:hover:bg-[#8CBDF0]/10 active:scale-[0.98] transition-colors order-1"
-            >
-              <Navigation className="w-4 h-4 shrink-0" />
-              <span className="truncate">Track live</span>
-            </button>
+            <>
+              <Link 
+                to={`/patient/messages?provider=${providerId}`}
+                className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
+              >
+                <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Chat</span>
+              </Link>
+              <button
+                type="button"
+                onClick={() => onTrack({ id, providerId, patientId, provider, providerAvatarUrl, service })}
+                className="col-span-1 neu-btn-primary justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
+              >
+                <Navigation className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Track Live GPS</span>
+              </button>
+            </>
           )}
 
-          {/* Pre-Session Info */}
-          {['Accepted', 'Pending'].includes(status) && (
-            <button
-              type="button"
-              onClick={() => !presessionSubmitted && onPreSession({ id, providerId, patientId, providerName: provider })}
-              disabled={presessionSubmitted}
-              className={`col-span-1 justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] order-2 ${
-                presessionSubmitted
-                  ? 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] cursor-default opacity-90'
-                  : 'neu-btn text-link dark:text-[#8CBDF0]'
-              }`}
-            >
-              <FileUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-link dark:text-[#8CBDF0]'}`} />
-              <span className="truncate">{presessionSubmitted ? 'Submitted' : 'Pre-Session Info'}</span>
-            </button>
+          {/* Accepted Visits: Pre-Session & Chat & Manage */}
+          {status === 'Accepted' && (
+            <>
+              <button
+                type="button"
+                onClick={() => !presessionSubmitted && onPreSession({ id, providerId, patientId, providerName: provider })}
+                disabled={presessionSubmitted}
+                className={`col-span-1 justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
+                  presessionSubmitted
+                    ? 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] cursor-default opacity-90'
+                    : 'neu-btn text-link dark:text-[#8CBDF0]'
+                }`}
+              >
+                <FileUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-link dark:text-[#8CBDF0]'}`} />
+                <span className="truncate">{presessionSubmitted ? 'Submitted' : 'Pre-Session'}</span>
+              </button>
+
+              <Link 
+                to={`/patient/messages?provider=${providerId}`}
+                className="col-span-1 neu-btn-primary justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
+              >
+                <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Chat Provider</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, service, date, time, originalNotes, durationMinutes })}
+                className="col-span-2 sm:col-span-1 neu-btn justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-[#BC3030] dark:text-[#F4918B] flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform"
+              >
+                <XCircle className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Manage Visit</span>
+              </button>
+            </>
           )}
 
-          {/* Manage Request (Cancel/Reschedule) */}
-          {['Pending', 'Accepted'].includes(status) && (
-            <button
-              type="button"
-              onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, service, date, time, originalNotes, durationMinutes })}
-              className="col-span-1 neu-btn justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-[#BC3030] dark:text-[#F4918B] flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform order-3"
-            >
-              <XCircle className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Manage</span>
-            </button>
+          {/* Pending Visits: Pre-Session & Cancel */}
+          {status === 'Pending' && (
+            <>
+              <button
+                type="button"
+                onClick={() => !presessionSubmitted && onPreSession({ id, providerId, patientId, providerName: provider })}
+                disabled={presessionSubmitted}
+                className={`col-span-1 justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
+                  presessionSubmitted
+                    ? 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] cursor-default opacity-90'
+                    : 'neu-btn text-link dark:text-[#8CBDF0]'
+                }`}
+              >
+                <FileUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-link dark:text-[#8CBDF0]'}`} />
+                <span className="truncate">{presessionSubmitted ? 'Submitted' : 'Pre-Session'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onManageRequest({ id, providerId, patientId, providerName: provider, service, date, time, originalNotes, durationMinutes })}
+                className="col-span-1 neu-btn justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-[#BC3030] dark:text-[#F4918B] flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform"
+              >
+                <XCircle className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Cancel Request</span>
+              </button>
+            </>
           )}
 
-          {/* Rate & Review */}
+          {/* Completed Visits: View Profile & Rate/Review */}
           {status === 'Completed' && (
-            <button 
-              type="button"
-              onClick={() => !isRated && onRateProvider({ id, providerId, patientId, providerName: provider })}
-              disabled={isRated}
-              className={`col-span-2 sm:col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center transition-all cursor-pointer ${
-                isRated 
-                  ? 'neu-flat-sm text-success dark:text-success-dark cursor-default opacity-90' 
-                  : 'neu-btn-primary shadow-sm'
-              }`}
-            >
-              <span>{isRated ? 'Reviewed' : 'Rate & Review'}</span>
-            </button>
+            <>
+              {providerId ? (
+                <Link
+                  to={`/patient/providers/${providerId}/profile`}
+                  className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="truncate">View Profile</span>
+                </Link>
+              ) : (
+                <div className="hidden sm:block col-span-1" />
+              )}
+
+              <button 
+                type="button"
+                onClick={() => !isRated && onRateProvider({ id, providerId, patientId, providerName: provider })}
+                disabled={isRated}
+                className={`col-span-1 justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold flex items-center transition-all cursor-pointer ${
+                  isRated 
+                    ? 'neu-flat-sm text-success dark:text-success-dark cursor-default opacity-90' 
+                    : 'neu-btn-primary shadow-sm'
+                }`}
+              >
+                <span>{isRated ? 'Reviewed' : 'Rate & Review'}</span>
+              </button>
+            </>
+          )}
+
+          {/* Cancelled / Rejected Visits: Zero Dead-End Void! Helpful Rebook Action */}
+          {['Cancelled', 'Rejected'].includes(status) && (
+            <>
+              {providerId ? (
+                <Link
+                  to={`/patient/providers/${providerId}/profile`}
+                  className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="truncate">View Doctor</span>
+                </Link>
+              ) : (
+                <div className="hidden sm:block col-span-1" />
+              )}
+
+              {providerId ? (
+                <Link
+                  to={`/patient/providers/${providerId}/profile`}
+                  className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold text-[#1E6FBF] dark:text-[#8CBDF0] border-primary/30 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="truncate">Rebook Visit</span>
+                </Link>
+              ) : (
+                <Link
+                  to="/patient/providers"
+                  className="col-span-2 sm:col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold text-[#1E6FBF] dark:text-[#8CBDF0] flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span className="truncate">Find Another Doctor</span>
+                </Link>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -419,13 +568,14 @@ const PatientRequests = () => {
             </div>
           </div>
 
-            {/* Clean Segmented Tab Pill */}
+          {/* Responsive Segmented Tabs & Search/Filter Toolbar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-            <div className="flex p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 text-xs font-semibold self-start sm:self-auto">
+            {/* Tabs: 33/33/33 equal width on mobile, auto on desktop — zero horizontal scroll */}
+            <div className="grid grid-cols-3 sm:flex p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800 text-xs font-semibold w-full sm:w-auto shrink-0 text-center">
               <button
                 type="button"
                 onClick={() => { setActiveTab('upcoming'); setFilter('All'); }}
-                className={`px-3 sm:px-4 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`py-2 px-2.5 sm:px-4 rounded-lg transition-all cursor-pointer truncate ${
                   activeTab === 'upcoming'
                     ? 'bg-white dark:bg-slate-800 text-link font-bold shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -436,7 +586,7 @@ const PatientRequests = () => {
               <button
                 type="button"
                 onClick={() => { setActiveTab('past'); setFilter('All'); }}
-                className={`px-3 sm:px-4 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`py-2 px-2.5 sm:px-4 rounded-lg transition-all cursor-pointer truncate ${
                   activeTab === 'past'
                     ? 'bg-white dark:bg-slate-800 text-link font-bold shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -447,7 +597,7 @@ const PatientRequests = () => {
               <button
                 type="button"
                 onClick={() => { setActiveTab('all'); setFilter('All'); }}
-                className={`px-3 sm:px-4 py-1.5 rounded-lg transition-all cursor-pointer ${
+                className={`py-2 px-2.5 sm:px-4 rounded-lg transition-all cursor-pointer truncate ${
                   activeTab === 'all'
                     ? 'bg-white dark:bg-slate-800 text-link font-bold shadow-sm'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -458,7 +608,7 @@ const PatientRequests = () => {
             </div>
 
             {/* Integrated Search Bar + Side Dropdown Button */}
-          <div className="flex items-center gap-2 sm:gap-3 pt-0.5 sm:pt-1">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto sm:min-w-[320px]">
             {/* Sunken Search Box */}
             <div className="relative flex-1 min-w-0">
               <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[44px] sm:h-[52px] border border-slate-200/50 dark:border-white/5">

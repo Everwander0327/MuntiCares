@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Search, MapPin, X, Loader2, Building, Home } from 'lucide-react';
+import { Search, X, Loader2 } from 'lucide-react';
 import { geocodeAddress } from '../services/geocoding';
 
 const MUNTINLUPA_BARANGAYS = [
@@ -33,9 +33,11 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [showBarangayDrawer, setShowBarangayDrawer] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
   const debounceTimer = useRef(null);
   const requestId = useRef(0);
   const listboxId = useId();
@@ -50,6 +52,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
     const handleClickOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
+        setShowBarangayDrawer(false);
         setActiveIndex(-1);
       }
     };
@@ -67,7 +70,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
       lat: l.lat,
       lng: l.lng,
       displayName: `${l.name}, ${l.sub}, Muntinlupa City`,
-      isLandmark: true,
+      tag: 'Landmark',
     }));
 
     const matchedBarangays = MUNTINLUPA_BARANGAYS.filter(
@@ -76,12 +79,11 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
       lat: b.lat,
       lng: b.lng,
       displayName: `Brgy. ${b.name}, Muntinlupa City`,
-      isBarangay: true,
+      tag: 'Barangay',
     }));
 
     const local = [...matchedLandmarks, ...matchedBarangays];
 
-    // Show local matches at once; the remote lookup only appends to them.
     setResults(local);
     setHasSearched(true);
     setIsOpen(true);
@@ -97,7 +99,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
               lat: remoteHit.lat,
               lng: remoteHit.lng,
               displayName: remoteHit.displayName,
-              isRemote: true,
+              tag: 'Street',
             },
           ]);
           setActiveIndex((index) => (index === -1 ? 0 : index));
@@ -115,6 +117,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
     const text = e.target.value;
     setQuery(text);
     setActiveIndex(-1);
+    setShowBarangayDrawer(false);
     clearTimeout(debounceTimer.current);
 
     if (!text.trim()) {
@@ -123,6 +126,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
       setLoading(false);
       setIsOpen(false);
       setHasSearched(false);
+      setShowBarangayDrawer(true);
       return;
     }
 
@@ -139,6 +143,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
   const selectResult = (item) => {
     setQuery(item.displayName);
     setIsOpen(false);
+    setShowBarangayDrawer(false);
     setActiveIndex(-1);
     onSelect?.({
       lat: item.lat,
@@ -147,11 +152,26 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
     });
   };
 
+  const selectBarangay = (b) => {
+    const displayName = `Brgy. ${b.name}, Muntinlupa City`;
+    setQuery(displayName);
+    setShowBarangayDrawer(false);
+    setIsOpen(false);
+    setActiveIndex(-1);
+    onSelect?.({
+      lat: b.lat,
+      lng: b.lng,
+      displayName,
+    });
+  };
+
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
-      if (isOpen) {
+      if (isOpen || showBarangayDrawer) {
         e.preventDefault();
+        e.stopPropagation();
         setIsOpen(false);
+        setShowBarangayDrawer(false);
         setActiveIndex(-1);
       }
       return;
@@ -177,10 +197,11 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
   const showEmpty = showPanel && !loading && hasSearched && results.length === 0;
 
   return (
-    <div ref={containerRef} className="relative w-full z-[600]">
-      <div className="relative flex items-center">
-        <Search className="absolute left-3.5 w-4 h-4 text-tertiary pointer-events-none" />
+    <div ref={containerRef} className="relative w-full z-[600] space-y-2">
+      <div className="neu-inset px-3 py-1.5 rounded-xl flex items-center gap-2 border border-white/60 dark:border-white/5">
+        <Search className="w-4 h-4 text-link shrink-0 pointer-events-none" />
         <input
+          ref={inputRef}
           type="text"
           role="combobox"
           aria-label="Search street, subdivision, or landmark"
@@ -196,22 +217,23 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
           value={query}
           onChange={handleChange}
           onFocus={() => {
-            if (results.length || loading) setIsOpen(true);
+            if (results.length || loading) {
+              setIsOpen(true);
+            } else if (!query.trim()) {
+              setShowBarangayDrawer(true);
+            }
           }}
           onKeyDown={handleKeyDown}
-          onBlur={() => {
-            // Let option clicks land before closing.
-            setTimeout(() => setIsOpen(false), 120);
-          }}
-          placeholder="Search street, subdivision, or landmark in Muntinlupa…"
-          className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 placeholder:text-tertiary focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+          placeholder="Search street, subdivision, or barangay in Muntinlupa…"
+          className="w-full py-1.5 bg-transparent text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder:text-tertiary placeholder:font-normal focus:outline-none min-w-0"
         />
         {loading ? (
-          <Loader2 className="absolute right-3 w-4 h-4 text-link animate-spin" />
+          <Loader2 className="w-4 h-4 text-link animate-spin shrink-0" />
         ) : query ? (
           <button
             type="button"
             aria-label="Clear address search"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               requestId.current += 1;
               clearTimeout(debounceTimer.current);
@@ -220,26 +242,80 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
               setLoading(false);
               setIsOpen(false);
               setHasSearched(false);
+              setShowBarangayDrawer(true);
+              inputRef.current?.focus();
             }}
-            className="absolute right-0 flex h-11 w-11 items-center justify-center text-tertiary hover:text-slate-600 dark:hover:text-slate-200"
+            className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-tertiary hover:text-danger shrink-0 cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         ) : null}
+
+        <button
+          type="button"
+          onClick={() => {
+            setShowBarangayDrawer((prev) => !prev);
+            setIsOpen(false);
+          }}
+          className={`neu-btn px-2.5 py-1.5 rounded-lg text-2xs font-extrabold shrink-0 cursor-pointer transition-colors ${
+            showBarangayDrawer ? 'text-link ring-1 ring-primary/30' : 'text-slate-700 dark:text-slate-200 hover:text-link'
+          }`}
+        >
+          Barangays ▾
+        </button>
       </div>
 
+      {/* Quick Jump: Muntinlupa Barangays 3-Col Grid Drawer */}
+      {showBarangayDrawer && (
+        <div className="neu-flat rounded-2xl p-3 border border-white/80 dark:border-white/10 shadow-xl space-y-2 animate-in fade-in duration-150">
+          <div className="flex items-center justify-between px-0.5">
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
+              Quick Jump · Muntinlupa Barangays
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowBarangayDrawer(false)}
+              className="text-2xs font-extrabold text-link hover:underline cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {MUNTINLUPA_BARANGAYS.map((b) => {
+              const isCurrent = query.toLowerCase().includes(b.name.toLowerCase());
+              return (
+                <button
+                  key={b.name}
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => selectBarangay(b)}
+                  className={`py-2 px-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer truncate ${
+                    isCurrent
+                      ? 'bg-primary text-white font-extrabold shadow-xs'
+                      : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-link'
+                  }`}
+                >
+                  {b.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Search Suggestions Dropdown */}
       {showPanel && (
-        <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl overflow-hidden max-h-60 overflow-y-auto z-[700]">
+        <div className="absolute left-0 right-0 top-full mt-1.5 neu-flat border border-white/80 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-[700]">
           {loading && results.length === 0 ? (
             <p className="px-4 py-3 text-xs font-semibold text-tertiary" role="status">
               Searching Muntinlupa…
             </p>
           ) : showEmpty ? (
             <p className="px-4 py-3 text-xs font-semibold text-tertiary" role="status">
-              No matches in Muntinlupa. Try a nearby landmark, or drag the map to set the pin.
+              No matches in Muntinlupa. Try selecting a barangay above, or drag the map to place the pin.
             </p>
           ) : (
-            <ul id={listboxId} role="listbox" aria-label="Address suggestions">
+            <ul id={listboxId} role="listbox" aria-label="Address suggestions" className="divide-y divide-slate-200/60 dark:divide-white/5">
               {results.map((item, idx) => (
                 <li
                   key={`${item.lat}-${item.lng}-${idx}`}
@@ -249,29 +325,23 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
                   onMouseDown={(e) => e.preventDefault()}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => selectResult(item)}
-                  className={`w-full px-4 py-2.5 flex items-center gap-3 text-left cursor-pointer border-b border-slate-100 dark:border-white/5 last:border-0 transition-colors ${
+                  className={`w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left cursor-pointer transition-colors ${
                     idx === activeIndex
-                      ? 'bg-primary/5 dark:bg-primary/10'
-                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      ? 'bg-primary/10 dark:bg-primary/20'
+                      : 'hover:bg-slate-200/40 dark:hover:bg-slate-800/50'
                   }`}
                 >
-                  <div className="w-7 h-7 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center text-link shrink-0">
-                    {item.isLandmark ? (
-                      <Building className="w-3.5 h-3.5" />
-                    ) : item.isBarangay ? (
-                      <Home className="w-3.5 h-3.5" />
-                    ) : (
-                      <MapPin className="w-3.5 h-3.5" />
-                    )}
-                  </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                    <p className="text-xs font-extrabold text-slate-900 dark:text-slate-100 truncate">
                       {item.displayName.split(',')[0]}
                     </p>
-                    <p className="text-xs text-tertiary font-semibold truncate">
+                    <p className="text-xs text-tertiary font-medium truncate">
                       {item.displayName}
                     </p>
                   </div>
+                  <span className="px-2 py-0.5 rounded-md bg-primary/10 text-link text-2xs font-extrabold uppercase tracking-wider shrink-0">
+                    {item.tag || 'Select'}
+                  </span>
                 </li>
               ))}
             </ul>

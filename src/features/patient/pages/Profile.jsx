@@ -704,7 +704,7 @@ const PatientProfile = () => {
 
               {/* Avatar overlapping the banner */}
               <div className="px-5 sm:px-6 -mt-12 sm:-mt-14 relative z-10 flex justify-center">
-                <div className="neu-flat rounded-full p-1.5 shadow-lg">
+                <div className="neu-flat rounded-2xl p-1.5 shadow-lg">
                   <ProfilePhotoUpload
                     userId={user.id}
                     fullName={profile.full_name}
@@ -719,11 +719,11 @@ const PatientProfile = () => {
                 <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5 truncate">{profile.email}</p>
                 
                 <div className="flex items-center justify-center gap-2 mt-3">
-                  <span className="neu-flat-sm px-3 py-1 text-link font-black text-2xs uppercase tracking-widest rounded-full">
+                  <span className="neu-flat-sm px-3 py-1 text-link font-black text-2xs uppercase tracking-widest rounded-md">
                     Patient
                   </span>
                   {profile.is_profile_complete && (
-                    <span className="neu-flat-sm px-3 py-1 text-success dark:text-success-dark font-black text-2xs uppercase tracking-widest rounded-full flex items-center gap-1">
+                    <span className="neu-flat-sm px-3 py-1 text-success dark:text-success-dark font-black text-2xs uppercase tracking-widest rounded-md flex items-center gap-1">
                       <CheckCircle2 className="w-3 h-3 text-success" /> Complete
                     </span>
                   )}

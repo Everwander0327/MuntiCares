@@ -1,81 +1,39 @@
-import { useEffect, useRef, useState } from 'react';
-import { Check, Layers, Map as MapIcon, Mountain, Satellite } from 'lucide-react';
+import { Map as MapIcon, Mountain, Satellite } from 'lucide-react';
 
 export const BASEMAP_MODES = [
-  { id: 'streets', label: 'Street map', Icon: MapIcon },
-  { id: 'satellite', label: 'Satellite', Icon: Satellite },
-  { id: 'terrain', label: 'Terrain', Icon: Mountain },
+  { id: 'streets', label: 'Street', fullLabel: 'Street map', Icon: MapIcon },
+  { id: 'satellite', label: 'Satellite', fullLabel: 'Satellite', Icon: Satellite },
+  { id: 'terrain', label: 'Terrain', fullLabel: 'Terrain', Icon: Mountain },
 ];
 
 /**
- * Shared by the onboarding picker and the live tracker so both maps expose the
- * same three base maps. Renders the trigger plus a menu that opens beside the
- * control stack (it is a sibling, not a flex item).
+ * Option 1 Global Basemap Switcher (Yandex / Grab 1-Tap Segmented Squircle Bar).
+ * Renders a crisp top-right (or custom-positioned) 1-tap squircle segmented bar
+ * so users can switch between Street, Satellite, and Terrain views immediately
+ * without opening a hidden popup menu.
  */
-export default function BasemapControl({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const buttonRef = useRef(null);
-  const menuRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    const onPointerDown = (event) => {
-      if (menuRef.current?.contains(event.target)) return;
-      if (buttonRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    const onKeyDown = (event) => {
-      if (event.key !== 'Escape') return;
-      setOpen(false);
-      buttonRef.current?.focus();
-    };
-
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open]);
-
-  const select = (id) => {
-    onChange(id);
-    setOpen(false);
-    buttonRef.current?.focus();
-  };
-
+export default function BasemapControl({ value, onChange, className = '' }) {
   return (
-    <>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        className="mc-map-control"
-        title="Change base map"
-        aria-label="Change base map"
-        aria-expanded={open}
-      >
-        <Layers className="w-4 h-4" />
-      </button>
-
-      {open && (
-        <div ref={menuRef} className="mc-basemap" role="group" aria-label="Base map">
-          {BASEMAP_MODES.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              type="button"
-              className="mc-basemap__item"
-              aria-pressed={value === id}
-              onClick={() => select(id)}
-            >
-              <Icon className="w-4 h-4" aria-hidden="true" />
-              <span>{label}</span>
-              {value === id && <Check className="w-4 h-4 ml-auto" aria-hidden="true" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </>
+    <div
+      className={`mc-basemap-segmented ${className}`}
+      role="group"
+      aria-label="Base map view"
+    >
+      {BASEMAP_MODES.map(({ id, label, fullLabel }) => {
+        const active = value === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onChange(id)}
+            aria-pressed={active}
+            title={fullLabel}
+            className={`mc-basemap-segmented__btn${active ? ' is-active' : ''}`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

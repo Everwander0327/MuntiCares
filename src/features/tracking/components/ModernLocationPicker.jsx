@@ -248,50 +248,57 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
         hideLabel={readOnly}
       />
 
-      {/* Control stack mirrors the live visit tracker */}
+      {/* Option 1 Global Map HUD: Top-Right 1-Tap Basemap Switcher + Bottom-Right Split GPS & Zoom Dock */}
       {!readOnly && ready && (
-        <div className="mc-map-controls mc-map-controls--bottom">
-          <BasemapControl value={basemap} onChange={setBasemap} />
+        <>
+          <div className="mc-basemap-dock mc-basemap-dock--top-right">
+            <BasemapControl value={basemap} onChange={setBasemap} />
+          </div>
 
-          <button
-            type="button"
-            onClick={handleLocateMe}
-            disabled={locatingGps}
-            className="mc-map-control disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Use my current GPS location"
-            aria-label="Use my current GPS location"
-          >
-            {locatingGps ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <LocateFixed className="w-4 h-4" />
-            )}
-          </button>
+          <div className="mc-split-controls mc-split-controls--bottom">
+            <button
+              type="button"
+              onClick={handleLocateMe}
+              disabled={locatingGps}
+              className="mc-gps-pill-btn disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Use my current GPS location"
+              aria-label="Use my current GPS location"
+            >
+              {locatingGps ? (
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+              ) : (
+                <LocateFixed className="w-4 h-4 shrink-0" />
+              )}
+              <span>My GPS</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              mapRef.current?.zoomIn();
-            }}
-            className="mc-map-control"
-            title="Zoom in"
-            aria-label="Zoom in"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+            <div className="mc-zoom-pod" role="group" aria-label="Map zoom controls">
+              <button
+                type="button"
+                onClick={() => {
+                  mapRef.current?.zoomIn();
+                }}
+                className="mc-zoom-pod__btn"
+                title="Zoom in"
+                aria-label="Zoom in"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              mapRef.current?.zoomOut();
-            }}
-            className="mc-map-control"
-            title="Zoom out"
-            aria-label="Zoom out"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
-        </div>
+              <button
+                type="button"
+                onClick={() => {
+                  mapRef.current?.zoomOut();
+                }}
+                className="mc-zoom-pod__btn"
+                title="Zoom out"
+                aria-label="Zoom out"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

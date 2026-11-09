@@ -568,63 +568,86 @@ const TrackingMap = forwardRef(function TrackingMap({
         </div>
       )}
 
-      {/* Redesign: one vertical control stack, no scattered map chrome */}
-      <div className={`mc-map-controls ${controlsAlign === 'top' ? 'mc-map-controls--top' : 'mc-map-controls--center'}`}>
+      {/* Option 1 Global Map HUD: 1-Tap Segmented Basemap Bar + Split GPS & Zoom/Route Dock */}
+      <div
+        className={`mc-basemap-dock ${
+          compact
+            ? 'mc-basemap-dock--top-right'
+            : controlsAlign === 'top'
+              ? 'mc-basemap-dock--below-hud'
+              : 'mc-basemap-dock--top-right-hud'
+        }`}
+      >
         <BasemapControl value={basemap} onChange={setBasemap} />
+      </div>
+
+      <div
+        className={`mc-split-controls ${
+          compact
+            ? 'mc-split-controls--bottom'
+            : controlsAlign === 'top'
+              ? 'mc-split-controls--top'
+              : 'mc-split-controls--center'
+        }`}
+      >
         <button
           type="button"
           onClick={handleLocateMe}
           disabled={locatingGps}
-          className="mc-map-control disabled:opacity-40 disabled:cursor-not-allowed"
+          className="mc-gps-pill-btn disabled:opacity-50 disabled:cursor-not-allowed"
           title="Use my current GPS location"
           aria-label="Use my current GPS location"
         >
           {locatingGps ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
           ) : (
-            <LocateFixed className="w-4 h-4" />
+            <LocateFixed className="w-4 h-4 shrink-0" />
           )}
+          <span>My GPS</span>
         </button>
-        <button
-          type="button"
-          onClick={() => mapRef.current?.zoomIn()}
-          className="mc-map-control"
-          title="Zoom in"
-          aria-label="Zoom in"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => mapRef.current?.zoomOut()}
-          className="mc-map-control"
-          title="Zoom out"
-          aria-label="Zoom out"
-        >
-          <Minus className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={fitRoute}
-          disabled={!p && !d}
-          className="mc-map-control disabled:opacity-40 disabled:cursor-not-allowed"
-          title="Fit entire route in view"
-          aria-label="Fit entire route in view"
-        >
-          <Maximize2 className="w-4 h-4" />
-        </button>
-        {onToggleFollow && (
+
+        <div className="mc-zoom-pod" role="group" aria-label="Map navigation controls">
           <button
             type="button"
-            onClick={() => onToggleFollow(!follow)}
-            className="mc-map-control"
-            title={follow ? 'Following provider (click to unlock)' : 'Follow provider'}
-            aria-label={follow ? 'Stop following provider' : 'Follow provider'}
-            aria-pressed={follow}
+            onClick={() => mapRef.current?.zoomIn()}
+            className="mc-zoom-pod__btn"
+            title="Zoom in"
+            aria-label="Zoom in"
           >
-            <Crosshair className="w-4 h-4" />
+            <Plus className="w-4 h-4" />
           </button>
-        )}
+          <button
+            type="button"
+            onClick={() => mapRef.current?.zoomOut()}
+            className="mc-zoom-pod__btn"
+            title="Zoom out"
+            aria-label="Zoom out"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={fitRoute}
+            disabled={!p && !d}
+            className="mc-zoom-pod__btn disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Fit entire route in view"
+            aria-label="Fit entire route in view"
+          >
+            <Maximize2 className="w-4 h-4" />
+          </button>
+          {onToggleFollow && (
+            <button
+              type="button"
+              onClick={() => onToggleFollow(!follow)}
+              className="mc-zoom-pod__btn"
+              title={follow ? 'Following provider (click to unlock)' : 'Follow provider'}
+              aria-label={follow ? 'Stop following provider' : 'Follow provider'}
+              aria-pressed={follow}
+            >
+              <Crosshair className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {compact && (

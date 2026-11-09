@@ -5,7 +5,26 @@ import 'leaflet/dist/leaflet.css';
 import { Search, LocateFixed, Loader2, Check, MapPin, Plus, Minus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
+import BasemapControl from './BasemapControl';
 import { geocodeAddress, savePatientCoords } from '../services/geocoding';
+
+const LEAFLET_TILES = {
+  streets: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>',
+  },
+  satellite: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution:
+      '&copy; <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, Maxar, Earthstar Geographics',
+  },
+  terrain: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution:
+      '&copy; <a href="https://www.esri.com/" target="_blank" rel="noreferrer">Esri</a>, HERE, Garmin, USGS',
+  },
+};
 
 const pinIcon = L.divIcon({
   className: '',
@@ -58,8 +77,10 @@ export default function LocationPicker({
   const { dark } = useTheme();
   const [pos, setPos] = useState(initial || null);
   const [busy, setBusy] = useState(null); // 'geo' | 'gps' | 'save'
+  const [basemap, setBasemap] = useState('streets');
   const markerRef = useRef(null);
   const mapRef = useRef(null);
+  const activeTile = LEAFLET_TILES[basemap] || LEAFLET_TILES.streets;
 
   useEffect(() => {
     if (initial?.lat != null && initial?.lng != null) setPos(initial);
@@ -131,11 +152,15 @@ export default function LocationPicker({
           style={{ background: dark ? '#0f172a' : '#eaf2f8' }}
         >
           <TileLayer
-            key={dark ? 'dark' : 'light'}
-            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>'
+            key={`${basemap}-${dark ? 'dark' : 'light'}`}
+            url={activeTile.url}
+            attribution={activeTile.attribution}
             maxZoom={19}
-            className={`mc-map-tiles mc-muted-tiles${dark ? ' mc-dark-tiles' : ''}`}
+            className={
+              basemap !== 'satellite'
+                ? `mc-map-tiles mc-muted-tiles${dark ? ' mc-dark-tiles' : ''}`
+                : ''
+            }
           />
           <ClickToMove onPick={setPos} />
           <Recenter pos={pos} />
@@ -143,26 +168,48 @@ export default function LocationPicker({
           {pos && <Marker position={[pos.lat, pos.lng]} icon={pinIcon} draggable eventHandlers={handlers} ref={markerRef} />}
         </MapContainer>
 
-        {/* Desktop zoom stays as one compact vertical control stack */}
-        <div className="mc-map-controls m-0 hidden sm:flex" style={{ top: 'auto', bottom: 12, transform: 'none' }}>
+        {/* Option 1 Global Map HUD: Top-Right 1-Tap Basemap Switcher + Bottom-Right Split GPS & Zoom Dock */}
+        <div className="mc-basemap-dock mc-basemap-dock--top-right">
+          <BasemapControl value={basemap} onChange={setBasemap} />
+        </div>
+
+        <div className="mc-split-controls mc-split-controls--bottom">
           <button
             type="button"
-            onClick={() => mapRef.current?.zoomIn()}
-            title="Zoom in"
-            aria-label="Zoom in"
-            className="mc-map-control"
+            onClick={useGps}
+            disabled={!!busy}
+            className="mc-gps-pill-btn disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Use my current GPS location"
+            aria-label="Use my current GPS location"
           >
-            <Plus className="w-4 h-4" />
+            {busy === 'gps' ? (
+              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            ) : (
+              <LocateFixed className="w-4 h-4 shrink-0" />
+            )}
+            <span>My GPS</span>
           </button>
-          <button
-            type="button"
-            onClick={() => mapRef.current?.zoomOut()}
-            title="Zoom out"
-            aria-label="Zoom out"
-            className="mc-map-control"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
+
+          <div className="mc-zoom-pod" role="group" aria-label="Map zoom controls">
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomIn()}
+              title="Zoom in"
+              aria-label="Zoom in"
+              className="mc-zoom-pod__btn"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => mapRef.current?.zoomOut()}
+              title="Zoom out"
+              aria-label="Zoom out"
+              className="mc-zoom-pod__btn"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {!pos && (

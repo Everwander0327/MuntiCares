@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { initialsAvatar } from '@/lib/avatar';
-import { MessageSquareWarning, Search, PhoneOff } from 'lucide-react';
+import { MessageSquareWarning, Search, PhoneOff, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { usePresence } from '@/contexts/PresenceContext';
 import { fetchRecentCalls, onCallsChanged } from '../lib/callRecords';
@@ -22,8 +22,11 @@ const formatRelativeTime = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 };
 
+const stripLeadingCallMarker = (str) =>
+  String(str || '').replace(/^(\u{1F4F9}|\u{1F4DE})\s*/u, '');
+
 const getLastMessagePreview = (msg, userId, callRecord) => {
-  if (!msg) return { text: 'No messages yet', isYou: false };
+  if (!msg) return { text: '', isYou: false };
   const isYou = msg.sender_id === userId;
   if (msg.message_type === 'call') {
     return { text: `${callRecord?.call_type === 'audio' ? 'Voice' : 'Video'} consultation`, isYou };
@@ -32,23 +35,21 @@ const getLastMessagePreview = (msg, userId, callRecord) => {
   if (isImage) {
     const lines = (msg.content || '').split('\n');
     const caption = lines.slice(1).join('\n').trim();
-    return { text: caption ? `📷 ${caption}` : '📷 Photo', isYou };
+    return { text: caption ? `Photo: ${caption}` : 'Photo shared', isYou };
   }
   const isVideo = msg.message_type === 'video' || (msg.content && /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(msg.content.split('\n')[0]));
   if (isVideo) {
     const lines = (msg.content || '').split('\n');
     const caption = lines.slice(1).join('\n').trim();
-    return { text: caption ? `🎥 ${caption}` : '🎥 Video', isYou };
+    return { text: caption ? `Video: ${caption}` : 'Video shared', isYou };
   }
   if (msg.message_type === 'file') {
-    return { text: '📎 Attachment', isYou };
+    return { text: 'File attachment', isYou };
   }
-  // Chat rows written before calls were recorded carry only their emoji, which is how
-  // this list came to label a voice consultation as "Video call started".
-  if (msg.content?.startsWith('📹') || msg.content?.startsWith('📞')) {
+  if (/^(\u{1F4F9}|\u{1F4DE})/u.test(msg.content || '')) {
     return { text: 'Consultation call', isYou };
   }
-  let text = msg.content || '';
+  let text = stripLeadingCallMarker(msg.content || '');
   if (text.length > 50) text = text.slice(0, 50) + '…';
   return { text, isYou };
 };
@@ -59,6 +60,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
   const [loading, setLoading] = useState(true);
   const [callById, setCallById] = useState({});
   const [missedByPartner, setMissedByPartner] = useState({});
+  const [activeFilter, setActiveFilter] = useState('all');
 
   // Only the last 24 hours are flagged, matching the window the transcript itself shows
   // when the conversation is opened. Older records stay in `calls` for auditing.
@@ -91,7 +93,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
 
         const { data: reqData } = await supabase
           .from('requests')
-          .select(`${otherCol}, partner:${otherCol}(full_name, email, avatar_url)`)
+          .select(`service, ${otherCol}, partner:${otherCol}(full_name, email, avatar_url)`)
           .eq(filterCol, user.id)
           .in('status', ['Accepted', 'On The Way', 'Arrived', 'Completed']);
 
@@ -105,6 +107,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
             name: p.full_name || (isPatient ? 'Provider' : 'Patient'),
             email: p.email,
             avatar_url: p.avatar_url || '',
+            serviceType: req.service || '',
             photoUrl: p.avatar_url || initialsAvatar(p.full_name, { background: isPatient ? 'DDEBF8' : 'E1F3EA', color: isPatient ? '2F6FB5' : '2C7A55' }),
           };
         });
@@ -226,38 +229,41 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
     };
   }, [user, loadCalls]);
 
-  const filtered = searchTerm
-    ? conversations.filter(c => c.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+  const searchFiltered = searchTerm
+    ? conversations.filter(c => {
+        const q = searchTerm.toLowerCase();
+        const nameMatch = c.name?.toLowerCase().includes(q);
+        const msgMatch = c.lastMessage?.content?.toLowerCase().includes(q);
+        return nameMatch || msgMatch;
+      })
     : conversations;
+
+  const unreadConversationsCount = conversations.filter(c => c.unreadCount > 0).length;
+  const onlineConversationsCount = conversations.filter(c => isUserOnline(c.id)).length;
+
+  const filtered = searchFiltered.filter(c => {
+    if (activeFilter === 'unread') return c.unreadCount > 0;
+    if (activeFilter === 'online') return isUserOnline(c.id);
+    return true;
+  });
 
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center p-12">
         <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
         </div>
       </div>
     );
   }
 
-  if (filtered.length === 0) {
-    if (searchTerm && conversations.length > 0) {
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center text-tertiary dark:text-tertiary py-16 px-4">
-          <div className="neu-flat-sm w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-tertiary">
-            <Search className="w-8 h-8" />
-          </div>
-          <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">No results found</h3>
-          <p className="text-xs text-tertiary dark:text-tertiary mt-1 text-center">No conversations match {'\u201C'}{searchTerm}{'\u201D'}</p>
-        </div>
-      );
-    }
+  if (conversations.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-tertiary dark:text-tertiary py-16 px-4">
-        <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mb-3 text-link">
-          <MessageSquareWarning className="w-8 h-8" />
+        <div className="neu-flat w-14 h-14 rounded-2xl flex items-center justify-center mb-3 text-link">
+          <MessageSquareWarning className="w-7 h-7" />
         </div>
-        <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">No conversations yet</h3>
+        <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">No conversations yet</h3>
         <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-xs text-center">
           {user?.role === 'patient'
             ? 'Chat with providers once a request is accepted.'
@@ -268,88 +274,154 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
   }
 
   return (
-    <div className="space-y-1 sm:space-y-1.5 select-text">
-      {filtered.map((conv, i) => {
-        const preview = getLastMessagePreview(conv.lastMessage, user.id, callById[conv.lastMessage?.call_id]);
-        const missed = missedByPartner[conv.id];
-        const hasUnread = conv.unreadCount > 0;
-        return (
-          <motion.div
-            key={conv.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: Math.min(i, 8) * 0.02 }}
-            onClick={() => {
-              setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
-              onSelect(conv);
-            }}
-            className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3 transition-all cursor-pointer ${
-              conv.id === selectedId
-                ? 'neu-pressed border border-primary/40 bg-primary/10'
-                : hasUnread 
-                ? 'neu-flat border border-primary/30 ring-1 ring-primary/20' 
-                : 'hover:bg-slate-200/50 dark:hover:bg-white/5'
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="relative shrink-0">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden p-0.5 flex items-center justify-center aspect-square bg-slate-100 dark:bg-slate-700 shadow-sm">
-                  <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-full" />
-                </div>
-                <div 
-                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-surface-shell transition-colors ${
-                    isUserOnline(conv.id) ? 'bg-emerald-500' : 'bg-slate-400'
-                  }`} 
-                  title={isUserOnline(conv.id) ? 'Online' : 'Offline'}
-                />
-              </div>
+    <div className="space-y-3 select-text">
+      {/* Option 1: Segmented Filter Squircles (All / Unread / Online) */}
+      <div className="grid grid-cols-3 gap-1.5 p-1 neu-inset rounded-xl">
+        <button
+          type="button"
+          onClick={() => setActiveFilter('all')}
+          className={`py-1.5 px-2 rounded-lg text-2xs font-black transition-all cursor-pointer truncate ${
+            activeFilter === 'all'
+              ? 'bg-primary text-white shadow-sm'
+              : 'text-tertiary hover:text-slate-800 dark:hover:text-white'
+          }`}
+        >
+          All ({conversations.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilter('unread')}
+          className={`py-1.5 px-2 rounded-lg text-2xs font-black transition-all cursor-pointer truncate ${
+            activeFilter === 'unread'
+              ? 'bg-primary text-white shadow-sm'
+              : 'text-tertiary hover:text-slate-800 dark:hover:text-white'
+          }`}
+        >
+          Unread ({unreadConversationsCount})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveFilter('online')}
+          className={`py-1.5 px-2 rounded-lg text-2xs font-black transition-all cursor-pointer truncate ${
+            activeFilter === 'online'
+              ? 'bg-primary text-white shadow-sm'
+              : 'text-tertiary hover:text-slate-800 dark:hover:text-white'
+          }`}
+        >
+          Online ({onlineConversationsCount})
+        </button>
+      </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <p className={`font-display font-extrabold text-xs sm:text-sm truncate ${
-                    hasUnread ? 'text-link' : 'text-slate-900 dark:text-white'
-                  }`}>
-                    {conv.name}
-                  </p>
-                  <span className="text-2xs text-tertiary dark:text-tertiary shrink-0 font-medium tabular-nums">
-                    {formatRelativeTime(conv.lastMessage?.created_at)}
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  {preview.text ? (
-                    <p className={`text-xs truncate ${
-                      hasUnread 
-                        ? 'text-slate-800 dark:text-slate-100 font-bold' 
-                        : 'text-tertiary dark:text-tertiary font-normal'
-                    }`}>
-                      {preview.isYou && <span className="text-tertiary font-normal">You: </span>}
-                      {preview.text}
-                    </p>
-                  ) : (
-                    <p className="text-2xs text-tertiary italic">No messages yet</p>
-                  )}
-                </div>
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center text-tertiary dark:text-tertiary py-12 px-4">
+          <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mb-2.5 text-tertiary">
+            <Search className="w-5 h-5" />
+          </div>
+          <h3 className="text-xs font-extrabold text-slate-800 dark:text-slate-100">
+            {searchTerm ? 'No matching conversations' : `No ${activeFilter} contacts`}
+          </h3>
+          <p className="text-2xs text-tertiary dark:text-tertiary mt-1 text-center">
+            {searchTerm
+              ? `No conversations match \u201C${searchTerm}\u201D`
+              : activeFilter === 'unread'
+              ? 'You have read all incoming messages.'
+              : 'No contacts are currently online.'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {filtered.map((conv, i) => {
+            const preview = getLastMessagePreview(conv.lastMessage, user.id, callById[conv.lastMessage?.call_id]);
+            const missed = missedByPartner[conv.id];
+            const hasUnread = conv.unreadCount > 0;
+            const online = isUserOnline(conv.id);
+            const isSelected = conv.id === selectedId;
 
-                {missed && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <PhoneOff className="w-3 h-3 text-danger shrink-0" />
-                    <span className="text-3xs font-extrabold uppercase tracking-wider text-danger truncate">
-                      Missed {missed.call_type === 'audio' ? 'voice' : 'video'} call · {formatRelativeTime(missed.ringing_at)}
-                    </span>
+            return (
+              <motion.div
+                key={conv.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.18, delay: Math.min(i, 8) * 0.02 }}
+                onClick={() => {
+                  setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, unreadCount: 0 } : c));
+                  onSelect(conv);
+                }}
+                className={`p-2.5 sm:p-3 rounded-xl flex items-center justify-between gap-2.5 transition-all cursor-pointer ${
+                  isSelected
+                    ? 'neu-pressed border border-primary/50 bg-primary/10'
+                    : hasUnread
+                    ? 'neu-flat border border-primary/40 ring-1 ring-primary/20'
+                    : 'neu-flat-sm hover:border-primary/30 border border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Squircle Avatar (Zero circular avatars or color dots) */}
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl overflow-hidden p-0.5 flex items-center justify-center aspect-square bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 shrink-0 shadow-xs">
+                    <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                   </div>
-                )}
-              </div>
-            </div>
 
-            {hasUnread && (
-              <span className="min-w-[18px] h-[18px] bg-primary rounded-full flex items-center justify-center text-3xs font-black text-white px-1 shadow-sm shrink-0">
-                {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-              </span>
-            )}
-          </motion.div>
-        );
-      })}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className={`font-display font-extrabold text-xs sm:text-sm truncate ${
+                          hasUnread ? 'text-link' : 'text-slate-900 dark:text-white'
+                        }`}>
+                          {conv.name}
+                        </p>
+                        <span
+                          className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 border ${
+                            online
+                              ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-slate-200/70 dark:bg-slate-800/90 border-slate-300/80 dark:border-white/10 text-tertiary'
+                          }`}
+                        >
+                          {online ? 'Online' : 'Offline'}
+                        </span>
+                      </div>
+                      <span className="text-2xs text-tertiary dark:text-tertiary shrink-0 font-bold tabular-nums">
+                        {formatRelativeTime(conv.lastMessage?.created_at)}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                      {preview.text ? (
+                        <p className={`text-xs truncate ${
+                          hasUnread
+                            ? 'text-slate-800 dark:text-slate-100 font-bold'
+                            : 'text-tertiary dark:text-tertiary font-medium'
+                        }`}>
+                          {preview.isYou && <span className="text-tertiary font-normal">You: </span>}
+                          {preview.text}
+                        </p>
+                      ) : (
+                        <p className="text-2xs text-tertiary truncate font-medium">
+                          No messages yet {conv.serviceType ? `\u2022 ${conv.serviceType}` : ''}
+                        </p>
+                      )}
+
+                      {hasUnread && (
+                        <span className="px-1.5 py-0.5 bg-primary rounded-md flex items-center justify-center text-[9px] font-black text-white uppercase tracking-wider shadow-xs shrink-0">
+                          {conv.unreadCount > 9 ? '9+ NEW' : `${conv.unreadCount} NEW`}
+                        </span>
+                      )}
+                    </div>
+
+                    {missed && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <PhoneOff className="w-3 h-3 text-danger shrink-0" />
+                        <span className="text-3xs font-extrabold uppercase tracking-wider text-danger truncate">
+                          Missed {missed.call_type === 'audio' ? 'voice' : 'video'} call &bull; {formatRelativeTime(missed.ringing_at)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };

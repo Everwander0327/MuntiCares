@@ -18,14 +18,14 @@ export default function CenterMapPin({ isPanning, addressPreview, loading, hideL
         {/* Pulsing Ground Radar Ring */}
         {!isPanning && (
           <span
-            className="absolute w-8 h-8 rounded-full border border-[#2F6FB5]/55 dark:border-[#8CBDF0]/55 bg-[#2F6FB5]/15 animate-ping"
+            className="absolute w-8 h-8 rounded-lg border border-[#2F6FB5]/55 dark:border-[#8CBDF0]/55 bg-[#2F6FB5]/15 animate-ping"
             style={{ animationDuration: '2.2s' }}
           />
         )}
 
         {/* Secondary Target Halo */}
         <span
-          className={`rounded-full border transition-all duration-200 ${
+          className={`rounded-lg border transition-all duration-200 ${
             isPanning
               ? 'w-5 h-5 border-[#2F6FB5]/70 dark:border-[#8CBDF0]/80 bg-[#2F6FB5]/10 scale-90'
               : 'w-7 h-7 border-[#2F6FB5]/35 dark:border-[#8CBDF0]/40 bg-[#2F6FB5]/10 scale-100'
@@ -35,36 +35,28 @@ export default function CenterMapPin({ isPanning, addressPreview, loading, hideL
 
       {/* Dynamic Ground Shadow — centered on the true map center */}
       <div
-        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-950/45 blur-[2px] transition-all duration-200 ${
+        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-2 rounded-md bg-slate-950/45 blur-[2px] transition-all duration-200 ${
           isPanning ? 'w-3 opacity-30 scale-75' : 'w-6 opacity-80 scale-100'
         }`}
       />
 
       {/* Caption + Care Home Beacon stack; bottom edge (stem tip) sits on exact map center */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full flex w-full flex-col items-center px-3">
-        {/* Floating Address Pill above beacon */}
-        <div
-          className={`mb-2 max-w-full px-3 py-1.5 rounded-full text-sm font-semibold shadow-lg backdrop-blur-md transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
-            hideLabel ? 'hidden' : ''
-          } ${
-            isPanning
-              ? 'scale-95 -translate-y-1 opacity-85 bg-slate-900/90 text-white border border-white/15'
-              : 'scale-100 translate-y-0 opacity-100 bg-white/95 dark:bg-slate-900/95 text-slate-800 dark:text-slate-100 border border-slate-200/80 dark:border-white/15'
-          }`}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin text-[#2F6FB5] dark:text-[#8CBDF0] shrink-0" />
-              <span className="truncate">Locating care address…</span>
-            </>
-          ) : (
-            <span className="truncate">
-              {isPanning
-                ? 'Release map to lock care location'
-                : addressPreview || 'Drag map to set care visit location'}
-            </span>
-          )}
-        </div>
+        {/* Compact Squircle Status Badge ONLY while panning or loading (Never repeats the full address over the map) */}
+        {!hideLabel && (isPanning || loading) && (
+          <div
+            className="mb-2 max-w-[240px] px-2.5 py-1 rounded-lg text-xs font-bold shadow-md backdrop-blur-md transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-white border border-white/15"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-3 h-3 animate-spin text-[#8CBDF0] shrink-0" />
+                <span className="truncate">Locating address…</span>
+              </>
+            ) : (
+              <span className="truncate">Release map to lock pin</span>
+            )}
+          </div>
+        )}
 
         {/* Care Home Beacon SVG (Squircle Badge + Roof/Heart + Precision Stem) */}
         <div
@@ -197,7 +189,7 @@ export default function CenterMapPin({ isPanning, addressPreview, loading, hideL
       </div>
 
       {/* Exact Center Reticle Dot */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[#2F6FB5] dark:bg-[#8CBDF0] ring-2 ring-white dark:ring-slate-900 shadow-sm" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-sm bg-[#2F6FB5] dark:bg-[#8CBDF0] ring-2 ring-white dark:ring-slate-900 shadow-sm" />
     </div>
   );
 }

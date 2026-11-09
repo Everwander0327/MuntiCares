@@ -189,9 +189,9 @@ const AdminProfile = () => {
                   </p>
                 </div>
 
-                {/* Role Pill */}
+                {/* Role Badge */}
                 <div className="mt-3">
-                  <span className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider text-link">
+                  <span className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-2xs font-extrabold uppercase tracking-wider text-link">
                     <Shield className="w-3.5 h-3.5 text-link" />
                     System Administrator
                   </span>
