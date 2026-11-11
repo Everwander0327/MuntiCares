@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { normalizePermissions } from '@/features/patient/utils/consent';
 import toast from 'react-hot-toast';
+import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 
 const PERMISSION_CONFIG = [
   {
@@ -305,10 +306,10 @@ const PatientConsent = () => {
 
       if (nextValue) {
         addHistoryEntry({ providerName, providerId, action: 'Granted', details: 'Full data sharing enabled' });
-        toast.success(`Access granted for ${providerName}`);
+        toast.success(`Access granted for ${providerName}`, { id: 'consent-status' });
       } else {
         addHistoryEntry({ providerName, providerId, action: 'Revoked', details: 'Data access paused' });
-        toast.success(`Access paused for ${providerName}`);
+        toast(`Access paused for ${providerName}`, { id: 'consent-status', icon: 'pause' });
       }
     } catch (err) {
       console.error('Error toggling consent:', err);
@@ -383,7 +384,11 @@ const PatientConsent = () => {
         details: `${updatedPerms[permKey] ? 'Granted' : 'Revoked'} ${PERMISSION_LABELS[permKey]}`,
       });
 
-      toast.success(`${updatedPerms[permKey] ? 'Enabled' : 'Disabled'} ${PERMISSION_LABELS[permKey]}`);
+      if (updatedPerms[permKey]) {
+        toast.success(`Enabled ${PERMISSION_LABELS[permKey]}`, { id: 'permission-status' });
+      } else {
+        toast(`Disabled ${PERMISSION_LABELS[permKey]}`, { id: 'permission-status', icon: 'pause' });
+      }
     } catch (err) {
       console.error('Error updating permissions:', err);
       toast.error('Failed to update permission.');
@@ -426,16 +431,7 @@ const PatientConsent = () => {
   }, [consents]);
 
   // Prevent background scroll and repaint lag when modal is open
-  useEffect(() => {
-    if (showAuditModal || selectedPermProvider) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, [showAuditModal, selectedPermProvider]);
+  useBodyScrollLock(Boolean(showAuditModal || selectedPermProvider));
 
   return (
     <DashboardLayout role="patient">

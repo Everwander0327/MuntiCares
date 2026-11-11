@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Check, Download, X, FileCode, User, Activity, HeartPulse, FileText, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
+import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 
 const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   const [copied, setCopied] = useState(false);
@@ -82,7 +83,9 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     };
   }, [bundle, patientName]);
 
-  // Lock background scroll and handle Escape key when open
+  // Handle Escape key when open
+  useBodyScrollLock(open);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && open) {
@@ -91,13 +94,9 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
       }
     };
     if (open) {
-      document.body.classList.add('modal-open');
       window.addEventListener('keydown', handleKeyDown);
-    } else {
-      document.body.classList.remove('modal-open');
     }
     return () => {
-      document.body.classList.remove('modal-open');
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [open, onClose]);
@@ -134,7 +133,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden">
+        <div className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden">
           {/* Backdrop */}
           <motion.div
             className="fixed inset-0 bg-slate-950/70 sm:backdrop-blur-sm z-[60]"
@@ -155,7 +154,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
             exit={{ opacity: 0, y: 24 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full sm:max-w-2xl max-h-[90dvh] sm:max-h-[84vh] neu-flat bg-surface-shell rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden z-[10000] border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            className="relative w-full sm:max-w-2xl max-h-[90dvh] sm:max-h-[84vh] neu-flat bg-surface-shell rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden z-[70] border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.5rem,env(safe-area-inset-bottom))]"
           >
             {/* Mobile Drag Indicator Bar (Squircle) */}
             <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-md mx-auto mt-2.5 sm:hidden shrink-0" />

@@ -42,6 +42,29 @@ export async function newContext(browser, viewport, theme = 'light') {
   return context;
 }
 
+// Scroll the document to the bottom in viewport-sized steps so IntersectionObserver
+// driven reveals (framer-motion `whileInView`) actually run, then return to the top.
+// Without this, below-fold content is audited while still at opacity 0 and the gates
+// report a blank page as clean.
+export async function revealPage(page) {
+  const viewport = page.viewportSize();
+  const step = Math.max(200, Math.round((viewport?.height ?? 800) * 0.75));
+  await page.evaluate(async (increment) => {
+    const settle = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+    let previous = -1;
+    for (let guard = 0; guard < 80; guard += 1) {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      if (maxScroll <= 0) break;
+      window.scrollBy(0, increment);
+      await settle(140);
+      if (window.scrollY === previous) break;
+      previous = window.scrollY;
+    }
+    window.scrollTo(0, 0);
+    await settle(200);
+  }, step);
+}
+
 export async function applyTheme(page, theme) {
   await page.evaluate((mode) => {
     try {

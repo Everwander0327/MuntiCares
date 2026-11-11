@@ -474,7 +474,7 @@ const AuthPage = () => {
   };
 
   return (
-    <main ref={pageRef} className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full flex flex-col justify-center">
+    <div ref={pageRef} className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full flex flex-col justify-center">
       {/* 50/50 Desktop Split-Screen Architecture */}
       <div className="w-full flex-1 grid grid-cols-1 lg:grid-cols-12 min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)]">
         
@@ -499,12 +499,12 @@ const AuthPage = () => {
             <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-primary dark:text-[#8CBDF0]">
               MuntiCares
             </span>
-            <h1 className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white tracking-tight leading-[1.12]">
+            <p className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white tracking-tight leading-[1.12]">
               Quality home care <br />right at your{' '}
               <span className="text-primary dark:text-[#8CBDF0]">
                 doorstep
               </span>
-            </h1>
+            </p>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 font-medium leading-relaxed max-w-md">
               Connecting Muntinlupa City residents with trusted, verified home care providers &mdash; fast, secure, and patient-first.
             </p>
@@ -553,9 +553,9 @@ const AuthPage = () => {
               transition={{ duration: 0.4, ease: FLUID }}
             >
               <div className="mb-4">
-                <h2 className="font-display font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white tracking-tight">
+                <h1 className="font-display font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white tracking-tight">
                   {mode === 'login' ? 'Welcome back' : 'Create an Account'}
-                </h2>
+                </h1>
                 <p className="text-xs sm:text-sm text-tertiary mt-0.5">
                   {mode === 'login'
                     ? 'Sign in to access your healthcare portal.'
@@ -596,7 +596,7 @@ const AuthPage = () => {
         </div>
 
       </div>
-    </main>
+    </div>
   );
 };
 

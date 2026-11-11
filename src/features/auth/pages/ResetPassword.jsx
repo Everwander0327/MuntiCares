@@ -89,16 +89,16 @@ const ResetPassword = () => {
   };
 
   if (!authInitialized) {
-    return <main className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full" />;
+    return <div className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full" />;
   }
 
   return (
-    <main className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full bg-secondary dark:bg-slate-950 flex items-center justify-center p-6 sm:p-10">
+    <div className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full bg-secondary dark:bg-slate-950 flex items-center justify-center p-6 sm:p-10">
       <div className="w-full max-w-md rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-5 sm:p-7 shadow-xl">
         <div className="mb-4 text-center">
-          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white tracking-tight">
+          <h1 className="font-display font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-white tracking-tight">
             Reset Password
-          </h2>
+          </h1>
           <p className="text-xs sm:text-sm text-tertiary mt-0.5">
             {user
               ? `Choose a new password for ${user.email}`
@@ -185,7 +185,7 @@ const ResetPassword = () => {
           </form>
         )}
       </div>
-    </main>
+    </div>
   );
 };
 

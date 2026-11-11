@@ -8,7 +8,8 @@ const BANNED_SOURCE = [
   { id: 'h-screen', pattern: /\bh-screen\b/ },
   { id: 'text-4xs', pattern: /\btext-4xs\b/ },
   { id: 'shadow-xs', pattern: /\bshadow-xs\b/ },
-  { id: 'z-index-escalation', pattern: /z-\[9\d*\]/ },
+  { id: 'backdrop-blur-xs', pattern: /\bbackdrop-blur-xs\b/ },
+  { id: 'z-index-escalation', pattern: /z-\[\d{4,}\]/ },
   { id: 'pure-black-hex', pattern: /#000(?![0-9a-fA-F])/ },
   {
     id: 'purple-classes',
@@ -210,7 +211,7 @@ export function evaluateGates(report, baseline, sourceHits = scanSource()) {
         failures.push(`src: ${id} x${hits.length} e.g. ${hits[0].file}:${hits[0].line}`);
       }
     }
-    const domKeys = ['hScreen', 'text4xs', 'shadowXs', 'zIndexEscalation', 'purpleClasses', 'uiAvatars', 'pureBlackComputed'];
+    const domKeys = ['hScreen', 'text4xs', 'shadowXs', 'backdropBlurXs', 'zIndexEscalation', 'purpleClasses', 'uiAvatars', 'pureBlackComputed'];
     const domTotals = Object.fromEntries(domKeys.map((key) => [key, 0]));
     for (const { audit } of entries) {
       for (const key of domKeys) domTotals[key] += audit.banned[key] || 0;
@@ -242,6 +243,15 @@ export function evaluateGates(report, baseline, sourceHits = scanSource()) {
       .filter(({ audit }) => audit.rootOverflow.xOverflow)
       .map(({ route, audit }) => `${route} @${audit.viewport} ${audit.theme}: scrollWidth ${audit.rootOverflow.scrollWidth} > ${audit.rootOverflow.clientWidth}`);
     add(11, 'Horizontal overflow', '0', failures, failures.length);
+  }
+
+  // 12 — nested <main> landmarks
+  {
+    const failures = entries
+      .filter(({ audit }) => (audit.nestedMain ?? 0) > 0)
+      .map(({ route, audit }) => `${route} @${audit.viewport} ${audit.theme}: ${audit.mainCount} main, ${audit.nestedMain} nested`);
+    const measured = entries.reduce((sum, { audit }) => sum + (audit.nestedMain ?? 0), 0);
+    add(12, 'Nested <main> landmarks', '0', failures, measured);
   }
 
   return gates;

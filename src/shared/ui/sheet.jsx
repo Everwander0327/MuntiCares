@@ -11,7 +11,7 @@ const SheetPortal = DialogPrimitive.Portal
 const SheetOverlay = React.forwardRef(({ className, ...props }, ref) => (
   <DialogPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-black/40 dark:bg-black/70",
+      "fixed inset-0 z-overlay bg-black/40 dark:bg-black/70",
       "data-[state=open]:animate-in data-[state=closed]:animate-out",
       "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 duration-200",
       className
@@ -29,7 +29,7 @@ const SheetContent = React.forwardRef(({ className, children, side = "bottom", .
       ref={ref}
       aria-modal="true"
       className={cn(
-        "fixed z-50 gap-4 bg-white dark:bg-slate-800 shadow-xl transition-transform duration-250 ease-out will-change-transform transform-gpu",
+        "fixed z-overlay gap-4 bg-surface-shell shadow-xl transition-transform duration-250 ease-out will-change-transform transform-gpu",
         "data-[state=open]:animate-in data-[state=closed]:animate-out duration-200",
         "overflow-y-auto overscroll-contain",
         side === "top" && "inset-x-0 top-0 max-h-[90dvh] data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",

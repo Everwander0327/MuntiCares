@@ -125,6 +125,15 @@ a,
   --chart-4: #38BDF8;
   --chart-5: #2C7A55;
   --chart-deep: #183049;
+  /* Page-level overlay ramp (DESIGN.md §6). Ascending, and the only sanctioned
+     z-index values for fixed-position layers. Numbers inside a map pane or a card
+     are local to that stacking context and are not part of this ramp. */
+  --z-chrome: 40;    /* sticky navbar and page headers */
+  --z-popover: 200;  /* menus and dropdowns anchored to chrome */
+  --z-dock: 900;     /* persistent, non-modal tracking dock */
+  --z-shell: 1000;   /* full-screen tracking shell */
+  --z-overlay: 1100; /* modal backdrop, dialog, sheet */
+  --z-toast: 1200;   /* notifications, above every overlay */
 }
 
 html.dark {
@@ -1249,36 +1258,6 @@ select:focus {
   100% { transform: translateY(-4px); }
 }
 
-.leaflet-container {
-  font-family: inherit;
-  outline: none;
-}
-
-.leaflet-control-attribution {
-  background: rgba(255, 255, 255, 0.84) !important;
-  color: #475569 !important;
-  font-family: inherit;
-  font-size: 10px !important;
-  line-height: 1.5;
-  padding: 2px 6px !important;
-  border-radius: 8px 0 0 0;
-  backdrop-filter: blur(6px);
-}
-
-.dark .leaflet-control-attribution {
-  background: rgba(15, 23, 42, 0.84) !important;
-  color: #cbd5e1 !important;
-}
-
-.leaflet-control-attribution a {
-  color: #2f6fb5 !important;
-  font-weight: 700;
-}
-
-.dark .leaflet-control-attribution a {
-  color: #8cbdf0 !important;
-}
-
 .mc-nav-stale {
   opacity: 0.5;
   filter: grayscale(0.45);
@@ -1798,7 +1777,7 @@ select:focus {
 .mc-tracker-shell {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--z-shell);
   display: flex;
   background: var(--trk-bg);
 }
@@ -1811,8 +1790,6 @@ select:focus {
   overflow: hidden;
   background: var(--trk-bg);
 }
-
-.mc-map-pane > .leaflet-container { width: 100%; height: 100%; }
 
 .mc-side-panel {
   position: relative;
@@ -2314,7 +2291,7 @@ select:focus {
 /* ---------- Provider dock ---------- */
 .mc-provider-dock {
   position: fixed;
-  z-index: 900;
+  z-index: var(--z-dock);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2360,11 +2337,10 @@ select:focus {
   border-radius: var(--trk-radius-md);
   background: var(--trk-bg);
 }
-.mc-provider-map > .leaflet-container { width: 100%; height: 100%; }
 
 .mc-provider-collapsed {
   position: fixed;
-  z-index: 900;
+  z-index: var(--z-dock);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2504,8 +2480,6 @@ select:focus {
   background: var(--trk-bg);
 }
 
-.mc-location-map .leaflet-container { width: 100%; height: 100%; }
-
 @media (max-width: 1023px) {
   .mc-side-panel { display: none; }
   .mc-panel-rail { display: none; }
@@ -2520,14 +2494,6 @@ select:focus {
   .mc-map-pane--sheet-full {
     height: calc(100dvh - var(--trk-sheet-full) + 24px);
   }
-  /* Keep OSM attribution visible above the mobile sheet. */
-  .mc-map-pane .leaflet-bottom.leaflet-right {
-    top: calc(max(12px, env(safe-area-inset-top)) + 44px);
-    left: 12px;
-    right: auto;
-    bottom: auto;
-  }
-  .mc-map-pane .leaflet-control-attribution { border-radius: 6px; }
 }
 
 @media (min-width: 1024px) {
@@ -2590,4 +2556,53 @@ select:focus {
     min-height: 260px;
     aspect-ratio: 16 / 10;
   }
+}
+
+/* ==========================================================================
+   Toast Aurora Border & Glowing Halo
+   ========================================================================== */
+@property --toast-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes toast-aurora {
+  to { --toast-angle: 360deg; }
+}
+
+.toast-aurora {
+  position: relative;
+  isolation: isolate;
+  padding: 1.5px;
+  border-radius: 14px;
+  background: conic-gradient(
+    from var(--toast-angle),
+    transparent 0%,
+    var(--toast-c) 18%,
+    transparent 40%,
+    transparent 60%,
+    var(--toast-c) 78%,
+    transparent 100%
+  );
+  animation: toast-aurora 3s linear infinite;
+}
+
+.toast-aurora::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: inherit;
+  filter: blur(14px);
+  opacity: 0.35;
+}
+
+html.dark .toast-aurora::before {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-aurora { animation-duration: 12s; }
 }

@@ -42,7 +42,7 @@ describe('formatRequestRow', () => {
   });
 
   it('defaults durationMinutes to null when absent', () => {
-    const { duration_minutes, ...rest } = raw;
+    const { duration_minutes: _duration_minutes, ...rest } = raw;
     expect(formatRequestRow(rest).durationMinutes).toBeNull();
   });
 });

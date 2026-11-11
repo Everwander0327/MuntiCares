@@ -5,6 +5,7 @@ import { Upload, FileText, Image, Trash2, CheckCircle2, Loader2, Check } from 'l
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import { markPresessionSubmitted } from '@/features/patient/utils/localState';
 import { buildPreSessionNotesSummary, mergePreSessionNotes } from '@/features/patient/utils/preSessionNotes';
 
@@ -41,21 +42,19 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
   const [checklist, setChecklist] = useState({});
   const fileInputRef = useRef(null);
 
+  useBodyScrollLock(isOpen);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) onClose();
     };
     if (isOpen) {
-      document.body.classList.add('modal-open');
       window.addEventListener('keydown', handleKeyDown);
       if (request?.id) {
         setChecklist(loadChecklist(request.id));
       }
-    } else {
-      document.body.classList.remove('modal-open');
     }
     return () => {
-      document.body.classList.remove('modal-open');
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose, request?.id]);

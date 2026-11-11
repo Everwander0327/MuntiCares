@@ -294,7 +294,7 @@ const ProviderRequests = () => {
   };
 
   // Provider can extend the duration of an active visit by 30 minutes via RPC
-  const handleExtendDuration = async (id, patientName) => {
+  const handleExtendDuration = async (id) => {
     setExtendingVisitId(id);
     try {
       const { data, error } = await supabase.rpc('provider_extend_request_duration', {
@@ -810,7 +810,7 @@ const ProviderRequests = () => {
                           <button
                             type="button"
                             disabled={extendingVisitId === req.id || updatingVisitId === req.id}
-                            onClick={() => handleExtendDuration(req.id, req.patient)}
+                            onClick={() => handleExtendDuration(req.id)}
                             className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-link hover:text-primary transition-all cursor-pointer flex items-center gap-1 active:scale-95"
                             title="Extend visit duration by 30 minutes via RPC"
                           >

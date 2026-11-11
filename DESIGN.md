@@ -4,8 +4,8 @@
 **Status:** describes the shipped UI. The implementation is canonical; this file records it.
 
 Open drift, tracked in `.design-qa/automation-state.json`: shared page-header adoption,
-avatar consolidation, spinner-to-skeleton migration, data-fetch error states, the z-index
-ramp, and the single-primary-CTA cleanup. Rules below are the target until those close.
+avatar consolidation, spinner-to-skeleton migration, data-fetch error states, and the
+single-primary-CTA cleanup. Rules below are the target until those close.
 
 Sources of truth:
 
@@ -165,10 +165,28 @@ No neon glows, no arbitrary `shadow-[…]` stacks.
   Equal cards are allowed only for the clinical directory.
 - Landing hero is split/asymmetric: headline and copy on one side, image/CTA surface on the
   other. A centered hero is not the default.
-- Overlays are the only `fixed inset-0` roots. Z-index is assigned from the documented ramp;
+- Overlays are the only `fixed inset-0` roots. Z-index is assigned from the ramp below;
   ad-hoc `z-[9999]`-style escalation is banned (gate 9).
 - Dashboard rhythm: `space-y-5`, mobile `dashboard-main padding-bottom: 5rem`, and the mobile
   bottom nav hides while a modal is open.
+
+### 6.1 Page-level z-index ramp
+
+Declared once as `--z-*` custom properties in the `:root` block of `src/index.css` and
+re-exposed as `z-*` utilities by `tailwind.config.js`. Fixed-position layers take one of
+these tiers and nothing else:
+
+| Tier | Value | Utility | Layer |
+|---|---|---|---|
+| `chrome` | 40 | `z-chrome` | Sticky navbar and page headers |
+| `popover` | 200 | `z-popover` | Menus and dropdowns anchored to chrome |
+| `dock` | 900 | `z-dock` | Persistent, non-modal tracking dock |
+| `shell` | 1000 | `z-shell` | Full-screen tracking shell |
+| `overlay` | 1100 | `z-overlay` | Modal backdrop, dialog, sheet |
+| `toast` | 1200 | `z-toast` | Notifications, above every overlay |
+
+Numbers inside a map pane or a card are local to that stacking context and are not part of
+this ramp. `scripts/design-qa/zIndexRamp.test.js` pins the ordering and the consumers.
 
 ---
 
@@ -181,6 +199,9 @@ No neon glows, no arbitrary `shadow-[…]` stacks.
 - Auto-moving content (carousels, marquees) needs pause on hover/focus, an explicit
   play/pause control, and a full stop under `prefers-reduced-motion` (WCAG 2.2.2).
 - Animate transform/opacity only. All motion must respect `prefers-reduced-motion`.
+- `framer-motion` defaults to `reducedMotion: "never"`, so any tree that animates needs an
+  explicit `<MotionConfig reducedMotion="user">` around it. The CSS media query in
+  `index.css` only covers CSS animations and transitions, not motion's JS tweens.
 
 ---
 
@@ -217,8 +238,8 @@ No neon glows, no arbitrary `shadow-[…]` stacks.
 - Three-equal-card marketing rows; centered hero by default.
 - `h-screen`; use `min-h-[100dvh]`.
 - Circular spinners where a skeleton or inline progress belongs.
-- Zombie utilities that do not exist (`text-4xs`, `shadow-xs`).
-- Ad-hoc z-index escalation (`z-[9999]`, `z-[10000]`, `z-[99999]`).
+- Zombie utilities that do not exist (`text-4xs`, `shadow-xs`, `backdrop-blur-xs`).
+- Ad-hoc z-index escalation: any arbitrary `z-[…]` of 1000 or higher (`z-[9999]`, `z-[10000]`, `z-[99999]`).
 - Nested scroll inside a scrolling sheet; more than one scroll container per overlay.
 - More than one primary CTA per screen, sheet, or modal.
 - Coral beside a blue primary on the same view.
@@ -241,9 +262,10 @@ No neon glows, no arbitrary `shadow-[…]` stacks.
 | Dialog semantics + focus trap on all overlays | 2 |
 | Text floor (12px / 14px, eyebrows excepted) | 3, 4 |
 | Contrast at ≥12px | 5 |
-| Exactly one `h1` per route | 6 |
+| Exactly one visible `h1` per route | 6 |
 | `alt` on images | 7 |
 | 44px targets on listed controls | 8 |
-| Banned classes (`h-screen`, `text-4xs`, `shadow-xs`, `z-[9…]`, `#000`, purple, `ui-avatars.com`) | 9 |
+| Banned classes (`h-screen`, `text-4xs`, `shadow-xs`, `backdrop-blur-xs`, `z-[≥1000]`, `#000`, purple, `ui-avatars.com`) | 9 |
 | No new console/page errors | 10 |
 | No horizontal overflow | 11 |
+| No nested `<main>` landmarks | 12 |

@@ -1301,7 +1301,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             type="button"
             onClick={() => handleStartCall('audio')}
             disabled={ringingFromPeer}
-            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-success transition-all shadow-xs ${
+            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-success transition-all ${
               ringingFromPeer ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
             }`}
             title={ringingFromPeer ? 'Answer the incoming call first' : 'Start Voice Consultation'}
@@ -1313,7 +1313,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             type="button"
             onClick={() => handleStartCall('video')}
             disabled={ringingFromPeer}
-            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-link transition-all shadow-xs ${
+            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-link transition-all ${
               ringingFromPeer ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
             }`}
             title={ringingFromPeer ? 'Answer the incoming call first' : 'Start Teleconsultation (Video)'}
@@ -1324,7 +1324,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           <button
             type="button"
             onClick={() => setShowProfilePanel(prev => !prev)}
-            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer shadow-xs ${
+            className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
               showProfilePanel
                 ? 'neu-pressed text-link border border-primary/40'
                 : 'text-slate-700 dark:text-slate-200 hover:text-link'
@@ -1760,7 +1760,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                                 key={msg.id}
                                 type="button"
                                 onClick={() => handleJumpToMessage(msg.id)}
-                                className="w-full text-left p-2 rounded-xl neu-btn hover:border-link/40 transition-all cursor-pointer flex flex-col gap-0.5 group shadow-xs"
+                                className="w-full text-left p-2 rounded-xl neu-btn hover:border-link/40 transition-all cursor-pointer flex flex-col gap-0.5 group"
                                 title="Click to jump to this message in chat"
                               >
                                 <div className="flex items-center justify-between text-3xs w-full">
@@ -1793,7 +1793,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     <button
                       type="button"
                       onClick={handleToggleConsent}
-                      className={`w-full py-2 px-3 rounded-xl flex items-center justify-between transition-all cursor-pointer shadow-xs border ${
+                      className={`w-full py-2 px-3 rounded-xl flex items-center justify-between transition-all cursor-pointer border ${
                         consentEnabled
                           ? 'neu-flat border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
                           : 'neu-pressed border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400'
@@ -1804,7 +1804,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       <div className={`w-10 h-5 flex items-center rounded-lg p-0.5 transition-colors duration-200 ${
                         consentEnabled ? 'bg-emerald-500 justify-end' : 'bg-slate-300 dark:bg-slate-600 justify-start'
                       }`}>
-                        <div className="w-4 h-4 bg-white rounded-md shadow-xs" />
+                        <div className="w-4 h-4 bg-white rounded-md" />
                       </div>
                     </button>
                   </div>
@@ -1894,7 +1894,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.2 }}
                   onClick={() => setShowProfilePanel(false)}
-                  className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-xs flex flex-col justify-end select-text"
+                  className="fixed inset-0 z-[70] bg-black/60 flex flex-col justify-end select-text"
                 >
                   <motion.div
                     initial={{ y: '100%' }}
@@ -1961,7 +1961,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 <div className="p-4 border-t border-slate-200/80 dark:border-white/10 shrink-0">
                   <Link
                     to={profilePath}
-                    className="neu-btn w-full py-2.5 px-3 rounded-xl text-xs font-black text-link hover:text-primary-700 flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                    className="neu-btn w-full py-2.5 px-3 rounded-xl text-xs font-black text-link hover:text-primary-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
                     <span>View Full Profile</span>
                     <span>&rarr;</span>

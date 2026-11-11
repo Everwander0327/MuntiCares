@@ -16,7 +16,7 @@ export const VIEWPORTS = [
 
 export const THEMES = ['light', 'dark'];
 
-export const PUBLIC_ROUTES = ['/', '/login', '/register', '/onboarding'];
+export const PUBLIC_ROUTES = ['/', '/login', '/register', '/reset-password', '/privacy', '/terms', '/onboarding'];
 
 export const ROLE_ROUTES = {
   patient: [

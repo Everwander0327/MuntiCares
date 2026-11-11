@@ -18,6 +18,7 @@ import {
   launchBrowser,
   newContext,
   applyTheme,
+  revealPage,
   watchConsole,
   login,
   screenshot,
@@ -68,6 +69,14 @@ async function captureRoute(page, name, route) {
   }
   const shots = [];
 
+  // Reveals are `once: true`, so a single pass locks every section in for the
+  // remaining screenshots and audits at every viewport.
+  try {
+    await revealPage(page);
+  } catch (error) {
+    console.log(`reveal skipped for ${route}: ${String(error).slice(0, 120)}`);
+  }
+
   await applyTheme(page, 'light');
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.waitForTimeout(400);
@@ -115,11 +124,12 @@ async function captureRoute(page, name, route) {
       tiny: Math.max(worstSoFar.tiny, audit.tinyText.violationCount),
       sentences: Math.max(worstSoFar.sentences, audit.smallSentences.count),
       contrast: Math.max(worstSoFar.contrast, audit.contrast.failures),
+      hidden: Math.max(worstSoFar.hidden, audit.hiddenContent?.count ?? 0),
     }),
-    { tiny: 0, sentences: 0, contrast: 0 }
+    { tiny: 0, sentences: 0, contrast: 0, hidden: 0 }
   );
   console.log(
-    `captured ${name} -> ${entry.finalPath}${navError ? ' (nav error)' : ''} | worst tiny=${worst.tiny} sentences=${worst.sentences} contrast=${worst.contrast} | console=${entry.consoleErrors.length}`
+    `captured ${name} -> ${entry.finalPath}${navError ? ' (nav error)' : ''} | worst tiny=${worst.tiny} sentences=${worst.sentences} contrast=${worst.contrast} hidden=${worst.hidden} | console=${entry.consoleErrors.length}`
   );
 }
 

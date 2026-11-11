@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
  * - Tapered precision stem whose tip is anchored at the exact map center (50%, 50%)
  * - Pulsing ground radar ring centered via wrapper so `animate-ping` scales from true center
  */
-export default function CenterMapPin({ isPanning, addressPreview, loading, hideLabel = false }) {
+export default function CenterMapPin({ isPanning, loading, hideLabel = false }) {
   return (
     <div
       className="pointer-events-none absolute inset-0 z-[500] select-none"

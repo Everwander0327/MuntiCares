@@ -22,6 +22,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { liveUserRowToAction } from './liveUserSync';
+import toast from 'react-hot-toast';
 
 const DashboardLayoutContext = createContext(false);
 
@@ -319,12 +320,26 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   useEffect(() => {
     if (!authUser?.id) return;
 
+    // A realtime UPDATE that lands while the fetch below is still in flight is newer
+    // than the row that fetch resolves with, so the fetch must not merge over it.
+    let sawRealtimeUpdate = false;
+    // This effect re-runs while an earlier fetch is still in flight; a superseded run
+    // must not write to the profile either.
+    let active = true;
+
     const fetchLiveUser = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .select('full_name, avatar_url, role, is_banned')
         .eq('id', authUser.id)
         .maybeSingle();
+
+      if (!active) return;
+      if (error) {
+        toast.error('Could not refresh your profile.');
+        return;
+      }
+      if (sawRealtimeUpdate) return;
 
       if (data) {
         const action = liveUserRowToAction(data);
@@ -347,6 +362,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
       .channel(`live-user-${authUser.id}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'users', filter: `id=eq.${authUser.id}` }, payload => {
         if (payload?.new) {
+          sawRealtimeUpdate = true;
           const action = liveUserRowToAction(payload.new);
           if (action.signOut) {
             logout();
@@ -363,6 +379,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
       .subscribe();
 
     return () => {
+      active = false;
       supabase.removeChannel(userChannel);
     };
   }, [authUser?.id, updateUser, logout, navigate]);

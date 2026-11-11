@@ -10,6 +10,23 @@ export function auditPage({ name, theme, viewport }) {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
   };
+  // Laid out and unhidden except for opacity, which is checked as the product of the
+  // whole ancestor chain — reveal animations set opacity on a wrapper, not each child.
+  const laidOutButTransparent = (el) => {
+    if (!el || !el.isConnected) return false;
+    const s = getComputedStyle(el);
+    if (s.display === 'none' || s.visibility === 'hidden') return false;
+    const r = el.getBoundingClientRect();
+    if (!(r.width > 0 && r.height > 0)) return false;
+    let opacity = 1;
+    let node = el;
+    while (node && node !== document.documentElement) {
+      opacity *= Number(getComputedStyle(node).opacity);
+      if (opacity === 0) return true;
+      node = node.parentElement;
+    }
+    return false;
+  };
   const rect = (el) => {
     const r = el.getBoundingClientRect();
     return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) };
@@ -38,17 +55,14 @@ export function auditPage({ name, theme, viewport }) {
   }
 
   // ------------------------------------------------- text size classification
-  const textEls = [...document.querySelectorAll('p,span,div,li,a,button,label,td,th,h1,h2,h3,h4,h5,h6,small,time')].filter(
+  const TEXT_SELECTOR = 'p,span,div,li,a,button,label,td,th,h1,h2,h3,h4,h5,h6,small,time';
+  const LEAF_TEXT_TAGS = ['A', 'BUTTON', 'LABEL', 'SPAN', 'TD', 'TH', 'TIME', 'SMALL'];
+  const isLeafText = (el) => el.children.length === 0 || LEAF_TEXT_TAGS.includes(el.tagName);
+  const textEls = [...document.querySelectorAll(TEXT_SELECTOR)].filter(
     (el) => {
       if (!visible(el)) return false;
       if (!el.textContent || !el.textContent.trim()) return false;
-      if (
-        el.children.length > 0 &&
-        !['A', 'BUTTON', 'LABEL', 'SPAN', 'TD', 'TH', 'TIME', 'SMALL'].includes(el.tagName)
-      ) {
-        return false;
-      }
-      return true;
+      return isLeafText(el);
     }
   );
 
@@ -82,6 +96,19 @@ export function auditPage({ name, theme, viewport }) {
       smallSentences.push({ px: fs, text: text.slice(0, 90), tag: el.tagName });
     }
   }
+
+  // ------------------------------------------ laid-out but invisible content
+  const hiddenTextEls = [...document.querySelectorAll(TEXT_SELECTOR)].filter(
+    (el) => laidOutButTransparent(el) && isLeafText(el) && textOf(el).length > 0
+  );
+  const hiddenContent = {
+    count: hiddenTextEls.length,
+    samples: hiddenTextEls.slice(0, 10).map((el) => ({
+      tag: el.tagName,
+      text: textOf(el).slice(0, 90),
+      ...rect(el),
+    })),
+  };
 
   // ------------------------------------------------------- contrast (4.5:1)
   const parseColor = (c) => {
@@ -241,6 +268,7 @@ export function auditPage({ name, theme, viewport }) {
     hScreen: 0,
     text4xs: 0,
     shadowXs: 0,
+    backdropBlurXs: 0,
     zIndexEscalation: 0,
     purpleClasses: 0,
     uiAvatars: 0,
@@ -254,7 +282,8 @@ export function auditPage({ name, theme, viewport }) {
       if (/\bh-screen\b/.test(cls)) banned.hScreen += 1;
       if (/\btext-4xs\b/.test(cls)) banned.text4xs += 1;
       if (/\bshadow-xs\b/.test(cls)) banned.shadowXs += 1;
-      if (/z-\[9\d*\]/.test(cls)) banned.zIndexEscalation += 1;
+      if (/\bbackdrop-blur-xs\b/.test(cls)) banned.backdropBlurXs += 1;
+      if (/z-\[\d{4,}\]/.test(cls)) banned.zIndexEscalation += 1;
       if (/\b(?:text|bg|border|ring|from|via|to|divide)-(?:purple|violet|fuchsia|indigo)(?:-\d{2,3})?\b/.test(cls)) {
         banned.purpleClasses += 1;
       }
@@ -286,6 +315,7 @@ export function auditPage({ name, theme, viewport }) {
     vw,
     htmlLang: doc.lang,
     mainCount: document.querySelectorAll('main').length,
+    nestedMain: [...document.querySelectorAll('main')].filter((el) => el.parentElement?.closest('main')).length,
     h1Count: h1Els.length,
     h1Text: h1Els.length ? textOf(h1Els[0]).slice(0, 80) : null,
     headingOrder: headingOrder.slice(0, 16),
@@ -299,6 +329,7 @@ export function auditPage({ name, theme, viewport }) {
       samples: tinyViolations.slice(0, 12),
     },
     smallSentences: { count: smallSentences.length, samples: smallSentences.slice(0, 10) },
+    hiddenContent,
     contrast: { failures: contrastFailures, failuresBelow12: contrastFailuresBelow12, excludedPaintedMedia: contrastExcluded, samples: contrastSamples },
     images: { count: imgs.length, missingAlt: missingAlt.length, missingAltSamples: missingAlt.slice(0, 6).map((i) => (i.currentSrc || i.src || '').slice(0, 120)) },
     targets: { interactiveCount: interactive.length, smallByClass, samples: smallSamples },

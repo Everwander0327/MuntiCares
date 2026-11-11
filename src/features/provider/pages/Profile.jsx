@@ -782,7 +782,7 @@ const ProviderProfile = () => {
                         profile.services.map((s, i) => (
                           <motion.span
                             key={i}
-                            className="neu-btn px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-extrabold text-link shadow-xs"
+                            className="neu-btn px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-extrabold text-link"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.05 + i * 0.04 }}
@@ -821,7 +821,7 @@ const ProviderProfile = () => {
                     ].map((item, i) => (
                       <div key={i} className="flex items-center justify-between py-1.5 border-b border-slate-200/40 dark:border-white/5 last:border-0">
                         <div className="flex items-center gap-2.5">
-                          <div className={`w-5 h-5 rounded-md flex items-center justify-center ${item.met ? 'bg-emerald-500 text-white shadow-xs' : 'neu-pressed text-tertiary'}`}>
+                          <div className={`w-5 h-5 rounded-md flex items-center justify-center ${item.met ? 'bg-emerald-500 text-white' : 'neu-pressed text-tertiary'}`}>
                             {item.met ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-3xs font-black">-</span>}
                           </div>
                           <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label}</span>

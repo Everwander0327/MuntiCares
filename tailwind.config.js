@@ -117,6 +117,15 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      // Named overlay ramp; values live in the :root block of src/index.css.
+      zIndex: {
+        chrome: 'var(--z-chrome)',
+        popover: 'var(--z-popover)',
+        dock: 'var(--z-dock)',
+        shell: 'var(--z-shell)',
+        overlay: 'var(--z-overlay)',
+        toast: 'var(--z-toast)',
+      },
       boxShadow: {
         soft: "0 24px 80px -24px rgba(30, 111, 191, 0.18)",
         softer: "0 12px 40px -12px rgba(11, 21, 38, 0.12)",

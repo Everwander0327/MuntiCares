@@ -7,19 +7,15 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import { fetchConsentGrant } from '../lib/consent';
 import toast from 'react-hot-toast';
 import { EmptyState } from '@/shared/ui';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 
-const CONSENT_TABS = { history: 'medical_history', documents: 'documents', notes: 'visit_notes' };
-
 /** Consent is deny-by-default: only an explicit `true` grants a category. */
 const canView = (perms, key) => perms?.[key] === true;
-
-const firstGrantedTab = (perms) =>
-  Object.keys(CONSENT_TABS).find(tab => canView(perms, CONSENT_TABS[tab])) || null;
 
 const PatientRecordModal = ({ 
   isOpen, 
@@ -236,16 +232,7 @@ const PatientRecordModal = ({
   }, [isOpen, patientId, user, applyPerms, fetchPatientData]);
 
   // Lock background scroll while the record is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, [isOpen]);
+  useBodyScrollLock(isOpen);
 
   const handleSaveNote = async (e) => {
     e.preventDefault();

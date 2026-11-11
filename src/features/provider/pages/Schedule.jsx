@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import {
@@ -798,7 +798,7 @@ const ProviderSchedule = () => {
                                           Patient Request Note
                                         </span>
                                         <p className="text-xs text-slate-700 dark:text-slate-200 italic font-medium leading-relaxed">
-                                          "{appt.notes}"
+                                          &quot;{appt.notes}&quot;
                                         </p>
                                       </div>
                                     )}

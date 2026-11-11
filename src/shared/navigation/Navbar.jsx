@@ -4,6 +4,7 @@ import { Heart, ArrowUpRight } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ThemeToggle } from '@/shared/feedback';
 import { useAuth } from '@/contexts/AuthContext';
+import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 
 const Navbar = () => {
   const location = useLocation();
@@ -14,10 +15,7 @@ const Navbar = () => {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
   const isActive = (path) => location.pathname === path;
 
-  useEffect(() => {
-    document.body.style.overflow = isMenuOpen ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
-  }, [isMenuOpen]);
+  useBodyScrollLock(isMenuOpen);
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -36,7 +34,7 @@ const Navbar = () => {
   return (
     <>
       {/* Full-Width Edge-to-Edge Fixed Header (Always follows smoothly as you scroll) */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md transition-colors duration-200">
+      <header className="fixed top-0 left-0 right-0 z-chrome w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between">
           
           {/* Brand Logo with Preserved Heart Icon */}

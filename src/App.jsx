@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, useToasterStore, toast } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 import { NeumorphicToast, ErrorBoundary, CookieConsent } from '@/shared/feedback';
 import { unlockAudio } from '@/lib/audio';
@@ -68,6 +68,15 @@ function AppContent() {
     document.addEventListener('pointerdown', handler);
     return () => document.removeEventListener('pointerdown', handler);
   }, []);
+
+  // Enforce max 2 active toasts to prevent clutter while keeping buttery smooth transitions
+  const { toasts } = useToasterStore();
+  useEffect(() => {
+    toasts
+      .filter((t) => t.visible)
+      .filter((_, i) => i >= 2)
+      .forEach((t) => toast.dismiss(t.id));
+  }, [toasts]);
 
   return (
     <CallProvider>
@@ -138,7 +147,7 @@ function AppContent() {
           top: 'max(0.75rem, env(safe-area-inset-top, 12px))',
           left: 0,
           right: 0,
-          zIndex: 99999,
+          zIndex: 'var(--z-toast)',
           pointerEvents: 'none',
         }}
         toastOptions={{

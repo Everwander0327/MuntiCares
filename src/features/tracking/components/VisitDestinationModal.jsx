@@ -144,7 +144,7 @@ export default function VisitDestinationModal({
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="pointer-events-auto fixed inset-0 z-[10000] flex items-end sm:items-center justify-center bg-slate-950/70 p-0 sm:p-4 backdrop-blur-xs"
+          className="pointer-events-auto fixed inset-0 z-overlay flex items-end sm:items-center justify-center bg-slate-950/70 p-0 sm:p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

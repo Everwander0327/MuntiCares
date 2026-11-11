@@ -8,6 +8,7 @@ import { MessageCircle, Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
 import { useLocation } from 'react-router-dom';
+import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 
 const ProviderMessages = () => {
   const { user } = useAuth();
@@ -128,16 +129,7 @@ const ProviderMessages = () => {
     }
   }, [location.search, currentUserData, location.pathname]);
 
-  useEffect(() => {
-    if (view === 'chat' && !isDesktop) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-    return () => {
-      document.body.classList.remove('modal-open');
-    };
-  }, [view, isDesktop]);
+  useBodyScrollLock(view === 'chat' && !isDesktop);
 
   const handleSelect = (partner) => {
     setSelectedPartner(partner);

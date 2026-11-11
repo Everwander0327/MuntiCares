@@ -19,6 +19,7 @@ import { ensurePatientCoords } from '@/features/tracking/services/geocoding';
 import { DEFAULT_CONSENT_PERMS } from '@/features/patient/utils/consent';
 import { slotsOverlap, toLocalDateKey, formatSlotLabel } from '@/lib/localDate';
 import { getServiceDurationMinutes, getServiceSlotsCount } from '@/config/constants';
+import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
@@ -414,14 +415,7 @@ const PatientProviders = () => {
   }, [selectedProvider, watchedDate, serviceDurationMinutes]);
 
   // Toggle body class when modals open to hide bottom nav
-  useEffect(() => {
-    if (selectedProvider || viewingProvider) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-    return () => document.body.classList.remove('modal-open');
-  }, [selectedProvider, viewingProvider]);
+  useBodyScrollLock(Boolean(selectedProvider || viewingProvider));
 
   const allSpecialties = useMemo(() => {
     const set = new Set();
@@ -1057,7 +1051,7 @@ const PatientProviders = () => {
                       {servicesList.slice(0, 3).map((s, i) => (
                         <span
                           key={i}
-                          className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold shadow-xs border border-slate-200/70 dark:border-white/5"
+                          className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200/70 dark:border-white/5"
                         >
                           {s}
                         </span>
@@ -1382,7 +1376,7 @@ const PatientProviders = () => {
                                 onClick={() => setSlotPeriod('am')}
                                 className={`py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                                   slotPeriod === 'am'
-                                    ? 'bg-primary text-white shadow-xs'
+                                    ? 'bg-primary text-white'
                                     : 'text-slate-600 dark:text-slate-300 hover:text-link'
                                 }`}
                               >
@@ -1393,7 +1387,7 @@ const PatientProviders = () => {
                                 onClick={() => setSlotPeriod('pm')}
                                 className={`py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                                   slotPeriod === 'pm'
-                                    ? 'bg-primary text-white shadow-xs'
+                                    ? 'bg-primary text-white'
                                     : 'text-slate-600 dark:text-slate-300 hover:text-link'
                                 }`}
                               >

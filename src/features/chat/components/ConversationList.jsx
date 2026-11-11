@@ -357,7 +357,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   {/* Squircle Avatar (Zero circular avatars or color dots) */}
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl overflow-hidden p-0.5 flex items-center justify-center aspect-square bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 shrink-0 shadow-xs">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl overflow-hidden p-0.5 flex items-center justify-center aspect-square bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 shrink-0">
                     <img src={conv.photoUrl} alt="" className="w-full h-full object-cover rounded-lg" />
                   </div>
 
@@ -401,7 +401,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
                       )}
 
                       {hasUnread && (
-                        <span className="px-1.5 py-0.5 bg-primary rounded-md flex items-center justify-center text-[9px] font-black text-white uppercase tracking-wider shadow-xs shrink-0">
+                        <span className="px-1.5 py-0.5 bg-primary rounded-md flex items-center justify-center text-[9px] font-black text-white uppercase tracking-wider shrink-0">
                           {conv.unreadCount > 9 ? '9+ NEW' : `${conv.unreadCount} NEW`}
                         </span>
                       )}

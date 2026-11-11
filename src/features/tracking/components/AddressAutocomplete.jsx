@@ -291,7 +291,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
                   onClick={() => selectBarangay(b)}
                   className={`py-2 px-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer truncate ${
                     isCurrent
-                      ? 'bg-primary text-white font-extrabold shadow-xs'
+                      ? 'bg-primary text-white font-extrabold'
                       : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-link'
                   }`}
                 >

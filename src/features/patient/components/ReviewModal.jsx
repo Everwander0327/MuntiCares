@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import { markRequestRated } from '@/features/patient/utils/localState';
 
 const RATING_LABELS = {
@@ -42,18 +43,16 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
     onClose();
   };
 
+  useBodyScrollLock(isOpen);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) handleClose();
     };
     if (isOpen) {
-      document.body.classList.add('modal-open');
       window.addEventListener('keydown', handleKeyDown);
-    } else {
-      document.body.classList.remove('modal-open');
     }
     return () => {
-      document.body.classList.remove('modal-open');
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);

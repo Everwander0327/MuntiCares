@@ -638,7 +638,7 @@ const NotificationBell = () => {
               right: panelPos.right, 
               width: panelPos.width || 384, 
               maxHeight: 'calc(100vh - 90px)',
-              zIndex: 200,
+              zIndex: 'var(--z-popover)',
               contain: 'paint layout'
             }}
             initial={{ opacity: 0, y: -8, scale: 0.98 }}
