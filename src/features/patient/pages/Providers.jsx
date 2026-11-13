@@ -16,7 +16,7 @@ import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
 import { ensurePatientCoords } from '@/features/tracking/services/geocoding';
-import { DEFAULT_CONSENT_PERMS } from '@/features/patient/utils/consent';
+import { bookVisitWithConsent } from '@/features/patient/services/booking';
 import { slotsOverlap, toLocalDateKey, parseLocalDate, formatSlotLabel } from '@/lib/localDate';
 import { getServiceDurationMinutes, getServiceSlotsCount } from '@/config/constants';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
@@ -766,29 +766,16 @@ const PatientProviders = () => {
         return;
       }
 
-      // 2. Send the request
-      const { error: reqError } = await supabase
-        .from('requests')
-        .insert([{
-          patient_id: user.id,
-          provider_id: providerId,
-          service: values.service,
-          duration_minutes: serviceDurationMinutes,
-          date: values.date,
-          time: values.time + ':00',
-          status: 'Pending',
-          notes: values.notes,
-          dest_lat: destination.lat,
-          dest_lng: destination.lng,
-          dest_address: destination.address || null,
-          dest_source: 'booking',
-          dest_version: 1,
-          dest_updated_at: new Date().toISOString(),
-        }]);
-
-      if (reqError) {
-        // The exclusion constraint / unique index is the server authority on slot exclusivity:
-        // concurrent bookings overlapping in time are rejected with 23P01 (exclusion) or 23505 (unique).
+      // The server saves the request and consent in one transaction.
+      try {
+        await bookVisitWithConsent({
+          providerId,
+          values,
+          durationMinutes: serviceDurationMinutes,
+          destination,
+        });
+      } catch (reqError) {
+        // Database constraints remain authoritative for concurrent bookings.
         if (reqError.code === '23505' || reqError.code === '23P01') {
           toast.error('This time slot has just been taken. Please choose another.');
           setBookingLoading(false);
@@ -797,52 +784,6 @@ const PatientProviders = () => {
         }
         throw reqError;
       }
-
-      // 3. Enable Data Sharing (Consent). An existing grant keeps whatever
-      // categories the patient chose in Privacy & Consent; a new one starts
-      // with the medical summary only. Enabling always needs a future expiry.
-      const { data: existingConsent } = await supabase
-        .from('consent_access')
-        .select('id, expires_at')
-        .eq('patient_id', user.id)
-        .eq('provider_id', providerId)
-        .maybeSingle();
-
-      const grantTtlMs = 90 * 86400000;
-      const stillFuture = existingConsent?.expires_at && new Date(existingConsent.expires_at).getTime() > Date.now();
-      const expiresAt = stillFuture ? existingConsent.expires_at : new Date(Date.now() + grantTtlMs).toISOString();
-
-      const { error: consentErr } = existingConsent
-        ? await supabase
-            .from('consent_access')
-            .update({ is_enabled: true, expires_at: expiresAt })
-            .eq('id', existingConsent.id)
-        : await supabase.from('consent_access').insert([{
-            patient_id: user.id,
-            provider_id: providerId,
-            is_enabled: true,
-            expires_at: expiresAt,
-            permissions: DEFAULT_CONSENT_PERMS,
-          }]);
-
-      if (consentErr) {
-        // Pre-migration databases have no expires_at column; the grant itself still works.
-        const missingColumn = consentErr.code === '42703' || /column .* does not exist/i.test(consentErr.message || '');
-        if (missingColumn) {
-          const retry = existingConsent
-            ? await supabase.from('consent_access').update({ is_enabled: true }).eq('id', existingConsent.id)
-            : await supabase.from('consent_access').insert([{
-                patient_id: user.id,
-                provider_id: providerId,
-                is_enabled: true,
-                permissions: DEFAULT_CONSENT_PERMS,
-              }]);
-          if (retry.error) console.warn('Could not grant consent access:', retry.error);
-        } else {
-          console.warn('Could not grant consent access:', consentErr);
-        }
-      }
-
       setConfirmedSnapshot({
         providerName: selectedProvider.full_name,
         service: values.service,
