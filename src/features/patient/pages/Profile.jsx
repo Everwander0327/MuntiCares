@@ -1,6 +1,27 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Activity, LogOut, Save, Calendar, CheckCircle2, Upload, FileText, X, Loader2, Download, User, Stethoscope, FolderOpen, Clock, FileCode, ExternalLink } from 'lucide-react';
+import {
+  Activity,
+  AlertCircle,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  Download,
+  ExternalLink,
+  FileCode,
+  FileText,
+  FolderOpen,
+  Loader2,
+  LogOut,
+  MapPin,
+  MoreHorizontal,
+  Save,
+  Stethoscope,
+  Trash2,
+  Undo2,
+  Upload,
+  User,
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,8 +33,19 @@ import { getSignedUrl } from '@/lib/supabaseHelpers';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { ProfilePhotoUpload, FhirExportModal } from '@/shared/components';
 import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
-import PermanentAddressSection from '@/features/patient/components/PermanentAddressSection';
-import { isMissingColumnError, parseEmergencyContact, shouldSkipMedicalHistoryWrite } from '@/features/patient/utils/patientProfile';
+import ProfileAddressModal from '@/features/patient/components/ProfileAddressModal';
+import ProfileMobileAccountSheet from '@/features/patient/components/ProfileMobileAccountSheet';
+import ProfileConfirmDialog from '@/features/patient/components/ProfileConfirmDialog';
+import {
+  buildProfileSnapshot,
+  formatEmergencyContact,
+  getProfileCompletion,
+  isMissingColumnError,
+  isProfileDirty,
+  resolveEmergencyContactParts,
+  shouldSkipMedicalHistoryWrite,
+  summarizeAddressForCard,
+} from '@/features/patient/utils/patientProfile';
 
 const PatientProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -30,8 +62,16 @@ const PatientProfile = () => {
   const navigate = useNavigate();
   
   const initialAddressRef = useRef('');
+  const savedBaselineRef = useRef(null);
+  const [savedSnapshot, setSavedSnapshot] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [homeCoords, setHomeCoords] = useState(null);
+  const [addressDraftMeta, setAddressDraftMeta] = useState(null);
+  const [addressModalOpen, setAddressModalOpen] = useState(false);
+  const [accountSheetOpen, setAccountSheetOpen] = useState(false);
+  const [docPendingDelete, setDocPendingDelete] = useState(null);
+  const [deletingDoc, setDeletingDoc] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [profile, setProfile] = useState({
     full_name: '',
@@ -40,6 +80,8 @@ const PatientProfile = () => {
     address: '',
     medical_notes: '',
     emergency_contact: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
     allergies: '',
     chronic_conditions: '',
     past_surgeries: '',
@@ -47,14 +89,17 @@ const PatientProfile = () => {
     created_at: ''
   });
 
+  const userId = user?.id;
+
   useEffect(() => {
+    let cancelled = false;
     const fetchProfile = async () => {
-      if (!user) return;
+      if (!userId) return;
       try {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('full_name, email, created_at')
-          .eq('id', user.id)
+          .eq('id', userId)
           .single();
           
         if (userError) throw userError;
@@ -62,67 +107,85 @@ const PatientProfile = () => {
         const { data: patData, error: patError } = await supabase
           .from('patients')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .single();
 
         if (patError && patError.code !== 'PGRST116') {
           throw patError;
         }
 
-        if (patData?.latitude != null && patData?.longitude != null) {
-          setHomeCoords({ lat: patData.latitude, lng: patData.longitude });
+        const initialCoords =
+          patData?.latitude != null && patData?.longitude != null
+            ? { lat: patData.latitude, lng: patData.longitude }
+            : null;
+        if (initialCoords) {
+          setHomeCoords(initialCoords);
         }
         initialAddressRef.current = patData?.address || '';
-        setProfile({
+        const emergencyParts = resolveEmergencyContactParts(patData);
+        let hydratedProfile = {
           full_name: userData.full_name,
           email: userData.email,
           phone: patData?.phone || '',
           address: patData?.address || '',
           medical_notes: patData?.medical_notes || '',
-          emergency_contact: patData?.emergency_contact || '',
+          emergency_contact: formatEmergencyContact(emergencyParts.name, emergencyParts.phone),
+          emergency_contact_name: emergencyParts.name,
+          emergency_contact_phone: emergencyParts.phone,
           allergies: '',
           chronic_conditions: '',
           past_surgeries: '',
           is_profile_complete: patData?.is_profile_complete || false,
           created_at: userData.created_at
-        });
+        };
+        if (cancelled) return;
+        setProfile(hydratedProfile);
         try {
           const { data: avData } = await supabase
             .from('users')
             .select('avatar_url')
-            .eq('id', user.id)
+            .eq('id', userId)
             .single();
-          if (avData?.avatar_url) setAvatarUrl(avData.avatar_url);
+          if (!cancelled && avData?.avatar_url) setAvatarUrl(avData.avatar_url);
         } catch {} // column may not exist yet
 
         // Fetch Medical History
         const { data: histRows, error: histError } = await supabase
           .from('medical_histories')
           .select('allergies, chronic_conditions, past_surgeries')
-          .eq('patient_id', user.id);
+          .eq('patient_id', userId);
+        if (cancelled) return;
         if (histError) {
           console.error('Error fetching medical history:', histError);
         } else {
           setHistoryLoaded(true);
           const mh = histRows?.[0];
           if (mh) {
-            setProfile(prev => ({
-              ...prev,
+            hydratedProfile = {
+              ...hydratedProfile,
               allergies: mh.allergies || '',
               chronic_conditions: mh.chronic_conditions || '',
               past_surgeries: mh.past_surgeries || '',
-            }));
+            };
+            setProfile(hydratedProfile);
           }
         }
+
+        savedBaselineRef.current = {
+          profile: hydratedProfile,
+          homeCoords: initialCoords,
+          addressDraftMeta: null,
+        };
+        setSavedSnapshot(buildProfileSnapshot(hydratedProfile, initialCoords));
 
         // Fetch Documents
         const { data: docs, error: docsError } = await supabase
           .from('patient_documents')
           .select('*')
-          .eq('patient_id', user.id)
+          .eq('patient_id', userId)
           .order('uploaded_at', { ascending: false });
           
-        if (!docsError && docs) {
+        if (!cancelled && !docsError && docs) {
           setDocuments(docs);
         }
 
@@ -130,26 +193,33 @@ const PatientProfile = () => {
         const { data: notes, error: notesError } = await supabase
           .from('visit_notes')
           .select('*, provider:provider_id(full_name)')
-          .eq('patient_id', user.id)
+          .eq('patient_id', userId)
           .order('created_at', { ascending: false });
 
-        if (!notesError && notes) {
+        if (!notesError && notes && !cancelled) {
           setVisitNotes(notes);
         }
       } catch (err) {
         console.error('Error fetching profile:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchProfile();
-  }, [user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
-      const isComplete = Boolean(profile.phone?.trim() && profile.address?.trim() && profile.emergency_contact?.trim());
+      const emergencyCombined = formatEmergencyContact(
+        profile.emergency_contact_name,
+        profile.emergency_contact_phone,
+      );
+      const isComplete = Boolean(profile.phone?.trim() && profile.address?.trim() && emergencyCombined);
       const initialAddress = initialAddressRef.current;
       const addressChanged = Boolean(initialAddress && initialAddress.trim() !== (profile.address || '').trim());
 
@@ -158,13 +228,11 @@ const PatientProfile = () => {
         phone: profile.phone,
         address: profile.address,
         medical_notes: profile.medical_notes,
-        emergency_contact: profile.emergency_contact,
+        emergency_contact: emergencyCombined,
         is_profile_complete: isComplete,
+        emergency_contact_name: (profile.emergency_contact_name || '').trim(),
+        emergency_contact_phone: (profile.emergency_contact_phone || '').trim(),
       };
-
-      const emergencyParts = parseEmergencyContact(profile.emergency_contact);
-      patientPayload.emergency_contact_name = emergencyParts.name;
-      patientPayload.emergency_contact_phone = emergencyParts.phone;
 
       if (homeCoords?.lat != null && homeCoords?.lng != null) {
         patientPayload.latitude = homeCoords.lat;
@@ -223,7 +291,18 @@ const PatientProfile = () => {
         }
       }
 
-      setProfile(prev => ({ ...prev, is_profile_complete: isComplete }));
+      const nextSavedProfile = {
+        ...profile,
+        emergency_contact: emergencyCombined,
+        is_profile_complete: isComplete,
+      };
+      setProfile(nextSavedProfile);
+      savedBaselineRef.current = {
+        profile: nextSavedProfile,
+        homeCoords,
+        addressDraftMeta,
+      };
+      setSavedSnapshot(buildProfileSnapshot(nextSavedProfile, homeCoords));
 
       if (activeTab === 'medical' && !isComplete) {
         toast('Medical history saved, but contact information is incomplete. Please complete your contact details in Personal Information.', { icon: 'ℹ️' });
@@ -238,9 +317,74 @@ const PatientProfile = () => {
     }
   };
 
+  const dirty = useMemo(
+    () => isProfileDirty(savedSnapshot, profile, homeCoords),
+    [savedSnapshot, profile, homeCoords],
+  );
+
+  const handleDiscardChanges = () => {
+    const baseline = savedBaselineRef.current;
+    if (!baseline) return;
+    setProfile(baseline.profile);
+    setHomeCoords(baseline.homeCoords);
+    setAddressDraftMeta(baseline.addressDraftMeta);
+    toast('Unsaved changes discarded.', { icon: '↩️' });
+  };
+
+  const handleClearNotes = () => {
+    const previousNotes = profile.medical_notes;
+    if (!previousNotes?.trim()) return;
+    setProfile((prev) => ({ ...prev, medical_notes: '' }));
+    toast(
+      (t) => (
+        <div className="flex items-center gap-3">
+          <span className="text-xs sm:text-sm font-semibold">Medical notes cleared.</span>
+          <button
+            type="button"
+            onClick={() => {
+              setProfile((prev) => ({ ...prev, medical_notes: previousNotes }));
+              toast.dismiss(t.id);
+            }}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-white text-xs font-bold cursor-pointer"
+          >
+            <Undo2 className="w-3.5 h-3.5" />
+            <span>Undo</span>
+          </button>
+        </div>
+      ),
+      { duration: 6000 },
+    );
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const requestLogout = () => {
+    if (dirty) {
+      setLogoutConfirmOpen(true);
+      return;
+    }
+    handleLogout();
+  };
+
+  const handleConfirmDeleteDoc = async () => {
+    if (!docPendingDelete) return;
+    setDeletingDoc(true);
+    try {
+      await supabase.storage.from('medical_documents').remove([docPendingDelete.file_path]);
+      const { error } = await supabase.from('patient_documents').delete().eq('id', docPendingDelete.id);
+      if (error) throw error;
+      setDocuments((prev) => prev.filter((d) => d.id !== docPendingDelete.id));
+      toast.success('Document deleted!');
+      setDocPendingDelete(null);
+    } catch (err) {
+      console.error('Error deleting document:', err);
+      toast.error('Failed to delete document.');
+    } finally {
+      setDeletingDoc(false);
+    }
   };
 
   const handleFileUpload = async (event) => {
@@ -297,10 +441,15 @@ const PatientProfile = () => {
     }
   };
 
-  // Calculate completion
-  const fields = [profile.phone, profile.address, profile.emergency_contact];
-  const filled = fields.filter(f => f && f.trim() !== '').length;
-  const completionPercent = Math.round((filled / fields.length) * 100);
+  const completion = getProfileCompletion(profile);
+  const completionPercent = completion.percentage;
+  const addressSummary = summarizeAddressForCard(profile.address, homeCoords, addressDraftMeta);
+  const memberSinceLabel = profile.created_at
+    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+    : 'N/A';
+  const emergencySummary =
+    formatEmergencyContact(profile.emergency_contact_name, profile.emergency_contact_phone) ||
+    profile.emergency_contact;
 
   // FHIR Export
   const handleFhirExport = async () => {
@@ -417,7 +566,7 @@ const PatientProfile = () => {
         ['Email', profile.email],
         ['Phone', profile.phone || 'Not provided'],
         ['Address', profile.address || 'Not provided'],
-        ['Emergency Contact', profile.emergency_contact || 'Not provided'],
+        ['Emergency Contact', emergencySummary || 'Not provided'],
       ];
       info.forEach(([label, val]) => {
         doc.setFont('helvetica', 'bold');
@@ -638,6 +787,90 @@ const PatientProfile = () => {
     }
   };
 
+  const MEDICAL_SECTIONS = [
+    {
+      field: 'allergies',
+      id: 'profile-allergies',
+      label: 'Known Allergies',
+      critical: true,
+      placeholder: 'List any medication, food, or contact allergies...',
+      chips: ['No known allergies', 'Penicillin', 'Sulfa', 'Iodine', 'Latex', 'Peanuts'],
+      chipClass: 'text-danger dark:text-danger-dark',
+    },
+    {
+      field: 'chronic_conditions',
+      id: 'profile-chronic-conditions',
+      label: 'Chronic Conditions',
+      critical: false,
+      placeholder: 'e.g. Hypertension, Type 2 Diabetes, Asthma...',
+      chips: ['Diabetes', 'High Blood Pressure', 'Asthma', 'Heart Disease', 'Arthritis', 'None'],
+      chipClass: 'text-link',
+    },
+    {
+      field: 'past_surgeries',
+      id: 'profile-past-surgeries',
+      label: 'Past Surgeries or Procedures',
+      critical: false,
+      placeholder: 'List any past surgeries and approximate year...',
+      chips: ['Appendectomy', 'C-Section', 'Gallbladder Removal', 'Knee Surgery', 'Tonsillectomy', 'None'],
+      chipClass: 'text-link dark:text-primary-400',
+    },
+  ];
+
+  const renderUnsavedBanner = () =>
+    dirty ? (
+      <div
+        role="status"
+        className="mx-4 sm:mx-6 md:mx-7 mt-4 rounded-xl px-3.5 py-2.5 flex items-center gap-2 border border-amber-500/40 bg-amber-500/10 text-xs font-bold text-amber-800 dark:text-warning-dark"
+      >
+        <AlertCircle className="w-4 h-4 text-warning shrink-0" />
+        <span>You have unsaved changes — save below to keep your updates.</span>
+      </div>
+    ) : null;
+
+  const renderSaveFooter = (submitLabel) => (
+    <div className="px-4 sm:px-6 md:px-7 py-4 border-t border-slate-200/60 dark:border-white/5 flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2.5">
+      <div className="flex items-center gap-2 text-xs font-semibold">
+        {dirty ? (
+          <>
+            <AlertCircle className="w-4 h-4 text-warning shrink-0" />
+            <span className="text-amber-800 dark:text-warning-dark">
+              Save below to apply edits
+            </span>
+          </>
+        ) : (
+          <>
+            <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+            <span className="text-tertiary dark:text-tertiary">
+              All profile changes saved
+            </span>
+          </>
+        )}
+      </div>
+      <div className="flex items-center justify-end gap-2.5 w-full sm:w-auto">
+        {dirty && (
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            type="button"
+            onClick={handleDiscardChanges}
+            className="neu-btn min-h-[44px] px-4 py-2.5 text-tertiary dark:text-tertiary font-bold rounded-xl text-xs sm:text-sm cursor-pointer"
+          >
+            Discard
+          </motion.button>
+        )}
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          type="submit"
+          disabled={saving}
+          className="neu-btn-primary min-h-[44px] px-6 py-2.5 font-black rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
+        >
+          <Save className="w-4 h-4" />
+          <span>{saving ? 'Saving...' : submitLabel}</span>
+        </motion.button>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;
   }
@@ -648,7 +881,7 @@ const PatientProfile = () => {
       <div className="space-y-4 sm:space-y-6 relative w-full max-w-full pb-8 select-text">
         
         {/* Clean Patient Profile Header */}
-        <div className="pt-1 pb-2">
+        <div className="pt-1 pb-1">
           <h1 className="font-display font-black tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
             Patient Profile
           </h1>
@@ -670,8 +903,8 @@ const PatientProfile = () => {
                   <Activity className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-amber-800 dark:text-warning-dark font-extrabold text-sm sm:text-base">Complete Your Profile</h3>
-                  <p className="text-warning dark:text-warning-dark text-xs sm:text-xs mt-0.5">Your address is required so providers know where to deliver home care services.</p>
+                  <h2 className="text-amber-800 dark:text-warning-dark font-extrabold text-sm sm:text-base">Complete Your Profile</h2>
+                  <p className="text-warning dark:text-warning-dark text-xs mt-0.5">Add your phone, emergency contact, and home visit pin so providers know where to deliver care.</p>
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
@@ -689,21 +922,89 @@ const PatientProfile = () => {
           </motion.div>
         )}
 
+        {/* Mobile Account Hub Compact Strip (keeps Tabs above the fold on < lg) */}
+        <section aria-label="Account summary" className="lg:hidden neu-flat rounded-2xl p-3.5 sm:p-4 space-y-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="neu-flat-sm rounded-2xl p-1 shrink-0">
+              <ProfilePhotoUpload
+                compact
+                userId={user.id}
+                fullName={profile.full_name}
+                currentUrl={avatarUrl}
+                onUpdate={setAvatarUrl}
+              />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <h2 className="text-base font-black text-slate-900 dark:text-slate-100 truncate">
+                    {profile.full_name}
+                  </h2>
+                  <p className="text-xs text-tertiary dark:text-tertiary font-semibold truncate">
+                    {profile.email}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAccountSheetOpen(true)}
+                  aria-label="Open account and exports menu"
+                  className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-link shrink-0 cursor-pointer"
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                <span className="neu-flat-sm px-2.5 py-0.5 text-link font-black text-2xs uppercase tracking-widest rounded-md">
+                  Patient
+                </span>
+                {profile.is_profile_complete ? (
+                  <span className="neu-flat-sm px-2.5 py-0.5 text-success dark:text-success-dark font-black text-2xs uppercase tracking-widest rounded-md inline-flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Complete
+                  </span>
+                ) : (
+                  <span className="neu-flat-sm px-2.5 py-0.5 text-warning dark:text-warning-dark font-black text-2xs uppercase tracking-widest rounded-md">
+                    {completionPercent}% Setup
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setAccountSheetOpen(true)}
+            className="neu-inset w-full px-3 py-2.5 rounded-xl flex items-center justify-between gap-2 text-xs text-slate-700 dark:text-slate-200 text-left cursor-pointer"
+          >
+            <span className="truncate font-semibold">
+              {profile.phone || 'Add phone'} •{' '}
+              {addressSummary.hasCoords
+                ? 'Home pin saved'
+                : addressSummary.hasAddress
+                ? 'Pin needed'
+                : 'No address'}
+            </span>
+            <span className="text-link font-bold shrink-0">
+              PDF / FHIR &amp; Account
+            </span>
+          </button>
+        </section>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-7">
-          {/* Profile Sidebar Card */}
-          <div className="lg:col-span-1">
+          {/* Desktop Sticky Identity Rail */}
+          <div className="hidden lg:block lg:col-span-1">
             <motion.div 
-              className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden"
+              className="neu-flat rounded-[2.25rem] overflow-hidden lg:sticky lg:top-6"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
               {/* Neumorphic Header Accent */}
-              <div className="h-20 sm:h-24 neu-convex relative flex items-center justify-center overflow-hidden border-b border-white/50 dark:border-white/5">
+              <div className="h-24 neu-convex relative flex items-center justify-center overflow-hidden border-b border-white/50 dark:border-white/5">
                 <div className="absolute inset-0 bg-primary/10 dark:bg-primary/5" />
               </div>
 
               {/* Avatar overlapping the banner */}
-              <div className="px-5 sm:px-6 -mt-12 sm:-mt-14 relative z-10 flex justify-center">
+              <div className="px-6 -mt-14 relative z-10 flex justify-center">
                 <div className="neu-flat rounded-2xl p-1.5 shadow-lg">
                   <ProfilePhotoUpload
                     userId={user.id}
@@ -714,8 +1015,8 @@ const PatientProfile = () => {
                 </div>
               </div>
 
-              <div className="px-5 sm:px-6 pt-3 pb-6 sm:pb-7 text-center">
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100 truncate">{profile.full_name}</h2>
+              <div className="px-6 pt-3 pb-7 text-center">
+                <h2 className="text-xl font-black text-slate-900 dark:text-slate-100 truncate">{profile.full_name}</h2>
                 <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5 truncate">{profile.email}</p>
                 
                 <div className="flex items-center justify-center gap-2 mt-3">
@@ -730,7 +1031,7 @@ const PatientProfile = () => {
                 </div>
 
                 {/* Quick Info - Unified Single Card */}
-                <div className="mt-5 neu-inset p-3.5 sm:p-4 rounded-2xl text-left space-y-2.5">
+                <div className="mt-5 neu-inset p-4 rounded-2xl text-left space-y-2.5">
                   <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200">
                     <span className="text-2xs uppercase font-extrabold text-tertiary">Email</span>
                     <span className="truncate font-semibold max-w-[65%] text-right">{profile.email}</span>
@@ -759,7 +1060,7 @@ const PatientProfile = () => {
                   <div className="border-t border-slate-200/50 dark:border-white/5" />
                   <div className="flex items-center justify-between text-sm text-slate-700 dark:text-slate-200">
                     <span className="text-2xs uppercase font-extrabold text-tertiary">Member Since</span>
-                    <span className="font-semibold">{profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}</span>
+                    <span className="font-semibold">{memberSinceLabel}</span>
                   </div>
                 </div>
 
@@ -769,18 +1070,20 @@ const PatientProfile = () => {
                   <div className="neu-inset p-2 rounded-2xl space-y-2">
                     <motion.button
                       whileTap={{ scale: 0.96 }}
+                      type="button"
                       onClick={generatePDF}
                       disabled={generatingPdf}
-                      className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-link transition-all text-xs cursor-pointer disabled:opacity-50"
+                      className="neu-btn w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-link transition-all text-xs cursor-pointer disabled:opacity-50"
                     >
                       {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                       <span>{generatingPdf ? 'Generating...' : 'Medical Summary (PDF)'}</span>
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.96 }}
+                      type="button"
                       onClick={handleFhirExport}
                       disabled={fhirLoading}
-                      className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-success dark:text-success-dark transition-all text-xs cursor-pointer disabled:opacity-50"
+                      className="neu-btn w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-success dark:text-success-dark transition-all text-xs cursor-pointer disabled:opacity-50"
                     >
                       {fhirLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />}
                       <span>{fhirLoading ? 'Exporting...' : 'FHIR Record (JSON)'}</span>
@@ -792,8 +1095,9 @@ const PatientProfile = () => {
                 <div className="pt-4">
                   <motion.button
                     whileTap={{ scale: 0.96 }}
-                    onClick={handleLogout}
-                    className="neu-btn w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-danger dark:text-danger-dark hover:text-danger transition-all text-xs cursor-pointer active:scale-95"
+                    type="button"
+                    onClick={requestLogout}
+                    className="neu-btn w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-danger dark:text-danger-dark hover:text-danger transition-all text-xs cursor-pointer active:scale-95"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Sign Out</span>
@@ -811,7 +1115,7 @@ const PatientProfile = () => {
             transition={{ delay: 0.1 }}
           >
             <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-              {/* Neumorphic Tabs Header - Compressed 4-column grid fitting all tabs without horizontal scroll */}
+              {/* Neumorphic Tabs Header - Stacked icons on mobile prevent label truncation ("Docume...") */}
               <Tabs.List className="neu-inset p-1 sm:p-1.5 rounded-2xl mb-4 sm:mb-5 grid grid-cols-4 gap-1 sm:gap-1.5">
                 {[
                   { value: 'overview', icon: User, label: 'Overview' },
@@ -822,14 +1126,14 @@ const PatientProfile = () => {
                   <Tabs.Trigger
                     key={tab.value}
                     value={tab.value}
-                    className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-3 py-2 sm:py-2.5 rounded-xl text-xs xs:text-sm font-bold transition-all truncate cursor-pointer select-none ${
+                    className={`min-h-[52px] sm:min-h-[44px] flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-sm font-bold leading-tight transition-all cursor-pointer select-none ${
                       activeTab === tab.value
                         ? 'neu-flat text-link font-black shadow-sm'
                         : 'text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                     }`}
                   >
-                    <tab.icon className={`w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0 ${activeTab === tab.value ? 'text-link' : 'text-tertiary'}`} />
-                    <span className="truncate">{tab.label}</span>
+                    <tab.icon className={`w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0 ${activeTab === tab.value ? 'text-link' : 'text-tertiary'}`} />
+                    <span>{tab.label}</span>
                   </Tabs.Trigger>
                 ))}
               </Tabs.List>
@@ -837,151 +1141,261 @@ const PatientProfile = () => {
               {/* Overview Tab */}
               <Tabs.Content value="overview" className="outline-none">
                 <form onSubmit={handleSave} className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
-                  <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
+                  <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Personal Information</h3>
-                    <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Your contact details and medical notes.</p>
+                    <p className="text-tertiary dark:text-tertiary text-xs mt-0.5">Your contact details, home pin, and general care notes.</p>
                   </div>
 
-                  <div className="p-5 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                      <div className="space-y-1.5">
-                        <label htmlFor="profile-phone" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Phone Number</label>
-                        <input 
-                          id="profile-phone"
-                          type="tel" name="phone" required autoComplete="tel"
-                          value={profile.phone}
-                          onChange={e => setProfile({...profile, phone: e.target.value})}
-                          placeholder="e.g., 09123456789"
-                          className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-semibold outline-none transition-all"
-                        />
-                      </div>
+                  {renderUnsavedBanner()}
 
-                      <div className="space-y-1.5">
-                        <label htmlFor="profile-emergency-contact" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Emergency Contact</label>
-                        <input 
-                          id="profile-emergency-contact"
-                          type="text" name="emergency_contact" required
-                          value={profile.emergency_contact}
-                          onChange={e => setProfile({...profile, emergency_contact: e.target.value})}
-                          placeholder="Name & Contact Number"
-                          className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 text-xs sm:text-sm font-semibold outline-none transition-all"
-                        />
-                      </div>
+                  <div className="p-4 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                        <div className="space-y-1.5 md:col-span-2">
+                          <label htmlFor="profile-phone" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1 block">
+                            Phone Number
+                          </label>
+                          <input 
+                            id="profile-phone"
+                            type="tel"
+                            inputMode="tel"
+                            name="phone"
+                            autoComplete="tel"
+                            value={profile.phone}
+                            onChange={e => setProfile({...profile, phone: e.target.value})}
+                            placeholder="e.g., 09123456789"
+                            className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 min-h-[44px] text-base sm:text-sm font-semibold outline-none transition-all"
+                          />
+                        </div>
 
-                      <div className="md:col-span-2">
-                        <PermanentAddressSection
-                          initialAddress={profile.address}
-                          initialCoords={homeCoords}
-                          onChange={({ address, coords }) => {
-                            setProfile((prev) => ({ ...prev, address }));
-                            setHomeCoords(coords || null);
-                          }}
-                        />
-                      </div>
+                        {/* Split Emergency Contact */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="profile-emergency-name" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1 block">
+                            Emergency Contact Name
+                          </label>
+                          <input
+                            id="profile-emergency-name"
+                            type="text"
+                            name="emergency_contact_name"
+                            autoComplete="name"
+                            value={profile.emergency_contact_name}
+                            onChange={(e) =>
+                              setProfile((prev) => ({
+                                ...prev,
+                                emergency_contact_name: e.target.value,
+                                emergency_contact: formatEmergencyContact(
+                                  e.target.value,
+                                  prev.emergency_contact_phone,
+                                ),
+                              }))
+                            }
+                            placeholder="e.g., Maria Cruz"
+                            className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 min-h-[44px] text-base sm:text-sm font-semibold outline-none transition-all"
+                          />
+                        </div>
 
-                      <div className="space-y-1.5 md:col-span-2">
-                        <label htmlFor="profile-medical-notes" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">General Medical Notes</label>
-                        <textarea id="profile-medical-notes" name="medical_notes" value={profile.medical_notes}
-                          onChange={e => setProfile({...profile, medical_notes: e.target.value})}
-                          placeholder="Special needs, mobility notes, or care instructions..." rows={3}
-                          className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
-                        />
+                        <div className="space-y-1.5">
+                          <label htmlFor="profile-emergency-phone" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1 block">
+                            Emergency Contact Number
+                          </label>
+                          <input
+                            id="profile-emergency-phone"
+                            type="tel"
+                            inputMode="tel"
+                            name="emergency_contact_phone"
+                            autoComplete="tel"
+                            value={profile.emergency_contact_phone}
+                            onChange={(e) =>
+                              setProfile((prev) => ({
+                                ...prev,
+                                emergency_contact_phone: e.target.value,
+                                emergency_contact: formatEmergencyContact(
+                                  prev.emergency_contact_name,
+                                  e.target.value,
+                                ),
+                              }))
+                            }
+                            placeholder="e.g., 09187654321"
+                            className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl py-2.5 sm:py-3 px-4 min-h-[44px] text-base sm:text-sm font-semibold outline-none transition-all"
+                          />
+                        </div>
+
+                        {/* Scoped Saved Home Visit Pin Summary Card */}
+                        <div className="md:col-span-2">
+                          <div className="neu-inset rounded-2xl p-4 sm:p-5 border border-slate-200/70 dark:border-white/5 space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                              <div className="flex items-start gap-3 min-w-0">
+                                <div className="neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center text-link shrink-0">
+                                  <MapPin className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100">
+                                      Permanent Home &amp; Visit Address
+                                    </span>
+                                    {addressSummary.hasAddress && addressSummary.hasCoords ? (
+                                      <span className="neu-flat-sm px-2.5 py-0.5 text-success dark:text-success-dark font-black text-2xs uppercase tracking-wider rounded-md">
+                                        Default Home Pin
+                                      </span>
+                                    ) : addressSummary.hasAddress ? (
+                                      <span className="neu-flat-sm px-2.5 py-0.5 text-warning dark:text-warning-dark font-black text-2xs uppercase tracking-wider rounded-md">
+                                        Map Pin Needed
+                                      </span>
+                                    ) : (
+                                      <span className="neu-flat-sm px-2.5 py-0.5 text-tertiary font-black text-2xs uppercase tracking-wider rounded-md">
+                                        Not Set
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {addressSummary.hasAddress ? (
+                                    <div className="mt-1.5 space-y-1">
+                                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug break-words">
+                                        {addressSummary.street}
+                                      </p>
+                                      {addressSummary.detailsLine && (
+                                        <p className="text-xs text-tertiary dark:text-tertiary font-medium">
+                                          {addressSummary.detailsLine}
+                                        </p>
+                                      )}
+                                      {addressSummary.instructions && (
+                                        <p className="text-xs text-link dark:text-primary-400 font-semibold">
+                                          Gate note: {addressSummary.instructions}
+                                        </p>
+                                      )}
+                                      {addressSummary.coordsLabel ? (
+                                        <p className="text-2xs font-bold text-tertiary dark:text-tertiary">
+                                          GPS Pin: {addressSummary.coordsLabel}
+                                        </p>
+                                      ) : (
+                                        <p className="text-2xs font-semibold text-amber-700 dark:text-amber-300">
+                                          Add a map pin so healthcare providers locate your exact home entrance.
+                                        </p>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs sm:text-sm text-tertiary dark:text-tertiary mt-1">
+                                      Add your home visit street, barangay, and map pin for future bookings.
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <motion.button
+                                whileTap={{ scale: 0.96 }}
+                                type="button"
+                                onClick={() => setAddressModalOpen(true)}
+                                className="neu-btn min-h-[44px] px-4 py-2.5 rounded-xl font-bold text-link text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer w-full sm:w-auto"
+                              >
+                                <MapPin className="w-4 h-4" />
+                                <span>Edit Pin &amp; Address</span>
+                              </motion.button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 md:col-span-2">
+                          <div className="flex items-center justify-between gap-2">
+                            <label htmlFor="profile-medical-notes" className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">
+                              General Medical Notes
+                            </label>
+                            <button
+                              type="button"
+                              onClick={handleClearNotes}
+                              disabled={!profile.medical_notes?.trim()}
+                              className="neu-btn min-h-[36px] px-3 py-1 rounded-lg text-xs font-bold text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            >
+                              Clear Notes
+                            </button>
+                          </div>
+                          <textarea
+                            id="profile-medical-notes"
+                            name="medical_notes"
+                            value={profile.medical_notes}
+                            onChange={e => setProfile({...profile, medical_notes: e.target.value})}
+                            placeholder="Special needs, mobility notes, or care instructions..."
+                            rows={3}
+                            className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3.5 sm:p-4 text-base sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row justify-end items-center gap-2.5">
-                      <motion.button whileTap={{ scale: 0.96 }} type="button"
-                        onClick={() => setProfile({...profile, medical_notes: ''})}
-                        className="neu-btn px-5 py-2.5 text-tertiary dark:text-tertiary font-bold rounded-xl text-xs cursor-pointer w-full sm:w-auto"
-                      >
-                        Clear Notes
-                      </motion.button>
-                      <motion.button whileTap={{ scale: 0.96 }} type="submit" disabled={saving}
-                        className="neu-btn-primary px-7 py-2.5 font-black rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer disabled:opacity-50 w-full sm:w-auto"
-                      >
-                        <Save className="w-4 h-4" />
-                        {saving ? 'Saving...' : 'Save Profile'}
-                      </motion.button>
-                    </div>
-                  </div>
+                  {renderSaveFooter('Save Profile')}
                 </form>
               </Tabs.Content>
 
               {/* Medical Tab */}
               <Tabs.Content value="medical" className="outline-none">
                 <form onSubmit={handleSave} className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
-                  <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
+                  <div className="p-4 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Medical History</h3>
-                    <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Your allergies, chronic conditions, and past surgeries.</p>
+                    <p className="text-tertiary dark:text-tertiary text-xs mt-0.5">Your allergies, chronic conditions, and past surgeries.</p>
                   </div>
 
-                  <div className="p-5 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
-                    {/* Allergies */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Known Allergies</label>
-                        <span className="text-2xs font-extrabold text-danger uppercase">Critical</span>
-                      </div>
-                      <textarea name="allergies" value={profile.allergies}
-                        onChange={e => setProfile({...profile, allergies: e.target.value})}
-                        placeholder="List any medication, food, or contact allergies..." rows={2}
-                        className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
-                      />
-                      <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        {['No known allergies', 'Penicillin', 'Sulfa', 'Iodine', 'Latex', 'Peanuts'].filter(s => !(profile.allergies || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                          <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
-                            onClick={() => setProfile({...profile, allergies: ((profile.allergies || '').trim() ? `${profile.allergies.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="neu-btn px-2.5 py-1 text-danger dark:text-danger-dark rounded-lg text-xs font-bold cursor-pointer"
-                          >+ {s}</motion.button>
-                        ))}
-                      </div>
+                  {renderUnsavedBanner()}
+
+                  <div className="p-4 sm:p-6 md:p-7 space-y-4 sm:space-y-5">
+                      {MEDICAL_SECTIONS.map((section) => {
+                        const currentValue = profile[section.field] || '';
+                        const availableChips = section.chips.filter(
+                          (chip) => !currentValue.toLowerCase().includes(chip.toLowerCase()),
+                        );
+
+                        return (
+                          <div key={section.field} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label
+                                htmlFor={section.id}
+                                className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1"
+                              >
+                                {section.label}
+                              </label>
+                              {section.critical && (
+                                <span className="text-2xs font-extrabold text-danger uppercase">Critical</span>
+                              )}
+                            </div>
+                            <textarea
+                              id={section.id}
+                              name={section.field}
+                              value={currentValue}
+                              onChange={(e) =>
+                                setProfile((prev) => ({ ...prev, [section.field]: e.target.value }))
+                              }
+                              placeholder={section.placeholder}
+                              rows={2}
+                              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-base sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
+                            />
+                            {availableChips.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {availableChips.map((chip) => (
+                                  <motion.button
+                                    key={chip}
+                                    type="button"
+                                    whileTap={{ scale: 0.94 }}
+                                    onClick={() =>
+                                      setProfile((prev) => {
+                                        const existing = (prev[section.field] || '').trim();
+                                        return {
+                                          ...prev,
+                                          [section.field]: existing
+                                            ? `${prev[section.field].replace(/,\s*$/, '')}, ${chip}`
+                                            : chip,
+                                        };
+                                      })
+                                    }
+                                    className={`neu-btn min-h-[38px] px-3 py-1.5 ${section.chipClass} rounded-lg text-xs font-bold cursor-pointer`}
+                                  >
+                                    + {chip}
+                                  </motion.button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    {/* Chronic Conditions */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Chronic Conditions</label>
-                      <textarea name="chronic_conditions" value={profile.chronic_conditions}
-                        onChange={e => setProfile({...profile, chronic_conditions: e.target.value})}
-                        placeholder="e.g. Hypertension, Type 2 Diabetes, Asthma..." rows={2}
-                        className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
-                      />
-                      <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        {['Diabetes', 'High Blood Pressure', 'Asthma', 'Heart Disease', 'Arthritis', 'None'].filter(s => !(profile.chronic_conditions || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                          <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
-                            onClick={() => setProfile({...profile, chronic_conditions: ((profile.chronic_conditions || '').trim() ? `${profile.chronic_conditions.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="neu-btn px-2.5 py-1 text-link rounded-lg text-xs font-bold cursor-pointer"
-                          >+ {s}</motion.button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Past Surgeries */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-700 dark:text-slate-200 ml-1">Past Surgeries or Procedures</label>
-                      <textarea name="past_surgeries" value={profile.past_surgeries}
-                        onChange={e => setProfile({...profile, past_surgeries: e.target.value})}
-                        placeholder="List any past surgeries and approximate year..." rows={2}
-                        className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl sm:rounded-2xl p-3 text-xs sm:text-sm font-semibold outline-none transition-all resize-none leading-relaxed"
-                      />
-                      <div className="flex flex-wrap gap-1.5 pt-0.5">
-                        {['Appendectomy', 'C-Section', 'Gallbladder Removal', 'Knee Surgery', 'Tonsillectomy', 'None'].filter(s => !(profile.past_surgeries || '').toLowerCase().includes(s.toLowerCase())).map(s => (
-                          <motion.button key={s} type="button" whileTap={{ scale: 0.94 }}
-                            onClick={() => setProfile({...profile, past_surgeries: ((profile.past_surgeries || '').trim() ? `${profile.past_surgeries.replace(/,\s*$/, '')}, ${s}` : s)})}
-                            className="neu-btn px-2.5 py-1 text-link dark:text-primary-400 rounded-lg text-xs font-bold cursor-pointer"
-                          >+ {s}</motion.button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-slate-200/60 dark:border-white/5 flex justify-end">
-                      <motion.button whileTap={{ scale: 0.96 }} type="submit" disabled={saving}
-                        className="neu-btn-primary px-7 py-2.5 font-black rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer disabled:opacity-50 w-full sm:w-auto"
-                      >
-                        <Save className="w-4 h-4" />
-                        {saving ? 'Saving...' : 'Save Medical History'}
-                      </motion.button>
-                    </div>
-                  </div>
+                  {renderSaveFooter('Save Medical History')}
                 </form>
               </Tabs.Content>
 
@@ -991,13 +1405,13 @@ const PatientProfile = () => {
                   <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Medical Documents</h3>
-                      <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Upload lab results, prescriptions, or imaging (Max 3MB)</p>
+                      <p className="text-tertiary dark:text-tertiary text-xs mt-0.5">Upload lab results, prescriptions, or imaging (Max 3MB)</p>
                     </div>
                     <div>
                       <input type="file" id="doc-upload" className="hidden" accept="image/jpeg, image/png, application/pdf"
                         onChange={handleFileUpload} disabled={uploading} />
                       <label htmlFor="doc-upload"
-                        className={`neu-btn px-4 py-2 text-link font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all active:scale-95 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`neu-btn min-h-[44px] px-4 py-2.5 text-link font-bold text-xs sm:text-sm rounded-xl inline-flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                         <span>{uploading ? 'Uploading...' : 'Upload File'}</span>
@@ -1025,11 +1439,11 @@ const PatientProfile = () => {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                         {documents.map((doc) => (
-                          <div key={doc.id} className="neu-flat-sm p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center gap-3 select-text">
-                            <div className="neu-flat-sm w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-link shrink-0">
-                              <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+                          <div key={doc.id} className="neu-flat-sm p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center gap-2.5 select-text">
+                            <div className="neu-flat-sm w-10 h-10 rounded-xl flex items-center justify-center text-link shrink-0">
+                              <FileText className="w-5 h-5" />
                             </div>
-                            <div className="flex-1 min-w-0 pr-2">
+                            <div className="flex-1 min-w-0 pr-1">
                               <button
                                 type="button"
                                 onClick={async () => {
@@ -1045,7 +1459,8 @@ const PatientProfile = () => {
                               <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
                             </div>
                             <motion.button whileTap={{ scale: 0.9 }} type="button"
-                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-tertiary hover:text-link transition-colors shrink-0 cursor-pointer"
+                              className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-tertiary hover:text-link transition-colors shrink-0 cursor-pointer"
+                              aria-label={`Open ${doc.document_title}`}
                               title="Open Document"
                               onClick={async () => {
                                 const url = await getSignedUrl(doc.file_path, 3600);
@@ -1056,24 +1471,12 @@ const PatientProfile = () => {
                               <ExternalLink className="w-4 h-4" />
                             </motion.button>
                             <motion.button whileTap={{ scale: 0.9 }} type="button"
-                              className="neu-btn w-8 h-8 rounded-lg flex items-center justify-center text-tertiary hover:text-danger dark:hover:text-rose-400 transition-colors shrink-0 cursor-pointer"
+                              className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-tertiary hover:text-danger dark:hover:text-rose-400 transition-colors shrink-0 cursor-pointer"
+                              aria-label={`Delete ${doc.document_title}`}
                               title="Delete Document"
-                              onClick={async () => {
-                                if(window.confirm('Delete this document?')) {
-                                  try {
-                                    await supabase.storage.from('medical_documents').remove([doc.file_path]);
-                                    const { error } = await supabase.from('patient_documents').delete().eq('id', doc.id);
-                                    if (error) throw error;
-                                    setDocuments(documents.filter(d => d.id !== doc.id));
-                                    toast.success('Document deleted!');
-                                  } catch (err) {
-                                    console.error('Error deleting document:', err);
-                                    toast.error('Failed to delete document.');
-                                  }
-                                }
-                              }}
+                              onClick={() => setDocPendingDelete(doc)}
                             >
-                              <X className="w-4 h-4 stroke-[2.5]" />
+                              <Trash2 className="w-4 h-4" />
                             </motion.button>
                           </div>
                         ))}
@@ -1088,7 +1491,7 @@ const PatientProfile = () => {
                 <div className="neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden">
                   <div className="p-5 sm:p-6 md:p-7 border-b border-slate-200/60 dark:border-white/5">
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">Consultation & Visit History</h3>
-                    <p className="text-tertiary dark:text-tertiary text-xs sm:text-xs mt-0.5">Past medical visits, vital signs, and provider clinical notes.</p>
+                    <p className="text-tertiary dark:text-tertiary text-xs mt-0.5">Past medical visits, vital signs, and provider clinical notes.</p>
                   </div>
 
                   <div className="p-5 sm:p-6 md:p-7">
@@ -1157,7 +1560,7 @@ const PatientProfile = () => {
                             {note.attachment_url && (
                               <motion.button whileTap={{ scale: 0.96 }} type="button"
                                 onClick={async () => { const url = await getSignedUrl(note.attachment_url, 3600); if (url) window.open(url, '_blank'); }}
-                                className="neu-btn px-3 py-1.5 rounded-lg inline-flex items-center gap-2 text-xs text-link font-bold transition-all cursor-pointer"
+                                className="neu-btn min-h-[44px] px-4 py-2 rounded-xl inline-flex items-center gap-2 text-xs text-link font-bold transition-all cursor-pointer"
                               >
                                 <FileText className="w-3.5 h-3.5" />
                                 <span>View Attachment</span>
@@ -1175,6 +1578,69 @@ const PatientProfile = () => {
         </div>
       </div>
     </DashboardLayout>
+
+      <ProfileAddressModal
+        open={addressModalOpen}
+        onClose={() => setAddressModalOpen(false)}
+        address={profile.address}
+        coords={homeCoords}
+        draftMeta={addressDraftMeta}
+        onApply={({ address, coords, street, unit, subdivision, instructions }) => {
+          setProfile((prev) => ({ ...prev, address }));
+          setHomeCoords(coords || null);
+          setAddressDraftMeta({ street, unit, subdivision, instructions });
+        }}
+      />
+
+      <ProfileMobileAccountSheet
+        open={accountSheetOpen}
+        onClose={() => setAccountSheetOpen(false)}
+        fullName={profile.full_name}
+        email={profile.email}
+        phone={profile.phone}
+        address={profile.address}
+        memberSince={memberSinceLabel}
+        isComplete={profile.is_profile_complete}
+        completionPercentage={completionPercent}
+        generatingPdf={generatingPdf}
+        fhirLoading={fhirLoading}
+        hasUnsavedChanges={dirty}
+        onExportPdf={generatePDF}
+        onExportFhir={handleFhirExport}
+        onLogout={requestLogout}
+      />
+
+      <ProfileConfirmDialog
+        open={Boolean(docPendingDelete)}
+        title="Delete Medical Document?"
+        description={
+          docPendingDelete
+            ? `"${docPendingDelete.document_title}" will be permanently deleted from your medical records.`
+            : ''
+        }
+        confirmLabel={deletingDoc ? 'Deleting...' : 'Delete Permanently'}
+        cancelLabel="Keep File"
+        loading={deletingDoc}
+        danger
+        onCancel={() => {
+          if (!deletingDoc) setDocPendingDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteDoc}
+      />
+
+      <ProfileConfirmDialog
+        open={logoutConfirmOpen}
+        title="Discard Unsaved Changes & Sign Out?"
+        description="You have unsaved edits on your profile. Signing out now will discard those unsaved updates."
+        confirmLabel="Discard & Sign Out"
+        cancelLabel="Keep Editing"
+        danger={false}
+        onCancel={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setLogoutConfirmOpen(false);
+          handleLogout();
+        }}
+      />
 
       <FhirExportModal
         open={fhirOpen}

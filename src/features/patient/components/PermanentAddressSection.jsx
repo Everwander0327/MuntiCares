@@ -12,20 +12,34 @@ import { formatFullVisitAddress, parseFullVisitAddress } from '@/features/tracki
 export default function PermanentAddressSection({
   initialAddress = '',
   initialCoords = null,
+  initialBaseAddress = '',
+  initialUnit = '',
+  initialSubdivision = '',
+  initialInstructions = '',
+  hideHeader = false,
   onChange,
 }) {
+  const parsedOnMount = parseFullVisitAddress(initialAddress);
+  const hasStructuredInitial = Boolean(
+    initialBaseAddress || initialUnit || initialSubdivision || initialInstructions,
+  );
+
   const [addressLabel] = useState('Home');
-  const [baseAddress, setBaseAddress] = useState('');
-  const [unitFloor, setUnitFloor] = useState('');
-  const [subdivisionGate, setSubdivisionGate] = useState('');
-  const [arrivalInstructions, setArrivalInstructions] = useState('');
+  const [baseAddress, setBaseAddress] = useState(
+    () => initialBaseAddress || parsedOnMount.baseAddress || initialAddress || '',
+  );
+  const [unitFloor, setUnitFloor] = useState(() => initialUnit || '');
+  const [subdivisionGate, setSubdivisionGate] = useState(() => initialSubdivision || '');
+  const [arrivalInstructions, setArrivalInstructions] = useState(
+    () => initialInstructions || parsedOnMount.instructions || '',
+  );
   const [coords, setCoords] = useState(initialCoords);
 
   const pickerRef = useRef(null);
   // Tracks the last address string we emitted to the parent, so that when the
   // parent echoes it back via `initialAddress` we don't re-parse it into
   // `baseAddress` (which would duplicate unit/subdivision on every keystroke).
-  const lastEmittedAddressRef = useRef(null);
+  const lastEmittedAddressRef = useRef(hasStructuredInitial ? initialAddress || '' : null);
 
   // Initialize from initialAddress (only for externally-originated changes)
   useEffect(() => {
@@ -39,6 +53,8 @@ export default function PermanentAddressSection({
   useEffect(() => {
     if (initialCoords?.lat != null && initialCoords?.lng != null) {
       setCoords(initialCoords);
+    } else if (initialCoords === null) {
+      setCoords(null);
     }
   }, [initialCoords]);
 
@@ -55,6 +71,7 @@ export default function PermanentAddressSection({
     onChange?.({
       address: formatted,
       coords: newCoords,
+      street: newBase,
       unit: newUnit,
       subdivision: newSub,
       instructions: newInstr,
@@ -98,16 +115,18 @@ export default function PermanentAddressSection({
   };
 
   return (
-    <div className="space-y-4 rounded-2xl p-4 sm:p-5 neu-flat-sm border border-slate-200/70 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/40">
+    <div className={hideHeader ? 'space-y-4' : 'space-y-4 rounded-2xl p-4 sm:p-5 neu-flat-sm border border-slate-200/70 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/40'}>
       {/* Header */}
-      <div className="pb-3 border-b border-slate-200/60 dark:border-white/5">
-        <label className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 block">
-          Permanent Home & Visit Address
-        </label>
-        <p className="text-sm text-tertiary dark:text-tertiary mt-0.5">
-          Saved to your profile. All future home visits default to this location unless changed at booking.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="pb-3 border-b border-slate-200/60 dark:border-white/5">
+          <label className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 block">
+            Permanent Home & Visit Address
+          </label>
+          <p className="text-sm text-tertiary dark:text-tertiary mt-0.5">
+            Saved to your profile. All future home visits default to this location unless changed at booking.
+          </p>
+        </div>
+      )}
 
       {/* Step 1: Search Street / Landmark */}
       <div className="space-y-1.5">
@@ -136,7 +155,7 @@ export default function PermanentAddressSection({
           ref={pickerRef}
           initial={coords}
           onPinChange={handlePinChange}
-          className="h-[260px] sm:h-[300px]"
+          className="h-[240px] sm:h-[280px]"
         />
         {!coords && baseAddress.trim() && (
           <p className="text-2xs font-semibold text-[#B45309] dark:text-[#FCD34D] ml-1">
@@ -159,7 +178,7 @@ export default function PermanentAddressSection({
               value={baseAddress}
               onChange={handleFieldChange(setBaseAddress, 'base')}
               placeholder="e.g. Sampaguita St., Brgy. Tunasan, Muntinlupa City"
-              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3 text-xs font-medium outline-none transition-all"
+              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[44px] text-base sm:text-sm font-medium outline-none transition-all"
             />
           </div>
 
@@ -174,7 +193,7 @@ export default function PermanentAddressSection({
               value={unitFloor}
               onChange={handleFieldChange(setUnitFloor, 'unit')}
               placeholder="e.g. Block 14 Lot 8"
-              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3 text-xs font-medium outline-none transition-all"
+              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[44px] text-base sm:text-sm font-medium outline-none transition-all"
             />
           </div>
 
@@ -189,7 +208,7 @@ export default function PermanentAddressSection({
               value={subdivisionGate}
               onChange={handleFieldChange(setSubdivisionGate, 'sub')}
               placeholder="e.g. Victoria Homes Phase 2"
-              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3 text-xs font-medium outline-none transition-all"
+              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[44px] text-base sm:text-sm font-medium outline-none transition-all"
             />
           </div>
 
@@ -204,7 +223,7 @@ export default function PermanentAddressSection({
               value={arrivalInstructions}
               onChange={handleFieldChange(setArrivalInstructions, 'instr')}
               placeholder="e.g. Yellow gate beside bakery, ring buzzer on right pillar"
-              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl p-3 text-xs font-medium outline-none resize-none transition-all leading-relaxed"
+              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl p-3 text-base sm:text-sm font-medium outline-none resize-none transition-all leading-relaxed"
             />
           </div>
         </div>

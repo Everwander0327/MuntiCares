@@ -8,6 +8,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
+import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import { fetchConsentGrant } from '../lib/consent';
 import toast from 'react-hot-toast';
 import { EmptyState } from '@/shared/ui';
@@ -233,6 +234,7 @@ const PatientRecordModal = ({
 
   // Lock background scroll while the record is open
   useBodyScrollLock(isOpen);
+  const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({ onClose });
 
   const handleSaveNote = async (e) => {
     e.preventDefault();
@@ -367,9 +369,13 @@ const PatientRecordModal = ({
           >
             <motion.div
               className="relative w-full max-w-5xl h-[92dvh] sm:h-[88vh] max-h-[92dvh] sm:max-h-[88vh] neu-flat rounded-t-[2rem] sm:rounded-[2.25rem] flex flex-col overflow-hidden border-t sm:border border-slate-200/80 dark:border-white/10 shadow-2xl pointer-events-auto bg-surface-shell select-text overscroll-contain"
+              {...drawerMotionProps}
             >
               {/* Modal Top Header Bar (100% Solid, Non-Collapsing Surface) */}
-              <div className="bg-surface-shell border-b border-slate-200/80 dark:border-white/10 shrink-0 z-20 shadow-sm pt-2 sm:pt-0">
+              <div
+                className="bg-surface-shell border-b border-slate-200/80 dark:border-white/10 shrink-0 z-20 shadow-sm pt-2 sm:pt-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
+                {...dragHandleProps}
+              >
                 {/* Mobile Pull Bar */}
                 <div className="w-12 h-1 bg-slate-300 dark:bg-slate-700 rounded-sm mx-auto mb-2 sm:hidden shrink-0" />
 
@@ -431,7 +437,7 @@ const PatientRecordModal = ({
 
                     <DialogPrimitive.Close
                       aria-label="Close"
-                      className="neu-btn w-10 h-10 rounded-xl flex items-center justify-center text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer shrink-0"
+                      className="neu-btn w-10 h-10 rounded-xl hidden sm:flex items-center justify-center text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer shrink-0"
                     >
                       <X className="w-4 h-4" />
                     </DialogPrimitive.Close>

@@ -316,7 +316,17 @@ const RequestCard = ({
 
               <button 
                 type="button"
-                onClick={() => !isRated && onRateProvider({ id, providerId, patientId, providerName: provider })}
+                onClick={() =>
+                  !isRated &&
+                  onRateProvider({
+                    id,
+                    providerId,
+                    patientId,
+                    providerName: provider,
+                    providerAvatarUrl,
+                    service,
+                  })
+                }
                 disabled={isRated}
                 className={`col-span-1 justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold flex items-center transition-all cursor-pointer ${
                   isRated 

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 
 export const DOCTOR_AVATARS = [
   { id: 'doc-male', name: 'Dr. Ryan', src: '/images/avatars/avatar_doctor_male.jpg', role: 'Physician' },
@@ -42,6 +43,10 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
   const [preview, setPreview] = useState(null);
   const [stagedAvatar, setStagedAvatar] = useState(null);
   const inputRef = useRef(null);
+  const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
+    onClose: () => setModalOpen(false),
+    disabled: uploading,
+  });
 
   const src = preview || currentUrl;
 
@@ -211,29 +216,35 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 24 }}
               onClick={(e) => e.stopPropagation()}
+              {...drawerMotionProps}
               className="neu-flat w-full max-w-xl rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 relative overflow-hidden shadow-2xl border-t sm:border border-white/60 dark:border-white/10 max-h-[92dvh] flex flex-col"
             >
-              {/* Mobile Bottom Sheet Grab Handle */}
-              <div className="w-10 h-1 rounded-sm bg-slate-300 dark:bg-slate-600 mx-auto mb-3 sm:hidden shrink-0" />
+              <div
+                className="shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
+                {...dragHandleProps}
+              >
+                {/* Mobile Bottom Sheet Grab Handle */}
+                <div className="w-10 h-1 rounded-sm bg-slate-300 dark:bg-slate-600 mx-auto mb-3 sm:hidden shrink-0" />
 
-              {/* Clean Modal Header (No Left Icon) */}
-              <div className="flex items-start justify-between gap-3 mb-3.5 pb-3 border-b border-slate-200/50 dark:border-white/5 shrink-0">
-                <div className="min-w-0">
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 leading-tight">
-                    {collectionTitle}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-tertiary dark:text-tertiary font-medium mt-0.5">
-                    {collectionSubtitle}
-                  </p>
+                {/* Clean Modal Header (No Left Icon) */}
+                <div className="flex items-start justify-between gap-3 mb-3.5 pb-3 border-b border-slate-200/50 dark:border-white/5 shrink-0">
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 leading-tight">
+                      {collectionTitle}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-tertiary dark:text-tertiary font-medium mt-0.5">
+                      {collectionSubtitle}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(false)}
+                    className="neu-btn p-2 rounded-xl hidden sm:flex items-center justify-center text-tertiary hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer shrink-0"
+                    aria-label="Close modal"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(false)}
-                  className="neu-btn p-2 rounded-xl text-tertiary hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer shrink-0"
-                  aria-label="Close modal"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
 
               {/* Live Identity Preview Stage (Signal / Cal.com Pattern) */}

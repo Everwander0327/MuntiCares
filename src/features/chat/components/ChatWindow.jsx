@@ -7,6 +7,7 @@ import { useCalls } from '@/contexts/CallContext';
 import { usePresence } from '@/contexts/PresenceContext';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import useWebRTCCall from '../hooks/useWebRTCCall';
 import {
   newCallId,
@@ -195,6 +196,13 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState(null);
   const [showProfilePanel, setShowProfilePanel] = useState(false);
+  const {
+    drawerMotionProps: infoDrawerMotionProps,
+    dragHandleProps: infoDragHandleProps,
+  } = useBottomDrawerDrag({
+    onClose: () => setShowProfilePanel(false),
+    mobileQuery: '(max-width: 1023px)',
+  });
   const [isMobileScreen, setIsMobileScreen] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   });
@@ -1902,23 +1910,26 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     exit={{ y: '100%' }}
                     transition={{ type: 'spring', damping: 28, stiffness: 280 }}
                     onClick={(e) => e.stopPropagation()}
+                    {...infoDrawerMotionProps}
                     className="w-full max-h-[82dvh] bg-surface-shell rounded-t-2xl border-t-2 border-primary/40 shadow-2xl flex flex-col overflow-hidden"
                     style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
                   >
-                    <div className="pt-2.5 pb-1 flex justify-center shrink-0">
-                      <div className="w-10 h-1 rounded-xs bg-slate-400/50 dark:bg-slate-600" />
-                    </div>
-                    <div className="px-4 py-2.5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0">
-                      <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
-                        Conversation Info
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowProfilePanel(false)}
-                        className="neu-btn px-2.5 py-1 rounded-lg text-2xs font-black text-slate-700 dark:text-slate-200 hover:text-danger cursor-pointer"
-                      >
-                        Close
-                      </button>
+                    <div className="shrink-0 cursor-grab active:cursor-grabbing" {...infoDragHandleProps}>
+                      <div className="pt-2.5 pb-1 flex justify-center shrink-0">
+                        <div className="w-10 h-1 rounded-xs bg-slate-400/50 dark:bg-slate-600" />
+                      </div>
+                      <div className="px-4 py-2.5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0">
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
+                          Conversation Info
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowProfilePanel(false)}
+                          className="neu-btn px-2.5 py-1 rounded-lg text-2xs font-black text-slate-700 dark:text-slate-200 hover:text-danger cursor-pointer"
+                        >
+                          Close
+                        </button>
+                      </div>
                     </div>
                     <div className="p-4 overflow-y-auto space-y-4 flex-1">
                       {dossierBody}

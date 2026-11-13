@@ -7,6 +7,7 @@ import AddressAutocomplete from './AddressAutocomplete';
 import { reverseGeocode } from '../services/geocoding';
 import { formatFullVisitAddress } from '../services/addressFormat';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
+import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 
 /**
  * VisitDestinationModal — Option 1 (Grab / DoorDash Clean 2-Step Pin Picker)
@@ -35,6 +36,10 @@ export default function VisitDestinationModal({
   const dialogRef = useRef(null);
 
   useBodyScrollLock(isOpen);
+  const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
+    onClose,
+    disabled: saving,
+  });
 
   useEffect(() => {
     if (!isOpen) return;
@@ -161,36 +166,42 @@ export default function VisitDestinationModal({
             exit={{ y: 40, opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
+            {...drawerMotionProps}
           >
-            {/* Mobile Drag Handle */}
-            <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-md bg-slate-300 dark:bg-slate-700 sm:hidden" aria-hidden="true" />
+            <div
+              className="shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
+              {...dragHandleProps}
+            >
+              {/* Mobile Drag Handle */}
+              <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-md bg-slate-300 dark:bg-slate-700 sm:hidden" aria-hidden="true" />
 
-            {/* Option 1 Compact Header */}
-            <div className="flex items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-slate-200/70 dark:border-white/5 shrink-0">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 id="visit-destination-title" className="text-base sm:text-lg font-display font-extrabold text-slate-900 dark:text-white leading-tight truncate">
-                    {step === 'pin' ? 'Move map to place pin' : 'Exact visit & gate details'}
-                  </h2>
-                  <span className="px-2 py-0.5 rounded-md bg-primary/10 text-link text-2xs font-extrabold uppercase tracking-wider shrink-0">
-                    {step === 'pin' ? 'Step 1 of 2' : 'Step 2 of 2'}
-                  </span>
+              {/* Option 1 Compact Header */}
+              <div className="flex items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-slate-200/70 dark:border-white/5 shrink-0">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 id="visit-destination-title" className="text-base sm:text-lg font-display font-extrabold text-slate-900 dark:text-white leading-tight truncate">
+                      {step === 'pin' ? 'Move map to place pin' : 'Exact visit & gate details'}
+                    </h2>
+                    <span className="px-2 py-0.5 rounded-md bg-primary/10 text-link text-2xs font-extrabold uppercase tracking-wider shrink-0">
+                      {step === 'pin' ? 'Step 1 of 2' : 'Step 2 of 2'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">
+                    {step === 'pin'
+                      ? 'Position the center pin at your house or subdivision entrance gate.'
+                      : 'Provide unit, subdivision, or gate instructions for your arriving provider.'}
+                  </p>
                 </div>
-                <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">
-                  {step === 'pin'
-                    ? 'Position the center pin at your house or subdivision entrance gate.'
-                    : 'Provide unit, subdivision, or gate instructions for your arriving provider.'}
-                </p>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  title="Close"
+                  aria-label="Close visit location"
+                  className="neu-btn w-9 h-9 min-w-[36px] min-h-[36px] hidden sm:flex items-center justify-center rounded-xl text-tertiary hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={onClose}
-                title="Close"
-                aria-label="Close visit location"
-                className="neu-btn w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-tertiary hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
 
             {/* Modal Body */}

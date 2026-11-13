@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Check, Download, X, FileCode, User, Activity, HeartPulse, FileText, ShieldCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
+import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 
 const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   const [copied, setCopied] = useState(false);
@@ -128,6 +129,10 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     setCopied(false);
   };
 
+  const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
+    onClose: handleClose,
+  });
+
   if (typeof document === 'undefined') return null;
 
   return createPortal(
@@ -154,45 +159,51 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
             exit={{ opacity: 0, y: 24 }}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
+            {...drawerMotionProps}
             className="relative w-full sm:max-w-2xl max-h-[90dvh] sm:max-h-[84vh] neu-flat bg-surface-shell rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden z-[70] border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.5rem,env(safe-area-inset-bottom))]"
           >
-            {/* Mobile Drag Indicator Bar (Squircle) */}
-            <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-md mx-auto mt-2.5 sm:hidden shrink-0" />
+            <div
+              className="shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
+              {...dragHandleProps}
+            >
+              {/* Mobile Drag Indicator Bar (Squircle) */}
+              <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-md mx-auto mt-2.5 sm:hidden shrink-0" />
 
-            {/* Header */}
-            <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/70 dark:border-white/10 shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 flex items-center justify-center text-primary dark:text-primary-300 shrink-0">
-                  <FileCode className="w-5 h-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 id="fhir-modal-title" className="font-display font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate">
-                      FHIR R4 Clinical Bundle
-                    </h2>
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-extrabold text-success dark:text-emerald-300 uppercase tracking-wider">
-                      HL7 R4 Transaction
-                    </span>
+              {/* Header */}
+              <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/70 dark:border-white/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 flex items-center justify-center text-primary dark:text-primary-300 shrink-0">
+                    <FileCode className="w-5 h-5" />
                   </div>
-                  <p className="text-xs text-tertiary dark:text-slate-400 mt-0.5 truncate font-semibold">
-                    {patientName ? (
-                      <>
-                        Patient: <span className="text-slate-700 dark:text-slate-200 font-bold">{patientName}</span> •{' '}
-                      </>
-                    ) : null}
-                    <span className="font-mono text-[11px]">{fileName}</span> ({fileSizeLabel})
-                  </p>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 id="fhir-modal-title" className="font-display font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate">
+                        FHIR R4 Clinical Bundle
+                      </h2>
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-extrabold text-success dark:text-emerald-300 uppercase tracking-wider">
+                        HL7 R4 Transaction
+                      </span>
+                    </div>
+                    <p className="text-xs text-tertiary dark:text-slate-400 mt-0.5 truncate font-semibold">
+                      {patientName ? (
+                        <>
+                          Patient: <span className="text-slate-700 dark:text-slate-200 font-bold">{patientName}</span> •{' '}
+                        </>
+                      ) : null}
+                      <span className="font-mono text-[11px]">{fileName}</span> ({fileSizeLabel})
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={handleClose}
-                className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-tertiary hover:text-danger dark:text-tertiary dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer active:scale-95"
-                title="Close modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl hidden sm:flex items-center justify-center text-tertiary hover:text-danger dark:text-tertiary dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer active:scale-95"
+                  title="Close modal"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Body */}

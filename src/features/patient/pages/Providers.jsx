@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Search, Star, MapPin, X, Calendar, Shield, ShieldCheck, SlidersHorizontal, Check, ChevronDown, ChevronUp } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Star, MapPin, X, Calendar, Clock, Home, ArrowRight, Shield, ShieldCheck, SlidersHorizontal, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -17,9 +17,10 @@ import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
 import { ensurePatientCoords } from '@/features/tracking/services/geocoding';
 import { DEFAULT_CONSENT_PERMS } from '@/features/patient/utils/consent';
-import { slotsOverlap, toLocalDateKey, formatSlotLabel } from '@/lib/localDate';
+import { slotsOverlap, toLocalDateKey, parseLocalDate, formatSlotLabel } from '@/lib/localDate';
 import { getServiceDurationMinutes, getServiceSlotsCount } from '@/config/constants';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
+import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 
 const WORKING_HOURS_START = 9;
 const WORKING_HOURS_END = 17;
@@ -101,8 +102,18 @@ const PatientProviders = () => {
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingStep, setBookingStep] = useState('form');
+  const [bookingDir, setBookingDir] = useState('right');
+  const [showBookingNotes, setShowBookingNotes] = useState(false);
+  const [highlightSection, setHighlightSection] = useState(null);
+  const [confirmedSnapshot, setConfirmedSnapshot] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const prefersReducedMotion = useReducedMotion();
+  const bookingScrollRef = React.useRef(null);
+  const serviceSectionRef = React.useRef(null);
+  const scheduleSectionRef = React.useRef(null);
+  const locationSectionRef = React.useRef(null);
+  const consentSectionRef = React.useRef(null);
   const [patientHome, setPatientHome] = useState(null);
   const [visitDestination, setVisitDestination] = useState(null);
   const [destinationModalOpen, setDestinationModalOpen] = useState(false);
@@ -135,6 +146,9 @@ const PatientProviders = () => {
     }
   }, [availableSlots, morningSlots, afternoonSlots]);
 
+  const watchedConsent = watch('consent');
+  const watchedNotes = watch('notes');
+
   const dateOptions = useMemo(() => {
     const list = [];
     const now = new Date();
@@ -151,16 +165,94 @@ const PatientProviders = () => {
         continue;
       }
 
+      const weekdayShort = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
+      const dayNum = d.getDate();
+      const fullDate = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
       const label = isToday
-        ? `Today (${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
+        ? `Today (${monthShort} ${dayNum})`
         : isTomorrow
-          ? `Tomorrow (${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })})`
-          : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          ? `Tomorrow (${fullDate})`
+          : fullDate;
 
-      list.push({ key, label });
+      list.push({
+        key,
+        label,
+        isToday,
+        isTomorrow,
+        dayShort: isToday ? 'Today' : isTomorrow ? 'Tmrw' : weekdayShort,
+        weekdayShort,
+        monthShort,
+        dayNum,
+        fullDate,
+      });
     }
     return list;
   }, []);
+
+  const formatBookingDateLabel = (dateStr) => {
+    if (!dateStr) return 'Select a date';
+    const match = dateOptions.find((d) => d.key === dateStr);
+    if (match) return match.label;
+    const parsed = parseLocalDate(dateStr);
+    if (!parsed) return dateStr;
+    return parsed.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  };
+
+  const focusSectionByKey = (sectionKey) => {
+    if (!sectionKey) return;
+    if (sectionKey === 'service') setOpenServiceMenu(true);
+    const refMap = {
+      service: serviceSectionRef,
+      schedule: scheduleSectionRef,
+      location: locationSectionRef,
+      consent: consentSectionRef,
+    };
+    const targetRef = refMap[sectionKey];
+    setHighlightSection(sectionKey);
+    window.setTimeout(() => {
+      targetRef?.current?.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'center',
+      });
+    }, 90);
+    window.setTimeout(() => {
+      setHighlightSection((prev) => (prev === sectionKey ? null : prev));
+    }, 1050);
+  };
+
+  const goToBookingStep = (step, dir = 'right', focusKey = null) => {
+    setBookingDir(dir);
+    setBookingStep(step);
+    if (focusKey) {
+      focusSectionByKey(focusKey);
+    } else {
+      window.setTimeout(() => {
+        bookingScrollRef.current?.scrollTo({
+          top: 0,
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        });
+      }, 20);
+    }
+  };
+
+  const closeBookingModal = () => {
+    setSelectedProvider(null);
+    setBookingStep('form');
+    setBookingDir('right');
+    setConfirmedSnapshot(null);
+    setHighlightSection(null);
+    setOpenServiceMenu(false);
+    setShowBookingNotes(false);
+  };
+
+  const {
+    drawerMotionProps: bookingDrawerMotionProps,
+    dragHandleProps: bookingDragHandleProps,
+  } = useBottomDrawerDrag({
+    onClose: closeBookingModal,
+    disabled: bookingStep === 'confirm' || bookingLoading,
+  });
 
   const [sortBy, setSortBy] = useState('popular');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -472,6 +564,11 @@ const PatientProviders = () => {
     }
     setSelectedProvider(provider);
     setBookingStep('form');
+    setBookingDir('right');
+    setShowBookingNotes(false);
+    setHighlightSection(null);
+    setConfirmedSnapshot(null);
+    setOpenServiceMenu(false);
     setAvailableSlots([]);
     if (user?.id && !visitDestination) {
       ensurePatientCoords(user.id).then((coords) => {
@@ -560,7 +657,20 @@ const PatientProviders = () => {
       return;
     }
 
-    setBookingStep('confirm');
+    goToBookingStep('confirm', 'right');
+  };
+
+  const handleBookingValidationError = (fieldErrors) => {
+    if (fieldErrors?.service) {
+      focusSectionByKey('service');
+      toast.error(fieldErrors.service.message || 'Please select a service.');
+    } else if (fieldErrors?.date || fieldErrors?.time) {
+      focusSectionByKey('schedule');
+      toast.error(fieldErrors.time?.message || fieldErrors.date?.message || 'Please select an available time slot.');
+    } else if (fieldErrors?.consent) {
+      focusSectionByKey('consent');
+      toast.error(fieldErrors.consent.message || 'Please confirm data-sharing consent.');
+    }
   };
 
   const handleBookingSubmit = async () => {
@@ -733,9 +843,16 @@ const PatientProviders = () => {
         }
       }
 
+      setConfirmedSnapshot({
+        providerName: selectedProvider.full_name,
+        service: values.service,
+        date: values.date,
+        time: values.time,
+        durationMinutes: serviceDurationMinutes,
+        address: destination.address || patientHome?.address || '',
+      });
       setRequested(prev => [...new Set([...prev, providerId])]);
       setActiveRequestsMap(prev => ({ ...prev, [providerId]: 'Pending' }));
-      setSelectedProvider(null);
       setVisitDestination(
         patientHome?.lat != null
           ? {
@@ -749,7 +866,10 @@ const PatientProviders = () => {
           : null
       );
       toast.success('Booking request sent!');
-      confetti({ particleCount: 100, spread: 70, origin: { y: 0.5 } });
+      goToBookingStep('done', 'right');
+      if (!prefersReducedMotion) {
+        confetti({ particleCount: 95, spread: 72, origin: { y: 0.52 }, zIndex: 9999 });
+      }
     } catch (err) {
       console.error('Error sending request:', err);
       toast.error('Failed to send booking request. Please try again.');
@@ -1107,15 +1227,15 @@ const PatientProviders = () => {
         )}
       </div>
 
-      {/* Booking Modal */}
+      {/* Booking Modal — Direction 1 (Guided Horizontal Picker + Arrival Timeline) */}
       <DialogPrimitive.Root
         open={!!selectedProvider}
         modal={!destinationModalOpen}
-        onOpenChange={(open) => { if (!open && !destinationModalOpen) setSelectedProvider(null); }}
+        onOpenChange={(open) => { if (!open && !destinationModalOpen && !bookingLoading) closeBookingModal(); }}
       >
         {selectedProvider && (
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/70 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
           <DialogPrimitive.Content
             asChild
             aria-modal="true"
@@ -1125,30 +1245,34 @@ const PatientProviders = () => {
               bookingTriggerRef.current.focus();
             }}
             onInteractOutside={(event) => {
-              if (bookingStep !== 'form' || destinationModalOpen) event.preventDefault();
+              if (bookingStep === 'confirm' || destinationModalOpen || bookingLoading) event.preventDefault();
             }}
           >
-            <motion.div 
+            <motion.div
               className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.16 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
               onClick={() => {
-                if (bookingStep === 'form') setSelectedProvider(null);
+                if (bookingStep !== 'confirm' && !bookingLoading) closeBookingModal();
               }}
             >
-              <motion.div 
-                className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-lg p-4 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] relative max-h-[92dvh] overflow-y-auto no-scrollbar shadow-2xl border-t sm:border border-white/70 dark:border-white/10"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-                onClick={e => e.stopPropagation()}
+              <motion.div
+                className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-lg flex flex-col relative max-h-[92dvh] overflow-hidden shadow-2xl border-t sm:border border-white/70 dark:border-white/10"
+                initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 42, scale: 0.985 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+                onClick={(e) => e.stopPropagation()}
+                {...bookingDrawerMotionProps}
               >
-                {/* Mobile drag handle indicator */}
-                <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-md bg-slate-300 dark:bg-slate-700 sm:hidden" aria-hidden="true" />
+                {/* Sticky Header + Animated Live Progress Bar */}
+                <div
+                  className="shrink-0 px-4 sm:px-6 pt-3 sm:pt-5 pb-3.5 border-b border-slate-200/75 dark:border-white/10 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
+                  {...bookingDragHandleProps}
+                >
+                  {/* Mobile bottom-sheet drag indicator */}
+                  <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600 sm:hidden" aria-hidden="true" />
 
-                {/* Option 1 Compact Provider Identity Header + Inline Step Pill (Zero Decorative Icons) */}
-                <div className="flex items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-slate-200/70 dark:border-white/5">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="neu-flat-sm w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-link font-extrabold overflow-hidden p-0.5 shrink-0 aspect-square border border-white/80 dark:border-white/10">
                       {selectedProvider.avatar_url ? (
@@ -1172,454 +1296,967 @@ const PatientProviders = () => {
                       </span>
                     </div>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <DialogPrimitive.Title asChild>
                           <h2 className="text-base sm:text-lg font-display font-extrabold text-slate-900 dark:text-white leading-tight truncate">
-                            {bookingStep === 'form' ? 'Book Appointment' : 'Confirm Booking'}
+                            {bookingStep === 'form'
+                              ? 'Book Appointment'
+                              : bookingStep === 'confirm'
+                                ? 'Confirm Booking'
+                                : 'Visit Scheduled'}
                           </h2>
                         </DialogPrimitive.Title>
-                        <span className="px-2 py-0.5 rounded-md bg-primary/10 text-link text-2xs font-extrabold uppercase tracking-wider shrink-0">
-                          {bookingStep === 'form' ? 'Step 1 of 2' : 'Step 2 of 2'}
+                        <DialogPrimitive.Description className="sr-only">
+                          Select a service, arrival window, and confirmed home visit location with {selectedProvider.full_name}.
+                        </DialogPrimitive.Description>
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-2xs font-extrabold uppercase tracking-wider shrink-0 ${
+                            bookingStep === 'done'
+                              ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                              : 'bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400'
+                          }`}
+                        >
+                          {bookingStep === 'form'
+                            ? 'Step 1 of 2'
+                            : bookingStep === 'confirm'
+                              ? 'Step 2 of 2'
+                              : 'Confirmed'}
                         </span>
                       </div>
                       <p className="text-xs text-tertiary dark:text-tertiary truncate mt-0.5">
-                        with <span className="font-extrabold text-link">{selectedProvider.full_name}</span>
-                        {selectedProvider.specialty
-                          ? ` • ${selectedProvider.specialty}`
-                          : selectedProvider.services?.[0]
-                            ? ` • ${selectedProvider.services[0]}`
-                            : ' • Verified Provider'}
+                        with <span className="font-extrabold text-link dark:text-primary-400">{selectedProvider.full_name}</span>
+                        {bookingStep === 'done' && confirmedSnapshot?.service
+                          ? ` • ${confirmedSnapshot.service}`
+                          : watchedService
+                            ? ` • ${watchedService}`
+                            : selectedProvider.specialty
+                              ? ` • ${selectedProvider.specialty}`
+                              : selectedProvider.services?.[0]
+                                ? ` • ${selectedProvider.services[0]}`
+                                : ' • Verified Provider'}
                       </p>
                     </div>
                   </div>
 
-                  <DialogPrimitive.Close
-                    aria-label="Close"
-                    className="neu-btn w-9 h-9 min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl text-tertiary hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </DialogPrimitive.Close>
+                  {/* Animated Progress Track */}
+                  <div className="mt-3 h-1.5 w-full rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden" aria-hidden="true">
+                    <motion.div
+                      className={`h-full rounded-full transition-colors duration-300 ${
+                        bookingStep === 'done'
+                          ? 'bg-emerald-500 dark:bg-emerald-400'
+                          : 'bg-primary dark:bg-primary-400'
+                      }`}
+                      initial={false}
+                      animate={{ width: bookingStep === 'form' ? '50%' : '100%' }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
+                    />
+                  </div>
                 </div>
 
-                {/* Step 1: Option 1 Period-Segmented Booking Form (No Decorative Icons) */}
-                {bookingStep === 'form' && (
-                  <form onSubmit={handleSubmit(handleReviewBooking)} className="space-y-3.5">
-                    {/* Row 1: Service Selection + Duration Summary */}
-                    <div className="space-y-1 relative z-30">
-                      <div className="flex items-center justify-between">
-                        <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                          Service Type
-                        </label>
-                        <span className="text-2xs font-extrabold text-link">
-                          {serviceDurationMinutes} mins ({serviceSlotsCount} {serviceSlotsCount === 1 ? 'slot' : 'contiguous slots'})
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setOpenServiceMenu(prev => !prev);
-                        }}
-                        className="w-full neu-flat-sm rounded-xl p-2.5 px-3.5 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none border border-white/70 dark:border-white/5 hover:border-primary/30"
+                <AnimatePresence mode="wait" initial={false}>
+
+                {/* Step 1: Guided Horizontal Picker + Progressive Disclosure */}
+                {bookingStep === 'form' && (() => {
+                  const amOpenCount = morningSlots.filter(s => s.available).length;
+                  const pmOpenCount = afternoonSlots.filter(s => s.available).length;
+                  const visibleDateChips = dateOptions.slice(0, 5);
+                  const isCustomDateSelected = Boolean(
+                    watchedDate && !visibleDateChips.some(d => d.key === watchedDate)
+                  );
+                  const customDateObj = isCustomDateSelected ? parseLocalDate(watchedDate) : null;
+                  const selectedSlotParts = watchedTime
+                    ? formatSlotParts(watchedTime, serviceDurationMinutes)
+                    : null;
+                  const otherPeriod = slotPeriod === 'am' ? 'pm' : 'am';
+                  const otherOpenCount = otherPeriod === 'am' ? amOpenCount : pmOpenCount;
+                  const slideOffset = prefersReducedMotion ? 0 : bookingDir === 'left' ? -22 : 22;
+
+                  return (
+                    <motion.div
+                      key="step-form"
+                      initial={{ opacity: prefersReducedMotion ? 1 : 0, x: slideOffset }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: prefersReducedMotion ? 1 : 0, x: prefersReducedMotion ? 0 : -16 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+                      className="flex-1 min-h-0 flex flex-col"
+                    >
+                      <form
+                        onSubmit={handleSubmit(handleReviewBooking, handleBookingValidationError)}
+                        className="flex-1 min-h-0 flex flex-col"
                       >
-                        <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                          {watchedService || 'Select a service...'}
-                        </span>
-                        <span className="text-xs font-extrabold text-link shrink-0 ml-2">
-                          {openServiceMenu ? 'Close' : 'Change'}
-                        </span>
-                      </button>
-
-                      {/* Custom Dropdown List */}
-                      <AnimatePresence>
-                        {openServiceMenu && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -4 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute left-0 right-0 top-full mt-1 bg-surface-shell rounded-2xl p-1.5 z-40 shadow-xl border border-white/60 dark:border-white/10 space-y-1 max-h-56 overflow-y-auto"
+                        <div
+                          ref={bookingScrollRef}
+                          className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 sm:px-6 py-4 space-y-4"
+                        >
+                          {/* Row 1: Service Selection + Accordion */}
+                          <div
+                            ref={serviceSectionRef}
+                            className={`space-y-1.5 rounded-2xl transition-all duration-200 ${
+                              highlightSection === 'service'
+                                ? 'ring-2 ring-primary/50 dark:ring-primary-400/50 ring-offset-2 ring-offset-transparent p-1 -m-1'
+                                : ''
+                            }`}
                           >
-                            {(selectedProvider.services?.length > 0 ? selectedProvider.services : ['General Care']).map(s => {
-                              const isSelected = watchedService === s;
-                              return (
-                                <button
-                                  key={s}
-                                  type="button"
-                                  onClick={() => {
-                                    setValue('service', s, { shouldValidate: true });
-                                    setOpenServiceMenu(false);
-                                  }}
-                                  className={`w-full p-2.5 px-3 rounded-xl text-left flex items-center justify-between transition-colors cursor-pointer outline-none select-none ${
-                                    isSelected
-                                      ? 'bg-primary text-white font-bold'
-                                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
-                                  }`}
-                                >
-                                  <span className="text-xs font-semibold">{s}</span>
-                                  {isSelected && <span className="text-2xs font-extrabold uppercase tracking-wider">Selected</span>}
-                                </button>
-                              );
-                            })}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      {errors.service && (
-                        <p className="text-xs font-medium text-danger ml-1">{errors.service.message}</p>
-                      )}
-                    </div>
-
-                    {/* Row 2: Unified Schedule Well with Morning / Afternoon Period Switcher */}
-                    <div className="space-y-1.5">
-                      <div className="neu-inset rounded-2xl p-3 sm:p-3.5 space-y-3 border border-white/60 dark:border-white/5">
-                        {/* Date Selector Bar */}
-                        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-300/60 dark:border-white/10">
-                          <div className="min-w-0 flex-1">
-                            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block leading-none">
-                              Appointment Date
-                            </span>
-                            <select
-                              value={watchedDate || ''}
-                              onChange={(e) => {
-                                setValue('date', e.target.value, { shouldValidate: true });
-                                setValue('time', '');
-                              }}
-                              className="bg-transparent text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white outline-none cursor-pointer truncate max-w-full mt-1 block"
-                            >
-                              {dateOptions.map(opt => (
-                                <option key={opt.key} value={opt.key} className="dark:bg-slate-900 text-slate-900 dark:text-white">
-                                  {opt.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {watchedDate && !loadingSlots && availableSlots.length > 0 && (() => {
-                              const freeCount = availableSlots.filter(s => s.available).length;
-                              const allPast = availableSlots.every(s => s.isPast);
-                              if (freeCount > 0) {
-                                return (
-                                  <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20">
-                                    {freeCount} open
-                                  </span>
-                                );
-                              }
-                              if (allPast) {
-                                return (
-                                  <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                                    Clinic closed
-                                  </span>
-                                );
-                              }
-                              return (
-                                <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                                  Fully booked
-                                </span>
-                              );
-                            })()}
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
+                                Service Type
+                              </label>
+                              <span className="text-2xs font-extrabold text-link dark:text-primary-400 tabular-nums">
+                                {serviceDurationMinutes} mins ({serviceSlotsCount} {serviceSlotsCount === 1 ? 'slot' : 'contiguous slots'})
+                              </span>
+                            </div>
 
                             <button
                               type="button"
-                              onClick={() => setShowCustomDatePicker(prev => !prev)}
-                              className="neu-btn px-2.5 py-1 rounded-lg text-2xs font-extrabold text-link cursor-pointer"
+                              onClick={() => setOpenServiceMenu(prev => !prev)}
+                              className="w-full neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none border border-white/75 dark:border-white/10 hover:border-primary/40 dark:hover:border-primary-400/40 active:scale-[0.99]"
                             >
-                              {showCustomDatePicker ? 'Hide' : 'Pick date'}
+                              <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                                {watchedService || 'Select a service...'}
+                              </span>
+                              <span className="text-xs font-extrabold text-link dark:text-primary-400 shrink-0 ml-2 flex items-center gap-1">
+                                {openServiceMenu ? 'Close' : 'Change'}
+                                {openServiceMenu ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                              </span>
+                            </button>
+
+                            <AnimatePresence initial={false}>
+                              {openServiceMenu && (
+                                <motion.div
+                                  initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: 'auto' }}
+                                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                                  transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="neu-inset rounded-2xl p-1.5 space-y-1 max-h-52 overflow-y-auto no-scrollbar border border-white/60 dark:border-white/5">
+                                    {(selectedProvider.services?.length > 0 ? selectedProvider.services : ['General Care']).map(s => {
+                                      const isSelected = watchedService === s;
+                                      const sMins = getServiceDurationMinutes(s);
+                                      const sSlots = getServiceSlotsCount(s);
+                                      return (
+                                        <button
+                                          key={s}
+                                          type="button"
+                                          onClick={() => {
+                                            setValue('service', s, { shouldValidate: true });
+                                            setOpenServiceMenu(false);
+                                          }}
+                                          className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between transition-all cursor-pointer outline-none select-none active:scale-[0.98] ${
+                                            isSelected
+                                              ? 'bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] font-extrabold shadow-sm'
+                                              : 'text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800/70'
+                                          }`}
+                                        >
+                                          <div className="min-w-0 pr-2">
+                                            <span className="text-xs font-bold block truncate">{s}</span>
+                                            <span className={`text-2xs block ${isSelected ? 'opacity-90' : 'text-tertiary'}`}>
+                                              {sMins} mins ({sSlots} {sSlots === 1 ? 'slot' : 'slots'})
+                                            </span>
+                                          </div>
+                                          {isSelected && <span className="text-2xs font-extrabold uppercase tracking-wider shrink-0">Selected</span>}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+
+                            {errors.service && (
+                              <p className="text-xs font-medium text-danger ml-1">{errors.service.message}</p>
+                            )}
+                          </div>
+
+                          {/* Row 2: Horizontal 5-Day Date Strip + Animated Period Switch + Slots */}
+                          <div
+                            ref={scheduleSectionRef}
+                            className={`space-y-1.5 rounded-2xl transition-all duration-200 ${
+                              highlightSection === 'schedule'
+                                ? 'ring-2 ring-primary/50 dark:ring-primary-400/50 ring-offset-2 ring-offset-transparent p-1 -m-1'
+                                : ''
+                            }`}
+                          >
+                            <div className="neu-inset rounded-2xl p-3.5 space-y-3 border border-white/60 dark:border-white/5">
+                              {/* Schedule Header */}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block leading-none">
+                                    Select Day &amp; Arrival Window
+                                  </span>
+                                  <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white mt-1 block truncate">
+                                    {formatBookingDateLabel(watchedDate)}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {watchedDate && !loadingSlots && availableSlots.length > 0 && (() => {
+                                    const freeCount = availableSlots.filter(s => s.available).length;
+                                    const allPast = availableSlots.every(s => s.isPast);
+                                    if (freeCount > 0) {
+                                      return (
+                                        <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 tabular-nums">
+                                          {freeCount} open
+                                        </span>
+                                      );
+                                    }
+                                    if (allPast) {
+                                      return (
+                                        <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                          Clinic closed
+                                        </span>
+                                      );
+                                    }
+                                    return (
+                                      <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                                        Fully booked
+                                      </span>
+                                    );
+                                  })()}
+
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowCustomDatePicker(prev => !prev)}
+                                    className="neu-btn px-2.5 py-1 rounded-lg text-2xs font-extrabold text-link dark:text-primary-400 cursor-pointer active:scale-95 transition-transform"
+                                  >
+                                    {showCustomDatePicker ? 'Hide calendar' : 'More dates'}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Horizontal Date Chips */}
+                              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5" role="listbox" aria-label="Appointment dates">
+                                {visibleDateChips.map(opt => {
+                                  const isActive = watchedDate === opt.key;
+                                  return (
+                                    <button
+                                      key={opt.key}
+                                      type="button"
+                                      role="option"
+                                      aria-selected={isActive}
+                                      onClick={() => {
+                                        if (watchedDate !== opt.key) {
+                                          setValue('date', opt.key, { shouldValidate: true });
+                                          setValue('time', '');
+                                        }
+                                      }}
+                                      className={`min-w-[66px] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 transition-all active:scale-[0.96] select-none outline-none ${
+                                        isActive
+                                          ? 'bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20'
+                                          : 'neu-flat-sm text-slate-800 dark:text-slate-100 border border-white/70 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40'
+                                      }`}
+                                    >
+                                      <span className={`block text-2xs font-bold uppercase ${isActive ? 'opacity-90' : 'text-tertiary'}`}>
+                                        {opt.dayShort}
+                                      </span>
+                                      <span className="block text-xs sm:text-sm font-extrabold leading-tight mt-0.5 tabular-nums">
+                                        {opt.monthShort} {opt.dayNum}
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+
+                                {isCustomDateSelected && customDateObj && (
+                                  <button
+                                    type="button"
+                                    role="option"
+                                    aria-selected={true}
+                                    onClick={() => setShowCustomDatePicker(true)}
+                                    className="min-w-[70px] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20 select-none"
+                                  >
+                                    <span className="block text-2xs font-bold uppercase opacity-90">
+                                      {customDateObj.toLocaleDateString('en-US', { weekday: 'short' })}
+                                    </span>
+                                    <span className="block text-xs sm:text-sm font-extrabold leading-tight mt-0.5 tabular-nums">
+                                      {customDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Expandable Custom Date Picker */}
+                              <AnimatePresence initial={false}>
+                                {showCustomDatePicker && (
+                                  <motion.div
+                                    initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                                    transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.22, 1, 0.36, 1] }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="neu-flat-sm rounded-xl px-3 py-2 flex items-center justify-between gap-2 border border-white/70 dark:border-white/5">
+                                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300 shrink-0">Jump to date:</span>
+                                      <input
+                                        type="date"
+                                        min={toLocalDateKey()}
+                                        value={watchedDate || ''}
+                                        onChange={(e) => {
+                                          if (!e.target.value) return;
+                                          setValue('date', e.target.value, { shouldValidate: true });
+                                          setValue('time', '');
+                                        }}
+                                        className="bg-transparent text-xs font-extrabold text-slate-900 dark:text-white outline-none cursor-pointer"
+                                      />
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+
+                              {/* Animated Sliding Morning / Afternoon Period Switcher + Slots */}
+                              {!watchedDate ? (
+                                <div className="p-3 text-center text-xs text-tertiary">
+                                  Select a date above to view available slots.
+                                </div>
+                              ) : loadingSlots ? (
+                                <div className="space-y-2 py-1" aria-live="polite">
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {[0, 1, 2, 3, 4, 5].map(idx => (
+                                      <div
+                                        key={idx}
+                                        className="h-12 rounded-xl bg-white/70 dark:bg-slate-800/60 border border-slate-200/60 dark:border-white/5 animate-pulse"
+                                      />
+                                    ))}
+                                  </div>
+                                  <p className="text-center text-xs font-semibold text-link dark:text-primary-400">
+                                    Checking provider availability...
+                                  </p>
+                                </div>
+                              ) : availableSlots.length === 0 ? (
+                                <div className="p-3 text-center text-xs text-tertiary">
+                                  No slots available for this date.
+                                </div>
+                              ) : (
+                                <div className="space-y-2.5">
+                                  {availableSlots.every(s => !s.available) && (
+                                    <div className="p-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 font-medium">
+                                      {availableSlots.every(s => s.isPast)
+                                        ? 'Clinic working hours for today have ended (9:00 AM – 5:00 PM). Please select tomorrow or an upcoming date.'
+                                        : 'All time slots are booked for this date. Please choose another date.'}
+                                    </div>
+                                  )}
+
+                                  {/* Animated Sliding 50/50 Period Switch */}
+                                  <div className="relative neu-flat-sm p-1 rounded-xl grid grid-cols-2 border border-white/70 dark:border-white/5">
+                                    <motion.div
+                                      aria-hidden="true"
+                                      className="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-lg bg-primary dark:bg-primary-400 shadow-sm"
+                                      initial={false}
+                                      animate={{ x: slotPeriod === 'am' ? '0%' : '100%' }}
+                                      transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setSlotPeriod('am')}
+                                      className={`relative z-10 py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none ${
+                                        slotPeriod === 'am'
+                                          ? 'text-white dark:text-[#08182A]'
+                                          : 'text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400'
+                                      }`}
+                                    >
+                                      Morning ({amOpenCount} open)
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSlotPeriod('pm')}
+                                      className={`relative z-10 py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none ${
+                                        slotPeriod === 'pm'
+                                          ? 'text-white dark:text-[#08182A]'
+                                          : 'text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400'
+                                      }`}
+                                    >
+                                      Afternoon ({pmOpenCount} open)
+                                    </button>
+                                  </div>
+
+                                  {/* Period-Filtered Slots Grid */}
+                                  {(() => {
+                                    const periodList = slotPeriod === 'am' ? morningSlots : afternoonSlots;
+                                    const periodOpenCount = periodList.filter(s => s.available).length;
+                                    if (periodList.length === 0) {
+                                      return (
+                                        <div className="p-3 rounded-xl bg-white/60 dark:bg-slate-800/50 border border-dashed border-slate-300/80 dark:border-white/10 text-center space-y-2">
+                                          <p className="text-xs text-tertiary">
+                                            No {slotPeriod === 'am' ? 'morning' : 'afternoon'} slots for this service duration.
+                                          </p>
+                                          {otherOpenCount > 0 && (
+                                            <button
+                                              type="button"
+                                              onClick={() => setSlotPeriod(otherPeriod)}
+                                              className="px-3 py-1 rounded-lg bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 text-xs font-extrabold cursor-pointer active:scale-95 transition-transform"
+                                            >
+                                              Switch to {otherOpenCount} {otherPeriod === 'am' ? 'Morning' : 'Afternoon'} slots →
+                                            </button>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+
+                                    return (
+                                      <motion.div
+                                        key={`${watchedDate}-${slotPeriod}`}
+                                        initial={prefersReducedMotion ? false : { opacity: 0.45, y: 4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: prefersReducedMotion ? 0 : 0.16, ease: [0.22, 1, 0.36, 1] }}
+                                        className="space-y-2"
+                                      >
+                                        {periodOpenCount === 0 && otherOpenCount > 0 && (
+                                          <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/10 dark:bg-primary-400/10 border border-primary/20 dark:border-primary-400/20">
+                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                              {slotPeriod === 'am' ? 'Morning' : 'Afternoon'} slots are full.
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => setSlotPeriod(otherPeriod)}
+                                              className="text-xs font-extrabold text-link dark:text-primary-400 cursor-pointer shrink-0 hover:underline"
+                                            >
+                                              View {otherOpenCount} {otherPeriod === 'am' ? 'AM' : 'PM'} open →
+                                            </button>
+                                          </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                          {periodList.map(slot => {
+                                            const isSelected = watchedTime === slot.time;
+                                            const { startLabel, endLabel } = formatSlotParts(slot.time, serviceDurationMinutes);
+
+                                            return (
+                                              <button
+                                                key={slot.time}
+                                                type="button"
+                                                disabled={!slot.available}
+                                                onClick={() => setValue('time', slot.time, { shouldValidate: true })}
+                                                className={`py-2.5 px-2 rounded-xl text-center transition-all outline-none select-none ${
+                                                  !slot.available
+                                                    ? 'bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-600 border border-slate-200/60 dark:border-white/5 cursor-not-allowed'
+                                                    : isSelected
+                                                      ? 'bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20 cursor-pointer ring-2 ring-primary/35 dark:ring-primary-400/45 active:scale-[0.97]'
+                                                      : 'neu-flat-sm text-slate-800 dark:text-slate-100 border border-white/75 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40 cursor-pointer active:scale-[0.96]'
+                                                }`}
+                                              >
+                                                <span className="text-xs font-extrabold block leading-tight tabular-nums">
+                                                  {startLabel}
+                                                </span>
+                                                <span className={`text-[11px] font-semibold block mt-0.5 leading-tight tabular-nums ${
+                                                  !slot.available
+                                                    ? 'text-slate-400 dark:text-slate-600'
+                                                    : isSelected
+                                                      ? 'opacity-90'
+                                                      : 'text-tertiary'
+                                                }`}>
+                                                  {endLabel}
+                                                </span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </motion.div>
+                                    );
+                                  })()}
+                                </div>
+                              )}
+                            </div>
+
+                            {errors.date && (
+                              <p className="text-xs font-medium text-danger ml-1">{errors.date.message}</p>
+                            )}
+                            {errors.time && (
+                              <p className="text-xs font-medium text-danger ml-1">{errors.time.message}</p>
+                            )}
+                          </div>
+
+                          {/* Row 3: Home Visit Location + Progressive Disclosure Optional Gate Notes */}
+                          <div
+                            ref={locationSectionRef}
+                            className={`space-y-2 rounded-2xl transition-all duration-200 ${
+                              highlightSection === 'location'
+                                ? 'ring-2 ring-primary/50 dark:ring-primary-400/50 ring-offset-2 ring-offset-transparent p-1 -m-1'
+                                : ''
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setDestinationModalOpen(true)}
+                              className="w-full neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none border border-white/75 dark:border-white/10 hover:border-primary/40 dark:hover:border-primary-400/40 active:scale-[0.99]"
+                            >
+                              <div className="min-w-0 flex-1 pr-3">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
+                                    Visit Location
+                                  </span>
+                                  <span className="text-2xs font-bold text-link dark:text-primary-400">
+                                    • {!visitDestination
+                                      ? 'Not set'
+                                      : !destinationConfirmed
+                                        ? 'Approximate'
+                                        : visitDestination.source === 'booking'
+                                          ? 'Custom location'
+                                          : 'Saved address'}
+                                  </span>
+                                </div>
+                                <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
+                                  {visitDestination?.address || patientHome?.address || 'Set visit location'}
+                                </p>
+                                <p className={`text-xs truncate mt-0.5 font-semibold flex items-center gap-1.5 tabular-nums ${
+                                  destinationConfirmed ? 'text-success dark:text-success-dark' : 'text-[#B45309] dark:text-[#FCD34D]'
+                                }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                    destinationConfirmed ? 'bg-emerald-500' : 'bg-amber-500'
+                                  }`} />
+                                  <span className="truncate">
+                                    {visitDestination?.lat
+                                      ? destinationConfirmed
+                                        ? `GPS Pin Confirmed (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)})`
+                                        : `Approximate (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)}) · Tap to place pin`
+                                      : 'Tap to set address & gate directions'}
+                                  </span>
+                                </p>
+                              </div>
+                              <span className="neu-btn px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-link dark:text-primary-400 shrink-0">
+                                Change
+                              </span>
+                            </button>
+
+                            {/* Progressive Disclosure Gate Notes */}
+                            <div className="neu-inset rounded-2xl px-3.5 py-2.5 border border-slate-300/40 dark:border-white/5">
+                              <button
+                                type="button"
+                                onClick={() => setShowBookingNotes(prev => !prev)}
+                                className="w-full flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none"
+                              >
+                                <span className="truncate">
+                                  {watchedNotes?.trim() ? 'Patient & gate notes added' : '+ Add gate notes or symptoms (optional)'}
+                                </span>
+                                <span className="text-2xs font-extrabold text-link dark:text-primary-400 shrink-0 ml-2 uppercase tracking-wider">
+                                  {showBookingNotes || watchedNotes?.trim() ? 'Hide' : 'Add'}
+                                </span>
+                              </button>
+
+                              <div
+                                className={`grid transition-[grid-template-rows] duration-200 ease-out ${
+                                  showBookingNotes || watchedNotes?.trim() ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                                }`}
+                              >
+                                <div className="overflow-hidden">
+                                  <input
+                                    type="text"
+                                    {...register('notes')}
+                                    placeholder="e.g., Lobby guard knows visit name, gate code, symptoms..."
+                                    className="mt-2 w-full neu-flat-sm rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-tertiary placeholder:font-normal border border-white/70 dark:border-white/10 focus:border-primary/50 dark:focus:border-primary-400/50"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Row 4: Full-Card Clickable Consent Label */}
+                          <div
+                            ref={consentSectionRef}
+                            className={`space-y-1 rounded-2xl transition-all duration-200 ${
+                              highlightSection === 'consent'
+                                ? 'ring-2 ring-danger/50 ring-offset-2 ring-offset-transparent p-1 -m-1'
+                                : ''
+                            }`}
+                          >
+                            <label
+                              htmlFor="consent"
+                              className={`rounded-2xl p-3 flex items-start gap-3 transition-colors border cursor-pointer select-none ${
+                                errors.consent
+                                  ? 'bg-red-50/70 dark:bg-red-950/30 border-red-300 dark:border-red-800/70'
+                                  : watchedConsent
+                                    ? 'bg-emerald-50/70 dark:bg-emerald-950/25 border-emerald-300/70 dark:border-emerald-800/60'
+                                    : 'neu-flat-sm border-white/75 dark:border-white/10'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                id="consent"
+                                {...register('consent')}
+                                className="w-4 h-4 rounded accent-[#2F6FB5] dark:accent-[#8CBDF0] mt-0.5 cursor-pointer shrink-0"
+                              />
+                              <span className="text-xs text-slate-600 dark:text-slate-300 leading-snug">
+                                I consent to sharing my medical profile &amp; address with <span className="font-bold text-slate-900 dark:text-white">{selectedProvider.full_name}</span> for this home care visit.
+                              </span>
+                            </label>
+                            {errors.consent && (
+                              <p className="text-xs font-semibold text-danger ml-1">{errors.consent.message}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Sticky Bottom Footer CTA */}
+                        <div className="shrink-0 px-4 sm:px-6 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-slate-200/75 dark:border-white/10 bg-surface-shell/95 backdrop-blur-md">
+                          <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[116px_1fr] gap-2.5">
+                            <button
+                              type="button"
+                              onClick={closeBookingModal}
+                              className="w-full neu-btn py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="w-full neu-btn-primary py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform cursor-pointer"
+                            >
+                              <span>
+                                {selectedSlotParts
+                                  ? `Review ${selectedSlotParts.startLabel} Visit`
+                                  : 'Select a Time Slot'}
+                              </span>
+                              <ArrowRight className="w-4 h-4 shrink-0" />
                             </button>
                           </div>
                         </div>
+                      </form>
+                    </motion.div>
+                  );
+                })()}
 
-                        {/* Optional custom date picker toggle */}
-                        {showCustomDatePicker && (
-                          <div className="neu-flat-sm rounded-xl p-2 px-3 flex items-center animate-in fade-in duration-150">
-                            <input
-                              type="date"
-                              min={new Date().toLocaleDateString('en-CA')}
-                              value={watchedDate || ''}
-                              onChange={(e) => {
-                                setValue('date', e.target.value, { shouldValidate: true });
-                                setValue('time', '');
-                              }}
-                              className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-white outline-none cursor-pointer"
+                {/* Step 2: Direction 1 — Arrival Timeline + Verified Consent Assurance */}
+                {bookingStep === 'confirm' && (() => {
+                  const vals = getValues();
+                  const slideOffset = prefersReducedMotion ? 0 : bookingDir === 'left' ? -22 : 22;
+                  const nodeMotion = (delaySec) =>
+                    prefersReducedMotion
+                      ? {}
+                      : {
+                          initial: { opacity: 0, scale: 0.72 },
+                          animate: { opacity: 1, scale: 1 },
+                          transition: { duration: 0.3, delay: delaySec, type: 'spring', stiffness: 360, damping: 22 },
+                        };
+
+                  return (
+                    <motion.div
+                      key="step-confirm"
+                      initial={{ opacity: prefersReducedMotion ? 1 : 0, x: slideOffset }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: prefersReducedMotion ? 1 : 0, x: prefersReducedMotion ? 0 : -18 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+                      className="flex-1 min-h-0 flex flex-col"
+                    >
+                      <div
+                        ref={bookingScrollRef}
+                        className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 sm:px-6 py-4 space-y-3.5"
+                      >
+                        {/* Vertical Arrival Timeline Card */}
+                        <div className="neu-inset rounded-2xl p-3.5 sm:p-4 border border-white/60 dark:border-white/5">
+                          <div className="relative pl-10 space-y-3">
+                            {/* Animated Connecting Gradient Track */}
+                            <motion.div
+                              aria-hidden="true"
+                              initial={{ scaleY: prefersReducedMotion ? 1 : 0, opacity: prefersReducedMotion ? 1 : 0.25 }}
+                              animate={{ scaleY: 1, opacity: 1 }}
+                              transition={{ duration: prefersReducedMotion ? 0 : 0.42, delay: prefersReducedMotion ? 0 : 0.06, ease: [0.22, 1, 0.36, 1] }}
+                              className="origin-top absolute left-[15px] top-4 bottom-4 w-0.5 rounded-full bg-gradient-to-b from-primary via-primary to-emerald-500 dark:from-primary-400 dark:via-primary-400 dark:to-emerald-400"
                             />
-                          </div>
-                        )}
 
-                        {/* Morning / Afternoon 50-50 Split Tabs + Scannable Slots Grid */}
-                        {!watchedDate ? (
-                          <div className="p-3 text-center text-xs text-tertiary">
-                            Select a date above to view available slots.
-                          </div>
-                        ) : loadingSlots ? (
-                          <div className="p-3 text-center text-xs font-medium text-link animate-pulse">
-                            Loading available time slots...
-                          </div>
-                        ) : availableSlots.length === 0 ? (
-                          <div className="p-3 text-center text-xs text-tertiary">
-                            No slots available for this date.
-                          </div>
-                        ) : (
-                          <div className="space-y-2.5">
-                            {availableSlots.every(s => !s.available) && (
-                              <div className="p-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 font-medium">
-                                {availableSlots.every(s => s.isPast)
-                                  ? 'Clinic working hours for today have ended (9:00 AM – 5:00 PM). Please select tomorrow or an upcoming date.'
-                                  : 'All time slots are booked for this date. Please choose another date.'}
+                            {/* Timeline Node 1: Date */}
+                            <div className="relative">
+                              <motion.div
+                                {...nodeMotion(0.04)}
+                                className="absolute -left-10 top-3 w-8 h-8 rounded-full bg-surface-shell border-2 border-primary dark:border-primary-400 flex items-center justify-center text-link dark:text-primary-400 shadow-sm"
+                              >
+                                <Calendar className="w-4 h-4" />
+                              </motion.div>
+                              <div className="neu-flat-sm rounded-2xl px-3.5 py-3 flex items-center justify-between gap-2 border border-white/75 dark:border-white/10">
+                                <div className="min-w-0">
+                                  <span className="text-2xs font-bold text-tertiary block">Date</span>
+                                  <span className="text-sm font-extrabold text-slate-900 dark:text-white block truncate mt-0.5">
+                                    {formatBookingDateLabel(vals.date)}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => goToBookingStep('form', 'left', 'schedule')}
+                                  disabled={bookingLoading}
+                                  className="text-xs font-extrabold text-link dark:text-primary-400 hover:underline cursor-pointer shrink-0 disabled:opacity-50"
+                                >
+                                  Edit
+                                </button>
                               </div>
-                            )}
-
-                            {/* 50/50 Morning vs Afternoon Segmented Switch */}
-                            <div className="neu-flat-sm p-1 rounded-xl grid grid-cols-2 gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setSlotPeriod('am')}
-                                className={`py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                                  slotPeriod === 'am'
-                                    ? 'bg-primary text-white'
-                                    : 'text-slate-600 dark:text-slate-300 hover:text-link'
-                                }`}
-                              >
-                                Morning ({morningSlots.filter(s => s.available).length} open)
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSlotPeriod('pm')}
-                                className={`py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
-                                  slotPeriod === 'pm'
-                                    ? 'bg-primary text-white'
-                                    : 'text-slate-600 dark:text-slate-300 hover:text-link'
-                                }`}
-                              >
-                                Afternoon ({afternoonSlots.filter(s => s.available).length} open)
-                              </button>
                             </div>
 
-                            {/* Period-Filtered Time Slot Grid (2-col on mobile, 3-col on desktop) */}
-                            {(() => {
-                              const periodList = slotPeriod === 'am' ? morningSlots : afternoonSlots;
-                              if (periodList.length === 0) {
-                                return (
-                                  <div className="p-3 text-center text-xs text-tertiary">
-                                    No {slotPeriod === 'am' ? 'morning' : 'afternoon'} slots for this service duration.
+                            {/* Timeline Node 2: Arrival Window + Service */}
+                            <div className="relative">
+                              <motion.div
+                                {...nodeMotion(0.11)}
+                                className="absolute -left-10 top-3 w-8 h-8 rounded-full bg-surface-shell border-2 border-primary dark:border-primary-400 flex items-center justify-center text-link dark:text-primary-400 shadow-sm"
+                              >
+                                <Clock className="w-4 h-4" />
+                              </motion.div>
+                              <div className="neu-flat-sm rounded-2xl px-3.5 py-3 flex items-start justify-between gap-2 border border-white/75 dark:border-white/10">
+                                <div className="min-w-0">
+                                  <span className="text-2xs font-bold text-tertiary block">Arrival window</span>
+                                  <span className="text-sm font-extrabold text-slate-900 dark:text-white tabular-nums block mt-0.5">
+                                    {formatSlotLabel(vals.time, serviceDurationMinutes)}
+                                  </span>
+                                  <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                                    <span className="text-xs font-extrabold text-link dark:text-primary-400">
+                                      {vals.service} • {serviceDurationMinutes} mins ({serviceSlotsCount} {serviceSlotsCount === 1 ? 'slot' : 'slots'})
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => goToBookingStep('form', 'left', 'service')}
+                                      disabled={bookingLoading}
+                                      className="text-2xs font-extrabold uppercase tracking-wider text-tertiary hover:text-link dark:hover:text-primary-400 underline cursor-pointer disabled:opacity-50"
+                                    >
+                                      Switch
+                                    </button>
                                   </div>
-                                );
-                              }
-                              return (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                  {periodList.map(slot => {
-                                    const isSelected = watchedTime === slot.time;
-                                    const { startLabel, endLabel } = formatSlotParts(slot.time, serviceDurationMinutes);
-
-                                    return (
-                                      <button
-                                        key={slot.time}
-                                        type="button"
-                                        disabled={!slot.available}
-                                        onClick={() => setValue('time', slot.time, { shouldValidate: true })}
-                                        className={`py-2 px-2 rounded-xl text-center transition-all outline-none select-none ${
-                                          !slot.available
-                                            ? 'bg-slate-100/60 dark:bg-slate-800/40 text-slate-400 dark:text-slate-600 border border-slate-200/50 dark:border-white/5 cursor-not-allowed'
-                                            : isSelected
-                                              ? 'bg-primary text-white shadow-md shadow-primary/25 cursor-pointer ring-2 ring-primary/40'
-                                              : 'neu-flat-sm text-slate-800 dark:text-slate-100 hover:border-primary/40 hover:text-link cursor-pointer active:scale-95'
-                                        }`}
-                                      >
-                                        <span className="text-xs font-extrabold block leading-tight">
-                                          {startLabel}
-                                        </span>
-                                        <span className={`text-[11px] font-semibold block mt-0.5 leading-tight ${
-                                          !slot.available
-                                            ? 'text-slate-400 dark:text-slate-600'
-                                            : isSelected
-                                              ? 'text-white/90'
-                                              : 'text-tertiary'
-                                        }`}>
-                                          {endLabel}
-                                        </span>
-                                      </button>
-                                    );
-                                  })}
                                 </div>
-                              );
-                            })()}
-                          </div>
-                        )}
-                      </div>
+                                <button
+                                  type="button"
+                                  onClick={() => goToBookingStep('form', 'left', 'schedule')}
+                                  disabled={bookingLoading}
+                                  className="text-xs font-extrabold text-link dark:text-primary-400 hover:underline cursor-pointer shrink-0 disabled:opacity-50"
+                                >
+                                  Edit
+                                </button>
+                              </div>
+                            </div>
 
-                      {errors.date && (
-                        <p className="text-xs font-medium text-danger ml-1">{errors.date.message}</p>
-                      )}
-                      {errors.time && (
-                        <p className="text-xs font-medium text-danger ml-1">{errors.time.message}</p>
-                      )}
-                    </div>
+                            {/* Timeline Node 3: Home Visit + Calm GPS Confirmation */}
+                            <div className="relative">
+                              <motion.div
+                                {...nodeMotion(0.18)}
+                                className="absolute -left-10 top-3 w-8 h-8 rounded-full bg-surface-shell border-2 border-emerald-500 dark:border-emerald-400 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm"
+                              >
+                                <Home className="w-4 h-4" />
+                              </motion.div>
+                              <div className="neu-flat-sm rounded-2xl px-3.5 py-3 space-y-2.5 border border-white/75 dark:border-white/10">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <span className="text-2xs font-bold text-tertiary block">
+                                      Home visit{visitDestination && !destinationConfirmed ? ' · approximate' : ''}
+                                    </span>
+                                    <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white leading-snug mt-0.5">
+                                      {visitDestination?.address || 'Not confirmed'}
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => goToBookingStep('form', 'left', 'location')}
+                                    disabled={bookingLoading}
+                                    className="text-xs font-extrabold text-link dark:text-primary-400 hover:underline cursor-pointer shrink-0 disabled:opacity-50"
+                                  >
+                                    Edit
+                                  </button>
+                                </div>
 
-                    {/* Row 3: Compact Visit Location + Single-Line Gate Notes (Zero Icons) */}
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => setDestinationModalOpen(true)}
-                        className="w-full neu-flat-sm rounded-xl p-2.5 px-3.5 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none border border-white/70 dark:border-white/5 hover:border-primary/30"
-                      >
-                        <div className="min-w-0 flex-1 pr-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                              Visit Location
-                            </span>
-                            <span className="text-2xs font-bold text-link">
-                              • {!visitDestination
-                                ? 'Not set'
-                                : !destinationConfirmed
-                                  ? 'Approximate'
-                                  : visitDestination.source === 'booking'
-                                    ? 'Custom location'
-                                    : 'Saved address'}
-                            </span>
+                                {visitDestination?.lat != null && (
+                                  destinationConfirmed ? (
+                                    <div className="rounded-xl bg-emerald-50/90 dark:bg-emerald-950/35 border border-emerald-200/80 dark:border-emerald-800/60 px-3 py-2 flex items-start gap-2">
+                                      <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                                      <div className="text-[11px] leading-snug min-w-0">
+                                        <span className="font-extrabold text-emerald-800 dark:text-emerald-300 tabular-nums block">
+                                          GPS Pin Confirmed ({visitDestination.lat.toFixed(5)}, {visitDestination.lng.toFixed(5)})
+                                        </span>
+                                        <span className="text-slate-600 dark:text-slate-300 block mt-0.5">
+                                          This helps your provider find the exact entrance.
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="rounded-xl bg-amber-50/90 dark:bg-amber-950/35 border border-amber-200/80 dark:border-amber-800/60 px-3 py-2 flex items-start gap-2">
+                                      <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                                      <div className="text-[11px] leading-snug min-w-0">
+                                        <span className="font-extrabold text-amber-800 dark:text-amber-300 tabular-nums block">
+                                          Approximate Pin ({visitDestination.lat.toFixed(5)}, {visitDestination.lng.toFixed(5)})
+                                        </span>
+                                        <span className="text-slate-600 dark:text-slate-300 block mt-0.5">
+                                          Tap Edit above to place your exact gate entrance pin.
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
-                            {visitDestination?.address || patientHome?.address || 'Set visit location'}
-                          </p>
-                          <p className={`text-xs truncate mt-0.5 font-semibold ${destinationConfirmed ? 'text-success dark:text-success-dark' : 'text-[#B45309] dark:text-[#FCD34D]'}`}>
-                            {visitDestination?.lat
-                              ? destinationConfirmed
-                                ? `GPS Pin Confirmed (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)})`
-                                : `Approximate (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)}) · Tap to place pin`
-                              : 'Tap to set address & gate directions'}
-                          </p>
+
+                          {vals.notes?.trim() && (
+                            <div className="mt-3 neu-flat-sm rounded-xl px-3.5 py-2.5 border border-white/75 dark:border-white/10">
+                              <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary block">
+                                Patient &amp; Gate Notes
+                              </span>
+                              <p className="text-xs text-slate-700 dark:text-slate-200 italic mt-0.5">
+                                “{vals.notes.trim()}”
+                              </p>
+                            </div>
+                          )}
                         </div>
-                        <span className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-extrabold text-link dark:text-[#8CBDF0] shrink-0">
-                          Change
-                        </span>
-                      </button>
 
-                      {/* Compact Notes Input */}
-                      <div className="neu-inset p-2 px-3 rounded-xl border border-slate-300/40 dark:border-white/5 transition-all">
-                        <input
-                          type="text"
-                          {...register('notes')}
-                          placeholder="Gate notes or specific symptoms (optional)..."
-                          className="w-full bg-transparent text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-tertiary placeholder:font-normal"
-                        />
+                        {/* Verified Consent & Notification Trust Bar right above Primary CTA */}
+                        <div className="neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2 border border-white/75 dark:border-white/10">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 flex items-center justify-center shrink-0">
+                              <ShieldCheck className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-extrabold text-success dark:text-success-dark">
+                                Data sharing consent verified
+                              </div>
+                              <div className="text-[11px] text-tertiary truncate">
+                                Instant booking notice sent to {selectedProvider.full_name}
+                              </div>
+                            </div>
+                          </div>
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-2xs font-extrabold uppercase tracking-wider shrink-0">
+                            Ready
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Row 4: Tactile Consent Box + Asymmetric Action Footer */}
-                    <div className={`neu-flat-sm p-2.5 px-3 rounded-xl flex items-start gap-2.5 transition-colors border ${errors.consent ? 'border-red-300 dark:border-red-900/50' : 'border-white/70 dark:border-white/5'}`}>
-                      <input
-                        type="checkbox"
-                        id="consent"
-                        {...register('consent')}
-                        className="w-4 h-4 rounded text-link mt-0.5 cursor-pointer shrink-0"
-                      />
-                      <label htmlFor="consent" className="text-xs text-slate-600 dark:text-slate-300 leading-snug cursor-pointer select-none">
-                        I consent to sharing my medical profile & address with <span className="font-bold text-slate-900 dark:text-white">{selectedProvider.full_name}</span> for this home care visit.
-                      </label>
-                    </div>
-                    {errors.consent && (
-                      <p className="text-xs font-semibold text-danger ml-1">{errors.consent.message}</p>
-                    )}
-
-                    <div className="pt-0.5 grid grid-cols-[105px_1fr] sm:grid-cols-[120px_1fr] gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedProvider(null)}
-                        className="w-full neu-btn py-2.5 sm:py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="w-full neu-btn-primary py-2.5 sm:py-3 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center active:scale-[0.98] transition-transform cursor-pointer"
-                      >
-                        {watchedTime
-                          ? `Review Booking (${formatSlotParts(watchedTime, serviceDurationMinutes).startLabel})`
-                          : 'Review Booking'}
-                      </button>
-                    </div>
-                  </form>
-              )}
-
-              {/* Step 2: Confirmation (Clean Structured 2x2 Summary Grid — Zero Icons) */}
-              {bookingStep === 'confirm' && (() => {
-                const vals = getValues();
-                return (
-                <div className="space-y-4">
-                  <div className="neu-inset p-3.5 sm:p-4 rounded-2xl space-y-2.5">
-                    <div className="grid grid-cols-2 gap-2.5 text-xs">
-                      <div className="neu-flat-sm p-3 rounded-xl">
-                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary block">Selected Service</span>
-                        <p className="font-extrabold text-slate-900 dark:text-white text-sm mt-0.5 truncate">{vals.service}</p>
+                      {/* Sticky Step 2 Footer */}
+                      <div className="shrink-0 px-4 sm:px-6 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-slate-200/75 dark:border-white/10 bg-surface-shell/95 backdrop-blur-md">
+                        <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[116px_1fr] gap-2.5">
+                          <button
+                            type="button"
+                            onClick={() => goToBookingStep('form', 'left')}
+                            disabled={bookingLoading}
+                            className="w-full py-3 neu-btn rounded-xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs disabled:opacity-50 cursor-pointer active:scale-[0.98]"
+                          >
+                            Back
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleBookingSubmit}
+                            disabled={bookingLoading}
+                            className="w-full py-3 px-4 neu-btn-primary rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-extrabold cursor-pointer active:scale-[0.98]"
+                          >
+                            {bookingLoading ? (
+                              <>
+                                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                <span>Submitting...</span>
+                              </>
+                            ) : (
+                              <span>Confirm Appointment</span>
+                            )}
+                          </button>
+                        </div>
                       </div>
-                      <div className="neu-flat-sm p-3 rounded-xl">
-                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary block">Duration</span>
-                        <p className="font-extrabold text-link text-sm mt-0.5">
-                          {serviceDurationMinutes} mins ({serviceSlotsCount} {serviceSlotsCount === 1 ? 'slot' : 'slots'})
-                        </p>
-                      </div>
-                      <div className="neu-flat-sm p-3 rounded-xl">
-                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary block">Date</span>
-                        <p className="font-extrabold text-slate-900 dark:text-white text-sm mt-0.5">
-                          {new Date(vals.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                        </p>
-                      </div>
-                      <div className="neu-flat-sm p-3 rounded-xl">
-                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary block">Time Window</span>
-                        <p className="font-extrabold text-slate-900 dark:text-white text-sm mt-0.5">
-                          {formatSlotLabel(vals.time, serviceDurationMinutes)}
-                        </p>
-                      </div>
-                    </div>
+                    </motion.div>
+                  );
+                })()}
 
-                    <div className="neu-flat-sm p-3 rounded-xl">
-                      <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary block">
-                        Home Visit Location{visitDestination && !destinationConfirmed ? ' · approximate' : ''}
-                      </span>
-                      <p className="font-extrabold text-slate-900 dark:text-white text-xs sm:text-sm mt-0.5 leading-snug">
-                        {visitDestination?.address || 'Not confirmed'}
-                      </p>
-                      {visitDestination && (
-                        <p className="text-xs font-semibold text-success dark:text-success-dark tabular-nums mt-0.5">
-                          GPS Pin Confirmed ({visitDestination.lat.toFixed(5)}, {visitDestination.lng.toFixed(5)})
-                        </p>
-                      )}
-                    </div>
+                {/* Step 3: Celebratory Visit Scheduled Confirmation */}
+                {bookingStep === 'done' && (() => {
+                  const summary = confirmedSnapshot || {
+                    providerName: selectedProvider.full_name,
+                    service: watchedService,
+                    date: watchedDate,
+                    time: watchedTime,
+                    durationMinutes: serviceDurationMinutes,
+                    address: visitDestination?.address || patientHome?.address || '',
+                  };
 
-                    {vals.notes && (
-                      <div className="neu-flat-sm p-3 rounded-xl">
-                        <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary block">Patient Notes</span>
-                        <p className="text-xs text-slate-700 dark:text-slate-300 italic mt-0.5">“{vals.notes}”</p>
-                      </div>
-                    )}
-
-                    <div className="px-1 pt-0.5 flex items-center justify-between text-xs font-bold text-success dark:text-success-dark">
-                      <span>Data sharing consent verified</span>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-2xs uppercase tracking-wider font-extrabold">Ready</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-[105px_1fr] sm:grid-cols-[120px_1fr] gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setBookingStep('form')}
-                      disabled={bookingLoading}
-                      className="w-full py-3 neu-btn rounded-xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs disabled:opacity-50 cursor-pointer"
+                  return (
+                    <motion.div
+                      key="step-done"
+                      initial={{ opacity: prefersReducedMotion ? 1 : 0, x: prefersReducedMotion ? 0 : 22 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: prefersReducedMotion ? 1 : 0 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+                      className="flex-1 min-h-0 flex flex-col"
                     >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleBookingSubmit}
-                      disabled={bookingLoading}
-                      className="w-full py-3 neu-btn-primary rounded-xl shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed text-xs font-extrabold cursor-pointer"
-                    >
-                      {bookingLoading ? 'Submitting...' : 'Confirm Appointment'}
-                    </button>
-                  </div>
-                </div>
-                );
-              })()}
-            </motion.div>
+                      <div
+                        ref={bookingScrollRef}
+                        className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 sm:px-7 py-6 flex flex-col items-center text-center"
+                      >
+                        <div className="relative w-16 h-16 flex items-center justify-center mt-1">
+                          {!prefersReducedMotion && (
+                            <motion.div
+                              aria-hidden="true"
+                              initial={{ opacity: 0.55, scale: 0.88 }}
+                              animate={{ opacity: 0, scale: 1.65 }}
+                              transition={{ duration: 1.05, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
+                              className="absolute inset-0 rounded-full bg-emerald-400/35"
+                            />
+                          )}
+                          <div className="w-16 h-16 rounded-full bg-emerald-500 dark:bg-emerald-400 text-white dark:text-[#08182A] flex items-center justify-center shadow-lg shadow-emerald-500/30 relative z-10">
+                            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
+                              <motion.path
+                                d="M5 13l4 4L19 7"
+                                initial={{ pathLength: prefersReducedMotion ? 1 : 0 }}
+                                animate={{ pathLength: 1 }}
+                                transition={{ duration: prefersReducedMotion ? 0 : 0.42, delay: prefersReducedMotion ? 0 : 0.14, ease: [0.22, 1, 0.36, 1] }}
+                              />
+                            </svg>
+                          </div>
+                        </div>
+
+                        <h3 className="text-lg sm:text-xl font-display font-extrabold text-slate-900 dark:text-white mt-4">
+                          Appointment Requested!
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 max-w-sm">
+                          We sent your <strong className="text-slate-900 dark:text-white">{summary.service}</strong> visit details to{' '}
+                          <strong className="text-slate-900 dark:text-white">{summary.providerName}</strong>.
+                        </p>
+
+                        <div className="w-full neu-inset rounded-2xl p-4 mt-5 text-left space-y-2.5 border border-white/60 dark:border-white/5">
+                          <div className="flex items-center justify-between gap-3 text-xs">
+                            <span className="text-tertiary font-bold shrink-0">Date &amp; Time</span>
+                            <span className="font-extrabold text-slate-900 dark:text-white tabular-nums text-right">
+                              {formatBookingDateLabel(summary.date)} • {formatSlotLabel(summary.time, summary.durationMinutes)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 text-xs">
+                            <span className="text-tertiary font-bold shrink-0">Location</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200 truncate text-right">
+                              {summary.address || 'Confirmed GPS pin'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="w-full neu-flat-sm rounded-2xl p-4 mt-3 text-left space-y-2.5 border border-white/75 dark:border-white/10">
+                          <span className="text-2xs font-extrabold uppercase tracking-wider text-link dark:text-primary-400 block">
+                            What happens next
+                          </span>
+                          <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-extrabold text-2xs flex items-center justify-center shrink-0">1</span>
+                              <span>{summary.providerName} reviews your visit notes &amp; GPS pin.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 font-extrabold text-2xs flex items-center justify-center shrink-0">2</span>
+                              <span>You’ll get live status updates inside My Requests.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 font-extrabold text-2xs flex items-center justify-center shrink-0">3</span>
+                              <span>Medical profile sharing expires automatically after care.</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Sticky Step 3 Footer */}
+                      <div className="shrink-0 px-4 sm:px-6 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-slate-200/75 dark:border-white/10 bg-surface-shell/95 backdrop-blur-md">
+                        <div className="grid grid-cols-[100px_1fr] sm:grid-cols-[116px_1fr] gap-2.5">
+                          <button
+                            type="button"
+                            onClick={closeBookingModal}
+                            className="w-full py-3 neu-btn rounded-xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs cursor-pointer active:scale-[0.98]"
+                          >
+                            Done
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              closeBookingModal();
+                              navigate('/patient/requests');
+                            }}
+                            className="w-full py-3 px-4 neu-btn-primary rounded-xl shadow-md flex items-center justify-center gap-1.5 text-xs sm:text-sm font-extrabold cursor-pointer active:scale-[0.98]"
+                          >
+                            <span>View My Requests</span>
+                            <ArrowRight className="w-4 h-4 shrink-0" />
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })()}
+                </AnimatePresence>
+              </motion.div>
             </motion.div>
           </DialogPrimitive.Content>
         </DialogPrimitive.Portal>
