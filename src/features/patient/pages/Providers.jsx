@@ -1,10 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Search, Star, MapPin, X, Calendar, Clock, Home, ArrowRight, Shield, ShieldCheck, SlidersHorizontal, Check, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  MagnifyingGlass,
+  Star,
+  MapPin,
+  X,
+  Calendar,
+  Clock,
+  House,
+  ArrowRight,
+  Shield,
+  ShieldCheck,
+  SlidersHorizontal,
+  Check,
+  CaretDown,
+  CaretUp,
+} from '@phosphor-icons/react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -16,8 +32,14 @@ import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
 import { ensurePatientCoords } from '@/features/tracking/services/geocoding';
-import { bookVisitWithConsent } from '@/features/patient/services/booking';
-import { slotsOverlap, toLocalDateKey, parseLocalDate, formatSlotLabel } from '@/lib/localDate';
+import {
+  bookVisitWithConsent,
+  filterAvailableBookingSlots,
+  preserveOpenSlotPeriod,
+  shouldClearSelectedBookingSlot,
+  startBookingAvailabilityRefresh,
+} from '@/features/patient/services/booking';
+import { toLocalDateKey, parseLocalDate, formatSlotLabel } from '@/lib/localDate';
 import { getServiceDurationMinutes, getServiceSlotsCount } from '@/config/constants';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
@@ -36,7 +58,7 @@ const getProviderInitials = (fullName = '') => {
     .toUpperCase();
 };
 
-const formatSlotParts = (timeStr, durationMinutes = 30) => {
+const formatSlotParts = (timeStr, durationMinutes = 30, t) => {
   const [hStr, mStr] = String(timeStr || '09:00').split(':');
   const m = Number(hStr) * 60 + Number(mStr);
   const startH = Math.floor(m / 60);
@@ -50,42 +72,46 @@ const formatSlotParts = (timeStr, durationMinutes = 30) => {
   const endMin = endM % 60;
   const endPeriod = endH >= 12 ? 'PM' : 'AM';
   const displayEndH = endH % 12 === 0 ? 12 : endH % 12;
-  const endLabel = `to ${displayEndH}:${String(endMin).padStart(2, '0')} ${endPeriod}`;
+  const endTimeStr = `${displayEndH}:${String(endMin).padStart(2, '0')} ${endPeriod}`;
+  const endLabel = t ? t('patient.providers.endSlotRange', { time: endTimeStr }) : `to ${endTimeStr}`;
 
   return { startLabel, endLabel };
 };
 
-const bookingSchema = z.object({
-  service: z.string().min(1, 'Please select a service.'),
-  date: z.string().min(1, 'Please select a date.').refine(d => d >= new Date().toLocaleDateString('en-CA'), 'Appointment date cannot be in the past.'),
-  time: z.string().min(1, 'Please select a time slot.'),
-  notes: z.string().optional(),
-  consent: z.literal(true, { errorMap: () => ({ message: 'You must consent to proceed.' }) }),
-});
-
 const PatientProviders = () => {
   const { isUserOnline } = usePresence();
+  const { t, isTagalog, translateService, translateStatus } = useLanguage();
+  const locale = isTagalog ? 'tl-PH' : 'en-US';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [requested, setRequested] = useState([]);
   const [activeRequestsMap, setActiveRequestsMap] = useState({});
+
+  const bookingSchema = useMemo(() => z.object({
+    service: z.string().min(1, t('patient.providers.selectServiceError')),
+    date: z.string().min(1, t('patient.providers.selectDateError')).refine(d => d >= new Date().toLocaleDateString('en-CA'), t('patient.providers.pastDateError')),
+    time: z.string().min(1, t('patient.providers.selectTimeError')),
+    notes: z.string().optional(),
+    consent: z.literal(true, { errorMap: () => ({ message: t('patient.providers.consentRequiredError') }) }),
+  }), [t]);
 
   // Maps the patient's active request status with a provider to a button label.
   const getBookingButtonLabel = (providerId) => {
     const status = activeRequestsMap[providerId];
     if (!status) return null;
     switch (status) {
-      case 'Pending': return 'Pending Request';
-      case 'Accepted': return 'Visit Confirmed';
-      case 'On The Way': return 'Provider On The Way';
-      case 'Arrived': return 'Provider Arrived';
-      default: return `${status} Visit`;
+      case 'Pending': return t('patient.providers.btnPending');
+      case 'Accepted': return t('patient.providers.btnConfirmed');
+      case 'On The Way': return t('patient.providers.btnOnTheWay');
+      case 'Arrived': return t('patient.providers.btnArrived');
+      default: return t('patient.providers.btnOtherVisit', { status: translateStatus(status) });
     }
   };
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [, setSearchHistory] = useState([]);
   const searchRef = React.useRef(null);
+  const availabilityContextRef = React.useRef(null);
   
   // Booking & Viewing Modal State
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -137,14 +163,9 @@ const PatientProviders = () => {
 
   useEffect(() => {
     if (availableSlots.length === 0) return;
-    const amOpen = morningSlots.some((s) => s.available);
-    const pmOpen = afternoonSlots.some((s) => s.available);
-    if (!amOpen && pmOpen) {
-      setSlotPeriod('pm');
-    } else {
-      setSlotPeriod('am');
-    }
-  }, [availableSlots, morningSlots, afternoonSlots]);
+    const nextPeriod = preserveOpenSlotPeriod(slotPeriod, morningSlots, afternoonSlots);
+    if (nextPeriod !== slotPeriod) setSlotPeriod(nextPeriod);
+  }, [availableSlots, morningSlots, afternoonSlots, slotPeriod]);
 
   const watchedConsent = watch('consent');
   const watchedNotes = watch('notes');
@@ -165,14 +186,14 @@ const PatientProviders = () => {
         continue;
       }
 
-      const weekdayShort = d.toLocaleDateString('en-US', { weekday: 'short' });
-      const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
+      const weekdayShort = d.toLocaleDateString(locale, { weekday: 'short' });
+      const monthShort = d.toLocaleDateString(locale, { month: 'short' });
       const dayNum = d.getDate();
-      const fullDate = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const fullDate = d.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
       const label = isToday
-        ? `Today (${monthShort} ${dayNum})`
+        ? t('patient.cancelReschedule.todayDateLabel', { date: `${monthShort} ${dayNum}` })
         : isTomorrow
-          ? `Tomorrow (${fullDate})`
+          ? t('patient.cancelReschedule.tomorrowDateLabel', { date: fullDate })
           : fullDate;
 
       list.push({
@@ -180,7 +201,7 @@ const PatientProviders = () => {
         label,
         isToday,
         isTomorrow,
-        dayShort: isToday ? 'Today' : isTomorrow ? 'Tmrw' : weekdayShort,
+        dayShort: isToday ? t('patient.cancelReschedule.today') : isTomorrow ? t('patient.cancelReschedule.tmrw') : weekdayShort,
         weekdayShort,
         monthShort,
         dayNum,
@@ -188,15 +209,15 @@ const PatientProviders = () => {
       });
     }
     return list;
-  }, []);
+  }, [locale, t]);
 
   const formatBookingDateLabel = (dateStr) => {
-    if (!dateStr) return 'Select a date';
+    if (!dateStr) return t('patient.providers.selectDatePrompt');
     const match = dateOptions.find((d) => d.key === dateStr);
     if (match) return match.label;
     const parsed = parseLocalDate(dateStr);
     if (!parsed) return dateStr;
-    return parsed.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return parsed.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   const focusSectionByKey = (sectionKey) => {
@@ -440,31 +461,33 @@ const PatientProviders = () => {
   }, [searchTerm, user]);
 
   useEffect(() => {
-    if (!selectedProvider || !selectedProvider.id || !watchedDate) {
+    if (!selectedProvider || !selectedProvider.id || !watchedDate || bookingStep === 'done') {
       setAvailableSlots([]);
+      setLoadingSlots(false);
+      if (!selectedProvider) availabilityContextRef.current = null;
       return;
     }
 
-    let cancelled = false;
-    const fetchAvailableSlots = async () => {
-      setLoadingSlots(true);
-      try {
-        // Pending requests hold the slot: a provider can accept two of them, so a
-        // time showing as free here must not be one someone is already waiting on.
-        const { data: existingBookings } = await supabase
-          .from('requests')
-          .select('id, time, duration_minutes')
-          .eq('provider_id', selectedProvider.id)
-          .eq('date', watchedDate)
-          .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
+    const availabilityContext = JSON.stringify([
+      selectedProvider.id,
+      watchedDate,
+      serviceDurationMinutes,
+    ]);
+    if (availabilityContextRef.current !== availabilityContext) {
+      setAvailableSlots([]);
+      availabilityContextRef.current = availabilityContext;
+    }
 
-        if (cancelled) return;
-
+    setLoadingSlots(true);
+    const stopRefreshing = startBookingAvailabilityRefresh({
+      providerId: selectedProvider.id,
+      date: watchedDate,
+      onSlots: busySlots => {
         const todayStr = toLocalDateKey();
         const now = new Date();
         const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-        const slots = [];
+        const candidates = [];
         const intervalMinutes = 30;
         const startMinutes = WORKING_HOURS_START * 60;
         const endMinutes = WORKING_HOURS_END * 60;
@@ -476,35 +499,38 @@ const PatientProviders = () => {
           const h = Math.floor(m / 60);
           const min = m % 60;
           const time = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-          const isBooked = (existingBookings || []).some(b =>
-            slotsOverlap(watchedDate, time, watchedDate, b.time, serviceDurationMinutes, b.duration_minutes || 30)
-          );
           const isPast = watchedDate < todayStr || (watchedDate === todayStr && m <= currentTotalMinutes);
           const label = formatSlotLabel(time, serviceDurationMinutes);
 
-          slots.push({
+          candidates.push({
             time,
             label,
             durationMinutes: serviceDurationMinutes,
-            available: !isBooked && !isPast,
             isPast,
-            isBooked,
           });
         }
 
-        if (cancelled) return;
-        setAvailableSlots(slots);
-      } catch (err) {
+        setAvailableSlots(filterAvailableBookingSlots(candidates, busySlots, watchedDate));
+        setLoadingSlots(false);
+      },
+      onError: err => {
         console.error('Error fetching available slots:', err);
-        if (!cancelled) setAvailableSlots([]);
-      } finally {
-        if (!cancelled) setLoadingSlots(false);
-      }
-    };
+        setLoadingSlots(false);
+      },
+    });
+    return stopRefreshing;
+  }, [selectedProvider, watchedDate, serviceDurationMinutes, bookingStep]);
 
-    fetchAvailableSlots();
-    return () => { cancelled = true; };
-  }, [selectedProvider, watchedDate, serviceDurationMinutes]);
+  useEffect(() => {
+    if (!selectedProvider || !shouldClearSelectedBookingSlot(watchedTime, availableSlots, loadingSlots)) return;
+    if (bookingStep === 'confirm') {
+      setBookingStep('form');
+      toast.error(t('patient.providers.slotUnavailableToast'));
+    }
+    if (watchedTime) {
+      setValue('time', '', { shouldValidate: true });
+    }
+  }, [selectedProvider, availableSlots, watchedTime, loadingSlots, bookingStep, setValue, t]);
 
   // Toggle body class when modals open to hide bottom nav
   useBodyScrollLock(Boolean(selectedProvider || viewingProvider));
@@ -553,10 +579,14 @@ const PatientProviders = () => {
     bookingTriggerRef.current = triggerEl;
     const existingStatus = activeRequestsMap[provider.id];
     if (requested.includes(provider.id) || existingStatus) {
+      const providerName = provider.full_name || t('patient.providers.thisProviderFallback');
       toast(
         existingStatus === 'Pending'
-          ? `You already have a pending booking request with ${provider.full_name || 'this provider'}. You can track or manage it in My Requests.`
-          : `You already have an ongoing visit (${existingStatus || 'in progress'}) with ${provider.full_name || 'this provider'}. Track it in My Requests.`,
+          ? t('patient.providers.alreadyPendingToast', { name: providerName })
+          : t('patient.providers.alreadyOngoingToast', {
+              status: existingStatus ? translateStatus(existingStatus) : t('patient.providers.ongoingFallback'),
+              name: providerName,
+            }),
         { icon: 'ℹ️' }
       );
       navigate('/patient/requests');
@@ -651,8 +681,8 @@ const PatientProviders = () => {
       setDestinationModalOpen(true);
       toast.error(
         destination
-          ? 'Place and confirm your visit pin before booking.'
-          : 'Set your visit location before booking.'
+          ? t('patient.providers.pinBeforeBookingError')
+          : t('patient.providers.setLocationError')
       );
       return;
     }
@@ -663,13 +693,13 @@ const PatientProviders = () => {
   const handleBookingValidationError = (fieldErrors) => {
     if (fieldErrors?.service) {
       focusSectionByKey('service');
-      toast.error(fieldErrors.service.message || 'Please select a service.');
+      toast.error(fieldErrors.service.message || t('patient.providers.selectServiceError'));
     } else if (fieldErrors?.date || fieldErrors?.time) {
       focusSectionByKey('schedule');
-      toast.error(fieldErrors.time?.message || fieldErrors.date?.message || 'Please select an available time slot.');
+      toast.error(fieldErrors.time?.message || fieldErrors.date?.message || t('patient.providers.chooseSlotToast'));
     } else if (fieldErrors?.consent) {
       focusSectionByKey('consent');
-      toast.error(fieldErrors.consent.message || 'Please confirm data-sharing consent.');
+      toast.error(fieldErrors.consent.message || t('patient.providers.confirmConsentToast'));
     }
   };
 
@@ -678,6 +708,13 @@ const PatientProviders = () => {
 
     const values = getValues();
     setBookingLoading(true);
+
+    if (!values.time) {
+      toast.error(t('patient.providers.chooseSlotToast'));
+      setBookingLoading(false);
+      setBookingStep('form');
+      return;
+    }
 
     try {
       const { data: existing } = await supabase
@@ -688,25 +725,7 @@ const PatientProviders = () => {
         .eq('status', 'Pending');
 
       if (existing && existing.length > 0) {
-        toast.error('You already have a pending request with this provider.');
-        setBookingLoading(false);
-        setBookingStep('form');
-        return;
-      }
-
-      const { data: conflict } = await supabase
-        .from('requests')
-        .select('id, time, duration_minutes')
-        .eq('provider_id', selectedProvider.id)
-        .eq('date', values.date)
-        .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
-
-      const hasConflict = (conflict || []).some(c =>
-        slotsOverlap(values.date, values.time, values.date, c.time, serviceDurationMinutes, c.duration_minutes || 30)
-      );
-
-      if (hasConflict) {
-        toast.error('This time slot has just been taken. Please choose another.');
+        toast.error(t('patient.providers.duplicatePendingToast'));
         setBookingLoading(false);
         setBookingStep('form');
         return;
@@ -726,14 +745,14 @@ const PatientProviders = () => {
         }
       }
       if (!destination) {
-        toast.error('Please confirm the visit location before booking.');
+        toast.error(t('patient.providers.confirmLocationToast'));
         setBookingLoading(false);
         setBookingStep('form');
         return;
       }
       if (destination.confirmed === false) {
         setDestinationModalOpen(true);
-        toast.error('Place and confirm your visit pin before booking.');
+        toast.error(t('patient.providers.pinBeforeBookingError'));
         setBookingLoading(false);
         setBookingStep('form');
         return;
@@ -777,7 +796,7 @@ const PatientProviders = () => {
       } catch (reqError) {
         // Database constraints remain authoritative for concurrent bookings.
         if (reqError.code === '23505' || reqError.code === '23P01') {
-          toast.error('This time slot has just been taken. Please choose another.');
+          toast.error(t('patient.providers.slotTakenConcurrent'));
           setBookingLoading(false);
           setBookingStep('form');
           return;
@@ -806,14 +825,14 @@ const PatientProviders = () => {
             }
           : null
       );
-      toast.success('Booking request sent!');
+      toast.success(t('patient.providers.bookingSuccessToast'));
       goToBookingStep('done', 'right');
       if (!prefersReducedMotion) {
         confetti({ particleCount: 95, spread: 72, origin: { y: 0.52 }, zIndex: 9999 });
       }
     } catch (err) {
       console.error('Error sending request:', err);
-      toast.error('Failed to send booking request. Please try again.');
+      toast.error(err.message || t('patient.providers.bookingErrorToast'));
       setBookingStep('form');
     } finally {
       setBookingLoading(false);
@@ -823,9 +842,9 @@ const PatientProviders = () => {
   if (loading) return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;
 
   const sortOptions = [
-    { value: 'popular', label: 'Most Popular' },
-    { value: 'rating', label: 'Highest Rated' },
-    { value: 'trust', label: 'Trust Score' },
+    { value: 'popular', label: t('patient.providers.sortPopular') },
+    { value: 'rating', label: t('patient.providers.sortHighestRated') },
+    { value: 'trust', label: t('patient.providers.sortTrustScore') },
   ];
 
   return (
@@ -837,15 +856,20 @@ const PatientProviders = () => {
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 px-0.5">
             <div className="min-w-0">
               <h1 className="font-display font-extrabold tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white">
-                Find a Healthcare Provider
+                {t('patient.providers.pageTitle')}
               </h1>
               <p className="text-xs sm:text-sm text-tertiary dark:text-tertiary mt-0.5 max-w-xl">
-                Connect with certified medical practitioners, nurses, and caregivers across Muntinlupa.
+                {t('patient.providers.pageSubtitle')}
               </p>
             </div>
             <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
               <span className="neu-flat-sm px-3 py-1.5 rounded-xl text-xs font-extrabold text-link border border-white/60 dark:border-white/5">
-                Showing {sortedProviders.length} {sortedProviders.length === 1 ? 'provider' : 'providers'}
+                {t(
+                  sortedProviders.length === 1
+                    ? 'patient.providers.showingOne'
+                    : 'patient.providers.showingMany',
+                  { count: sortedProviders.length }
+                )}
               </span>
             </div>
           </div>
@@ -854,13 +878,13 @@ const PatientProviders = () => {
           <div className="neu-flat p-2.5 sm:p-3 rounded-2xl border border-white/70 dark:border-white/5 flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
             {/* Search Input Container */}
             <div className="relative flex-1 min-w-0" ref={searchRef}>
-              <label htmlFor="provider-search" className="sr-only">Search providers</label>
-              <div className="neu-inset px-3 py-2 rounded-xl flex items-center gap-2.5 h-[46px] sm:h-[48px]">
-                <Search className="w-4 h-4 text-link shrink-0" />
+              <label htmlFor="provider-search" className="sr-only">{t('patient.providers.searchAria')}</label>
+              <div className="neu-inset px-3 py-2 rounded-xl flex items-center gap-2.5 h-[2.875rem] sm:h-[3rem]">
+                <MagnifyingGlass className="w-4 h-4 text-link shrink-0" />
                 <input
                   id="provider-search"
                   type="text"
-                  placeholder="Search doctor, nurse, service..."
+                  placeholder={t('patient.providers.searchPlaceholder')}
                   autoComplete="off"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -869,7 +893,7 @@ const PatientProviders = () => {
                 {searchTerm && (
                   <button
                     onMouseDown={(e) => { e.preventDefault(); setSearchTerm(''); }}
-                    aria-label="Clear search"
+                    aria-label={t('patient.providers.clearSearchAria')}
                     className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-tertiary hover:text-danger transition-colors shrink-0 cursor-pointer"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -881,27 +905,27 @@ const PatientProviders = () => {
             {/* Mobile 1A: 50/50 Split Specialty & Sort Buttons (Zero Horizontal Scrollbar) */}
             <div className="grid grid-cols-2 md:flex items-center gap-2 shrink-0">
               {/* Specialty Picker Button (Left 50% on Mobile) */}
-              <div className="relative md:min-w-[205px] z-50" ref={specialtyMenuRef}>
+              <div className="relative md:min-w-[12.8125rem] z-50" ref={specialtyMenuRef}>
                 <button
                   type="button"
                   onClick={() => {
                     setShowSpecialtyMenu(prev => !prev);
                     setShowSortMenu(false);
                   }}
-                  className={`w-full neu-btn px-3 py-2 rounded-xl flex items-center justify-between gap-2 h-[46px] sm:h-[48px] transition-all cursor-pointer outline-none select-none ${
+                  className={`w-full neu-btn px-3 py-2 rounded-xl flex items-center justify-between gap-2 h-[2.875rem] sm:h-[3rem] transition-all cursor-pointer outline-none select-none ${
                     showSpecialtyMenu ? 'ring-2 ring-primary/20' : ''
                   }`}
-                  aria-label="Filter by specialty"
+                  aria-label={t('patient.providers.filterSpecialtyAria')}
                 >
                   <div className="min-w-0 flex-1 text-left">
-                    <span className="block text-[9px] font-extrabold uppercase tracking-wider text-tertiary leading-none">
-                      Specialty
+                    <span className="block text-[0.5625rem] font-extrabold uppercase tracking-wider text-tertiary leading-none">
+                      {t('patient.providers.specialtyLabel')}
                     </span>
                     <span className="block text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate mt-1">
-                      {selectedCategory === 'All' ? 'All Specialties' : selectedCategory}
+                      {selectedCategory === 'All' ? t('patient.providers.allSpecialties') : translateService(selectedCategory)}
                     </span>
                   </div>
-                  <ChevronDown className={`w-3.5 h-3.5 text-link transition-transform duration-200 shrink-0 ${showSpecialtyMenu ? 'rotate-180' : ''}`} />
+                  <CaretDown className={`w-3.5 h-3.5 text-link transition-transform duration-200 shrink-0 ${showSpecialtyMenu ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Specialty Floating Popover Menu (2-Column Grid on Mobile for Zero Scroll Clutter) */}
@@ -915,7 +939,7 @@ const PatientProviders = () => {
                       className="absolute left-0 md:left-auto md:right-0 top-full mt-2 w-[calc(200%+0.5rem)] md:w-72 neu-flat rounded-2xl p-2.5 z-50 shadow-2xl border border-white/70 dark:border-white/10 max-h-80 overflow-y-auto no-scrollbar"
                     >
                       <div className="px-2.5 py-1.5 border-b border-slate-200/60 dark:border-white/5 mb-2 flex items-center justify-between">
-                        <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Filter by Specialty</span>
+                        <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providers.filterBySpecialtyTitle')}</span>
                         {selectedCategory !== 'All' && (
                           <button
                             type="button"
@@ -925,7 +949,7 @@ const PatientProviders = () => {
                             }}
                             className="text-2xs font-extrabold text-link hover:underline cursor-pointer"
                           >
-                            Reset
+                            {t('patient.providers.resetBtn')}
                           </button>
                         )}
                       </div>
@@ -942,7 +966,7 @@ const PatientProviders = () => {
                               : 'neu-flat-sm text-slate-700 dark:text-slate-300 hover:text-link'
                           }`}
                         >
-                          <span>All Specialties</span>
+                          <span>{t('patient.providers.allSpecialties')}</span>
                           {selectedCategory === 'All' && <Check className="w-3.5 h-3.5 shrink-0" />}
                         </button>
                         {allSpecialties.filter(s => s !== 'All').map((spec) => {
@@ -961,7 +985,7 @@ const PatientProviders = () => {
                                   : 'neu-flat-sm text-slate-700 dark:text-slate-300 hover:text-link'
                               }`}
                             >
-                              <span className="truncate">{spec}</span>
+                              <span className="truncate">{translateService(spec)}</span>
                               {active && <Check className="w-3.5 h-3.5 shrink-0" />}
                             </button>
                           );
@@ -973,24 +997,24 @@ const PatientProviders = () => {
               </div>
 
               {/* Sort Picker Button (Right 50% on Mobile) */}
-              <div className="relative md:min-w-[185px] z-50" ref={sortMenuRef}>
+              <div className="relative md:min-w-[11.5625rem] z-50" ref={sortMenuRef}>
                 <button
                   type="button"
                   onClick={() => {
                     setShowSortMenu(prev => !prev);
                     setShowSpecialtyMenu(false);
                   }}
-                  className={`w-full neu-btn px-3 py-2 rounded-xl flex items-center justify-between gap-2 h-[46px] sm:h-[48px] transition-all cursor-pointer relative outline-none select-none ${
+                  className={`w-full neu-btn px-3 py-2 rounded-xl flex items-center justify-between gap-2 h-[2.875rem] sm:h-[3rem] transition-all cursor-pointer relative outline-none select-none ${
                     showSortMenu ? 'ring-2 ring-primary/20' : ''
                   }`}
-                  aria-label="Sort providers"
+                  aria-label={t('patient.providers.sortAria')}
                 >
                   <div className="min-w-0 flex-1 text-left">
-                    <span className="block text-[9px] font-extrabold uppercase tracking-wider text-tertiary leading-none">
-                      Sort By
+                    <span className="block text-[0.5625rem] font-extrabold uppercase tracking-wider text-tertiary leading-none">
+                      {t('patient.providers.sortByLabel')}
                     </span>
                     <span className="block text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate mt-1">
-                      {sortOptions.find(o => o.value === sortBy)?.label || 'Most Popular'}
+                      {sortOptions.find(o => o.value === sortBy)?.label || t('patient.providers.sortPopular')}
                     </span>
                   </div>
                   <SlidersHorizontal className="w-3.5 h-3.5 text-link shrink-0" />
@@ -1007,7 +1031,7 @@ const PatientProviders = () => {
                       className="absolute right-0 top-full mt-2 w-56 neu-flat rounded-2xl p-2.5 z-50 shadow-2xl border border-white/70 dark:border-white/10"
                     >
                       <div className="px-2.5 py-1.5 border-b border-slate-200/60 dark:border-white/5 mb-1.5 flex items-center justify-between">
-                        <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Sort Providers</span>
+                        <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providers.sortProvidersTitle')}</span>
                         <span className="text-2xs text-link font-bold">
                           {sortOptions.find(o => o.value === sortBy)?.label}
                         </span>
@@ -1087,17 +1111,17 @@ const PatientProviders = () => {
                         <h3 className="font-display font-extrabold tracking-tight text-slate-900 dark:text-slate-100 text-base sm:text-lg truncate">
                           {p.full_name}
                         </h3>
-                        <ShieldCheck className="w-4 h-4 text-link shrink-0" title="Verified Provider" />
+                        <ShieldCheck className="w-4 h-4 text-link shrink-0" title={t('patient.common.verifiedProvider')} />
                       </div>
                       <p className="text-xs font-semibold text-tertiary mt-0.5 truncate">
-                        {p.location || 'Muntinlupa City'}
+                        {p.location || t('patient.common.muntinlupaCity')}
                       </p>
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[10px] font-extrabold uppercase tracking-wider">
-                          Verified Provider
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[0.625rem] font-extrabold uppercase tracking-wider">
+                          {t('patient.common.verifiedProvider')}
                         </span>
                         <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                          • {servicesList.length} {servicesList.length === 1 ? 'Service' : 'Services'}
+                          • {servicesList.length} {servicesList.length === 1 ? t('patient.providers.serviceSingle') : t('patient.providers.servicePlural')}
                         </span>
                       </div>
                     </div>
@@ -1105,8 +1129,8 @@ const PatientProviders = () => {
 
                   {/* Layer 2: Structured Specialty Well */}
                   <div className="neu-inset rounded-xl p-3">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-tertiary block mb-2">
-                      Specialties & Home Services
+                    <span className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary block mb-2">
+                      {t('patient.providers.specialtiesWellTitle')}
                     </span>
                     <div className="flex flex-wrap gap-1.5">
                       {servicesList.slice(0, 3).map((s, i) => (
@@ -1114,7 +1138,7 @@ const PatientProviders = () => {
                           key={i}
                           className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-bold border border-slate-200/70 dark:border-white/5"
                         >
-                          {s}
+                          {translateService(s)}
                         </span>
                       ))}
                       {servicesList.length > 3 && (
@@ -1131,9 +1155,9 @@ const PatientProviders = () => {
                   <button
                     type="button"
                     onClick={() => navigate(`/patient/providers/${p.id}/profile`)}
-                    className="neu-btn px-4 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:text-link dark:hover:text-[#8CBDF0] transition-all active:scale-[0.98] cursor-pointer shrink-0"
+                    className="neu-btn px-4 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:text-link dark:hover:text-link transition-all active:scale-[0.98] cursor-pointer shrink-0"
                   >
-                    Profile
+                    {t('patient.providers.profileBtn')}
                   </button>
                   <button
                     type="button"
@@ -1151,9 +1175,9 @@ const PatientProviders = () => {
                     }`}
                   >
                     {hasActiveReq ? (
-                      <span className="truncate">{getBookingButtonLabel(p.id) || 'Ongoing'}</span>
+                      <span className="truncate">{getBookingButtonLabel(p.id) || t('patient.providers.ongoingFallback')}</span>
                     ) : (
-                      <span>Book Appointment</span>
+                      <span>{t('patient.providers.bookAppointmentBtn')}</span>
                     )}
                   </button>
                 </div>
@@ -1163,7 +1187,11 @@ const PatientProviders = () => {
           </div>
         ) : (
           <div className="neu-flat p-12 rounded-3xl text-center">
-            <EmptyState icon="search" title="No providers found" message={searchTerm ? 'Try adjusting your search query.' : 'No verified providers match this category yet.'} />
+            <EmptyState
+              icon="search"
+              title={t('patient.providers.noProvidersTitle')}
+              message={searchTerm ? t('patient.providers.noProvidersSearchMsg') : t('patient.providers.noProvidersCatMsg')}
+            />
           </div>
         )}
       </div>
@@ -1186,7 +1214,7 @@ const PatientProviders = () => {
               bookingTriggerRef.current.focus();
             }}
             onInteractOutside={(event) => {
-              if (bookingStep === 'confirm' || destinationModalOpen || bookingLoading) event.preventDefault();
+              if (destinationModalOpen || bookingLoading) event.preventDefault();
             }}
           >
             <motion.div
@@ -1195,7 +1223,7 @@ const PatientProviders = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
               onClick={() => {
-                if (bookingStep !== 'confirm' && !bookingLoading) closeBookingModal();
+                if (!destinationModalOpen && !bookingLoading) closeBookingModal();
               }}
             >
               <motion.div
@@ -1220,7 +1248,7 @@ const PatientProviders = () => {
                         <img
                           src={selectedProvider.avatar_url}
                           alt={selectedProvider.full_name}
-                          className="w-full h-full object-cover rounded-[14px]"
+                          className="w-full h-full object-cover rounded-[0.875rem]"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';
                             if (e.currentTarget.nextElementSibling) {
@@ -1242,14 +1270,14 @@ const PatientProviders = () => {
                         <DialogPrimitive.Title asChild>
                           <h2 className="text-base sm:text-lg font-display font-extrabold text-slate-900 dark:text-white leading-tight truncate">
                             {bookingStep === 'form'
-                              ? 'Book Appointment'
+                              ? t('patient.providers.modalBookTitle')
                               : bookingStep === 'confirm'
-                                ? 'Confirm Booking'
-                                : 'Visit Scheduled'}
+                                ? t('patient.providers.modalConfirmTitle')
+                                : t('patient.providers.modalDoneTitle')}
                           </h2>
                         </DialogPrimitive.Title>
                         <DialogPrimitive.Description className="sr-only">
-                          Select a service, arrival window, and confirmed home visit location with {selectedProvider.full_name}.
+                          {t('patient.providers.modalDesc', { name: selectedProvider.full_name })}
                         </DialogPrimitive.Description>
                         <span
                           className={`px-2 py-0.5 rounded-md text-2xs font-extrabold uppercase tracking-wider shrink-0 ${
@@ -1259,23 +1287,23 @@ const PatientProviders = () => {
                           }`}
                         >
                           {bookingStep === 'form'
-                            ? 'Step 1 of 2'
+                            ? t('patient.providers.step1Of2')
                             : bookingStep === 'confirm'
-                              ? 'Step 2 of 2'
-                              : 'Confirmed'}
+                              ? t('patient.providers.step2Of2')
+                              : t('patient.providers.confirmedBadge')}
                         </span>
                       </div>
                       <p className="text-xs text-tertiary dark:text-tertiary truncate mt-0.5">
-                        with <span className="font-extrabold text-link dark:text-primary-400">{selectedProvider.full_name}</span>
+                        {t('patient.providers.withProvider')} <span className="font-extrabold text-link dark:text-primary-400">{selectedProvider.full_name}</span>
                         {bookingStep === 'done' && confirmedSnapshot?.service
-                          ? ` • ${confirmedSnapshot.service}`
+                          ? ` • ${translateService(confirmedSnapshot.service)}`
                           : watchedService
-                            ? ` • ${watchedService}`
+                            ? ` • ${translateService(watchedService)}`
                             : selectedProvider.specialty
-                              ? ` • ${selectedProvider.specialty}`
+                              ? ` • ${translateService(selectedProvider.specialty)}`
                               : selectedProvider.services?.[0]
-                                ? ` • ${selectedProvider.services[0]}`
-                                : ' • Verified Provider'}
+                                ? ` • ${translateService(selectedProvider.services[0])}`
+                                : ` • ${t('patient.common.verifiedProvider')}`}
                       </p>
                     </div>
                   </div>
@@ -1307,7 +1335,7 @@ const PatientProviders = () => {
                   );
                   const customDateObj = isCustomDateSelected ? parseLocalDate(watchedDate) : null;
                   const selectedSlotParts = watchedTime
-                    ? formatSlotParts(watchedTime, serviceDurationMinutes)
+                    ? formatSlotParts(watchedTime, serviceDurationMinutes, t)
                     : null;
                   const otherPeriod = slotPeriod === 'am' ? 'pm' : 'am';
                   const otherOpenCount = otherPeriod === 'am' ? amOpenCount : pmOpenCount;
@@ -1341,10 +1369,16 @@ const PatientProviders = () => {
                           >
                             <div className="flex items-center justify-between gap-2">
                               <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                                Service Type
+                                {t('patient.providers.serviceTypeLabel')}
                               </label>
                               <span className="text-2xs font-extrabold text-link dark:text-primary-400 tabular-nums">
-                                {serviceDurationMinutes} mins ({serviceSlotsCount} {serviceSlotsCount === 1 ? 'slot' : 'contiguous slots'})
+                                {t('patient.providers.durationSummary', {
+                                  mins: serviceDurationMinutes,
+                                  count: serviceSlotsCount,
+                                  slotWord: serviceSlotsCount === 1
+                                    ? t('patient.providers.slotSingle')
+                                    : t('patient.providers.slotContiguous'),
+                                })}
                               </span>
                             </div>
 
@@ -1354,11 +1388,11 @@ const PatientProviders = () => {
                               className="w-full neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none border border-white/75 dark:border-white/10 hover:border-primary/40 dark:hover:border-primary-400/40 active:scale-[0.99]"
                             >
                               <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
-                                {watchedService || 'Select a service...'}
+                                {watchedService ? translateService(watchedService) : t('patient.providers.selectServicePlaceholder')}
                               </span>
                               <span className="text-xs font-extrabold text-link dark:text-primary-400 shrink-0 ml-2 flex items-center gap-1">
-                                {openServiceMenu ? 'Close' : 'Change'}
-                                {openServiceMenu ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                {openServiceMenu ? t('patient.common.close') : t('patient.providers.changeBtn')}
+                                {openServiceMenu ? <CaretUp className="w-3.5 h-3.5" /> : <CaretDown className="w-3.5 h-3.5" />}
                               </span>
                             </button>
 
@@ -1386,17 +1420,23 @@ const PatientProviders = () => {
                                           }}
                                           className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between transition-all cursor-pointer outline-none select-none active:scale-[0.98] ${
                                             isSelected
-                                              ? 'bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] font-extrabold shadow-sm'
+                                              ? 'bg-primary text-white dark:bg-primary-400 dark:text-neu-fg font-extrabold shadow-sm'
                                               : 'text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800/70'
                                           }`}
                                         >
                                           <div className="min-w-0 pr-2">
-                                            <span className="text-xs font-bold block truncate">{s}</span>
+                                            <span className="text-xs font-bold block truncate">{translateService(s)}</span>
                                             <span className={`text-2xs block ${isSelected ? 'opacity-90' : 'text-tertiary'}`}>
-                                              {sMins} mins ({sSlots} {sSlots === 1 ? 'slot' : 'slots'})
+                                              {t('patient.providers.durationSummary', {
+                                                mins: sMins,
+                                                count: sSlots,
+                                                slotWord: sSlots === 1
+                                                  ? t('patient.providers.slotSingle')
+                                                  : t('patient.providers.slotPlural'),
+                                              })}
                                             </span>
                                           </div>
-                                          {isSelected && <span className="text-2xs font-extrabold uppercase tracking-wider shrink-0">Selected</span>}
+                                          {isSelected && <span className="text-2xs font-extrabold uppercase tracking-wider shrink-0">{t('patient.providers.selectedBadge')}</span>}
                                         </button>
                                       );
                                     })}
@@ -1424,7 +1464,7 @@ const PatientProviders = () => {
                               <div className="flex items-center justify-between gap-2">
                                 <div className="min-w-0">
                                   <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block leading-none">
-                                    Select Day &amp; Arrival Window
+                                    {t('patient.providers.selectDayWindow')}
                                   </span>
                                   <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white mt-1 block truncate">
                                     {formatBookingDateLabel(watchedDate)}
@@ -1438,20 +1478,20 @@ const PatientProviders = () => {
                                     if (freeCount > 0) {
                                       return (
                                         <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 tabular-nums">
-                                          {freeCount} open
+                                          {t('patient.providers.slotsOpenCount', { count: freeCount })}
                                         </span>
                                       );
                                     }
                                     if (allPast) {
                                       return (
                                         <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                                          Clinic closed
+                                          {t('patient.providers.dateClosedStatus')}
                                         </span>
                                       );
                                     }
                                     return (
                                       <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                                        Fully booked
+                                        {t('patient.providers.dateFullStatus')}
                                       </span>
                                     );
                                   })()}
@@ -1461,13 +1501,13 @@ const PatientProviders = () => {
                                     onClick={() => setShowCustomDatePicker(prev => !prev)}
                                     className="neu-btn px-2.5 py-1 rounded-lg text-2xs font-extrabold text-link dark:text-primary-400 cursor-pointer active:scale-95 transition-transform"
                                   >
-                                    {showCustomDatePicker ? 'Hide calendar' : 'More dates'}
+                                    {showCustomDatePicker ? t('patient.providers.hideCalendarBtn') : t('patient.providers.moreDatesBtn')}
                                   </button>
                                 </div>
                               </div>
 
                               {/* Horizontal Date Chips */}
-                              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5" role="listbox" aria-label="Appointment dates">
+                              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5" role="listbox" aria-label={t('patient.providers.appointmentDatesAria')}>
                                 {visibleDateChips.map(opt => {
                                   const isActive = watchedDate === opt.key;
                                   return (
@@ -1482,9 +1522,9 @@ const PatientProviders = () => {
                                           setValue('time', '');
                                         }
                                       }}
-                                      className={`min-w-[66px] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 transition-all active:scale-[0.96] select-none outline-none ${
+                                      className={`min-w-[4.125rem] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 transition-all active:scale-[0.96] select-none outline-none ${
                                         isActive
-                                          ? 'bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20'
+                                          ? 'bg-primary text-white dark:bg-primary-400 dark:text-neu-fg shadow-md shadow-primary/25 dark:shadow-primary-400/20'
                                           : 'neu-flat-sm text-slate-800 dark:text-slate-100 border border-white/70 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40'
                                       }`}
                                     >
@@ -1504,13 +1544,13 @@ const PatientProviders = () => {
                                     role="option"
                                     aria-selected={true}
                                     onClick={() => setShowCustomDatePicker(true)}
-                                    className="min-w-[70px] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20 select-none"
+                                    className="min-w-[4.375rem] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 bg-primary text-white dark:bg-primary-400 dark:text-neu-fg shadow-md shadow-primary/25 dark:shadow-primary-400/20 select-none"
                                   >
                                     <span className="block text-2xs font-bold uppercase opacity-90">
-                                      {customDateObj.toLocaleDateString('en-US', { weekday: 'short' })}
+                                      {customDateObj.toLocaleDateString(locale, { weekday: 'short' })}
                                     </span>
                                     <span className="block text-xs sm:text-sm font-extrabold leading-tight mt-0.5 tabular-nums">
-                                      {customDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      {customDateObj.toLocaleDateString(locale, { month: 'short', day: 'numeric' })}
                                     </span>
                                   </button>
                                 )}
@@ -1527,7 +1567,7 @@ const PatientProviders = () => {
                                     className="overflow-hidden"
                                   >
                                     <div className="neu-flat-sm rounded-xl px-3 py-2 flex items-center justify-between gap-2 border border-white/70 dark:border-white/5">
-                                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300 shrink-0">Jump to date:</span>
+                                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300 shrink-0">{t('patient.providers.jumpToDateLabel')}</span>
                                       <input
                                         type="date"
                                         min={toLocalDateKey()}
@@ -1547,7 +1587,7 @@ const PatientProviders = () => {
                               {/* Animated Sliding Morning / Afternoon Period Switcher + Slots */}
                               {!watchedDate ? (
                                 <div className="p-3 text-center text-xs text-tertiary">
-                                  Select a date above to view available slots.
+                                  {t('patient.providers.selectDateAbove')}
                                 </div>
                               ) : loadingSlots ? (
                                 <div className="space-y-2 py-1" aria-live="polite">
@@ -1560,20 +1600,20 @@ const PatientProviders = () => {
                                     ))}
                                   </div>
                                   <p className="text-center text-xs font-semibold text-link dark:text-primary-400">
-                                    Checking provider availability...
+                                    {t('patient.providers.checkingAvailability')}
                                   </p>
                                 </div>
                               ) : availableSlots.length === 0 ? (
                                 <div className="p-3 text-center text-xs text-tertiary">
-                                  No slots available for this date.
+                                  {t('patient.providers.noSlotsDate')}
                                 </div>
                               ) : (
                                 <div className="space-y-2.5">
                                   {availableSlots.every(s => !s.available) && (
                                     <div className="p-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 font-medium">
                                       {availableSlots.every(s => s.isPast)
-                                        ? 'Clinic working hours for today have ended (9:00 AM – 5:00 PM). Please select tomorrow or an upcoming date.'
-                                        : 'All time slots are booked for this date. Please choose another date.'}
+                                        ? t('patient.providers.clinicHoursEnded')
+                                        : t('patient.providers.allSlotsBooked')}
                                     </div>
                                   )}
 
@@ -1591,22 +1631,22 @@ const PatientProviders = () => {
                                       onClick={() => setSlotPeriod('am')}
                                       className={`relative z-10 py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none ${
                                         slotPeriod === 'am'
-                                          ? 'text-white dark:text-[#08182A]'
+                                          ? 'text-white dark:text-neu-fg'
                                           : 'text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400'
                                       }`}
                                     >
-                                      Morning ({amOpenCount} open)
+                                      {t('patient.cancelReschedule.morningTab', { count: amOpenCount })}
                                     </button>
                                     <button
                                       type="button"
                                       onClick={() => setSlotPeriod('pm')}
                                       className={`relative z-10 py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none ${
                                         slotPeriod === 'pm'
-                                          ? 'text-white dark:text-[#08182A]'
+                                          ? 'text-white dark:text-neu-fg'
                                           : 'text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400'
                                       }`}
                                     >
-                                      Afternoon ({pmOpenCount} open)
+                                      {t('patient.cancelReschedule.afternoonTab', { count: pmOpenCount })}
                                     </button>
                                   </div>
 
@@ -1618,7 +1658,11 @@ const PatientProviders = () => {
                                       return (
                                         <div className="p-3 rounded-xl bg-white/60 dark:bg-slate-800/50 border border-dashed border-slate-300/80 dark:border-white/10 text-center space-y-2">
                                           <p className="text-xs text-tertiary">
-                                            No {slotPeriod === 'am' ? 'morning' : 'afternoon'} slots for this service duration.
+                                            {t('patient.providers.noPeriodSlots', {
+                                              period: slotPeriod === 'am'
+                                                ? t('patient.cancelReschedule.morningWord')
+                                                : t('patient.cancelReschedule.afternoonWord'),
+                                            })}
                                           </p>
                                           {otherOpenCount > 0 && (
                                             <button
@@ -1626,7 +1670,12 @@ const PatientProviders = () => {
                                               onClick={() => setSlotPeriod(otherPeriod)}
                                               className="px-3 py-1 rounded-lg bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 text-xs font-extrabold cursor-pointer active:scale-95 transition-transform"
                                             >
-                                              Switch to {otherOpenCount} {otherPeriod === 'am' ? 'Morning' : 'Afternoon'} slots →
+                                              {t('patient.providers.switchToPeriod', {
+                                                count: otherOpenCount,
+                                                period: otherPeriod === 'am'
+                                                  ? t('patient.providers.morningPeriod')
+                                                  : t('patient.providers.afternoonPeriod'),
+                                              })} →
                                             </button>
                                           )}
                                         </div>
@@ -1644,14 +1693,21 @@ const PatientProviders = () => {
                                         {periodOpenCount === 0 && otherOpenCount > 0 && (
                                           <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/10 dark:bg-primary-400/10 border border-primary/20 dark:border-primary-400/20">
                                             <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                              {slotPeriod === 'am' ? 'Morning' : 'Afternoon'} slots are full.
+                                              {t('patient.providers.periodSlotsFull', {
+                                                period: slotPeriod === 'am'
+                                                  ? t('patient.providers.morningPeriod')
+                                                  : t('patient.providers.afternoonPeriod'),
+                                              })}
                                             </span>
                                             <button
                                               type="button"
                                               onClick={() => setSlotPeriod(otherPeriod)}
                                               className="text-xs font-extrabold text-link dark:text-primary-400 cursor-pointer shrink-0 hover:underline"
                                             >
-                                              View {otherOpenCount} {otherPeriod === 'am' ? 'AM' : 'PM'} open →
+                                              {t('patient.providers.viewPeriodOpen', {
+                                                count: otherOpenCount,
+                                                period: otherPeriod === 'am' ? 'AM' : 'PM',
+                                              })} →
                                             </button>
                                           </div>
                                         )}
@@ -1659,7 +1715,7 @@ const PatientProviders = () => {
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                           {periodList.map(slot => {
                                             const isSelected = watchedTime === slot.time;
-                                            const { startLabel, endLabel } = formatSlotParts(slot.time, serviceDurationMinutes);
+                                            const { startLabel, endLabel } = formatSlotParts(slot.time, serviceDurationMinutes, t);
 
                                             return (
                                               <button
@@ -1671,14 +1727,14 @@ const PatientProviders = () => {
                                                   !slot.available
                                                     ? 'bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-600 border border-slate-200/60 dark:border-white/5 cursor-not-allowed'
                                                     : isSelected
-                                                      ? 'bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20 cursor-pointer ring-2 ring-primary/35 dark:ring-primary-400/45 active:scale-[0.97]'
+                                                      ? 'bg-primary text-white dark:bg-primary-400 dark:text-neu-fg shadow-md shadow-primary/25 dark:shadow-primary-400/20 cursor-pointer ring-2 ring-primary/35 dark:ring-primary-400/45 active:scale-[0.97]'
                                                       : 'neu-flat-sm text-slate-800 dark:text-slate-100 border border-white/75 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40 cursor-pointer active:scale-[0.96]'
                                                 }`}
                                               >
                                                 <span className="text-xs font-extrabold block leading-tight tabular-nums">
                                                   {startLabel}
                                                 </span>
-                                                <span className={`text-[11px] font-semibold block mt-0.5 leading-tight tabular-nums ${
+                                                <span className={`text-[0.6875rem] font-semibold block mt-0.5 leading-tight tabular-nums ${
                                                   !slot.available
                                                     ? 'text-slate-400 dark:text-slate-600'
                                                     : isSelected
@@ -1723,20 +1779,20 @@ const PatientProviders = () => {
                               <div className="min-w-0 flex-1 pr-3">
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                                    Visit Location
+                                    {t('patient.providers.visitLocationLabel')}
                                   </span>
                                   <span className="text-2xs font-bold text-link dark:text-primary-400">
                                     • {!visitDestination
-                                      ? 'Not set'
+                                      ? t('patient.providers.locNotSet')
                                       : !destinationConfirmed
-                                        ? 'Approximate'
+                                        ? t('patient.providers.locApprox')
                                         : visitDestination.source === 'booking'
-                                          ? 'Custom location'
-                                          : 'Saved address'}
+                                          ? t('patient.providers.locCustom')
+                                          : t('patient.providers.locSaved')}
                                   </span>
                                 </div>
                                 <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
-                                  {visitDestination?.address || patientHome?.address || 'Set visit location'}
+                                  {visitDestination?.address || patientHome?.address || t('patient.providers.setVisitLocationPrompt')}
                                 </p>
                                 <p className={`text-xs truncate mt-0.5 font-semibold flex items-center gap-1.5 tabular-nums ${
                                   destinationConfirmed ? 'text-success dark:text-success-dark' : 'text-[#B45309] dark:text-[#FCD34D]'
@@ -1747,14 +1803,20 @@ const PatientProviders = () => {
                                   <span className="truncate">
                                     {visitDestination?.lat
                                       ? destinationConfirmed
-                                        ? `GPS Pin Confirmed (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)})`
-                                        : `Approximate (${visitDestination.lat.toFixed(5)}, ${visitDestination.lng.toFixed(5)}) · Tap to place pin`
-                                      : 'Tap to set address & gate directions'}
+                                        ? t('patient.providers.gpsPinConfirmed', {
+                                            lat: visitDestination.lat.toFixed(5),
+                                            lng: visitDestination.lng.toFixed(5),
+                                          })
+                                        : t('patient.providers.gpsPinApprox', {
+                                            lat: visitDestination.lat.toFixed(5),
+                                            lng: visitDestination.lng.toFixed(5),
+                                          })
+                                      : t('patient.providers.tapToSetAddress')}
                                   </span>
                                 </p>
                               </div>
                               <span className="neu-btn px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-link dark:text-primary-400 shrink-0">
-                                Change
+                                {t('patient.providers.changeBtn')}
                               </span>
                             </button>
 
@@ -1766,10 +1828,10 @@ const PatientProviders = () => {
                                 className="w-full flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none"
                               >
                                 <span className="truncate">
-                                  {watchedNotes?.trim() ? 'Patient & gate notes added' : '+ Add gate notes or symptoms (optional)'}
+                                  {watchedNotes?.trim() ? t('patient.providers.notesAddedLabel') : t('patient.providers.addNotesPrompt')}
                                 </span>
                                 <span className="text-2xs font-extrabold text-link dark:text-primary-400 shrink-0 ml-2 uppercase tracking-wider">
-                                  {showBookingNotes || watchedNotes?.trim() ? 'Hide' : 'Add'}
+                                  {showBookingNotes || watchedNotes?.trim() ? t('patient.providers.hideBtn') : t('patient.providers.addBtn')}
                                 </span>
                               </button>
 
@@ -1782,7 +1844,7 @@ const PatientProviders = () => {
                                   <input
                                     type="text"
                                     {...register('notes')}
-                                    placeholder="e.g., Lobby guard knows visit name, gate code, symptoms..."
+                                    placeholder={t('patient.providers.notesInputPlaceholder')}
                                     className="mt-2 w-full neu-flat-sm rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-tertiary placeholder:font-normal border border-white/70 dark:border-white/10 focus:border-primary/50 dark:focus:border-primary-400/50"
                                   />
                                 </div>
@@ -1813,10 +1875,10 @@ const PatientProviders = () => {
                                 type="checkbox"
                                 id="consent"
                                 {...register('consent')}
-                                className="w-4 h-4 rounded accent-[#2F6FB5] dark:accent-[#8CBDF0] mt-0.5 cursor-pointer shrink-0"
+                                className="w-4 h-4 rounded accent-primary dark:accent-primary-400 mt-0.5 cursor-pointer shrink-0"
                               />
                               <span className="text-xs text-slate-600 dark:text-slate-300 leading-snug">
-                                I consent to sharing my medical profile &amp; address with <span className="font-bold text-slate-900 dark:text-white">{selectedProvider.full_name}</span> for this home care visit.
+                                {t('patient.providers.consentTextPrefix')} <span className="font-bold text-slate-900 dark:text-white">{selectedProvider.full_name}</span> {t('patient.providers.consentTextSuffix')}
                               </span>
                             </label>
                             {errors.consent && (
@@ -1833,7 +1895,7 @@ const PatientProviders = () => {
                               onClick={closeBookingModal}
                               className="w-full neu-btn py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
                             >
-                              Cancel
+                              {t('patient.common.cancel')}
                             </button>
                             <button
                               type="submit"
@@ -1841,8 +1903,8 @@ const PatientProviders = () => {
                             >
                               <span>
                                 {selectedSlotParts
-                                  ? `Review ${selectedSlotParts.startLabel} Visit`
-                                  : 'Select a Time Slot'}
+                                  ? t('patient.providers.reviewVisitBtn', { time: selectedSlotParts.startLabel })
+                                  : t('patient.providers.selectTimeSlotBtn')}
                               </span>
                               <ArrowRight className="w-4 h-4 shrink-0" />
                             </button>
@@ -1888,7 +1950,7 @@ const PatientProviders = () => {
                               initial={{ scaleY: prefersReducedMotion ? 1 : 0, opacity: prefersReducedMotion ? 1 : 0.25 }}
                               animate={{ scaleY: 1, opacity: 1 }}
                               transition={{ duration: prefersReducedMotion ? 0 : 0.42, delay: prefersReducedMotion ? 0 : 0.06, ease: [0.22, 1, 0.36, 1] }}
-                              className="origin-top absolute left-[15px] top-4 bottom-4 w-0.5 rounded-full bg-gradient-to-b from-primary via-primary to-emerald-500 dark:from-primary-400 dark:via-primary-400 dark:to-emerald-400"
+                              className="origin-top absolute left-[0.9375rem] top-4 bottom-4 w-0.5 rounded-full bg-gradient-to-b from-primary via-primary to-emerald-500 dark:from-primary-400 dark:via-primary-400 dark:to-emerald-400"
                             />
 
                             {/* Timeline Node 1: Date */}
@@ -1901,7 +1963,7 @@ const PatientProviders = () => {
                               </motion.div>
                               <div className="neu-flat-sm rounded-2xl px-3.5 py-3 flex items-center justify-between gap-2 border border-white/75 dark:border-white/10">
                                 <div className="min-w-0">
-                                  <span className="text-2xs font-bold text-tertiary block">Date</span>
+                                  <span className="text-2xs font-bold text-tertiary block">{t('patient.providers.dateLabel')}</span>
                                   <span className="text-sm font-extrabold text-slate-900 dark:text-white block truncate mt-0.5">
                                     {formatBookingDateLabel(vals.date)}
                                   </span>
@@ -1912,7 +1974,7 @@ const PatientProviders = () => {
                                   disabled={bookingLoading}
                                   className="text-xs font-extrabold text-link dark:text-primary-400 hover:underline cursor-pointer shrink-0 disabled:opacity-50"
                                 >
-                                  Edit
+                                  {t('patient.common.edit')}
                                 </button>
                               </div>
                             </div>
@@ -1927,13 +1989,19 @@ const PatientProviders = () => {
                               </motion.div>
                               <div className="neu-flat-sm rounded-2xl px-3.5 py-3 flex items-start justify-between gap-2 border border-white/75 dark:border-white/10">
                                 <div className="min-w-0">
-                                  <span className="text-2xs font-bold text-tertiary block">Arrival window</span>
+                                  <span className="text-2xs font-bold text-tertiary block">{t('patient.providers.arrivalWindowLabel')}</span>
                                   <span className="text-sm font-extrabold text-slate-900 dark:text-white tabular-nums block mt-0.5">
                                     {formatSlotLabel(vals.time, serviceDurationMinutes)}
                                   </span>
                                   <div className="flex items-center gap-1.5 flex-wrap mt-1">
                                     <span className="text-xs font-extrabold text-link dark:text-primary-400">
-                                      {vals.service} • {serviceDurationMinutes} mins ({serviceSlotsCount} {serviceSlotsCount === 1 ? 'slot' : 'slots'})
+                                      {translateService(vals.service)} • {t('patient.providers.durationSummary', {
+                                        mins: serviceDurationMinutes,
+                                        count: serviceSlotsCount,
+                                        slotWord: serviceSlotsCount === 1
+                                          ? t('patient.providers.slotSingle')
+                                          : t('patient.providers.slotPlural'),
+                                      })}
                                     </span>
                                     <button
                                       type="button"
@@ -1941,7 +2009,7 @@ const PatientProviders = () => {
                                       disabled={bookingLoading}
                                       className="text-2xs font-extrabold uppercase tracking-wider text-tertiary hover:text-link dark:hover:text-primary-400 underline cursor-pointer disabled:opacity-50"
                                     >
-                                      Switch
+                                      {t('patient.providers.switchBtn')}
                                     </button>
                                   </div>
                                 </div>
@@ -1951,7 +2019,7 @@ const PatientProviders = () => {
                                   disabled={bookingLoading}
                                   className="text-xs font-extrabold text-link dark:text-primary-400 hover:underline cursor-pointer shrink-0 disabled:opacity-50"
                                 >
-                                  Edit
+                                  {t('patient.common.edit')}
                                 </button>
                               </div>
                             </div>
@@ -1962,16 +2030,16 @@ const PatientProviders = () => {
                                 {...nodeMotion(0.18)}
                                 className="absolute -left-10 top-3 w-8 h-8 rounded-full bg-surface-shell border-2 border-emerald-500 dark:border-emerald-400 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shadow-sm"
                               >
-                                <Home className="w-4 h-4" />
+                                <House className="w-4 h-4" />
                               </motion.div>
                               <div className="neu-flat-sm rounded-2xl px-3.5 py-3 space-y-2.5 border border-white/75 dark:border-white/10">
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0">
                                     <span className="text-2xs font-bold text-tertiary block">
-                                      Home visit{visitDestination && !destinationConfirmed ? ' · approximate' : ''}
+                                      {t('patient.providers.homeVisitLabel')}{visitDestination && !destinationConfirmed ? t('patient.providers.approxSuffix') : ''}
                                     </span>
                                     <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white leading-snug mt-0.5">
-                                      {visitDestination?.address || 'Not confirmed'}
+                                      {visitDestination?.address || t('patient.providers.notConfirmed')}
                                     </p>
                                   </div>
                                   <button
@@ -1980,7 +2048,7 @@ const PatientProviders = () => {
                                     disabled={bookingLoading}
                                     className="text-xs font-extrabold text-link dark:text-primary-400 hover:underline cursor-pointer shrink-0 disabled:opacity-50"
                                   >
-                                    Edit
+                                    {t('patient.common.edit')}
                                   </button>
                                 </div>
 
@@ -1988,24 +2056,30 @@ const PatientProviders = () => {
                                   destinationConfirmed ? (
                                     <div className="rounded-xl bg-emerald-50/90 dark:bg-emerald-950/35 border border-emerald-200/80 dark:border-emerald-800/60 px-3 py-2 flex items-start gap-2">
                                       <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-                                      <div className="text-[11px] leading-snug min-w-0">
+                                      <div className="text-[0.6875rem] leading-snug min-w-0">
                                         <span className="font-extrabold text-emerald-800 dark:text-emerald-300 tabular-nums block">
-                                          GPS Pin Confirmed ({visitDestination.lat.toFixed(5)}, {visitDestination.lng.toFixed(5)})
+                                          {t('patient.providers.gpsPinConfirmed', {
+                                            lat: visitDestination.lat.toFixed(5),
+                                            lng: visitDestination.lng.toFixed(5),
+                                          })}
                                         </span>
                                         <span className="text-slate-600 dark:text-slate-300 block mt-0.5">
-                                          This helps your provider find the exact entrance.
+                                          {t('patient.providers.pinExactHint')}
                                         </span>
                                       </div>
                                     </div>
                                   ) : (
                                     <div className="rounded-xl bg-amber-50/90 dark:bg-amber-950/35 border border-amber-200/80 dark:border-amber-800/60 px-3 py-2 flex items-start gap-2">
                                       <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                                      <div className="text-[11px] leading-snug min-w-0">
+                                      <div className="text-[0.6875rem] leading-snug min-w-0">
                                         <span className="font-extrabold text-amber-800 dark:text-amber-300 tabular-nums block">
-                                          Approximate Pin ({visitDestination.lat.toFixed(5)}, {visitDestination.lng.toFixed(5)})
+                                          {t('patient.providers.approxPinLabel', {
+                                            lat: visitDestination.lat.toFixed(5),
+                                            lng: visitDestination.lng.toFixed(5),
+                                          })}
                                         </span>
                                         <span className="text-slate-600 dark:text-slate-300 block mt-0.5">
-                                          Tap Edit above to place your exact gate entrance pin.
+                                          {t('patient.providers.approxPinHint')}
                                         </span>
                                       </div>
                                     </div>
@@ -2018,7 +2092,7 @@ const PatientProviders = () => {
                           {vals.notes?.trim() && (
                             <div className="mt-3 neu-flat-sm rounded-xl px-3.5 py-2.5 border border-white/75 dark:border-white/10">
                               <span className="text-2xs uppercase font-extrabold tracking-wider text-tertiary block">
-                                Patient &amp; Gate Notes
+                                {t('patient.providers.patientGateNotesLabel')}
                               </span>
                               <p className="text-xs text-slate-700 dark:text-slate-200 italic mt-0.5">
                                 “{vals.notes.trim()}”
@@ -2035,15 +2109,15 @@ const PatientProviders = () => {
                             </div>
                             <div className="min-w-0">
                               <div className="text-xs font-extrabold text-success dark:text-success-dark">
-                                Data sharing consent verified
+                                {t('patient.providers.consentVerifiedTitle')}
                               </div>
-                              <div className="text-[11px] text-tertiary truncate">
-                                Instant booking notice sent to {selectedProvider.full_name}
+                              <div className="text-[0.6875rem] text-tertiary truncate">
+                                {t('patient.providers.instantNoticeSub', { name: selectedProvider.full_name })}
                               </div>
                             </div>
                           </div>
                           <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-2xs font-extrabold uppercase tracking-wider shrink-0">
-                            Ready
+                            {t('patient.providers.readyBadge')}
                           </span>
                         </div>
                       </div>
@@ -2057,7 +2131,7 @@ const PatientProviders = () => {
                             disabled={bookingLoading}
                             className="w-full py-3 neu-btn rounded-xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs disabled:opacity-50 cursor-pointer active:scale-[0.98]"
                           >
-                            Back
+                            {t('patient.common.back')}
                           </button>
                           <button
                             type="button"
@@ -2068,10 +2142,10 @@ const PatientProviders = () => {
                             {bookingLoading ? (
                               <>
                                 <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                <span>Submitting...</span>
+                                <span>{t('patient.providers.submittingBtn')}</span>
                               </>
                             ) : (
-                              <span>Confirm Appointment</span>
+                              <span>{t('patient.providers.confirmAppointmentBtn')}</span>
                             )}
                           </button>
                         </div>
@@ -2114,7 +2188,7 @@ const PatientProviders = () => {
                               className="absolute inset-0 rounded-full bg-emerald-400/35"
                             />
                           )}
-                          <div className="w-16 h-16 rounded-full bg-emerald-500 dark:bg-emerald-400 text-white dark:text-[#08182A] flex items-center justify-center shadow-lg shadow-emerald-500/30 relative z-10">
+                          <div className="w-16 h-16 rounded-full bg-emerald-500 dark:bg-emerald-400 text-white dark:text-emerald-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 relative z-10">
                             <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
                               <motion.path
                                 d="M5 13l4 4L19 7"
@@ -2127,44 +2201,46 @@ const PatientProviders = () => {
                         </div>
 
                         <h3 className="text-lg sm:text-xl font-display font-extrabold text-slate-900 dark:text-white mt-4">
-                          Appointment Requested!
+                          {t('patient.providers.requestedTitle')}
                         </h3>
                         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-1 max-w-sm">
-                          We sent your <strong className="text-slate-900 dark:text-white">{summary.service}</strong> visit details to{' '}
-                          <strong className="text-slate-900 dark:text-white">{summary.providerName}</strong>.
+                          {t('patient.providers.requestedSub', {
+                            service: translateService(summary.service),
+                            name: summary.providerName,
+                          })}
                         </p>
 
                         <div className="w-full neu-inset rounded-2xl p-4 mt-5 text-left space-y-2.5 border border-white/60 dark:border-white/5">
                           <div className="flex items-center justify-between gap-3 text-xs">
-                            <span className="text-tertiary font-bold shrink-0">Date &amp; Time</span>
+                            <span className="text-tertiary font-bold shrink-0">{t('patient.providers.dateTimeLabel')}</span>
                             <span className="font-extrabold text-slate-900 dark:text-white tabular-nums text-right">
                               {formatBookingDateLabel(summary.date)} • {formatSlotLabel(summary.time, summary.durationMinutes)}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-4 text-xs">
-                            <span className="text-tertiary font-bold shrink-0">Location</span>
+                            <span className="text-tertiary font-bold shrink-0">{t('patient.providers.locationLabel')}</span>
                             <span className="font-bold text-slate-800 dark:text-slate-200 truncate text-right">
-                              {summary.address || 'Confirmed GPS pin'}
+                              {summary.address || t('patient.providers.confirmedGpsPin')}
                             </span>
                           </div>
                         </div>
 
                         <div className="w-full neu-flat-sm rounded-2xl p-4 mt-3 text-left space-y-2.5 border border-white/75 dark:border-white/10">
                           <span className="text-2xs font-extrabold uppercase tracking-wider text-link dark:text-primary-400 block">
-                            What happens next
+                            {t('patient.providers.whatHappensNext')}
                           </span>
                           <div className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
                             <div className="flex items-center gap-2">
                               <span className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-extrabold text-2xs flex items-center justify-center shrink-0">1</span>
-                              <span>{summary.providerName} reviews your visit notes &amp; GPS pin.</span>
+                              <span>{t('patient.providers.nextStep1', { name: summary.providerName })}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="w-5 h-5 rounded-full bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 font-extrabold text-2xs flex items-center justify-center shrink-0">2</span>
-                              <span>You’ll get live status updates inside My Requests.</span>
+                              <span>{t('patient.providers.nextStep2')}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <span className="w-5 h-5 rounded-full bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 font-extrabold text-2xs flex items-center justify-center shrink-0">3</span>
-                              <span>Medical profile sharing expires automatically after care.</span>
+                              <span>{t('patient.providers.nextStep3')}</span>
                             </div>
                           </div>
                         </div>
@@ -2178,7 +2254,7 @@ const PatientProviders = () => {
                             onClick={closeBookingModal}
                             className="w-full py-3 neu-btn rounded-xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs cursor-pointer active:scale-[0.98]"
                           >
-                            Done
+                            {t('patient.common.done')}
                           </button>
                           <button
                             type="button"
@@ -2188,7 +2264,7 @@ const PatientProviders = () => {
                             }}
                             className="w-full py-3 px-4 neu-btn-primary rounded-xl shadow-md flex items-center justify-center gap-1.5 text-xs sm:text-sm font-extrabold cursor-pointer active:scale-[0.98]"
                           >
-                            <span>View My Requests</span>
+                            <span>{t('patient.providers.viewMyRequestsBtn')}</span>
                             <ArrowRight className="w-4 h-4 shrink-0" />
                           </button>
                         </div>
@@ -2212,12 +2288,12 @@ const PatientProviders = () => {
             event.preventDefault();
             sheetTriggerRef.current.focus();
           }}
-          className={`sm:max-w-lg md:max-w-3xl lg:max-w-4xl sm:mx-auto sm:bottom-4 rounded-t-[2.5rem] sm:rounded-[2.5rem] md:inset-0 md:m-auto h-[80dvh] min-h-[460px] sm:h-[82vh] md:min-h-[540px] max-h-[88vh] flex flex-col overflow-hidden p-0 bg-surface-shell border-0 shadow-2xl transform-gpu will-change-transform ${selectedProvider ? 'opacity-0 pointer-events-none' : ''}`}
+          className={`sm:max-w-lg md:max-w-3xl lg:max-w-4xl sm:mx-auto sm:bottom-4 rounded-t-[2rem] sm:rounded-[2.5rem] md:inset-0 md:m-auto h-[80dvh] min-h-[28.75rem] sm:h-[82vh] md:min-h-[33.75rem] max-h-[88vh] flex flex-col overflow-hidden p-0 bg-surface-shell border-0 shadow-2xl transform-gpu will-change-transform ${selectedProvider ? 'opacity-0 pointer-events-none' : ''}`}
         >
-          <SheetTitle className="sr-only">{viewingProvider?.full_name || 'Provider Profile'}</SheetTitle>
-          <SheetDescription className="sr-only">View provider details, trust score, and reviews</SheetDescription>
+          <SheetTitle className="sr-only">{viewingProvider?.full_name || t('patient.providers.sheetTitleFallback')}</SheetTitle>
+          <SheetDescription className="sr-only">{t('patient.providers.sheetDescSr')}</SheetDescription>
           {viewingProvider && (
-          <div className="flex flex-col h-full min-h-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-0 md:grid md:grid-cols-[360px_minmax(0,1fr)]">
+          <div className="flex flex-col h-full min-h-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-0 md:grid md:grid-cols-[22.5rem_minmax(0,1fr)]">
             {/* Left Column / Mobile Header */}
             <div className="flex flex-col shrink-0 md:shrink-0 md:min-h-0 md:overflow-y-auto md:border-r border-slate-200/60 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30">
               {/* Cover Header */}
@@ -2230,12 +2306,12 @@ const PatientProviders = () => {
               <div className="px-5 md:px-6 -mt-9 md:-mt-11 relative z-10 shrink-0">
                 <div className="flex gap-3.5">
                   <div className="relative shrink-0">
-                    <div className="w-[72px] h-[72px] md:w-20 md:h-20 rounded-2xl neu-flat flex items-center justify-center text-xl font-black text-link overflow-hidden p-0.5 ring-4 ring-white dark:ring-slate-900 shadow-md aspect-square">
+                    <div className="w-[4.5rem] h-[4.5rem] md:w-20 md:h-20 rounded-2xl neu-flat flex items-center justify-center text-xl font-black text-link overflow-hidden p-0.5 ring-4 ring-white dark:ring-slate-900 shadow-md aspect-square">
                       {viewingProvider.avatar_url ? (
                         <img
                           src={viewingProvider.avatar_url}
                           alt={`${viewingProvider.full_name} photo`}
-                          className="w-full h-full object-cover rounded-[14px]"
+                          className="w-full h-full object-cover rounded-[0.875rem]"
                         />
                       ) : (
                         <span>{getProviderInitials(viewingProvider.full_name)}</span>
@@ -2250,20 +2326,20 @@ const PatientProviders = () => {
                       </h2>
                       {viewingProvider.professional_id_status === 'verified' && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-extrabold text-success dark:text-success-dark bg-emerald-500/10">
-                          <ShieldCheck className="w-3 h-3 text-success" /> Verified
+                          <ShieldCheck className="w-3 h-3 text-success" /> {t('patient.common.verified')}
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 mt-1.5">
                       <div className="flex items-center text-warning">
-                        <Star className="w-3.5 h-3.5 fill-current" />
+                        <Star weight="fill" className="w-3.5 h-3.5 fill-current" />
                       </div>
                       <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">
                         {(viewingProvider.rating || 0).toFixed(1)}
                       </span>
-                      <span className="text-xs text-tertiary">({providerReviews.length} reviews)</span>
+                      <span className="text-xs text-tertiary">{t('patient.providers.sheetReviewsCount', { count: providerReviews.length })}</span>
                       <span className={`text-xs font-semibold ml-1 ${isUserOnline(viewingProvider.id) ? 'text-success font-bold' : 'text-tertiary'}`}>
-                        • {isUserOnline(viewingProvider.id) ? 'Online' : 'Offline'}
+                        • {isUserOnline(viewingProvider.id) ? t('patient.common.online') : t('patient.common.offline')}
                       </span>
                     </div>
                   </div>
@@ -2273,7 +2349,7 @@ const PatientProviders = () => {
                 <div className="mt-3.5 pt-3 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-3 text-xs">
                   <p className="text-tertiary dark:text-tertiary flex items-center gap-1.5 truncate">
                     <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
-                    <span className="truncate">{viewingProvider.location || 'Muntinlupa City'}</span>
+                    <span className="truncate">{viewingProvider.location || t('patient.common.muntinlupaCity')}</span>
                   </p>
                 </div>
               </div>
@@ -2282,26 +2358,26 @@ const PatientProviders = () => {
               <div className="hidden md:block px-6 mt-4 space-y-3.5">
                 {/* About Practitioner Bio */}
                 <div className="neu-flat-sm p-3.5 rounded-2xl">
-                  <p className="text-2xs uppercase font-extrabold tracking-wider text-tertiary mb-1">About Practitioner</p>
+                  <p className="text-2xs uppercase font-extrabold tracking-wider text-tertiary mb-1">{t('patient.providers.sheetAboutPractitioner')}</p>
                   <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                    {viewingProvider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa.'}
+                    {viewingProvider.bio || t('patient.providers.sheetDefaultBio')}
                   </p>
                 </div>
 
                 {/* 3 Metric chips: Rating, Services, Status */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="neu-flat-sm p-2.5 rounded-xl text-center">
-                    <p className="text-2xs uppercase font-bold text-tertiary">Rating</p>
+                    <p className="text-2xs uppercase font-bold text-tertiary">{t('patient.providers.sheetRatingLabel')}</p>
                     <p className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">{(viewingProvider.rating || 0).toFixed(1)} ★</p>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl text-center">
-                    <p className="text-2xs uppercase font-bold text-tertiary">Services</p>
+                    <p className="text-2xs uppercase font-bold text-tertiary">{t('patient.providers.sheetServicesLabel')}</p>
                     <p className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">{(viewingProvider.services || []).length}</p>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl text-center">
-                    <p className="text-2xs uppercase font-bold text-tertiary">Status</p>
+                    <p className="text-2xs uppercase font-bold text-tertiary">{t('patient.providers.sheetStatusLabel')}</p>
                     <p className={`text-xs font-black mt-1 capitalize ${isUserOnline(viewingProvider.id) ? 'text-success' : 'text-tertiary'}`}>
-                      {isUserOnline(viewingProvider.id) ? 'Active' : 'Offline'}
+                      {isUserOnline(viewingProvider.id) ? t('patient.common.active') : t('patient.common.offline')}
                     </p>
                   </div>
                 </div>
@@ -2311,7 +2387,7 @@ const PatientProviders = () => {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-1.5">
                       <Shield className="w-3.5 h-3.5 text-link" />
-                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
+                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providers.sheetTrustScore')}</span>
                     </div>
                     <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{viewingProvider.trust_score}/100</span>
                   </div>
@@ -2340,7 +2416,7 @@ const PatientProviders = () => {
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || 'Ongoing Visit') : 'Book Appointment'}</span>
+                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || t('patient.providers.ongoingVisitFallback')) : t('patient.providers.bookAppointmentBtn')}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -2349,7 +2425,7 @@ const PatientProviders = () => {
                   }}
                   className="w-full py-2.5 mt-1 text-xs font-bold text-link hover:underline text-center cursor-pointer"
                 >
-                  View Full Profile
+                  {t('patient.providers.sheetViewFullProfile')}
                 </button>
               </div>
             </div>
@@ -2360,23 +2436,23 @@ const PatientProviders = () => {
               <div className="px-5 md:hidden mt-4 shrink-0">
                 <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-200/60 dark:bg-slate-800/60 rounded-2xl" role="tablist">
                   {[
-                    { v: 'overview', label: 'Overview' },
-                    { v: 'services', label: `Services (${(viewingProvider.services || []).length})` },
-                    { v: 'reviews', label: `Reviews (${providerReviews.length})` },
-                  ].map(t => (
+                    { v: 'overview', label: t('patient.providers.sheetOverviewTab') },
+                    { v: 'services', label: t('patient.providers.sheetServicesCount', { count: (viewingProvider.services || []).length }) },
+                    { v: 'reviews', label: t('patient.providers.sheetReviewsTabCount', { count: providerReviews.length }) },
+                  ].map(tabItem => (
                     <button
-                      key={t.v}
+                      key={tabItem.v}
                       type="button"
                       role="tab"
-                      aria-selected={sheetTab === t.v}
-                      onClick={() => setSheetTab(t.v)}
+                      aria-selected={sheetTab === tabItem.v}
+                      onClick={() => setSheetTab(tabItem.v)}
                       className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer truncate outline-none select-none ${
-                        sheetTab === t.v
+                        sheetTab === tabItem.v
                           ? 'bg-primary text-white shadow-md'
                           : 'text-slate-600 dark:text-tertiary hover:text-link dark:hover:text-white bg-transparent'
                       }`}
                     >
-                      {t.label}
+                      {tabItem.label}
                     </button>
                   ))}
                 </div>
@@ -2389,7 +2465,7 @@ const PatientProviders = () => {
                     {/* Mobile Trust Score */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
+                        <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providers.sheetTrustScore')}</span>
                         <span className="text-xs font-black tabular-nums text-slate-800 dark:text-slate-200">{viewingProvider.trust_score}/100</span>
                       </div>
                       <div className="w-full h-1.5 bg-slate-200/70 dark:bg-slate-800 rounded-md overflow-hidden">
@@ -2403,31 +2479,31 @@ const PatientProviders = () => {
                     </div>
 
                     <div>
-                      <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mb-1.5">About Healthcare Provider</p>
+                      <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary mb-1.5">{t('patient.providers.sheetAboutProvider')}</p>
                       <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                        {viewingProvider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa.'}
+                        {viewingProvider.bio || t('patient.providers.sheetDefaultBio')}
                       </p>
                     </div>
 
                     <div className="neu-flat-sm p-4 rounded-2xl space-y-2.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-tertiary font-medium">Primary Area</span>
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">{viewingProvider.location || 'Muntinlupa City'}</span>
+                        <span className="text-tertiary font-medium">{t('patient.providers.sheetPrimaryArea')}</span>
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">{viewingProvider.location || t('patient.common.muntinlupaCity')}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-tertiary font-medium">Service Schedule</span>
+                        <span className="text-tertiary font-medium">{t('patient.providers.sheetServiceSchedule')}</span>
                         <span className="font-semibold text-slate-700 dark:text-slate-200">
-                          Mon – Sat • 9:00 AM – 5:00 PM
+                          {t('patient.providers.sheetScheduleValue')}
                         </span>
                       </div>
                       <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-white/5">
-                        <span className="text-tertiary font-medium">Online Status</span>
+                        <span className="text-tertiary font-medium">{t('patient.providers.sheetOnlineStatus')}</span>
                         <span className={`neu-flat-sm inline-flex items-center px-2.5 py-1 rounded-xl text-2xs font-extrabold uppercase tracking-wider ${
                           isUserOnline(viewingProvider.id) 
                             ? 'text-success dark:text-success-dark border border-emerald-500/30 bg-emerald-500/10' 
                             : 'text-tertiary dark:text-tertiary'
                         }`}>
-                          {isUserOnline(viewingProvider.id) ? 'Active Online' : 'Offline'}
+                          {isUserOnline(viewingProvider.id) ? t('patient.providers.sheetActiveOnline') : t('patient.common.offline')}
                         </span>
                       </div>
                     </div>
@@ -2436,7 +2512,7 @@ const PatientProviders = () => {
 
                 {sheetTab === 'services' && (
                   <div className="space-y-3">
-                    <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Available Medical Services</p>
+                    <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providers.sheetAvailableServices')}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {(viewingProvider.services || []).map((s, i) => (
                         <button
@@ -2446,11 +2522,11 @@ const PatientProviders = () => {
                           }}
                           className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                         >
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-link transition-colors">{s}</span>
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-200 group-hover:text-link transition-colors">{translateService(s)}</span>
                         </button>
                       ))}
                       {(!viewingProvider.services || viewingProvider.services.length === 0) && (
-                        <p className="text-xs text-tertiary italic py-2">General consultation only.</p>
+                        <p className="text-xs text-tertiary italic py-2">{t('patient.providers.sheetGeneralOnly')}</p>
                       )}
                     </div>
                   </div>
@@ -2464,10 +2540,10 @@ const PatientProviders = () => {
                       </span>
                       <div>
                         <div className="flex items-center text-warning">
-                          <Star className="w-4 h-4 fill-current" />
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Overall Rating</span>
+                          <Star weight="fill" className="w-4 h-4 fill-current" />
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">{t('patient.providers.sheetOverallRating')}</span>
                         </div>
-                        <p className="text-xs text-tertiary">Based on {providerReviews.length} verified patient visits</p>
+                        <p className="text-xs text-tertiary">{t('patient.providers.sheetBasedOnReviews', { count: providerReviews.length })}</p>
                       </div>
                     </div>
 
@@ -2478,7 +2554,7 @@ const PatientProviders = () => {
                         ))
                       ) : (
                         <div className="neu-flat-sm p-6 rounded-2xl text-center">
-                          <p className="text-xs text-tertiary">No written reviews yet for this provider.</p>
+                          <p className="text-xs text-tertiary">{t('patient.providers.sheetNoWrittenReviews')}</p>
                         </div>
                       )}
                     </div>
@@ -2491,15 +2567,15 @@ const PatientProviders = () => {
                 {/* Section 1: Practice Details */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Practice & Consultation</h3>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-primary/10 text-link">Muntinlupa Health Network</span>
+                    <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">{t('patient.providers.sheetPracticeHeader')}</h3>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-primary/10 text-link">{t('patient.providers.sheetNetworkBadge')}</span>
                   </div>
 
                   <div className="grid grid-cols-1 gap-3">
                     <div className="neu-flat-sm p-4 rounded-2xl">
-                      <p className="text-2xs uppercase font-extrabold text-tertiary tracking-wider">Practice Schedule</p>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1.5">Mon – Sat • 9:00 AM – 5:00 PM</p>
-                      <p className="text-xs text-tertiary mt-1">Walk-ins & scheduled appointments</p>
+                      <p className="text-2xs uppercase font-extrabold text-tertiary tracking-wider">{t('patient.providers.sheetPracticeSchedule')}</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-1.5">{t('patient.providers.sheetScheduleValue')}</p>
+                      <p className="text-xs text-tertiary mt-1">{t('patient.providers.sheetWalkinsSub')}</p>
                     </div>
                   </div>
                 </div>
@@ -2509,9 +2585,9 @@ const PatientProviders = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-                        Offered Services ({(viewingProvider.services || []).length})
+                        {t('patient.providers.sheetOfferedServices', { count: (viewingProvider.services || []).length })}
                       </h3>
-                      <p className="text-xs text-tertiary">Click any service to book directly</p>
+                      <p className="text-xs text-tertiary">{t('patient.providers.sheetClickToBook')}</p>
                     </div>
                     {(viewingProvider.services || []).length > 4 && (
                       <button
@@ -2520,9 +2596,9 @@ const PatientProviders = () => {
                         className="neu-btn px-3 py-1.5 rounded-xl text-xs font-extrabold text-link flex items-center gap-1 hover:scale-[1.02] active:scale-95 transition-all cursor-pointer"
                       >
                         {showAllServices ? (
-                          <>Show Less <ChevronUp className="w-3 h-3" /></>
+                          <>{t('patient.providers.sheetShowLess')} <CaretUp className="w-3 h-3" /></>
                         ) : (
-                          <>Show All ({(viewingProvider.services || []).length}) <ChevronDown className="w-3 h-3" /></>
+                          <>{t('patient.providers.sheetShowAll', { count: (viewingProvider.services || []).length })} <CaretDown className="w-3 h-3" /></>
                         )}
                       </button>
                     )}
@@ -2537,13 +2613,13 @@ const PatientProviders = () => {
                         className="neu-btn p-3.5 rounded-2xl flex items-center justify-between text-left hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer group"
                       >
                         <div className="min-w-0 pr-2">
-                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-link transition-colors truncate">{s}</p>
-                          <p className="text-xs text-tertiary">Available for booking</p>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-link transition-colors truncate">{translateService(s)}</p>
+                          <p className="text-xs text-tertiary">{t('patient.providers.sheetAvailableBooking')}</p>
                         </div>
                       </button>
                     ))}
                     {(!viewingProvider.services || viewingProvider.services.length === 0) && (
-                      <p className="text-xs text-tertiary italic py-2 col-span-2">General medical consultation only.</p>
+                      <p className="text-xs text-tertiary italic py-2 col-span-2">{t('patient.providers.sheetGeneralMedOnly')}</p>
                     )}
                   </div>
                 </div>
@@ -2552,12 +2628,12 @@ const PatientProviders = () => {
                 <div className="space-y-3 pt-2 border-t border-slate-200/60 dark:border-white/5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">Patient Reviews</h3>
-                      <p className="text-xs text-tertiary">Feedback from verified appointments</p>
+                      <h3 className="font-display text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">{t('patient.providers.sheetPatientReviews')}</h3>
+                      <p className="text-xs text-tertiary">{t('patient.providers.sheetFeedbackSub')}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center text-warning">
-                        <Star className="w-4 h-4 fill-current" />
+                        <Star weight="fill" className="w-4 h-4 fill-current" />
                       </div>
                       <span className="font-display text-base font-extrabold text-slate-900 dark:text-white">
                         {(viewingProvider.rating || 0).toFixed(1)}
@@ -2573,7 +2649,7 @@ const PatientProviders = () => {
                       ))
                     ) : (
                       <div className="neu-inset p-5 rounded-2xl text-center border border-slate-200/50 dark:border-white/5">
-                        <p className="text-xs text-tertiary">No written reviews yet for this healthcare provider.</p>
+                        <p className="text-xs text-tertiary">{t('patient.providers.sheetNoReviewsLong')}</p>
                       </div>
                     )}
                   </div>
@@ -2594,7 +2670,7 @@ const PatientProviders = () => {
                   }`}
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || 'Ongoing Visit') : 'Book Appointment'}</span>
+                  <span>{requested.includes(viewingProvider.id) ? (getBookingButtonLabel(viewingProvider.id) || t('patient.providers.ongoingVisitFallback')) : t('patient.providers.bookAppointmentBtn')}</span>
                 </button>
                 <button
                   onClick={() => {
@@ -2603,7 +2679,7 @@ const PatientProviders = () => {
                   }}
                   className="w-full py-2 mt-0.5 text-xs font-bold text-link hover:underline text-center cursor-pointer"
                 >
-                  View Full Profile
+                  {t('patient.providers.sheetViewFullProfile')}
                 </button>
               </div>
             </div>
@@ -2618,9 +2694,9 @@ const PatientProviders = () => {
         initial={visitDestination?.confirmed === false ? null : visitDestination}
         initialCenter={visitDestination?.confirmed === false ? visitDestination : null}
         homeAddress={patientHome?.address || ''}
-        title="Confirm visit location"
-        description="This pin is shared with your provider for this visit only. It does not change your saved home address."
-        confirmLabel="Use this visit location"
+        title={t('patient.providers.visitModalTitle')}
+        description={t('patient.providers.visitModalDesc')}
+        confirmLabel={t('patient.providers.visitModalConfirmBtn')}
         onConfirm={(dest) => {
           setVisitDestination({ ...dest, source: 'booking', version: 1, confirmed: true });
         }}

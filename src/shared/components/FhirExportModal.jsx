@@ -1,12 +1,24 @@
 import { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Copy, Check, Download, X, FileCode, User, Activity, HeartPulse, FileText, ShieldCheck } from 'lucide-react';
+import {
+  Copy,
+  Check,
+  DownloadSimple,
+  FileCode,
+  User,
+  Pulse,
+  Heartbeat,
+  FileText,
+  ShieldCheck,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const [viewMode, setViewMode] = useState('json'); // 'json' | 'resources'
 
@@ -49,9 +61,9 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
 
       let summary = res.id || `entry-${idx + 1}`;
       if (type === 'Patient') {
-        summary = res.name?.[0]?.text || patientName || 'Patient Demographics';
+        summary = res.name?.[0]?.text || patientName || t('common.fhir.patientDemographics');
       } else if (type === 'Observation') {
-        const label = res.code?.text || res.code?.coding?.[0]?.display || 'Vital Sign';
+        const label = res.code?.text || res.code?.coding?.[0]?.display || t('common.fhir.vitalSign');
         if (res.valueQuantity) {
           summary = `${label}: ${res.valueQuantity.value} ${res.valueQuantity.unit || ''}`.trim();
         } else if (Array.isArray(res.component) && res.component.length > 0) {
@@ -63,7 +75,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
       } else if (type === 'Condition' || type === 'AllergyIntolerance') {
         summary = res.code?.text || type;
       } else if (type === 'DocumentReference') {
-        summary = res.content?.[0]?.attachment?.title || 'Medical Document';
+        summary = res.content?.[0]?.attachment?.title || t('common.fhir.medicalDocument');
       }
 
       return {
@@ -82,7 +94,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
       documents,
       list,
     };
-  }, [bundle, patientName]);
+  }, [bundle, patientName, t]);
 
   // Handle Escape key when open
   useBodyScrollLock(open);
@@ -107,9 +119,9 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
       await navigator.clipboard.writeText(json);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-      toast.success('Copied to clipboard!');
+      toast.success(t('common.fhir.copiedToast'));
     } catch {
-      toast.error('Failed to copy');
+      toast.error(t('common.fhir.copyFailedToast'));
     }
   };
 
@@ -121,7 +133,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     a.download = fileName;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success('Downloaded!');
+    toast.success(t('common.fhir.downloadedToast'));
   };
 
   const handleClose = () => {
@@ -138,7 +150,10 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden">
+        <div
+          className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
+          onClick={handleClose}
+        >
           {/* Backdrop */}
           <motion.div
             className="fixed inset-0 bg-slate-950/70 sm:backdrop-blur-sm z-[60]"
@@ -178,31 +193,22 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 id="fhir-modal-title" className="font-display font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate">
-                        FHIR R4 Clinical Bundle
+                        {t('common.fhir.title')}
                       </h2>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-extrabold text-success dark:text-emerald-300 uppercase tracking-wider">
-                        HL7 R4 Transaction
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-[0.625rem] font-extrabold text-success dark:text-emerald-300 uppercase tracking-wider">
+                        {t('common.fhir.transactionBadge')}
                       </span>
                     </div>
                     <p className="text-xs text-tertiary dark:text-slate-400 mt-0.5 truncate font-semibold">
                       {patientName ? (
                         <>
-                          Patient: <span className="text-slate-700 dark:text-slate-200 font-bold">{patientName}</span> •{' '}
+                          {t('common.fhir.patientPrefix')} <span className="text-slate-700 dark:text-slate-200 font-bold">{patientName}</span> •{' '}
                         </>
                       ) : null}
-                      <span className="font-mono text-[11px]">{fileName}</span> ({fileSizeLabel})
+                      <span className="font-mono text-[0.6875rem]">{fileName}</span> ({fileSizeLabel})
                     </p>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="neu-btn w-8 h-8 sm:w-9 sm:h-9 rounded-xl hidden sm:flex items-center justify-center text-tertiary hover:text-danger dark:text-tertiary dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer active:scale-95"
-                  title="Close modal"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
@@ -215,8 +221,8 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                     {resourceStats.patients}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-tertiary truncate">Patient</p>
-                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">Demographics</p>
+                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary truncate">{t('common.fhir.tilePatient')}</p>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">{t('common.fhir.tileDemographics')}</p>
                   </div>
                 </div>
 
@@ -225,8 +231,8 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                     {resourceStats.observations}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-tertiary truncate">Observations</p>
-                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">Vital Signs</p>
+                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary truncate">{t('common.fhir.tileObservations')}</p>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">{t('common.fhir.tileVitalSigns')}</p>
                   </div>
                 </div>
 
@@ -235,8 +241,8 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                     {resourceStats.clinical}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-tertiary truncate">Clinical</p>
-                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">Conditions</p>
+                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary truncate">{t('common.fhir.tileClinical')}</p>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">{t('common.fhir.tileConditions')}</p>
                   </div>
                 </div>
 
@@ -245,8 +251,8 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                     {resourceStats.documents}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-wider text-tertiary truncate">Attachments</p>
-                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">Documents</p>
+                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary truncate">{t('common.fhir.tileAttachments')}</p>
+                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">{t('common.fhir.tileDocuments')}</p>
                   </div>
                 </div>
               </div>
@@ -263,7 +269,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                         : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    Raw JSON Payload
+                    {t('common.fhir.rawJson')}
                   </button>
                   <button
                     type="button"
@@ -274,7 +280,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                         : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    Included Resources ({resourceStats.total})
+                    {t('common.fhir.includedResources', { count: resourceStats.total })}
                   </button>
                 </div>
 
@@ -284,17 +290,17 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   className="hidden sm:inline-flex neu-btn px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-link transition-all items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-success stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5 text-primary dark:text-primary-400" />}
-                  <span>{copied ? 'Copied!' : 'Copy JSON'}</span>
+                  <span>{copied ? t('common.actions.copied') : t('common.fhir.copyJson')}</span>
                 </button>
               </div>
 
               {/* Inspector Content Area */}
               {viewMode === 'json' ? (
-                <div className="neu-inset rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 flex-1 min-h-[180px] flex flex-col">
+                <div className="neu-inset rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 flex-1 min-h-[11.25rem] flex flex-col">
                   {/* Code Header Toolbar */}
-                  <div className="px-3.5 py-2 bg-slate-200/60 dark:bg-slate-800/70 border-b border-slate-300/60 dark:border-white/10 flex items-center justify-between text-[11px] font-mono text-slate-600 dark:text-slate-400 shrink-0">
+                  <div className="px-3.5 py-2 bg-slate-200/60 dark:bg-slate-800/70 border-b border-slate-300/60 dark:border-white/10 flex items-center justify-between text-[0.6875rem] font-mono text-slate-600 dark:text-slate-400 shrink-0">
                     <span>application/fhir+json • UTF-8</span>
-                    <span>{jsonLines.length} lines</span>
+                    <span>{t('common.fhir.linesCount', { count: jsonLines.length })}</span>
                   </div>
 
                   {/* Scrollable Code View */}
@@ -307,18 +313,18 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                     }}
                   >
                     <pre className="text-slate-800 dark:text-slate-200 font-mono whitespace-pre-wrap break-words [word-break:break-word] text-xs leading-relaxed">
-                      {json || '// No data available'}
+                      {json || t('common.fhir.noData')}
                     </pre>
                   </div>
                 </div>
               ) : (
                 <div
-                  className="neu-inset rounded-2xl p-3 sm:p-4 flex-1 min-h-[180px] overflow-y-auto overscroll-contain space-y-2 border border-slate-200/80 dark:border-white/10"
+                  className="neu-inset rounded-2xl p-3 sm:p-4 flex-1 min-h-[11.25rem] overflow-y-auto overscroll-contain space-y-2 border border-slate-200/80 dark:border-white/10"
                   style={{ WebkitOverflowScrolling: 'touch' }}
                 >
                   {resourceStats.list.length === 0 ? (
                     <div className="text-center py-8 text-xs font-semibold text-tertiary">
-                      No FHIR resources found in this bundle.
+                      {t('common.fhir.noResources')}
                     </div>
                   ) : (
                     resourceStats.list.map((item) => {
@@ -326,10 +332,10 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                         item.type === 'Patient'
                           ? User
                           : item.type === 'Observation'
-                            ? Activity
+                            ? Pulse
                             : item.type === 'DocumentReference'
                               ? FileText
-                              : HeartPulse;
+                              : Heartbeat;
 
                       return (
                         <div
@@ -344,12 +350,12 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                               <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">
                                 {item.summary}
                               </p>
-                              <p className="text-[11px] font-mono text-tertiary truncate">
+                              <p className="text-[0.6875rem] font-mono text-tertiary truncate">
                                 {item.type}/{item.id}
                               </p>
                             </div>
                           </div>
-                          <span className="px-2 py-0.5 rounded-md neu-inset text-[10px] font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider shrink-0">
+                          <span className="px-2 py-0.5 rounded-md neu-inset text-[0.625rem] font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider shrink-0">
                             {item.type}
                           </span>
                         </div>
@@ -367,8 +373,8 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                   <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-success dark:text-emerald-300 flex items-center justify-center shrink-0">
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-[11px] sm:text-xs leading-snug">
-                    Saved locally to this device only. Nothing is sent to an external FHIR server.
+                  <span className="text-[0.6875rem] sm:text-xs leading-snug">
+                    {t('common.fhir.localNotice')}
                   </span>
                 </div>
 
@@ -379,7 +385,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                     className="col-span-2 neu-btn px-3.5 py-2.5 rounded-xl font-bold text-xs text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-success stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? 'Copied!' : 'Copy'}</span>
+                    <span>{copied ? t('common.actions.copied') : t('common.actions.copy')}</span>
                   </button>
 
                   <button
@@ -387,8 +393,8 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
                     onClick={handleDownload}
                     className="col-span-3 neu-btn-primary px-4 sm:px-5 py-2.5 rounded-xl font-bold text-xs text-white transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-sm"
                   >
-                    <Download className="w-4 h-4 shrink-0" />
-                    <span>Download .JSON File</span>
+                    <DownloadSimple className="w-4 h-4 shrink-0" />
+                    <span>{t('common.fhir.downloadJson')}</span>
                   </button>
                 </div>
               </div>

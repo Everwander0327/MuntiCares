@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import useRouteEta from '../hooks/useRouteEta';
 import { subscribeToProvider } from '../services/trackingService';
@@ -14,6 +15,9 @@ const THRESHOLDS = [120, 300, 600];
  */
 export default function PatientTrackingMonitor() {
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [active, setActive] = useState([]);
   const activeRef = useRef([]);
   const arrivedNotified = useRef(new Set());
@@ -67,8 +71,8 @@ export default function PatientTrackingMonitor() {
               } catch { /* ignore */ }
 
               notifyTracking(
-                'Provider has arrived',
-                'Your provider is at the visit location. Please be ready to welcome them.',
+                tRef.current('tracking.monitor.arrivedTitle'),
+                tRef.current('tracking.monitor.arrivedBody'),
                 { tag: key }
               );
             }
@@ -96,6 +100,11 @@ export default function PatientTrackingMonitor() {
 }
 
 function TrackingAlertWatcher({ request }) {
+  const { t, translateService } = useLanguage();
+  const tRef = useRef(t);
+  const translateServiceRef = useRef(translateService);
+  tRef.current = t;
+  translateServiceRef.current = translateService;
   const [provider, setProvider] = useState(null);
   const [session, setSession] = useState(null);
 
@@ -155,10 +164,13 @@ function TrackingAlertWatcher({ request }) {
     if (!threshold) return;
 
     const minutes = threshold / 60;
-    const providerName = request.provider?.full_name || 'Your provider';
+    const providerName = request.provider?.full_name || tRef.current('tracking.monitor.yourProvider');
+    const serviceLabel = translateServiceRef.current(request.service);
     notifyTracking(
-      'Provider arriving soon',
-      `${providerName} is about ${minutes} minute${minutes === 1 ? '' : 's'} away for ${request.service}.`,
+      tRef.current('tracking.monitor.arrivingSoonTitle'),
+      minutes === 1
+        ? tRef.current('tracking.monitor.arrivingSoonBodyOne', { provider: providerName, minutes, service: serviceLabel })
+        : tRef.current('tracking.monitor.arrivingSoonBodyMany', { provider: providerName, minutes, service: serviceLabel }),
       { tag: `eta:${request.id}:${threshold}` }
     );
 

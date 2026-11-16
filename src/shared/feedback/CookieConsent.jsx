@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X } from 'lucide-react';
+import { X } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const STORAGE_KEY = 'mc_cookie_consent';

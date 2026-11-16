@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, Stethoscope, Star, FileText, ArrowRight, RotateCcw } from 'lucide-react';
+import { Star, ArrowRight, ArrowCounterClockwise } from '@phosphor-icons/react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/shared/ui/sheet';
-import { getInitials, getStatusBadgeClass } from '../utils/dashboardMetrics';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { getInitials } from '../utils/dashboardMetrics';
+import StatusBadge from './StatusBadge';
 
 const PRESET_OPTIONS = [
-  { key: '30D', label: 'Last 30 Days' },
-  { key: '6M', label: 'Last 6 Months' },
-  { key: 'ALL', label: 'All Time' },
+  { key: '30D', labelKey: 'admin.sheet.preset30d' },
+  { key: '6M', labelKey: 'admin.sheet.preset6m' },
+  { key: 'ALL', labelKey: 'admin.sheet.presetAll' },
 ];
 
 const DashboardDetailSheet = ({
@@ -19,31 +21,32 @@ const DashboardDetailSheet = ({
   onChangeRange,
   onResetRange,
 }) => {
+  const { t, translateService } = useLanguage();
   const isOpen = Boolean(sheet);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <SheetContent
         side="bottom"
-        className="px-4 pb-7 pt-0 sm:max-w-lg sm:mx-auto sm:mb-6 sm:rounded-3xl"
+        className="px-5 pb-6 pt-0 sm:pt-2 sm:inset-x-0 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:max-w-md sm:mx-auto sm:rounded-3xl bg-surface dark:bg-surface-dark border border-surface-border shadow-card"
       >
         <div
-          className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded-full bg-slate-400/45 dark:bg-slate-500/45 sm:hidden"
+          className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded-full bg-surface-border sm:hidden"
           aria-hidden="true"
         />
 
         {sheet?.type === 'filter' && (
           <>
-            <SheetHeader className="px-2 pt-3 pb-3 text-left ring-0 border-b border-black/5 dark:border-white/10">
-              <SheetTitle className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
-                Filter Analytics Range
+            <SheetHeader className="px-1 pt-4 pb-3.5 text-left ring-0 border-b border-surface-border">
+              <SheetTitle className="font-display text-lg font-extrabold text-ink dark:text-txt-darkPrimary">
+                {t('admin.sheet.filterTitle')}
               </SheetTitle>
               <SheetDescription className="text-xs text-tertiary">
-                Choose a preset timeframe or set custom start and end dates. Swipe down to close.
+                {t('admin.sheet.filterDesc')}
               </SheetDescription>
             </SheetHeader>
 
-            <div className="space-y-4 px-2 pt-4">
+            <div className="space-y-4 px-1 pt-4">
               <div className="grid grid-cols-3 gap-2">
                 {PRESET_OPTIONS.map((preset) => {
                   const isActive = activePreset === preset.key;
@@ -55,41 +58,41 @@ const DashboardDetailSheet = ({
                         onApplyPreset(preset.key);
                         onClose();
                       }}
-                      className={`min-h-[44px] px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
+                      className={`min-h-[2.75rem] px-3 rounded-xl text-xs font-extrabold transition-all cursor-pointer active:scale-95 ${
                         isActive
-                          ? 'neu-btn-primary text-white dark:text-[#08182A]'
-                          : 'neu-inset text-slate-800 dark:text-slate-100 hover:text-link'
+                          ? 'neu-btn-primary text-white dark:text-neu-fg'
+                          : 'bg-surface-subtle border border-surface-border text-ink dark:text-txt-darkPrimary hover:text-link'
                       }`}
                     >
-                      {preset.label}
+                      {t(preset.labelKey)}
                     </button>
                   );
                 })}
               </div>
 
-              <div className="neu-inset rounded-2xl p-3.5 space-y-2.5">
-                <p className="text-[11px] font-extrabold uppercase tracking-wider text-tertiary">
-                  Custom Date Window
+              <div className="space-y-2.5 pt-2 border-t border-surface-border/70">
+                <p className="text-xs font-extrabold text-tertiary">
+                  {t('admin.sheet.customRangeLabel')}
                 </p>
                 <div className="grid grid-cols-1 xs:grid-cols-2 gap-2.5">
                   <label className="space-y-1 text-xs font-bold text-tertiary">
-                    <span>From</span>
+                    <span>{t('admin.sheet.fromLabel')}</span>
                     <input
                       type="date"
-                      aria-label="Filter start date"
+                      aria-label={t('admin.sheet.startDateAria')}
                       value={startDate || ''}
                       onChange={(e) => onChangeRange({ start: e.target.value, end: endDate || '' })}
-                      className="w-full min-h-[42px] px-3 rounded-xl neu-flat-sm bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none"
+                      className="w-full min-h-[2.75rem] px-3 rounded-xl border border-surface-border bg-surface-subtle/50 text-xs font-semibold text-ink dark:text-txt-darkPrimary outline-none"
                     />
                   </label>
                   <label className="space-y-1 text-xs font-bold text-tertiary">
-                    <span>To</span>
+                    <span>{t('admin.sheet.toLabel')}</span>
                     <input
                       type="date"
-                      aria-label="Filter end date"
+                      aria-label={t('admin.sheet.endDateAria')}
                       value={endDate || ''}
                       onChange={(e) => onChangeRange({ start: startDate || '', end: e.target.value })}
-                      className="w-full min-h-[42px] px-3 rounded-xl neu-flat-sm bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 outline-none"
+                      className="w-full min-h-[2.75rem] px-3 rounded-xl border border-surface-border bg-surface-subtle/50 text-xs font-semibold text-ink dark:text-txt-darkPrimary outline-none"
                     />
                   </label>
                 </div>
@@ -102,10 +105,10 @@ const DashboardDetailSheet = ({
                     onResetRange();
                     onClose();
                   }}
-                  className="w-full min-h-[44px] neu-btn rounded-xl flex items-center justify-center gap-2 text-xs font-extrabold text-danger dark:text-danger-dark cursor-pointer"
+                  className="w-full min-h-[2.75rem] neu-btn rounded-xl flex items-center justify-center gap-2 text-xs font-extrabold text-danger dark:text-danger-dark cursor-pointer"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Clear Date Filter
+                  <ArrowCounterClockwise className="w-3.5 h-3.5" aria-hidden="true" />
+                  {t('admin.sheet.clearDateFilter')}
                 </button>
               )}
             </div>
@@ -114,78 +117,62 @@ const DashboardDetailSheet = ({
 
         {sheet?.type === 'request' && sheet.item && (
           <>
-            <SheetHeader className="px-2 pt-3 pb-3 text-left ring-0 border-b border-black/5 dark:border-white/10">
-              <div className="flex items-start justify-between gap-3 sm:pr-10">
+            <SheetHeader className="px-1 pt-4 pb-3.5 text-left ring-0 border-b border-surface-border">
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-10 h-10 rounded-full bg-primary/15 dark:bg-primary-400/20 text-link font-extrabold text-xs flex items-center justify-center shrink-0">
+                  <span className="w-10 h-10 rounded-full bg-primary-soft dark:bg-primary-800/70 text-link font-extrabold text-xs flex items-center justify-center shrink-0">
                     {getInitials(sheet.item.user)}
                   </span>
                   <div className="min-w-0">
-                    <SheetTitle className="font-display text-base sm:text-lg font-extrabold text-slate-900 dark:text-white truncate">
+                    <SheetTitle className="font-display text-base sm:text-lg font-extrabold text-ink dark:text-txt-darkPrimary truncate">
                       {sheet.item.user}
                     </SheetTitle>
                     <SheetDescription className="text-xs text-tertiary truncate">
-                      {sheet.item.service || sheet.item.action} &bull; {sheet.item.date}
+                      {t('admin.sheet.requestedOn', { date: sheet.item.date })}
                     </SheetDescription>
                   </div>
                 </div>
-                <span
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider shrink-0 ${getStatusBadgeClass(sheet.item.status)}`}
-                >
-                  {sheet.item.status}
-                </span>
+                <StatusBadge status={sheet.item.status} className="shrink-0 pt-0.5" />
               </div>
             </SheetHeader>
 
-            <div className="space-y-3.5 px-2 pt-4">
-              <div className="neu-inset rounded-2xl p-3.5 space-y-2.5 text-xs">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-tertiary font-semibold">
-                    <Stethoscope className="w-3.5 h-3.5 text-link" />
-                    Service
-                  </span>
-                  <strong className="text-slate-900 dark:text-white">
-                    {sheet.item.service || 'General Healthcare'}
-                  </strong>
+            <div className="px-1 pt-2 space-y-4">
+              <dl className="divide-y divide-surface-border/70 text-xs">
+                <div className="py-2.5 flex items-center justify-between gap-4">
+                  <dt className="text-tertiary font-semibold">{t('admin.sheet.service')}</dt>
+                  <dd className="font-bold text-ink dark:text-txt-darkPrimary text-right">
+                    {sheet.item.service ? translateService(sheet.item.service) : t('admin.sheet.generalHealthcare')}
+                  </dd>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-tertiary font-semibold">
-                    <Calendar className="w-3.5 h-3.5 text-link" />
-                    Scheduled
-                  </span>
-                  <strong className="text-slate-900 dark:text-white">
+                <div className="py-2.5 flex items-center justify-between gap-4">
+                  <dt className="text-tertiary font-semibold">{t('admin.sheet.scheduled')}</dt>
+                  <dd className="font-bold text-ink dark:text-txt-darkPrimary tabular-nums text-right">
                     {sheet.item.scheduledLabel || sheet.item.date}
-                  </strong>
+                  </dd>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-1.5 text-tertiary font-semibold">
-                    <Clock className="w-3.5 h-3.5 text-link" />
-                    Assigned Provider
-                  </span>
-                  <strong className="text-slate-900 dark:text-white">
-                    {sheet.item.providerName || 'Unassigned'}
-                  </strong>
+                <div className="py-2.5 flex items-center justify-between gap-4">
+                  <dt className="text-tertiary font-semibold">{t('admin.sheet.assignedProvider')}</dt>
+                  <dd className="font-bold text-ink dark:text-txt-darkPrimary text-right">
+                    {sheet.item.providerName || t('admin.sheet.unassigned')}
+                  </dd>
                 </div>
                 {sheet.item.notes && (
-                  <div className="pt-2 border-t border-black/5 dark:border-white/10 space-y-1">
-                    <span className="flex items-center gap-1.5 text-tertiary font-semibold">
-                      <FileText className="w-3.5 h-3.5 text-link" />
-                      Care Notes
-                    </span>
-                    <p className="text-slate-700 dark:text-slate-200 leading-relaxed">
+                  <div className="py-2.5 space-y-1">
+                    <dt className="text-tertiary font-semibold">{t('admin.sheet.careNotes')}</dt>
+                    <dd className="text-txt-secondary dark:text-txt-darkSecondary leading-relaxed">
                       {sheet.item.notes}
-                    </p>
+                    </dd>
                   </div>
                 )}
-              </div>
+              </dl>
 
               <Link
                 to="/admin/requests"
                 onClick={onClose}
-                className="w-full min-h-[44px] neu-btn-primary rounded-xl flex items-center justify-center gap-2 text-xs font-extrabold text-white dark:text-[#08182A]"
+                className="w-full min-h-[2.75rem] neu-btn-primary rounded-2xl flex items-center justify-center gap-2 text-xs font-extrabold text-white dark:text-neu-fg"
               >
-                Open in Requests Manager
-                <ArrowRight className="w-4 h-4" />
+                {t('admin.sheet.openRequestsManager')}
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </Link>
             </div>
           </>
@@ -193,38 +180,44 @@ const DashboardDetailSheet = ({
 
         {sheet?.type === 'provider' && sheet.item && (
           <>
-            <SheetHeader className="px-2 pt-3 pb-3 text-left ring-0 border-b border-black/5 dark:border-white/10">
-              <div className="flex items-start justify-between gap-3 sm:pr-10">
+            <SheetHeader className="px-1 pt-4 pb-3.5 text-left ring-0 border-b border-surface-border">
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-10 h-10 rounded-2xl bg-sky-500/15 text-link font-extrabold text-xs flex items-center justify-center shrink-0">
+                  <span className="w-10 h-10 rounded-full bg-primary-soft dark:bg-primary-800/70 text-link font-extrabold text-xs flex items-center justify-center shrink-0">
                     {getInitials(sheet.item.name)}
                   </span>
                   <div className="min-w-0">
-                    <SheetTitle className="font-display text-base sm:text-lg font-extrabold text-slate-900 dark:text-white truncate">
+                    <SheetTitle className="font-display text-base sm:text-lg font-extrabold text-ink dark:text-txt-darkPrimary truncate">
                       {sheet.item.name}
                     </SheetTitle>
                     <SheetDescription className="text-xs text-tertiary">
-                      Approved Healthcare Provider
+                      {t('admin.sheet.approvedProvider')}
                     </SheetDescription>
                   </div>
                 </div>
-                <span className="neu-flat-sm px-2.5 py-1 rounded-xl inline-flex items-center gap-1 text-warning dark:text-warning-dark font-extrabold text-xs shrink-0">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  {Number(sheet.item.rating || 0).toFixed(1)}
-                </span>
+                {Number(sheet.item.rating || 0) > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-warning dark:text-warning-dark font-extrabold text-xs shrink-0 tabular-nums pt-0.5">
+                    <Star weight="fill" className="w-3.5 h-3.5 fill-current" aria-hidden="true" />
+                    {Number(sheet.item.rating).toFixed(1)}
+                  </span>
+                ) : (
+                  <span className="text-xs font-semibold text-tertiary shrink-0 pt-0.5">
+                    {t('admin.sheet.noReviews')}
+                  </span>
+                )}
               </div>
             </SheetHeader>
 
-            <div className="space-y-3.5 px-2 pt-4">
-              <div className="neu-inset rounded-2xl p-3.5 space-y-3 text-xs">
-                <div className="space-y-1.5">
+            <div className="px-1 pt-2 space-y-4">
+              <div className="divide-y divide-surface-border/70 text-xs">
+                <div className="py-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-tertiary">Trust Score</span>
-                    <strong className="tabular-nums text-slate-900 dark:text-white">
-                      {sheet.item.trust_score || 0}%
+                    <span className="font-semibold text-tertiary">{t('admin.sheet.trustScore')}</span>
+                    <strong className="tabular-nums text-ink dark:text-txt-darkPrimary">
+                      {sheet.item.trust_score || 0}/100
                     </strong>
                   </div>
-                  <div className="h-2 rounded-full neu-flat-sm overflow-hidden p-0.5">
+                  <div className="h-2 rounded-full bg-surface-border/60 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-primary dark:bg-primary-400"
                       style={{ width: `${Math.min(100, Math.max(0, Number(sheet.item.trust_score) || 0))}%` }}
@@ -232,28 +225,24 @@ const DashboardDetailSheet = ({
                   </div>
                 </div>
 
-                <div className="space-y-1.5 pt-1">
-                  <span className="font-semibold text-tertiary block">Specialties</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(sheet.item.services?.length ? sheet.item.services : ['General Healthcare']).map((srv) => (
-                      <span
-                        key={srv}
-                        className="px-2.5 py-1 rounded-lg neu-flat-sm text-[11px] font-bold text-slate-800 dark:text-slate-100"
-                      >
-                        {srv}
-                      </span>
-                    ))}
-                  </div>
+                <div className="py-3 space-y-1">
+                  <span className="font-semibold text-tertiary block">{t('admin.sheet.specialties')}</span>
+                  <p className="font-semibold text-ink dark:text-txt-darkPrimary leading-relaxed">
+                    {(sheet.item.services?.length
+                      ? sheet.item.services.map((s) => translateService(s))
+                      : [t('admin.sheet.generalHealthcare')]
+                    ).join(', ')}
+                  </p>
                 </div>
               </div>
 
               <Link
                 to="/admin/providers"
                 onClick={onClose}
-                className="w-full min-h-[44px] neu-btn-primary rounded-xl flex items-center justify-center gap-2 text-xs font-extrabold text-white dark:text-[#08182A]"
+                className="w-full min-h-[2.75rem] neu-btn-primary rounded-2xl flex items-center justify-center gap-2 text-xs font-extrabold text-white dark:text-neu-fg"
               >
-                Manage Providers
-                <ArrowRight className="w-4 h-4" />
+                {t('admin.sheet.manageProviders')}
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
               </Link>
             </div>
           </>

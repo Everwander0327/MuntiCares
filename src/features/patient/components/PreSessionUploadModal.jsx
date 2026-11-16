@@ -2,46 +2,47 @@ import { useState, useRef, useEffect } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
-  Upload,
-  Trash2,
-  CheckCircle2,
-  Loader2,
+  UploadSimple,
+  Trash,
+  CheckCircle,
+  SpinnerGap,
   Check,
   ArrowRight,
   ArrowLeft,
-  AlertCircle,
-} from 'lucide-react';
+  WarningCircle,
+} from '@phosphor-icons/react';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import { markPresessionSubmitted } from '@/features/patient/utils/localState';
 import { buildPreSessionNotesSummary, mergePreSessionNotes } from '@/features/patient/utils/preSessionNotes';
 
 const CHECKLIST_ITEMS = [
-  { key: 'id', label: 'Prepare your medical ID or identification card' },
-  { key: 'medications', label: 'List your current medications and dosages' },
-  { key: 'insurance', label: 'Have your insurance card ready' },
-  { key: 'questions', label: 'Prepare questions for your provider' },
-  { key: 'space', label: 'Clear a space in your home for the visit' },
-  { key: 'companion', label: 'Ensure a family member or friend can be present' },
+  { key: 'id', labelKey: 'patient.preSession.prepId' },
+  { key: 'medications', labelKey: 'patient.preSession.prepMedications' },
+  { key: 'insurance', labelKey: 'patient.preSession.prepInsurance' },
+  { key: 'questions', labelKey: 'patient.preSession.prepQuestions' },
+  { key: 'space', labelKey: 'patient.preSession.prepSpace' },
+  { key: 'companion', labelKey: 'patient.preSession.prepCompanion' },
 ];
 
 const VITAL_FIELDS = [
-  { key: 'bp', id: 'previsit-bp', label: 'Blood Pressure', placeholder: '120/80', unit: 'mmHg', inputMode: 'text' },
-  { key: 'temp', id: 'previsit-temp', label: 'Temperature', placeholder: '36.5', unit: '°C', inputMode: 'decimal' },
-  { key: 'hr', id: 'previsit-hr', label: 'Heart Rate', placeholder: '72', unit: 'bpm', inputMode: 'numeric' },
-  { key: 'weight', id: 'previsit-weight', label: 'Weight', placeholder: '65', unit: 'kg', inputMode: 'decimal' },
+  { key: 'bp', id: 'previsit-bp', labelKey: 'patient.preSession.vitalBpLabel', placeholder: '120/80', unit: 'mmHg', inputMode: 'text' },
+  { key: 'temp', id: 'previsit-temp', labelKey: 'patient.preSession.vitalTempLabel', placeholder: '36.5', unit: '°C', inputMode: 'decimal' },
+  { key: 'hr', id: 'previsit-hr', labelKey: 'patient.preSession.vitalHrLabel', placeholder: '72', unit: 'bpm', inputMode: 'numeric' },
+  { key: 'weight', id: 'previsit-weight', labelKey: 'patient.preSession.vitalWeightLabel', placeholder: '65', unit: 'kg', inputMode: 'decimal' },
 ];
 
 const QUICK_SYMPTOMS = [
-  'Fever',
-  'Headache',
-  'Dizziness',
-  'Pain / swelling',
-  'Cough',
-  'Fatigue',
+  { value: 'Fever', labelKey: 'patient.preSession.symptomFever' },
+  { value: 'Headache', labelKey: 'patient.preSession.symptomHeadache' },
+  { value: 'Dizziness', labelKey: 'patient.preSession.symptomDizziness' },
+  { value: 'Pain / swelling', labelKey: 'patient.preSession.symptomPainSwelling' },
+  { value: 'Cough', labelKey: 'patient.preSession.symptomCough' },
+  { value: 'Fatigue', labelKey: 'patient.preSession.symptomFatigue' },
 ];
 
 const EMPTY_VITALS = { bp: '', temp: '', hr: '', weight: '' };
@@ -99,6 +100,7 @@ const getInitialSessionState = (open, requestId) => {
 
 const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
   const { user } = useAuth();
+  const { t, translateService } = useLanguage();
   const [activeTab, setActiveTab] = useState(
     () => getInitialSessionState(isOpen, request?.id).tab,
   ); // 'checklist' | 'intake'
@@ -197,7 +199,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
     if (selected.length === 0) return;
 
     if (files.length + selected.length > 5) {
-      toast.error('Maximum 5 files allowed.');
+      toast.error(t('patient.preSession.maxFilesError'));
       return;
     }
 
@@ -216,7 +218,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
     const hasFiles = files.length > 0;
 
     if (!hasVitals && !hasSymptoms && !hasFiles) {
-      const msg = 'Add at least one vital, symptom note, or file — your checklist saves automatically.';
+      const msg = t('patient.preSession.emptySubmitError');
       setFormError(msg);
       toast.error(msg);
       return;
@@ -264,7 +266,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
 
       // Nothing was attached and nothing was typed: do not claim success.
       if (files.length > 0 && uploadedUrls.length === 0) {
-        toast.error('Your files could not be uploaded. Check your connection and try again.');
+        toast.error(t('patient.preSession.allFilesFailedError'));
         return;
       }
 
@@ -293,11 +295,11 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
       }
 
       if (failedUploads.length > 0) {
-        toast.error(`${failedUploads.length} file(s) were not uploaded.`);
+        toast.error(t('patient.preSession.someFilesFailedError', { count: failedUploads.length }));
       } else if (failedDocRows.length > 0) {
-        toast('Some files were uploaded but could not be saved to your document list.', { icon: '⚠️' });
+        toast(t('patient.preSession.docListPartialWarn'), { icon: '⚠️' });
       } else {
-        toast.success('Pre-session info submitted successfully!');
+        toast.success(t('patient.preSession.submitSuccess'));
       }
 
       markPresessionSubmitted(user?.id, request.id);
@@ -309,7 +311,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
       onClose();
     } catch (err) {
       console.error('Error submitting pre-session data:', err);
-      toast.error('Something went wrong. Please try again.');
+      toast.error(t('patient.preSession.submitError'));
     } finally {
       setUploading(false);
     }
@@ -324,7 +326,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
   const hasSubmittableData = hasVitals || symptomNotes.trim() !== '' || files.length > 0;
   const lowerSymptoms = symptomNotes.toLowerCase();
   const slideOffset = prefersReducedMotion ? 0 : navDir === 'left' ? -20 : 20;
-  const providerLabel = request.providerName || 'Provider';
+  const providerLabel = request.providerName || t('patient.preSession.providerFallback');
 
   return (
     <DialogPrimitive.Root
@@ -379,18 +381,18 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                   <div className="min-w-0 flex-1">
                     <DialogPrimitive.Title asChild>
                       <h2 className="text-base sm:text-lg font-display font-extrabold text-slate-900 dark:text-white leading-tight truncate">
-                        Pre-Session Information
+                        {t('patient.preSession.title')}
                       </h2>
                     </DialogPrimitive.Title>
                     <DialogPrimitive.Description className="sr-only">
-                      Complete your visit preparation checklist and optionally share vitals, symptoms, or documents with {providerLabel}.
+                      {t('patient.preSession.srDesc', { name: providerLabel })}
                     </DialogPrimitive.Description>
                     <p className="text-xs text-tertiary dark:text-tertiary truncate mt-0.5">
-                      For{' '}
+                      {t('patient.preSession.forLabel')}{' '}
                       <span className="font-extrabold text-link dark:text-primary-400">
                         {providerLabel}
                       </span>
-                      {request.service ? ` • ${request.service}` : ' • Home visit'}
+                      {request.service ? ` • ${translateService(request.service)}` : ` • ${t('patient.preSession.homeVisitSuffix')}`}
                     </p>
                   </div>
                 </div>
@@ -398,7 +400,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                 {/* Sliding Pill 2-Tab Switcher */}
                 <div
                   role="tablist"
-                  aria-label="Pre-session sections"
+                  aria-label={t('patient.preSession.sectionsAria')}
                   className="relative neu-inset p-1 rounded-xl grid grid-cols-2 border border-white/60 dark:border-white/5"
                 >
                   <motion.div
@@ -415,13 +417,13 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                     aria-controls="presession-panel-checklist"
                     aria-selected={activeTab === 'checklist'}
                     onClick={() => switchTab('checklist')}
-                    className={`relative z-10 min-h-[36px] py-1.5 px-2 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none tabular-nums ${
+                    className={`relative z-10 min-h-[2.25rem] py-1.5 px-2 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none tabular-nums ${
                       activeTab === 'checklist'
-                        ? 'text-white dark:text-[#08182A]'
+                        ? 'text-white dark:text-neu-fg'
                         : 'text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400'
                     }`}
                   >
-                    1. Prep ({checkedCount}/{CHECKLIST_ITEMS.length})
+                    {t('patient.preSession.tabPrep', { done: checkedCount, total: CHECKLIST_ITEMS.length })}
                   </button>
                   <button
                     type="button"
@@ -430,13 +432,13 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                     aria-controls="presession-panel-intake"
                     aria-selected={activeTab === 'intake'}
                     onClick={() => switchTab('intake')}
-                    className={`relative z-10 min-h-[36px] py-1.5 px-2 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none flex items-center justify-center gap-1.5 ${
+                    className={`relative z-10 min-h-[2.25rem] py-1.5 px-2 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none flex items-center justify-center gap-1.5 ${
                       activeTab === 'intake'
-                        ? 'text-white dark:text-[#08182A]'
+                        ? 'text-white dark:text-neu-fg'
                         : 'text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400'
                     }`}
                   >
-                    <span>2. Vitals &amp; Docs</span>
+                    <span>{t('patient.preSession.tabVitals')}</span>
                     {hasSubmittableData && (
                       <span
                         className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -470,18 +472,18 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
                             <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block leading-none">
-                              Before Provider Arrives
+                              {t('patient.preSession.beforeArrives')}
                             </span>
                             <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white mt-1 tabular-nums">
-                              {checkedCount} of {CHECKLIST_ITEMS.length} tasks ready
+                              {t('patient.preSession.tasksReadyCount', { done: checkedCount, total: CHECKLIST_ITEMS.length })}
                             </p>
                           </div>
                           <button
                             type="button"
                             onClick={handleToggleAllChecklist}
-                            className="neu-btn min-h-[36px] px-3 py-1.5 rounded-xl text-xs font-extrabold text-link dark:text-primary-400 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                            className="neu-btn min-h-[2.25rem] px-3 py-1.5 rounded-xl text-xs font-extrabold text-link dark:text-primary-400 shrink-0 cursor-pointer active:scale-95 transition-transform"
                           >
-                            {allChecklistDone ? 'Clear all' : 'Mark all ready'}
+                            {allChecklistDone ? t('patient.preSession.clearAll') : t('patient.preSession.markAllReady')}
                           </button>
                         </div>
 
@@ -492,8 +494,8 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                           />
                         </div>
 
-                        <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                          Saved automatically on your device as you check items.
+                        <p className="text-[0.6875rem] font-medium text-emerald-700 dark:text-emerald-400">
+                          {t('patient.preSession.autoSavedNote')}
                         </p>
                       </div>
 
@@ -507,7 +509,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                               type="button"
                               aria-pressed={isChecked}
                               onClick={() => handleToggleChecklistItem(item.key)}
-                              className={`w-full min-h-[46px] px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition-all cursor-pointer select-none active:scale-[0.99] ${
+                              className={`w-full min-h-[2.875rem] px-3.5 py-2.5 rounded-xl flex items-center gap-3 text-left transition-all cursor-pointer select-none active:scale-[0.99] ${
                                 isChecked
                                   ? 'bg-emerald-500/10 border border-emerald-500/25'
                                   : 'neu-flat-sm border border-white/75 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40'
@@ -523,13 +525,13 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                                 {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </span>
                               <span
-                                className={`text-xs sm:text-[13px] flex-1 leading-snug transition-colors ${
+                                className={`text-xs sm:text-[0.8125rem] flex-1 leading-snug transition-colors ${
                                   isChecked
                                     ? 'text-tertiary dark:text-tertiary line-through'
                                     : 'text-slate-800 dark:text-slate-100 font-semibold'
                                 }`}
                               >
-                                {item.label}
+                                {t(item.labelKey)}
                               </span>
                             </button>
                           );
@@ -542,17 +544,17 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                       <button
                         type="button"
                         onClick={() => switchTab('intake')}
-                        className="w-full neu-btn-primary min-h-[46px] py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-2 active:scale-[0.98] transition-transform cursor-pointer"
+                        className="w-full neu-btn-primary min-h-[2.875rem] py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-2 active:scale-[0.98] transition-transform cursor-pointer"
                       >
-                        <span>Add Vitals, Symptoms &amp; Files</span>
+                        <span>{t('patient.preSession.goToVitalsBtn')}</span>
                         <ArrowRight className="w-4 h-4 shrink-0" />
                       </button>
                       <button
                         type="button"
                         onClick={onClose}
-                        className="w-full min-h-[42px] py-2 px-4 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                        className="w-full min-h-[2.625rem] py-2 px-4 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-white/5 transition-colors cursor-pointer"
                       >
-                        I&apos;ll finish later
+                        {t('patient.preSession.finishLaterBtn')}
                       </button>
                     </div>
                   </motion.div>
@@ -574,10 +576,10 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                            Self-Measured Vitals (Optional)
+                            {t('patient.preSession.selfVitalsLabel')}
                           </span>
-                          <span className="text-[11px] font-semibold text-tertiary">
-                            Units added automatically
+                          <span className="text-[0.6875rem] font-semibold text-tertiary">
+                            {t('patient.preSession.unitsAddedHint')}
                           </span>
                         </div>
 
@@ -588,9 +590,9 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                                 htmlFor={field.id}
                                 className="text-xs font-bold text-slate-700 dark:text-slate-200 block"
                               >
-                                {field.label}
+                                {t(field.labelKey)}
                               </label>
-                              <div className="neu-inset rounded-xl px-2.5 min-h-[44px] flex items-center justify-between gap-1.5 border border-white/60 dark:border-white/5 focus-within:ring-2 focus-within:ring-primary/30 dark:focus-within:ring-primary-400/35">
+                              <div className="neu-inset rounded-xl px-2.5 min-h-[2.75rem] flex items-center justify-between gap-1.5 border border-white/60 dark:border-white/5 focus-within:ring-2 focus-within:ring-primary/30 dark:focus-within:ring-primary-400/35">
                                 <input
                                   id={field.id}
                                   type="text"
@@ -600,7 +602,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                                   onChange={(e) => handleVitalChange(field.key, e.target.value)}
                                   className="w-full min-w-0 bg-transparent border-0 text-base sm:text-xs font-extrabold text-slate-900 dark:text-white outline-none placeholder:text-tertiary/70 placeholder:font-medium tabular-nums"
                                 />
-                                <span className="text-[11px] font-extrabold text-link dark:text-primary-400 bg-primary/10 dark:bg-primary-400/15 px-1.5 py-0.5 rounded-md shrink-0">
+                                <span className="text-[0.6875rem] font-extrabold text-link dark:text-primary-400 bg-primary/10 dark:bg-primary-400/15 px-1.5 py-0.5 rounded-md shrink-0">
                                   {field.unit}
                                 </span>
                               </div>
@@ -616,29 +618,30 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                             htmlFor="previsit-symptoms"
                             className="text-2xs font-extrabold uppercase tracking-wider text-tertiary"
                           >
-                            Current Symptoms or Concerns
+                            {t('patient.preSession.symptomsLabel')}
                           </label>
-                          <span className="text-[11px] font-semibold text-tertiary">
-                            Tap pills or type
+                          <span className="text-[0.6875rem] font-semibold text-tertiary">
+                            {t('patient.preSession.symptomsHint')}
                           </span>
                         </div>
 
                         <div className="flex flex-wrap gap-1.5">
                           {QUICK_SYMPTOMS.map((sym) => {
-                            const isActive = lowerSymptoms.includes(sym.toLowerCase());
+                            const isActive = lowerSymptoms.includes(sym.value.toLowerCase());
+                            const symLabel = t(sym.labelKey);
                             return (
                               <button
-                                key={sym}
+                                key={sym.value}
                                 type="button"
                                 aria-pressed={isActive}
-                                onClick={() => toggleQuickSymptom(sym)}
-                                className={`min-h-[34px] px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-95 ${
+                                onClick={() => toggleQuickSymptom(sym.value)}
+                                className={`min-h-[2.125rem] px-3 py-1 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-95 ${
                                   isActive
-                                    ? 'bg-primary text-white border-primary dark:bg-primary-400 dark:text-[#08182A] dark:border-primary-400 shadow-sm'
+                                    ? 'bg-primary text-white border-primary dark:bg-primary-400 dark:text-neu-fg dark:border-primary-400 shadow-sm'
                                     : 'neu-flat-sm text-slate-700 dark:text-slate-200 border-white/75 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40'
                                 }`}
                               >
-                                {isActive ? `✓ ${sym}` : `+ ${sym}`}
+                                {isActive ? `✓ ${symLabel}` : `+ ${symLabel}`}
                               </button>
                             );
                           })}
@@ -649,7 +652,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                             id="previsit-symptoms"
                             value={symptomNotes}
                             onChange={(e) => handleSymptomChange(e.target.value)}
-                            placeholder="Any pain level, onset time, or medication notes..."
+                            placeholder={t('patient.preSession.symptomsPlaceholder')}
                             rows={2}
                             className="w-full bg-transparent border-0 text-base sm:text-xs font-medium text-slate-800 dark:text-slate-100 outline-none resize-none placeholder:text-tertiary/80"
                           />
@@ -660,10 +663,10 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                            Photos / Medical Docs
+                            {t('patient.preSession.photosDocsLabel')}
                           </span>
-                          <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 tabular-nums">
-                            {files.length} / 5 files
+                          <span className="text-[0.6875rem] font-extrabold px-2 py-0.5 rounded-full bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-300 tabular-nums">
+                            {t('patient.preSession.filesCount', { count: files.length })}
                           </span>
                         </div>
 
@@ -683,16 +686,16 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                           className="w-full neu-inset p-3.5 rounded-2xl border-2 border-dashed border-primary/30 dark:border-primary-400/30 flex items-center gap-3 text-left transition-all cursor-pointer disabled:opacity-45 disabled:cursor-not-allowed hover:border-primary dark:hover:border-primary-400 group active:scale-[0.99]"
                         >
                           <div className="neu-btn w-11 h-11 rounded-xl flex items-center justify-center text-link dark:text-primary-400 shrink-0 group-hover:scale-105 transition-transform">
-                            <Upload className="w-4 h-4" />
+                            <UploadSimple className="w-4 h-4" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-extrabold text-slate-800 dark:text-white leading-tight">
                               {files.length >= 5
-                                ? 'Maximum 5 files reached'
-                                : 'Tap to upload photos or medical documents'}
+                                ? t('patient.preSession.maxFilesReached')
+                                : t('patient.preSession.uploadCta')}
                             </p>
-                            <p className="text-[11px] text-tertiary mt-0.5">
-                              Lab results, Rx, wound photo &bull; JPG, PNG, PDF
+                            <p className="text-[0.6875rem] text-tertiary mt-0.5">
+                              {t('patient.preSession.uploadFormats')}
                             </p>
                           </div>
                         </button>
@@ -708,7 +711,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                                 >
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <span
-                                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-black uppercase ${badge.className}`}
+                                      className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-[0.625rem] font-black uppercase ${badge.className}`}
                                     >
                                       {badge.label}
                                     </span>
@@ -716,7 +719,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                                       <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
                                         {file.name}
                                       </p>
-                                      <p className="text-[11px] text-tertiary tabular-nums">
+                                      <p className="text-[0.6875rem] text-tertiary tabular-nums">
                                         {formatFileSize(file.size)}
                                       </p>
                                     </div>
@@ -725,11 +728,11 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                                     type="button"
                                     disabled={uploading}
                                     onClick={() => removeFile(idx)}
-                                    aria-label={`Remove ${file.name}`}
-                                    title="Remove file"
-                                    className="min-w-[44px] min-h-[44px] rounded-xl flex items-center justify-center text-tertiary hover:text-danger dark:hover:text-red-400 hover:bg-danger/10 transition-colors shrink-0 cursor-pointer disabled:opacity-40"
+                                    aria-label={t('patient.preSession.removeFileAria', { name: file.name })}
+                                    title={t('patient.preSession.removeFileTitle')}
+                                    className="min-w-[2.75rem] min-h-[2.75rem] rounded-xl flex items-center justify-center text-tertiary hover:text-danger dark:hover:text-red-400 hover:bg-danger/10 transition-colors shrink-0 cursor-pointer disabled:opacity-40"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash className="w-4 h-4" />
                                   </button>
                                 </div>
                               );
@@ -743,7 +746,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                           role="alert"
                           className="p-3 rounded-xl bg-danger/10 border border-danger/25 flex items-start gap-2 text-xs font-bold text-danger dark:text-red-300"
                         >
-                          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                          <WarningCircle className="w-4 h-4 shrink-0 mt-0.5" />
                           <span>{formError}</span>
                         </div>
                       )}
@@ -756,28 +759,30 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                           type="button"
                           disabled={uploading}
                           onClick={() => switchTab('checklist')}
-                          className="w-full neu-btn min-h-[46px] py-3 px-3 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
+                          className="w-full neu-btn min-h-[2.875rem] py-3 px-3 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
                         >
                           <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
-                          <span>Checklist</span>
+                          <span>{t('patient.preSession.checklistBackBtn')}</span>
                         </button>
                         <button
                           type="submit"
                           disabled={uploading}
-                          className="w-full neu-btn-primary min-h-[46px] py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50 cursor-pointer"
+                          className="w-full neu-btn-primary min-h-[2.875rem] py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform disabled:opacity-50 cursor-pointer"
                         >
                           {uploading ? (
                             <>
-                              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                              <span>Sending...</span>
+                              <SpinnerGap className="w-4 h-4 animate-spin shrink-0" />
+                              <span>{t('patient.preSession.sendingBtn')}</span>
                             </>
                           ) : (
                             <>
-                              <CheckCircle2 className="w-4 h-4 shrink-0" />
+                              <CheckCircle className="w-4 h-4 shrink-0" />
                               <span className="truncate">
                                 {files.length > 0
-                                  ? `Send Info & ${files.length} File${files.length > 1 ? 's' : ''}`
-                                  : `Send to ${providerLabel}`}
+                                  ? files.length > 1
+                                    ? t('patient.preSession.sendManyFilesBtn', { count: files.length })
+                                    : t('patient.preSession.sendOneFileBtn')
+                                  : t('patient.preSession.sendToProviderBtn', { name: providerLabel })}
                               </span>
                             </>
                           )}

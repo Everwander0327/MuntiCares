@@ -1,13 +1,36 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Mail, Phone, MapPin, Calendar, HeartPulse, Activity, FileText, Clock, MessageCircle, ArrowLeft, Lock, Shield, AlertCircle, Stethoscope, FolderOpen, User, FileCode, Loader2, ExternalLink, Paperclip, Check } from 'lucide-react';
+import {
+  Envelope,
+  Phone,
+  MapPin,
+  Calendar,
+  Heartbeat,
+  Pulse,
+  FileText,
+  Clock,
+  ChatCircle,
+  ArrowLeft,
+  Lock,
+  Shield,
+  WarningCircle,
+  Stethoscope,
+  FolderOpen,
+  User,
+  FileCode,
+  SpinnerGap,
+  ArrowSquareOut,
+  Paperclip,
+  Check,
+} from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { supabase } from '@/lib/supabase';
-import { getSignedUrl } from '@/lib/supabaseHelpers';
+import { getAuditedDocumentUrl } from '../lib/documentAccess';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import toast from 'react-hot-toast';
 import { FhirExportModal } from '@/shared/components';
 import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
@@ -18,6 +41,7 @@ const PatientProfileView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user: authUser } = useAuth(); // need to import useAuth
+  const { t, formatDate, translateService } = useLanguage();
   const consentRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [patient, setPatient] = useState(null);
@@ -33,15 +57,15 @@ const PatientProfileView = () => {
 
   const handleOpenFile = async (filePath) => {
     try {
-      const url = await getSignedUrl(filePath, 3600);
+      const url = await getAuditedDocumentUrl(id, filePath);
       if (url) {
         window.open(url, '_blank', 'noopener,noreferrer');
       } else {
-        toast.error('Unable to open document.');
+        toast.error(t('provider.patientProfile.openDocFailed'));
       }
     } catch (err) {
       console.error('Error opening file:', err);
-      toast.error('Unable to open document.');
+      toast.error(t('provider.patientProfile.openDocFailed'));
     }
   };
 
@@ -228,7 +252,7 @@ const PatientProfileView = () => {
       setFhirOpen(true);
     } catch (err) {
       console.error('FHIR export error:', err);
-      toast.error('Failed to export FHIR data.');
+      toast.error(t('provider.patientProfile.fhirFailed'));
     } finally {
       setFhirLoading(false);
     }
@@ -246,7 +270,7 @@ const PatientProfileView = () => {
             className="neu-btn px-3.5 py-2 rounded-xl inline-flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 transition-all cursor-pointer shadow-sm"
           >
             <ArrowLeft className="w-3.5 h-3.5 text-primary dark:text-primary-400" />
-            <span>Back to My Patients</span>
+            <span>{t('provider.patientProfile.backToPatients')}</span>
           </motion.button>
         </div>
 
@@ -276,25 +300,25 @@ const PatientProfileView = () => {
                     {patient.full_name}
                   </h1>
                   {!consent?.is_enabled ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[10px] font-extrabold text-warning dark:text-warning-dark uppercase tracking-wider">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-[0.625rem] font-extrabold text-warning dark:text-warning-dark uppercase tracking-wider">
                       <Lock className="w-3 h-3 shrink-0" />
-                      <span>Consent Required</span>
+                      <span>{t('provider.patientProfile.consentRequired')}</span>
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-extrabold text-success dark:text-success-dark uppercase tracking-wider">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[0.625rem] font-extrabold text-success dark:text-success-dark uppercase tracking-wider">
                       <Shield className="w-3 h-3 shrink-0" />
-                      <span>Active Consent Granted</span>
+                      <span>{t('provider.patientProfile.activeConsentGranted')}</span>
                     </span>
                   )}
-                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-[10px] font-extrabold text-primary dark:text-primary-300 uppercase tracking-wider">
-                    Patient
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20 text-[0.625rem] font-extrabold text-primary dark:text-primary-300 uppercase tracking-wider">
+                    {t('provider.patientProfile.patientRole')}
                   </span>
                 </div>
 
                 {/* Single-line Metadata Summary (No Duplicate Clutter) */}
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  <span className="inline-flex items-center gap-1.5 truncate max-w-[240px] sm:max-w-none">
-                    <Mail className="w-3.5 h-3.5 text-primary dark:text-primary-400 shrink-0" />
+                  <span className="inline-flex items-center gap-1.5 truncate max-w-[15rem] sm:max-w-none">
+                    <Envelope className="w-3.5 h-3.5 text-primary dark:text-primary-400 shrink-0" />
                     <span className="truncate">{patient.email}</span>
                   </span>
                   {patient.phone && (
@@ -307,7 +331,7 @@ const PatientProfileView = () => {
                   <span className="inline-flex items-center gap-1.5 text-slate-400 dark:text-slate-500">
                     <span className="text-slate-300 dark:text-slate-600">•</span>
                     <Calendar className="w-3.5 h-3.5 shrink-0" />
-                    <span>Joined {new Date(patient.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                    <span>{t('provider.patientProfile.joinedDate', { date: formatDate(patient.created_at, { month: 'short', year: 'numeric' }) })}</span>
                   </span>
                 </div>
               </div>
@@ -321,7 +345,7 @@ const PatientProfileView = () => {
                 className="col-span-2 sm:col-span-1 neu-btn-primary px-4 py-2.5 rounded-xl font-bold text-white text-xs inline-flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
               >
                 <Stethoscope className="w-4 h-4 shrink-0" />
-                <span>Open Clinical Chart</span>
+                <span>{t('provider.patientProfile.openClinicalChart')}</span>
               </motion.button>
 
               <motion.button
@@ -329,15 +353,15 @@ const PatientProfileView = () => {
                 onClick={() => navigate(`/provider/messages?user=${id}`)}
                 className="neu-btn px-3.5 py-2.5 rounded-xl font-bold text-slate-700 dark:text-slate-200 text-xs inline-flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
-                <MessageCircle className="w-4 h-4 text-primary dark:text-primary-400 shrink-0" />
-                <span>Message</span>
+                <ChatCircle className="w-4 h-4 text-primary dark:text-primary-400 shrink-0" />
+                <span>{t('provider.patientProfile.messageBtn')}</span>
               </motion.button>
 
               <motion.button
                 whileTap={consent?.is_enabled ? { scale: 0.96 } : {}}
                 onClick={consent?.is_enabled ? handleFhirExport : undefined}
                 disabled={fhirLoading || !consent?.is_enabled}
-                title={consent?.is_enabled ? 'Export Patient Record as FHIR R4 JSON' : 'Patient Consent Required for FHIR Export'}
+                title={consent?.is_enabled ? t('provider.patientProfile.fhirExportTitle') : t('provider.patientProfile.fhirLockedTitle')}
                 className={`px-3.5 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-all ${
                   consent?.is_enabled
                     ? 'neu-btn text-teal-700 dark:text-teal-300 cursor-pointer'
@@ -345,7 +369,7 @@ const PatientProfileView = () => {
                 }`}
               >
                 {fhirLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  <SpinnerGap className="w-4 h-4 animate-spin shrink-0" />
                 ) : consent?.is_enabled ? (
                   <FileCode className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
                 ) : (
@@ -353,10 +377,10 @@ const PatientProfileView = () => {
                 )}
                 <span className="truncate">
                   {fhirLoading
-                    ? 'Exporting...'
+                    ? t('provider.patientProfile.exporting')
                     : consent?.is_enabled
-                      ? 'FHIR JSON'
-                      : 'FHIR Locked'}
+                      ? t('provider.patientProfile.fhirJson')
+                      : t('provider.patientProfile.fhirLocked')}
                 </span>
               </motion.button>
             </div>
@@ -373,10 +397,10 @@ const PatientProfileView = () => {
             {/* Segmented Squircle Tab Bar */}
             <Tabs.List className="neu-inset p-1.5 rounded-2xl mb-4 sm:mb-5 grid grid-cols-4 gap-1.5">
               {[
-                { value: 'overview', icon: User, label: 'Overview', shortLabel: 'Overview' },
-                { value: 'medical', icon: Stethoscope, label: 'Medical History', shortLabel: 'Medical', locked: !consent?.is_enabled || !consent?.permissions?.medical_history },
-                { value: 'documents', icon: FolderOpen, label: `Documents (${documents.length})`, shortLabel: `Docs (${documents.length})`, locked: !consent?.is_enabled || !consent?.permissions?.documents },
-                { value: 'history', icon: Clock, label: `Notes (${visitNotes.length})`, shortLabel: `Notes (${visitNotes.length})` },
+                { value: 'overview', icon: User, label: t('provider.patientProfile.tabOverview'), shortLabel: t('provider.patientProfile.tabOverview') },
+                { value: 'medical', icon: Stethoscope, label: t('provider.patientProfile.tabMedical'), shortLabel: t('provider.patientProfile.tabMedicalShort'), locked: !consent?.is_enabled || !consent?.permissions?.medical_history },
+                { value: 'documents', icon: FolderOpen, label: t('provider.patientProfile.tabDocuments', { count: documents.length }), shortLabel: t('provider.patientProfile.tabDocsShort', { count: documents.length }), locked: !consent?.is_enabled || !consent?.permissions?.documents },
+                { value: 'history', icon: Clock, label: t('provider.patientProfile.tabNotes', { count: visitNotes.length }), shortLabel: t('provider.patientProfile.tabNotes', { count: visitNotes.length }) },
               ].map(tab => (
                 <Tabs.Trigger
                   key={tab.value}
@@ -393,7 +417,7 @@ const PatientProfileView = () => {
                     <tab.icon className={`w-3.5 h-3.5 shrink-0 ${activeTab === tab.value ? 'text-link' : 'text-tertiary'}`} />
                   )}
                   <span className="hidden sm:inline truncate">{tab.label}</span>
-                  <span className="sm:hidden truncate text-[11px]">{tab.shortLabel}</span>
+                  <span className="sm:hidden truncate text-[0.6875rem]">{tab.shortLabel}</span>
                 </Tabs.Trigger>
               ))}
             </Tabs.List>
@@ -410,38 +434,38 @@ const PatientProfileView = () => {
                           <User className="w-4 h-4" />
                         </div>
                         <div>
-                          <h3 className="text-sm sm:text-base font-display font-extrabold text-slate-800 dark:text-slate-100">Contact & Residence</h3>
-                          <p className="text-[11px] font-semibold text-tertiary">Verified patient identity & barangay location</p>
+                          <h3 className="text-sm sm:text-base font-display font-extrabold text-slate-800 dark:text-slate-100">{t('provider.patientProfile.contactResidence')}</h3>
+                          <p className="text-[0.6875rem] font-semibold text-tertiary">{t('provider.patientProfile.contactResidenceSub')}</p>
                         </div>
                       </div>
-                      <span className="px-2.5 py-1 rounded-md neu-inset text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Verified Profile
+                      <span className="px-2.5 py-1 rounded-md neu-inset text-[0.625rem] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        {t('provider.patientProfile.verifiedProfile')}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                       <div className="neu-inset p-3.5 rounded-xl">
-                        <p className="text-[10px] text-tertiary font-extrabold uppercase tracking-wider mb-1">Full Legal Name</p>
+                        <p className="text-[0.625rem] text-tertiary font-extrabold uppercase tracking-wider mb-1">{t('provider.patientProfile.fullLegalName')}</p>
                         <p className="text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm truncate">{patient.full_name}</p>
                       </div>
                       <div className="neu-inset p-3.5 rounded-xl">
-                        <p className="text-[10px] text-tertiary font-extrabold uppercase tracking-wider mb-1">Mobile Phone</p>
-                        <p className="text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm">{patient.phone || 'Not provided'}</p>
+                        <p className="text-[0.625rem] text-tertiary font-extrabold uppercase tracking-wider mb-1">{t('provider.patientProfile.mobilePhone')}</p>
+                        <p className="text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm">{patient.phone || t('provider.patientProfile.notProvided')}</p>
                       </div>
                     </div>
 
                     <div className="neu-inset p-3.5 rounded-xl mb-3">
-                      <p className="text-[10px] text-tertiary font-extrabold uppercase tracking-wider mb-1">Email Address</p>
+                      <p className="text-[0.625rem] text-tertiary font-extrabold uppercase tracking-wider mb-1">{t('provider.patientProfile.emailAddress')}</p>
                       <p className="text-slate-800 dark:text-slate-100 font-bold text-xs sm:text-sm break-all">{patient.email}</p>
                     </div>
 
                     <div className="neu-inset p-3.5 rounded-xl">
                       <div className="flex items-center gap-1.5 mb-1">
                         <MapPin className="w-3.5 h-3.5 text-primary dark:text-primary-400 shrink-0" />
-                        <p className="text-[10px] text-tertiary font-extrabold uppercase tracking-wider">Registered Address / Barangay</p>
+                        <p className="text-[0.625rem] text-tertiary font-extrabold uppercase tracking-wider">{t('provider.patientProfile.registeredAddress')}</p>
                       </div>
                       <p className="text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm leading-relaxed">
-                        {patient.address || 'No residential address provided'}
+                        {patient.address || t('provider.patientProfile.noAddress')}
                       </p>
                     </div>
                   </div>
@@ -453,11 +477,11 @@ const PatientProfileView = () => {
                     <div className="flex items-center justify-between gap-2 pb-3.5 mb-4 border-b border-slate-200/60 dark:border-white/5">
                       <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center text-danger shrink-0">
-                          <HeartPulse className="w-4 h-4" />
+                          <Heartbeat className="w-4 h-4" />
                         </div>
                         <div>
-                          <h3 className="text-sm sm:text-base font-display font-extrabold text-slate-800 dark:text-slate-100">Emergency & Consent</h3>
-                          <p className="text-[11px] font-semibold text-tertiary">ICE responder & data sharing permissions</p>
+                          <h3 className="text-sm sm:text-base font-display font-extrabold text-slate-800 dark:text-slate-100">{t('provider.patientProfile.emergencyConsent')}</h3>
+                          <p className="text-[0.6875rem] font-semibold text-tertiary">{t('provider.patientProfile.emergencyConsentSub')}</p>
                         </div>
                       </div>
                     </div>
@@ -465,41 +489,44 @@ const PatientProfileView = () => {
                     {/* Highlighted Emergency Contact (ICE) Card */}
                     <div className="p-3.5 rounded-xl bg-rose-500/5 dark:bg-rose-500/10 border border-rose-500/20 mb-4">
                       <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-danger flex items-center gap-1.5">
-                          <HeartPulse className="w-3.5 h-3.5 shrink-0" />
-                          In Case of Emergency (ICE)
+                        <span className="text-[0.625rem] font-extrabold uppercase tracking-wider text-danger flex items-center gap-1.5">
+                          <Heartbeat className="w-3.5 h-3.5 shrink-0" />
+                          {t('provider.patientProfile.iceLabel')}
                         </span>
-                        <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-[9px] font-extrabold uppercase tracking-wider text-danger">
-                          Priority
+                        <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-[0.5625rem] font-extrabold uppercase tracking-wider text-danger">
+                          {t('provider.patientProfile.priorityBadge')}
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 mt-1">
-                        {patient.emergency_contact || 'No emergency contact listed'}
+                        {patient.emergency_contact || t('provider.patientProfile.noEmergencyContact')}
                       </p>
                     </div>
 
                     {/* Granted Clinical Permissions Matrix */}
                     <div>
-                      <p className="text-[10px] font-extrabold uppercase tracking-wider text-tertiary mb-2.5">
-                        Granted Clinical Permissions
+                      <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary mb-2.5">
+                        {t('provider.patientProfile.grantedPermissions')}
                       </p>
                       <div className="grid grid-cols-3 gap-2">
                         {[
                           {
-                            label: 'Medical History',
+                            key: 'medical_history',
+                            label: t('provider.patientProfile.permMedicalHistory'),
                             granted: Boolean(consent?.is_enabled && consent?.permissions?.medical_history),
                           },
                           {
-                            label: 'Lab Documents',
+                            key: 'documents',
+                            label: t('provider.patientProfile.permLabDocuments'),
                             granted: Boolean(consent?.is_enabled && consent?.permissions?.documents),
                           },
                           {
-                            label: 'FHIR Bundle',
+                            key: 'fhir',
+                            label: t('provider.patientProfile.permFhirBundle'),
                             granted: Boolean(consent?.is_enabled),
                           },
                         ].map((perm) => (
                           <div
-                            key={perm.label}
+                            key={perm.key}
                             className={`p-2.5 rounded-xl border text-center transition-all ${
                               perm.granted
                                 ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/20'
@@ -515,13 +542,13 @@ const PatientProfileView = () => {
                             >
                               {perm.granted ? <Check className="w-3.5 h-3.5" /> : <Lock className="w-3 h-3" />}
                             </div>
-                            <p className="text-[10px] font-extrabold text-slate-700 dark:text-slate-200 leading-tight">{perm.label}</p>
+                            <p className="text-[0.625rem] font-extrabold text-slate-700 dark:text-slate-200 leading-tight">{perm.label}</p>
                             <p
-                              className={`text-[9px] font-bold uppercase tracking-wider mt-0.5 ${
+                              className={`text-[0.5625rem] font-bold uppercase tracking-wider mt-0.5 ${
                                 perm.granted ? 'text-success dark:text-success-dark' : 'text-tertiary'
                               }`}
                             >
-                              {perm.granted ? 'Allowed' : 'Restricted'}
+                              {perm.granted ? t('provider.patientProfile.allowed') : t('provider.patientProfile.restricted')}
                             </p>
                           </div>
                         ))}
@@ -531,13 +558,13 @@ const PatientProfileView = () => {
 
                   {/* Quick Record Summary Footer */}
                   <div className="pt-3 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-xs">
-                    <span className="text-tertiary font-semibold">Clinical Chart Records</span>
+                    <span className="text-tertiary font-semibold">{t('provider.patientProfile.chartRecordsFooter')}</span>
                     <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-md neu-inset font-bold text-slate-700 dark:text-slate-200 text-[11px]">
-                        {documents.length} {documents.length === 1 ? 'Doc' : 'Docs'}
+                      <span className="px-2.5 py-1 rounded-md neu-inset font-bold text-slate-700 dark:text-slate-200 text-[0.6875rem]">
+                        {documents.length} {documents.length === 1 ? t('provider.patientProfile.docSingular') : t('provider.patientProfile.docPlural')}
                       </span>
-                      <span className="px-2.5 py-1 rounded-md neu-inset font-bold text-slate-700 dark:text-slate-200 text-[11px]">
-                        {visitNotes.length} {visitNotes.length === 1 ? 'Note' : 'Notes'}
+                      <span className="px-2.5 py-1 rounded-md neu-inset font-bold text-slate-700 dark:text-slate-200 text-[0.6875rem]">
+                        {visitNotes.length} {visitNotes.length === 1 ? t('provider.patientProfile.noteSingular') : t('provider.patientProfile.notePlural')}
                       </span>
                     </div>
                   </div>
@@ -549,8 +576,8 @@ const PatientProfileView = () => {
             <Tabs.Content value="medical" className="outline-none">
               <div className="neu-flat rounded-2xl overflow-hidden border border-slate-200/60 dark:border-white/5">
                 <div className="p-4 sm:p-6 border-b border-slate-200/50 dark:border-white/5">
-                  <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-800 dark:text-slate-100">Medical History</h3>
-                  <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5">Clinical baseline, allergies, and chronic conditions</p>
+                  <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-800 dark:text-slate-100">{t('provider.patientProfile.medicalHistoryTitle')}</h3>
+                  <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5">{t('provider.patientProfile.medicalHistorySub')}</p>
                 </div>
                 <div className="p-4 sm:p-6">
                   {!consent?.is_enabled || !consent?.permissions?.medical_history ? (
@@ -558,41 +585,41 @@ const PatientProfileView = () => {
                       <div className="w-14 h-14 neu-btn rounded-2xl flex items-center justify-center mx-auto mb-3 text-warning">
                         <Lock className="w-6 h-6" />
                       </div>
-                      <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">Patient Consent Required</p>
+                      <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">{t('provider.patientProfile.patientConsentRequiredTitle')}</p>
                       <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-sm mx-auto">
-                        The patient has not granted electronic health access for this category yet under local privacy governance.
+                        {t('provider.patientProfile.consentMedicalBody')}
                       </p>
                     </div>
                   ) : !medicalHistory ? (
                     <div className="text-center py-10 neu-inset rounded-2xl p-6">
                       <div className="w-14 h-14 neu-btn rounded-2xl flex items-center justify-center mx-auto mb-3 text-tertiary">
-                        <Activity className="w-6 h-6" />
+                        <Pulse className="w-6 h-6" />
                       </div>
-                      <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">No Medical History Recorded</p>
-                      <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-sm mx-auto">No recorded baseline history available for this patient.</p>
+                      <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">{t('provider.patientProfile.noMedicalHistoryTitle')}</p>
+                      <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-sm mx-auto">{t('provider.patientProfile.noMedicalHistoryBody')}</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
                       <div className="neu-inset p-4 rounded-2xl">
                         <p className="text-2xs text-danger font-extrabold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5" />
-                          Known Allergies
+                          <WarningCircle className="w-3.5 h-3.5" />
+                          {t('provider.patientProfile.knownAllergies')}
                         </p>
-                        <p className="text-slate-800 dark:text-slate-100 font-semibold text-xs sm:text-sm">{medicalHistory.allergies || 'None reported'}</p>
+                        <p className="text-slate-800 dark:text-slate-100 font-semibold text-xs sm:text-sm">{medicalHistory.allergies || t('provider.patientProfile.noneReported')}</p>
                       </div>
                       <div className="neu-inset p-4 rounded-2xl">
                         <p className="text-2xs text-success dark:text-success-dark font-extrabold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                          <HeartPulse className="w-3.5 h-3.5" />
-                          Chronic Conditions
+                          <Heartbeat className="w-3.5 h-3.5" />
+                          {t('provider.patientProfile.chronicConditions')}
                         </p>
-                        <p className="text-slate-800 dark:text-slate-100 font-semibold text-xs sm:text-sm">{medicalHistory.chronic_conditions || 'None reported'}</p>
+                        <p className="text-slate-800 dark:text-slate-100 font-semibold text-xs sm:text-sm">{medicalHistory.chronic_conditions || t('provider.patientProfile.noneReported')}</p>
                       </div>
                       <div className="neu-inset p-4 rounded-2xl">
                         <p className="text-2xs text-tertiary dark:text-tertiary font-extrabold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                          <Activity className="w-3.5 h-3.5" />
-                          Past Surgeries / Procedures
+                          <Pulse className="w-3.5 h-3.5" />
+                          {t('provider.patientProfile.pastSurgeries')}
                         </p>
-                        <p className="text-slate-800 dark:text-slate-100 font-semibold text-xs sm:text-sm">{medicalHistory.past_surgeries || 'None reported'}</p>
+                        <p className="text-slate-800 dark:text-slate-100 font-semibold text-xs sm:text-sm">{medicalHistory.past_surgeries || t('provider.patientProfile.noneReported')}</p>
                       </div>
                     </div>
                   )}
@@ -604,8 +631,8 @@ const PatientProfileView = () => {
             <Tabs.Content value="documents" className="outline-none">
               <div className="neu-flat rounded-2xl overflow-hidden border border-slate-200/60 dark:border-white/5">
                 <div className="p-4 sm:p-6 border-b border-slate-200/50 dark:border-white/5">
-                  <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-800 dark:text-slate-100">Medical Documents</h3>
-                  <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5">Uploaded laboratory results & prescriptions</p>
+                  <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-800 dark:text-slate-100">{t('provider.patientProfile.medicalDocumentsTitle')}</h3>
+                  <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5">{t('provider.patientProfile.medicalDocumentsSub')}</p>
                 </div>
                 <div className="p-4 sm:p-6">
                   {!consent?.is_enabled || !consent?.permissions?.documents ? (
@@ -613,13 +640,13 @@ const PatientProfileView = () => {
                       <div className="w-14 h-14 neu-btn rounded-2xl flex items-center justify-center mx-auto mb-3 text-warning">
                         <Lock className="w-6 h-6" />
                       </div>
-                      <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">Document Access Restricted</p>
+                      <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">{t('provider.patientProfile.docAccessRestrictedTitle')}</p>
                       <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-sm mx-auto">
-                        The patient has not granted document inspection permissions.
+                        {t('provider.patientProfile.docAccessRestrictedBody')}
                       </p>
                     </div>
                   ) : documents.length === 0 ? (
-                    <EmptyState icon="document" title="No documents uploaded" message="The patient hasn't uploaded any medical documents yet." variant="compact" />
+                    <EmptyState icon="document" title={t('provider.patientProfile.noDocumentsTitle')} message={t('provider.patientProfile.noDocumentsBody')} variant="compact" />
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
                       {documents.map((doc) => (
@@ -629,16 +656,16 @@ const PatientProfileView = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-extrabold text-slate-800 dark:text-slate-100 text-xs truncate">{doc.document_title}</p>
-                            <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">{new Date(doc.uploaded_at).toLocaleDateString()}</p>
+                            <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">{formatDate(doc.uploaded_at)}</p>
                           </div>
                           {doc.file_path && (
                             <button
                               type="button"
                               onClick={() => handleOpenFile(doc.file_path)}
-                              title="Open Document"
+                              title={t('provider.patientProfile.openDocumentTooltip')}
                               className="neu-btn p-2 rounded-xl text-teal-600 dark:text-teal-400 hover:text-teal-700 transition-all cursor-pointer shrink-0"
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <ArrowSquareOut className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -654,8 +681,8 @@ const PatientProfileView = () => {
               <div className="neu-flat rounded-2xl overflow-hidden border border-slate-200/60 dark:border-white/5">
                 <div className="p-4 sm:p-6 border-b border-slate-200/50 dark:border-white/5 flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-800 dark:text-slate-100">Visit Notes History</h3>
-                    <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5">Recorded consultations and vital assessments</p>
+                    <h3 className="text-base sm:text-lg font-display font-extrabold text-slate-800 dark:text-slate-100">{t('provider.patientProfile.visitNotesTitle')}</h3>
+                    <p className="text-tertiary dark:text-tertiary text-xs font-semibold mt-0.5">{t('provider.patientProfile.visitNotesSub')}</p>
                   </div>
                   <motion.button
                     whileTap={{ scale: 0.96 }}
@@ -663,7 +690,7 @@ const PatientProfileView = () => {
                     className="neu-btn px-3.5 py-2 rounded-xl text-xs font-bold text-primary dark:text-primary-300 inline-flex items-center gap-1.5 cursor-pointer"
                   >
                     <Stethoscope className="w-3.5 h-3.5" />
-                    <span>Log Clinical Note</span>
+                    <span>{t('provider.patientProfile.logClinicalNoteBtn')}</span>
                   </motion.button>
                 </div>
                 <div className="p-4 sm:p-6">
@@ -672,8 +699,8 @@ const PatientProfileView = () => {
                       <div className="w-14 h-14 neu-btn rounded-2xl flex items-center justify-center mx-auto mb-3 text-tertiary">
                         <Clock className="w-6 h-6" />
                       </div>
-                      <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">No past visits recorded</p>
-                      <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-sm mx-auto">Use the Open Clinical Chart button to log new clinical notes.</p>
+                      <p className="text-slate-700 dark:text-slate-200 font-extrabold text-sm sm:text-base">{t('provider.patientProfile.noPastVisitsTitle')}</p>
+                      <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-sm mx-auto">{t('provider.patientProfile.noPastVisitsBody')}</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -682,11 +709,11 @@ const PatientProfileView = () => {
                           <div className="flex items-center justify-between text-xs">
                             <div className="flex items-center gap-2 font-bold text-slate-700 dark:text-slate-200">
                               <Calendar className="w-4 h-4 text-success" />
-                              <span>{new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                              <span>{formatDate(note.created_at, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
                             {note.services_rendered && (
                               <span className="px-3 py-1 neu-inset rounded-lg text-2xs font-extrabold text-success dark:text-emerald-300 uppercase tracking-wider">
-                                {note.services_rendered}
+                                {note.services_rendered.split(',').map((s) => translateService(s.trim())).filter(Boolean).join(', ')}
                               </span>
                             )}
                           </div>
@@ -696,25 +723,25 @@ const PatientProfileView = () => {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
                               {note.vitals_bp && (
                                 <div className="neu-inset p-2.5 rounded-xl text-center">
-                                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">BP</p>
+                                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">{t('provider.patientProfile.vitalBp')}</p>
                                   <p className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_bp}</p>
                                 </div>
                               )}
                               {note.vitals_temp && (
                                 <div className="neu-inset p-2.5 rounded-xl text-center">
-                                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">Temp</p>
+                                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">{t('provider.patientProfile.vitalTemp')}</p>
                                   <p className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_temp}°C</p>
                                 </div>
                               )}
                               {note.vitals_hr && (
                                 <div className="neu-inset p-2.5 rounded-xl text-center">
-                                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">Heart Rate</p>
+                                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">{t('provider.patientProfile.vitalHeartRate')}</p>
                                   <p className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_hr} bpm</p>
                                 </div>
                               )}
                               {note.vitals_spo2 && (
                                 <div className="neu-inset p-2.5 rounded-xl text-center">
-                                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">SpO2</p>
+                                  <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-wider">{t('provider.patientProfile.vitalSpo2')}</p>
                                   <p className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm mt-0.5">{note.vitals_spo2}%</p>
                                 </div>
                               )}
@@ -724,7 +751,7 @@ const PatientProfileView = () => {
                           {/* Doctor's Note */}
                           {note.notes && (
                             <div className="neu-inset p-3.5 sm:p-4 rounded-2xl">
-                              <p className="text-2xs font-extrabold text-success dark:text-success-dark uppercase tracking-wider mb-1">Doctor&apos;s Clinical Assessment</p>
+                              <p className="text-2xs font-extrabold text-success dark:text-success-dark uppercase tracking-wider mb-1">{t('provider.patientProfile.clinicalAssessment')}</p>
                               <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed whitespace-pre-wrap">{note.notes}</p>
                             </div>
                           )}
@@ -737,8 +764,8 @@ const PatientProfileView = () => {
                                 className="neu-btn px-3 py-1.5 rounded-xl text-xs font-bold text-success dark:text-emerald-300 inline-flex items-center gap-1.5 cursor-pointer"
                               >
                                 <Paperclip className="w-3.5 h-3.5" />
-                                <span>View Attachment</span>
-                                <ExternalLink className="w-3 h-3" />
+                                <span>{t('provider.patientProfile.viewAttachment')}</span>
+                                <ArrowSquareOut className="w-3 h-3" />
                               </button>
                             </div>
                           )}

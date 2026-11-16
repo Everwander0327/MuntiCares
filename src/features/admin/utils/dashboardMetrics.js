@@ -1,6 +1,7 @@
 /**
  * Pure formatting and analytics helpers for the Admin Platform Analytics Bento dashboard.
  */
+import { DEFAULT_LANGUAGE, formatLocalizedDate, translate } from '@/i18n';
 
 export function getInitials(name) {
   const parts = String(name || '')
@@ -62,14 +63,16 @@ export function buildSparklinePoints(values = [], width = 64, height = 22, paddi
     .join(' ');
 }
 
-export function computeBookingMomentum(monthlyBars = []) {
-  if (!Array.isArray(monthlyBars) || monthlyBars.length === 0) return '0 recent';
+export function computeBookingMomentum(monthlyBars = [], language = DEFAULT_LANGUAGE) {
+  if (!Array.isArray(monthlyBars) || monthlyBars.length === 0) {
+    return translate(language, 'admin.dashboard.metrics.zeroRecent');
+  }
 
   const latest = monthlyBars[monthlyBars.length - 1] || {};
   const prev = monthlyBars.length > 1 ? monthlyBars[monthlyBars.length - 2] : null;
   const latestVal = Math.max(0, Number(latest.requests) || 0);
   const prevVal = Math.max(0, Number(prev?.requests) || 0);
-  const monthLabel = latest.month || 'Now';
+  const monthLabel = latest.month || translate(language, 'admin.dashboard.metrics.now');
 
   if (prevVal > 0 && latestVal >= prevVal * 2) {
     const multiplier = Number((latestVal / prevVal).toFixed(1));
@@ -83,8 +86,10 @@ export function computeBookingMomentum(monthlyBars = []) {
   return `0 ${monthLabel}`;
 }
 
-export function getPeakBookingMonth(monthlyBars = []) {
-  if (!Array.isArray(monthlyBars) || monthlyBars.length === 0) return 'No bookings';
+export function getPeakBookingMonth(monthlyBars = [], language = DEFAULT_LANGUAGE) {
+  if (!Array.isArray(monthlyBars) || monthlyBars.length === 0) {
+    return translate(language, 'admin.dashboard.metrics.noBookings');
+  }
 
   let peak = null;
   for (const item of monthlyBars) {
@@ -94,7 +99,9 @@ export function getPeakBookingMonth(monthlyBars = []) {
     }
   }
 
-  return peak ? `Peak ${peak.month} (${peak.count})` : 'No bookings';
+  return peak
+    ? translate(language, 'admin.dashboard.metrics.peakBooking', { month: peak.month, count: peak.count })
+    : translate(language, 'admin.dashboard.metrics.noBookings');
 }
 
 const STATUS_BADGE_MAP = {
@@ -110,9 +117,47 @@ export function getStatusBadgeClass(status) {
   return STATUS_BADGE_MAP[key] || STATUS_BADGE_MAP.pending;
 }
 
-export function formatRangeSubtitle(startDate, endDate, activePreset = 'ALL') {
-  if (!startDate && !endDate) return 'All Time Overview';
-  if (activePreset === '30D') return 'Last 30 Days Overview';
-  if (activePreset === '6M') return 'Last 6 Months Overview';
-  return `${startDate || '...'} to ${endDate || '...'} Overview`;
+export function formatRangeSubtitle(startDate, endDate, activePreset = 'ALL', language = DEFAULT_LANGUAGE) {
+  if (!startDate && !endDate) return translate(language, 'admin.dashboard.metrics.allTimeOverview');
+  if (activePreset === '30D') return translate(language, 'admin.dashboard.metrics.last30Overview');
+  if (activePreset === '6M') return translate(language, 'admin.dashboard.metrics.last6mOverview');
+  return translate(language, 'admin.dashboard.metrics.rangeOverview', {
+    start: startDate || '...',
+    end: endDate || '...',
+  });
+}
+
+export function formatScheduledSlot(dateStr, timeStr, language = DEFAULT_LANGUAGE) {
+  let formattedDate = '';
+  if (dateStr) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(dateStr).trim());
+    if (match) {
+      const d = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+      formattedDate = formatLocalizedDate(d, language, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    } else {
+      formattedDate = String(dateStr).trim();
+    }
+  }
+
+  let formattedTime = '';
+  if (timeStr) {
+    const rawTime = String(timeStr).trim();
+    const hmsMatch = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(rawTime);
+    if (hmsMatch) {
+      const hours24 = Number(hmsMatch[1]);
+      const minutes = hmsMatch[2];
+      const period = hours24 >= 12 ? 'PM' : 'AM';
+      const hours12 = hours24 % 12 || 12;
+      formattedTime = `${hours12}:${minutes} ${period}`;
+    } else {
+      formattedTime = rawTime;
+    }
+  }
+
+  const parts = [formattedDate, formattedTime].filter(Boolean);
+  return parts.length > 0 ? parts.join(', ') : null;
 }

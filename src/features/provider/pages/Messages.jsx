@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { initialsAvatar } from '@/lib/avatar';
-import { MessageCircle, Search, X } from 'lucide-react';
+import { ChatCircle, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
 import { useLocation } from 'react-router-dom';
@@ -12,6 +13,9 @@ import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 
 const ProviderMessages = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
+  const tRef = useRef(t);
+  tRef.current = t;
   const location = useLocation();
 
   const [view, setView] = useState('list');
@@ -23,7 +27,7 @@ const ProviderMessages = () => {
     user
       ? {
           id: user.id,
-          name: user.full_name || 'Provider',
+          name: user.full_name || t('provider.messages.defaultProvider'),
           email: user.email,
           avatar_url: user.avatar_url || '',
         }
@@ -46,7 +50,7 @@ const ProviderMessages = () => {
         ? prev
         : {
             id: user.id,
-            name: user.full_name || 'Provider',
+            name: user.full_name || tRef.current('provider.messages.defaultProvider'),
             email: user.email,
             avatar_url: user.avatar_url || '',
           }
@@ -61,7 +65,7 @@ const ProviderMessages = () => {
         setCurrentUserData((prev) => {
           const next = {
             id: user.id,
-            name: data.full_name || user.full_name || 'Provider',
+            name: data.full_name || user.full_name || tRef.current('provider.messages.defaultProvider'),
             email: data.email || user.email,
             avatar_url: data.avatar_url || user.avatar_url || '',
           };
@@ -84,7 +88,7 @@ const ProviderMessages = () => {
     const targetId = params.get('provider') || params.get('partner') || params.get('user');
     if (targetId && currentUserData) {
       const partnerName = params.get('name') || undefined;
-      const initialName = partnerName || 'Patient';
+      const initialName = partnerName || tRef.current('provider.messages.defaultPatient');
       setSelectedPartner({
         id: targetId,
         name: initialName,
@@ -96,7 +100,7 @@ const ProviderMessages = () => {
         .eq('id', targetId)
         .single()
         .then(({ data: partData }) => {
-          const resolvedName = partData?.full_name || partnerName || 'Patient';
+          const resolvedName = partData?.full_name || partnerName || tRef.current('provider.messages.defaultPatient');
           setSelectedPartner({
             id: targetId,
             name: resolvedName,
@@ -151,34 +155,34 @@ const ProviderMessages = () => {
         {/* ================= UNIFIED MESSENGER CONTAINER (OPTION 1: FOCUSED CLINICAL INBOX) ================= */}
         <div className="flex-1 neu-flat rounded-2xl overflow-hidden flex flex-col lg:flex-row h-full max-h-full min-h-0 border border-slate-200/80 dark:border-white/10 shadow-sm w-full">
           {/* Threads List Pane (Full width on mobile, 320px-360px on desktop) */}
-          <div className="w-full lg:w-80 xl:w-[360px] border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-white/10 flex flex-col h-full bg-surface-shell/40 shrink-0 select-text">
+          <div className="w-full lg:w-80 xl:w-[22.5rem] border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-white/10 flex flex-col h-full bg-surface-shell/40 shrink-0 select-text">
             <div className="p-4 border-b border-slate-200/80 dark:border-white/10 space-y-3 shrink-0">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h1 className="font-display font-black text-xl sm:text-2xl text-slate-900 dark:text-white leading-tight">
-                    Messages
+                    {t('provider.messages.title')}
                   </h1>
                   <span className="text-2xs font-extrabold uppercase tracking-wider text-link block">
-                    Direct Communication
+                    {t('provider.messages.subtitle')}
                   </span>
                 </div>
               </div>
               <div className="relative flex items-center">
                 <input
                   type="text"
-                  aria-label="Search conversations"
-                  placeholder="Search patient or message..."
+                  aria-label={t('provider.messages.searchAria')}
+                  placeholder={t('provider.messages.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full neu-inset rounded-xl pl-9 pr-8 h-10 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none placeholder:text-tertiary"
                 />
-                <Search className="w-4 h-4 text-primary absolute left-3 z-10 pointer-events-none shrink-0" />
+                <MagnifyingGlass className="w-4 h-4 text-primary absolute left-3 z-10 pointer-events-none shrink-0" />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
                     className="absolute right-2.5 z-10 text-tertiary hover:text-danger p-1 rounded-lg cursor-pointer"
-                    title="Clear search"
+                    title={t('provider.messages.clearSearch')}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -209,11 +213,11 @@ const ProviderMessages = () => {
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-tertiary">
                   <div className="neu-flat w-14 h-14 rounded-2xl flex items-center justify-center mb-3 text-link">
-                    <MessageCircle className="w-7 h-7" />
+                    <ChatCircle className="w-7 h-7" />
                   </div>
-                  <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">Select a conversation</h3>
+                  <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">{t('provider.messages.emptyTitle')}</h3>
                   <p className="text-xs text-tertiary mt-1 max-w-xs">
-                    Choose a patient from your clinical inbox on the left to start or continue a direct consultation.
+                    {t('provider.messages.emptyBody')}
                   </p>
                 </div>
               )

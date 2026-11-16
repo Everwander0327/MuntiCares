@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Heart, ArrowUpRight } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ThemeToggle } from '@/shared/feedback';
 import { useAuth } from '@/contexts/AuthContext';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 
@@ -34,8 +33,8 @@ const Navbar = () => {
   return (
     <>
       {/* Full-Width Edge-to-Edge Fixed Header (Always follows smoothly as you scroll) */}
-      <header className="fixed top-0 left-0 right-0 z-chrome w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md transition-colors duration-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-18 flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 z-chrome w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md transition-colors duration-200 pt-[env(safe-area-inset-top,0px)]">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-14 sm:h-[4.5rem] flex items-center justify-between">
           
           {/* Brand Logo with Preserved Heart Icon */}
           <Link to="/" className="flex items-center gap-2.5 group shrink-0" aria-label="MuntiCares home">
@@ -44,7 +43,7 @@ const Navbar = () => {
               whileHover={{ scale: 1.05, rotate: 6 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >
-              <Heart size={20} weight="fill" className="text-link fill-primary" />
+              <Heart weight="fill" className="w-5 h-5 text-link fill-primary" />
             </motion.div>
             <span className="font-display text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight group-hover:text-link dark:group-hover:text-primary-400 transition-colors">
               MuntiCares
@@ -55,7 +54,6 @@ const Navbar = () => {
           {isAuthPage ? (
             /* Auth Pages State (/login, /register): Clean Minimal Header */
             <div className="flex items-center gap-3 sm:gap-4">
-              <ThemeToggle className="!w-10 !h-10 !rounded-xl" />
               <Link
                 to="/"
                 className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400 transition-colors px-3 py-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900"
@@ -99,14 +97,13 @@ const Navbar = () => {
 
               {/* Desktop Actions */}
               <div className="hidden md:flex items-center gap-3">
-                <ThemeToggle className="!w-10 !h-10 !rounded-xl" />
                 {user ? (
                   <Link
                     to={`/${user.role}/dashboard`}
                     className="neu-btn-primary inline-flex items-center gap-2 text-white px-4 py-2 rounded-xl font-bold text-xs sm:text-sm shadow-sm hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
                     Dashboard
-                    <ArrowUpRight size={14} weight="bold" />
+                    <ArrowUpRight weight="bold" className="w-3.5 h-3.5" />
                   </Link>
                 ) : (
                   <>
@@ -128,7 +125,6 @@ const Navbar = () => {
 
               {/* Mobile Hamburger Button */}
               <div className="md:hidden flex items-center gap-2">
-                <ThemeToggle className="!w-10 !h-10 !rounded-xl" />
                 <button
                   type="button"
                   onClick={() => setIsMenuOpen((v) => !v)}
@@ -150,13 +146,13 @@ const Navbar = () => {
       </header>
 
       {/* In-flow spacer so page content is never hidden under the fixed header */}
-      <div className="h-16 sm:h-18 w-full shrink-0" aria-hidden="true" />
+      <div className="h-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:h-[calc(4.5rem+env(safe-area-inset-top,0px))] w-full shrink-0" aria-hidden="true" />
 
       {/* Fullscreen Mobile Drawer (Under Sticky Header) */}
       <AnimatePresence>
         {isMenuOpen && !isAuthPage && (
           <motion.div
-            className="fixed inset-x-0 top-16 sm:top-18 bottom-0 z-30 md:hidden bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 transform-gpu overflow-y-auto"
+            className="fixed inset-x-0 top-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:top-[calc(4.5rem+env(safe-area-inset-top,0px))] bottom-0 z-30 md:hidden bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 transform-gpu overflow-y-auto"
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
@@ -201,7 +197,7 @@ const Navbar = () => {
                     className="neu-btn-primary flex items-center justify-center gap-2 py-3 rounded-xl text-white font-bold text-sm shadow-md cursor-pointer"
                   >
                     Dashboard
-                    <ArrowUpRight size={16} weight="bold" />
+                    <ArrowUpRight weight="bold" className="w-4 h-4" />
                   </Link>
                 ) : (
                   <>

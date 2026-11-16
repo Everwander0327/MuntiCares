@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState, useImperativeHandle, forwardRef } from 'react';
 import { Map as MapLibreMap, AttributionControl } from 'maplibre-gl';
-import { LocateFixed, Plus, Minus, Loader2 } from 'lucide-react';
+import { CrosshairSimple, Plus, Minus, SpinnerGap } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import CenterMapPin from './CenterMapPin';
 import BasemapControl from './BasemapControl';
 import { reverseGeocode } from '../services/geocoding';
 import { BASEMAP_STYLES, STYLE_STREETS, focusOnLocation } from '../mapStyles';
 
 const ModernLocationPicker = forwardRef(function ModernLocationPicker(
-  { initial, initialCenter = null, onPinChange, readOnly = false, className = 'h-[320px] sm:h-[400px]' },
+  { initial, initialCenter = null, onPinChange, readOnly = false, className = 'h-[20rem] sm:h-[25rem]' },
   ref
 ) {
   const { dark } = useTheme();
+  const { t } = useLanguage();
+  const tRef = useRef(t);
+  tRef.current = t;
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const [ready, setReady] = useState(false);
@@ -105,7 +109,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       if (!pendingBasemapRef.current) return;
       pendingBasemapRef.current = null;
       setBasemap('streets');
-      toast.error('That base map failed to load; switched back to the street map.');
+      toast.error(tRef.current('tracking.map.basemapFailed'));
     });
 
     const onMoveStart = () => setIsPanning(true);
@@ -128,7 +132,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       debounceTimer.current = setTimeout(async () => {
         const resolved = await reverseGeocode(pos.lat, pos.lng);
         if (!isMountedRef.current) return;
-        setAddressPreview(resolved || 'Address lookup unavailable');
+        setAddressPreview(resolved || tRef.current('tracking.map.addressUnavailable'));
         setLoadingAddress(false);
         onPinChangeRef.current?.({
           ...pos,
@@ -199,7 +203,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
 
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser.');
+      toast.error(t('tracking.map.geoUnsupported'));
       return;
     }
     setLocatingGps(true);
@@ -209,14 +213,14 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
         const { latitude, longitude } = pos.coords;
         userMovedRef.current = true;
         focusOnLocation(mapRef.current, [longitude, latitude]);
-        toast.success('Centered on your GPS location');
+        toast.success(t('tracking.map.centeredGps'));
       },
       (err) => {
         setLocatingGps(false);
         if (err.code === 1) {
-          toast.error('Location permission denied. Please allow location access.');
+          toast.error(t('tracking.map.permissionDenied'));
         } else {
-          toast.error('Unable to fetch device location.');
+          toast.error(t('tracking.map.locationFailed'));
         }
       },
       { enableHighAccuracy: true, timeout: 12000 }
@@ -235,7 +239,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       {!ready && (
         <div className="absolute inset-0 z-[510] flex items-center justify-center bg-surface-subtle">
           <span className="text-sm font-medium text-tertiary" role="status">
-            Loading map…
+            {t('tracking.map.loadingMap')}
           </span>
         </div>
       )}
@@ -261,26 +265,26 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
               onClick={handleLocateMe}
               disabled={locatingGps}
               className="mc-gps-pill-btn disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Use my current GPS location"
-              aria-label="Use my current GPS location"
+              title={t('tracking.map.useGpsTitle')}
+              aria-label={t('tracking.map.useGpsTitle')}
             >
               {locatingGps ? (
-                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                <SpinnerGap className="w-4 h-4 animate-spin shrink-0" />
               ) : (
-                <LocateFixed className="w-4 h-4 shrink-0" />
+                <CrosshairSimple className="w-4 h-4 shrink-0" />
               )}
-              <span>My GPS</span>
+              <span>{t('tracking.map.myGps')}</span>
             </button>
 
-            <div className="mc-zoom-pod" role="group" aria-label="Map zoom controls">
+            <div className="mc-zoom-pod" role="group" aria-label={t('tracking.map.zoomControlsAria')}>
               <button
                 type="button"
                 onClick={() => {
                   mapRef.current?.zoomIn();
                 }}
                 className="mc-zoom-pod__btn"
-                title="Zoom in"
-                aria-label="Zoom in"
+                title={t('tracking.map.zoomIn')}
+                aria-label={t('tracking.map.zoomIn')}
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -291,8 +295,8 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
                   mapRef.current?.zoomOut();
                 }}
                 className="mc-zoom-pod__btn"
-                title="Zoom out"
-                aria-label="Zoom out"
+                title={t('tracking.map.zoomOut')}
+                aria-label={t('tracking.map.zoomOut')}
               >
                 <Minus className="w-4 h-4" />
               </button>

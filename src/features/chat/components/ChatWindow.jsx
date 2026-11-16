@@ -1,11 +1,37 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Send, UserCircle, Loader2, Check, CheckCheck, Video, Phone, ArrowLeft, Clock, Mic, MicOff, Camera, CameraOff, PhoneOff, AlertCircle, SwitchCamera, RotateCw, Paperclip, X, Maximize2, Info, MessageSquare, Search } from 'lucide-react';
+import {
+  PaperPlaneRight,
+  UserCircle,
+  SpinnerGap,
+  Check,
+  Checks,
+  VideoCamera,
+  Phone,
+  ArrowLeft,
+  Clock,
+  Microphone,
+  MicrophoneSlash,
+  Camera,
+  CameraSlash,
+  PhoneDisconnect,
+  WarningCircle,
+  CameraRotate,
+  ArrowClockwise,
+  Paperclip,
+  X,
+  ArrowsOut,
+  Info,
+  ChatText,
+  MagnifyingGlass,
+} from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCalls } from '@/contexts/CallContext';
 import { usePresence } from '@/contexts/PresenceContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { formatLocalizedDate, translate } from '@/i18n';
 import toast from 'react-hot-toast';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import useWebRTCCall from '../hooks/useWebRTCCall';
@@ -36,14 +62,14 @@ const addReadMsgIds = (userId, ids) => {
   } catch {}
 };
 
-const formatDateLabel = (dateStr) => {
+const formatDateLabel = (dateStr, language = 'en') => {
   const date = new Date(dateStr);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return 'Today';
-  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
-  return date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  if (date.toDateString() === today.toDateString()) return translate(language, 'chat.window.today');
+  if (date.toDateString() === yesterday.toDateString()) return translate(language, 'chat.window.yesterday');
+  return formatLocalizedDate(date, language, { weekday: 'long', month: 'short', day: 'numeric' });
 };
 
 const shouldShowTimestamp = (msg, nextMsg) => {
@@ -82,20 +108,21 @@ const formatDuration = (seconds) => {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 };
 
-const CALL_OUTCOME = {
-  answered: 'in progress',
-  ended: 'ended',
-  declined: 'declined',
-  missed: 'missed',
-  failed: 'could not connect',
+const CALL_OUTCOME_KEY = {
+  answered: 'chat.window.outcome.answered',
+  ended: 'chat.window.outcome.ended',
+  declined: 'chat.window.outcome.declined',
+  missed: 'chat.window.outcome.missed',
+  failed: 'chat.window.outcome.failed',
 };
 
 const CallBubbleAction = ({ msg, record, isMe, onJoin }) => {
+  const { t } = useLanguage();
   const isVideo = callTypeOf(msg, record) === 'video';
-  const kind = isVideo ? 'Video' : 'Voice';
+  const kind = isVideo ? t('chat.window.kindVideo') : t('chat.window.kindVoice');
 
   if (isJoinable(msg, record)) {
-    const Icon = isVideo ? Video : Phone;
+    const Icon = isVideo ? VideoCamera : Phone;
     return (
       <button
         type="button"
@@ -105,12 +132,14 @@ const CallBubbleAction = ({ msg, record, isMe, onJoin }) => {
         }`}
       >
         <Icon className="w-3.5 h-3.5" />
-        <span>Join {kind} Call</span>
+        <span>{t('chat.window.joinCall', { kind })}</span>
       </button>
     );
   }
 
-  const outcome = record ? CALL_OUTCOME[record.status] || 'ended' : 'no longer available';
+  const outcome = record
+    ? t(CALL_OUTCOME_KEY[record.status] || 'chat.window.outcome.ended')
+    : t('chat.window.outcomeUnavailable');
   const length = record?.duration_seconds != null && record.status === 'ended'
     ? ` · ${formatDuration(record.duration_seconds)}`
     : '';
@@ -118,8 +147,8 @@ const CallBubbleAction = ({ msg, record, isMe, onJoin }) => {
     <p className={`mt-2 flex items-center gap-1.5 text-2xs font-bold uppercase tracking-wider ${
       isMe ? 'text-white/80' : 'text-tertiary dark:text-tertiary'
     }`}>
-      <PhoneOff className="w-3 h-3 shrink-0" />
-      <span>{kind} consultation {outcome}{length}</span>
+      <PhoneDisconnect className="w-3 h-3 shrink-0" />
+      <span>{t('chat.window.callSummaryLine', { kind, outcome, length })}</span>
     </p>
   );
 };
@@ -141,6 +170,7 @@ const renderHighlightedText = (text, term) => {
 
 const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartCall }) => {
   const { user: authUser } = useAuth();
+  const { language, t, translateService, translateStatus } = useLanguage();
   const { startCallBroadcast, sendCallEnded, callDeclinedByPeer, callCancelledByPeer, markActiveCall, incomingCall } = useCalls();
   const { isUserOnline } = usePresence();
   const [messages, setMessages] = useState([]);
@@ -271,11 +301,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       }
 
       if (error) throw error;
-      toast.success(nextVal ? 'Consent access granted' : 'Consent access revoked');
+      toast.success(nextVal ? t('chat.window.consentGrantedToast') : t('chat.window.consentRevokedToast'));
     } catch (err) {
       console.error('Failed to toggle consent:', err);
       setConsentEnabled(!nextVal);
-      toast.error('Failed to update consent access');
+      toast.error(t('chat.window.consentErrorToast'));
     }
   };
 
@@ -283,7 +313,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     if (!currentUser?.id || !otherUser?.id) return;
     supabase
       .from('users')
-      .select('id, full_name, role, email, phone, avatar_url')
+      .select('id, full_name, role, email, avatar_url')
       .eq('id', otherUser.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -328,7 +358,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     if (!file) return;
 
     if (file.size > 50 * 1024 * 1024) {
-      toast.error('File size exceeds 50MB limit.');
+      toast.error(t('chat.window.fileLimitToast'));
       return;
     }
 
@@ -336,7 +366,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     const isImage = file.type.startsWith('image/');
 
     if (!isImage && !isVideo) {
-      toast.error('Please select an image or video file.');
+      toast.error(t('chat.window.fileTypeToast'));
       return;
     }
 
@@ -448,12 +478,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       supabase.removeChannel(existing);
     }
     const channel = supabase.channel(roomName, {
-      config: { presence: { key: currentUser.id }, broadcast: { self: true } }
+      config: { presence: { key: currentUser.id }, broadcast: { self: true }, private: true }
     });
     channelRef.current = channel;
 
-    // messages has no RLS yet, so every INSERT/UPDATE on the table reaches every
-    // subscribed client. Filter the subscription to my own rows and re-check here.
+    // Postgres changes are filtered again client-side after server-side RLS.
     const involvesMe = (msg) => msg?.sender_id === currentUser.id || msg?.receiver_id === currentUser.id;
 
     const onMessageInsert = async (payload) => {
@@ -607,7 +636,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     } catch (err) {
       console.error('Failed to send message:', err);
       setMessages(prev => prev.map(m => m.id === tempMsg.id ? { ...m, status: 'error' } : m));
-      toast.error('Failed to send message.');
+      toast.error(t('chat.window.sendErrorToast'));
     }
   };
 
@@ -625,7 +654,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       try {
         const file = currentAttachment.file;
         const fileExt = file.name.split('.').pop() || (currentAttachment.type === 'video' ? 'mp4' : 'jpg');
-        const filePath = `${currentUser.id}/${Date.now()}_${Math.random().toString(36).slice(2, 9)}.${fileExt}`;
+        const filePath = currentUser.id + '/' + otherUser.id + '/' + Date.now() + '_' + Math.random().toString(36).slice(2, 9) + '.' + fileExt;
         const mimeByExt = {
           jpg: 'image/jpeg',
           jpeg: 'image/jpeg',
@@ -643,7 +672,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
         const { error: uploadError } = await supabase.storage
           .from('chat_attachments')
-          .upload(filePath, file, { contentType, upsert: true });
+          .upload(filePath, file, { contentType, upsert: false });
 
         if (uploadError) throw uploadError;
 
@@ -655,7 +684,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
         console.error('Failed to upload attachment:', err);
         setSelectedAttachment(currentAttachment);
         setNewMessage(msgText);
-        toast.error('Failed to upload file. Please try again.');
+        toast.error(t('chat.window.uploadErrorToast'));
       } finally {
         setUploadingAttachment(false);
       }
@@ -730,7 +759,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       await createCallRecord({ id: callId, callerId: currentUser.id, calleeId: otherUser.id, callType: type });
     } catch (err) {
       console.error('Failed to open call record:', err);
-      toast.error('Could not start the consultation. Please try again.');
+      toast.error(t('chat.window.callStartErrorToast'));
       activeCallIdRef.current = null;
       markActiveCall(null);
       return;
@@ -738,7 +767,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
     const isVideo = type === 'video';
     sendMessage(
-      `Started a ${isVideo ? 'video' : 'voice'} consultation. Select Join ${isVideo ? 'Video' : 'Voice'} Call below to connect.`,
+      isVideo ? t('chat.window.startedVideoText') : t('chat.window.startedVoiceText'),
       { messageType: 'call', callId },
     );
     startCallBroadcast(otherUser.id, currentUser.name, type, callId);
@@ -765,10 +794,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     } catch (err) {
       console.error('Failed to start call:', err);
       markCallFailed(callId, 'Call could not start — microphone or camera unavailable');
-      toast.error('Could not access microphone/camera. Please check permissions.');
+      toast.error(t('chat.window.mediaPermErrorToast'));
       rtcEndCall();
     }
-  }, [currentUser, otherUser?.id, refreshCallRecords, rtcEndCall, rtcJoinCall, rtcStartCall, sendMessage, startCallBroadcast, markActiveCall]);
+  }, [currentUser, otherUser?.id, refreshCallRecords, rtcEndCall, rtcJoinCall, rtcStartCall, sendMessage, startCallBroadcast, markActiveCall, t]);
 
   const handleEndCall = useCallback((notify = true) => {
     const callId = activeCallIdRef.current;
@@ -808,7 +837,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           const record = await fetchCallRecord(autoStartCall.callId);
           if (cancelled) return;
           if (record && record.status !== 'ringing') {
-            toast('That consultation call has already ended.');
+            toast(t('chat.window.callEndedToast'));
             refreshCallRecords();
             return;
           }
@@ -831,7 +860,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
       rtcJoinCall('video');
     }
     return undefined;
-  }, [autoStartCall, autoStartVideo, currentUser?.id, otherUser?.id, refreshCallRecords, rtcJoinCall, markActiveCall]);
+  }, [autoStartCall, autoStartVideo, currentUser?.id, otherUser?.id, refreshCallRecords, rtcJoinCall, markActiveCall, t]);
 
   useEffect(() => {
     if (callStatus === 'idle') {
@@ -875,10 +904,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
     if (callStatus !== 'connecting' || rtcRole !== 'caller') return undefined;
     const timeout = setTimeout(() => {
       rtcEndCall(true);
-      toast('No answer. The invitation has expired.');
+      toast(t('chat.window.noAnswerToast'));
     }, RING_TIMEOUT_MS);
     return () => clearTimeout(timeout);
-  }, [callStatus, rtcRole, rtcEndCall]);
+  }, [callStatus, rtcRole, rtcEndCall, t]);
 
   useEffect(() => {
     attachMedia();
@@ -906,12 +935,12 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
 
   const statusIcon = (msg) => {
     if (msg.status === 'error') {
-      return <AlertCircle className="w-3 h-3 text-danger" title="Failed to send" />;
+      return <WarningCircle className="w-3 h-3 text-danger" title={t('chat.window.failedSendTitle')} />;
     }
     if (typeof msg.id === 'string' && msg.id.startsWith('temp-')) {
       return <Clock className="w-3 h-3 text-tertiary" />;
     }
-    if (msg.is_read) return <CheckCheck className="w-3 h-3 text-link" />;
+    if (msg.is_read) return <Checks className="w-3 h-3 text-link" />;
     return <Check className="w-3 h-3 text-tertiary" />;
   };
 
@@ -936,16 +965,16 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 {webRtcError ? (
                   <div className="neu-flat p-8 rounded-[2.5rem] max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
                     <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-danger">
-                      <PhoneOff className="w-7 h-7" />
+                      <PhoneDisconnect className="w-7 h-7" />
                     </div>
-                    <h3 className="text-slate-900 dark:text-white text-lg font-display font-black">Connection Notice</h3>
+                    <h3 className="text-slate-900 dark:text-white text-lg font-display font-black">{t('chat.window.connectionNotice')}</h3>
                     <p className="text-tertiary dark:text-tertiary text-xs mt-2 max-w-xs mx-auto">{webRtcError}</p>
                     <button
                       type="button"
                       onClick={closeCallOverlay}
                       className="mt-6 px-6 py-2.5 neu-btn text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer"
                     >
-                      Close Window
+                      {t('chat.window.closeWindow')}
                     </button>
                   </div>
                 ) : (
@@ -974,16 +1003,16 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     </div>
 
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg neu-flat-sm text-2xs font-extrabold text-link uppercase tracking-widest mb-2">
-                      {callType === 'audio' ? 'Connecting Voice Call' : 'Connecting Teleconsultation'}
+                      {callType === 'audio' ? t('chat.window.connectingVoice') : t('chat.window.connectingVideo')}
                     </div>
 
                     <h3 className="text-slate-900 dark:text-white text-lg font-display font-black truncate">
-                      {otherUser?.name || 'Healthcare Provider'}
+                      {otherUser?.name || t('chat.window.defaultProvider')}
                     </h3>
                     
                     <div className="flex items-center justify-center gap-2 mt-3 text-xs text-tertiary dark:text-tertiary">
-                      <Loader2 className="w-3.5 h-3.5 text-link animate-spin" />
-                      <span>{callType === 'audio' ? 'Securing encrypted audio line...' : 'Securing direct P2P video stream...'}</span>
+                      <SpinnerGap className="w-3.5 h-3.5 text-link animate-spin" />
+                      <span>{callType === 'audio' ? t('chat.window.securingAudio') : t('chat.window.securingVideo')}</span>
                     </div>
 
                     <div className="mt-8 flex justify-center">
@@ -991,9 +1020,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                         type="button"
                         onClick={() => { handleEndCall(true); closeCallOverlay(); }}
                         className="neu-btn w-14 h-14 rounded-2xl flex items-center justify-center text-danger hover:text-danger transition-all active:scale-90 shadow-md cursor-pointer"
-                        title="Cancel Call"
+                        title={t('chat.window.cancelCallTitle')}
                       >
-                        <PhoneOff className="w-6 h-6 stroke-[2.5]" />
+                        <PhoneDisconnect className="w-6 h-6 stroke-[2.5]" />
                       </button>
                     </div>
                   </div>
@@ -1007,14 +1036,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               <div className="flex items-center justify-between px-5 py-3.5 bg-surface-shell neu-flat border-b border-white/60 dark:border-white/10 shrink-0 z-10 shadow-sm">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl neu-flat-sm flex items-center justify-center text-link">
-                    {callType === 'audio' ? <Phone className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+                    {callType === 'audio' ? <Phone className="w-4 h-4" /> : <VideoCamera className="w-4 h-4" />}
                   </div>
                   <div>
                     <h3 className="font-display font-black text-xs sm:text-sm text-slate-900 dark:text-white leading-tight">
-                      {callType === 'audio' ? 'Voice Consultation' : 'Teleconsultation Session'}
+                      {callType === 'audio' ? t('chat.window.voiceSessionTitle') : t('chat.window.videoSessionTitle')}
                     </h3>
                     <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase">Live</span>
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[0.5625rem] font-black uppercase">{t('chat.window.liveBadge')}</span>
                       <p className="text-xs text-success dark:text-success-dark font-mono font-bold tracking-wider">
                         {formatTime(callTimer)}
                       </p>
@@ -1028,22 +1057,22 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       type="button"
                       onClick={() => setRemoteRotation((r) => (r + 90) % 360)}
                       className="neu-btn p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-link transition-all active:scale-95 cursor-pointer shadow-sm"
-                      title={`Rotate Participant Video (${remoteRotation}°)`}
+                      title={t('chat.window.rotateRemoteTitle', { deg: remoteRotation })}
                     >
-                      <RotateCw className="w-4 h-4" />
+                      <ArrowClockwise className="w-4 h-4" />
                     </button>
                   )}
-                  <span className="hidden sm:inline-block text-xs text-tertiary font-semibold truncate max-w-[150px]">
+                  <span className="hidden sm:inline-block text-xs text-tertiary font-semibold truncate max-w-[9.375rem]">
                     {otherUser?.name}
                   </span>
                   <button
                     type="button"
                     onClick={() => handleEndCall(true)}
                     className="neu-btn px-3 py-1.5 rounded-xl text-danger hover:text-danger text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer shadow-sm"
-                    title="End Call"
+                    title={t('chat.window.endCallTitle')}
                   >
-                    <PhoneOff className="w-3.5 h-3.5 stroke-[2.5]" />
-                    <span>Leave</span>
+                    <PhoneDisconnect className="w-3.5 h-3.5 stroke-[2.5]" />
+                    <span>{t('chat.window.leave')}</span>
                   </button>
                 </div>
               </div>
@@ -1089,10 +1118,10 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       </div>
                     </div>
                     <h3 className="text-xl sm:text-2xl font-display font-black text-slate-900 dark:text-white truncate max-w-xs text-center">
-                      {otherUser?.name || 'Healthcare Provider'}
+                      {otherUser?.name || t('chat.window.defaultProvider')}
                     </h3>
                     <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg neu-flat-sm text-2xs font-bold text-success dark:text-success-dark mt-2 uppercase tracking-widest">
-                      {callType === 'audio' ? 'Voice Consultation In Progress' : 'Remote camera is off'}
+                      {callType === 'audio' ? t('chat.window.voiceInProgress') : t('chat.window.remoteCamOff')}
                     </div>
                   </div>
                 )}
@@ -1106,8 +1135,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 }`}>
                   {isCameraOff ? (
                     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-tertiary bg-slate-800">
-                      <CameraOff className="w-5 h-5 mb-1" />
-                      <span className="text-xs font-bold">Cam Off</span>
+                      <CameraSlash className="w-5 h-5 mb-1" />
+                      <span className="text-xs font-bold">{t('chat.window.camOff')}</span>
                     </div>
                   ) : (
                     <>
@@ -1127,9 +1156,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                           type="button"
                           onClick={(e) => { e.stopPropagation(); switchCamera(); }}
                           className="absolute top-1.5 right-1.5 z-30 w-7 h-7 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center backdrop-blur-sm transition-all active:scale-90 cursor-pointer shadow-md"
-                          title={facingMode === 'user' ? 'Switch to Rear Camera' : 'Switch to Front Camera'}
+                          title={facingMode === 'user' ? t('chat.window.switchRearCam') : t('chat.window.switchFrontCam')}
                         >
-                          <SwitchCamera className="w-3.5 h-3.5" />
+                          <CameraRotate className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </>
@@ -1147,9 +1176,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       ? 'neu-pressed text-danger border border-rose-500/30' 
                       : 'neu-btn text-slate-700 dark:text-slate-200'
                   }`}
-                  title={isMuted ? 'Unmute' : 'Mute'}
+                  title={isMuted ? t('chat.window.unmute') : t('chat.window.mute')}
                 >
-                  {isMuted ? <MicOff className="w-5 h-5 stroke-[2.5]" /> : <Mic className="w-5 h-5" />}
+                  {isMuted ? <MicrophoneSlash className="w-5 h-5 stroke-[2.5]" /> : <Microphone className="w-5 h-5" />}
                 </button>
 
                 <button
@@ -1160,9 +1189,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       ? 'neu-pressed text-danger border border-rose-500/30' 
                       : 'neu-btn text-slate-700 dark:text-slate-200'
                   }`}
-                  title={isCameraOff ? 'Turn Camera On' : 'Turn Camera Off'}
+                  title={isCameraOff ? t('chat.window.turnCamOn') : t('chat.window.turnCamOff')}
                 >
-                  {isCameraOff ? <CameraOff className="w-5 h-5 stroke-[2.5]" /> : <Camera className="w-5 h-5" />}
+                  {isCameraOff ? <CameraSlash className="w-5 h-5 stroke-[2.5]" /> : <Camera className="w-5 h-5" />}
                 </button>
 
                 {!isCameraOff && callType === 'video' && (
@@ -1171,9 +1200,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       type="button"
                       onClick={switchCamera}
                       className="w-12 h-12 rounded-2xl neu-btn text-slate-700 dark:text-slate-200 hover:text-link flex items-center justify-center transition-all active:scale-95 cursor-pointer shadow-md"
-                      title={facingMode === 'user' ? 'Switch to Rear Camera' : 'Switch to Front Camera'}
+                      title={facingMode === 'user' ? t('chat.window.switchRearCam') : t('chat.window.switchFrontCam')}
                     >
-                      <SwitchCamera className="w-5 h-5 stroke-[2.2]" />
+                      <CameraRotate className="w-5 h-5 stroke-[2.2]" />
                     </button>
 
                     <button
@@ -1184,9 +1213,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                           ? 'neu-pressed text-link border border-primary/30'
                           : 'neu-btn text-slate-700 dark:text-slate-200'
                       }`}
-                      title={`Rotate Camera (${cameraRotation}°)`}
+                      title={t('chat.window.rotateCamTitle', { deg: cameraRotation })}
                     >
-                      <RotateCw className="w-5 h-5 stroke-[2.2]" />
+                      <ArrowClockwise className="w-5 h-5 stroke-[2.2]" />
                     </button>
                   </>
                 )}
@@ -1195,9 +1224,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   type="button"
                   onClick={() => handleEndCall(true)}
                   className="w-14 h-14 rounded-2xl neu-btn text-danger hover:text-danger flex items-center justify-center transition-all active:scale-90 shadow-lg cursor-pointer"
-                  title="End Call"
+                  title={t('chat.window.endCallTitle')}
                 >
-                  <PhoneOff className="w-6 h-6 stroke-[2.5]" />
+                  <PhoneDisconnect className="w-6 h-6 stroke-[2.5]" />
                 </button>
               </div>
             </div>
@@ -1207,23 +1236,23 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               <div className="flex-1 flex flex-col items-center justify-center px-6">
                 <div className="neu-flat p-8 sm:p-10 rounded-2xl max-w-sm w-full text-center border border-white/80 dark:border-white/10 shadow-2xl">
                   <div className="w-16 h-16 rounded-2xl neu-flat flex items-center justify-center mb-4 mx-auto text-tertiary">
-                    <PhoneOff className="w-7 h-7" />
+                    <PhoneDisconnect className="w-7 h-7" />
                   </div>
-                  <h3 className="text-slate-900 dark:text-white text-xl font-display font-black">Session Concluded</h3>
+                  <h3 className="text-slate-900 dark:text-white text-xl font-display font-black">{t('chat.window.sessionConcluded')}</h3>
                   {callTimer > 0 && (
                     <div className="mt-2 inline-block px-3 py-1 rounded-lg neu-flat-sm text-xs font-mono font-bold text-link">
-                      Duration: {formatTime(callTimer)}
+                      {t('chat.window.duration', { time: formatTime(callTimer) })}
                     </div>
                   )}
                   <p className="text-tertiary dark:text-tertiary text-xs mt-3 text-center max-w-xs mx-auto">
-                    {otherUser?.name || 'The participant'} has ended the consultation session.
+                    {t('chat.window.otherEndedSession', { name: otherUser?.name || t('chat.window.theParticipant') })}
                   </p>
                   <button
                     type="button"
                     onClick={closeCallOverlay}
                     className="mt-6 px-6 py-2.5 neu-btn text-link rounded-xl font-extrabold text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
                   >
-                    Return to Conversation
+                    {t('chat.window.returnToConv')}
                   </button>
                 </div>
               </div>
@@ -1237,15 +1266,19 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.9 }}
+          onClick={() => setShowDeclinedCall(false)}
           className="absolute inset-0 z-[300] bg-black/50 backdrop-blur-sm flex items-center justify-center"
         >
-          <div className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-xs w-full mx-4 shadow-2xl border border-slate-100 dark:border-slate-700 text-center">
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-xs w-full mx-4 shadow-2xl border border-slate-100 dark:border-slate-700 text-center"
+          >
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-              <PhoneOff className="w-8 h-8 text-danger" />
+              <PhoneDisconnect className="w-8 h-8 text-danger" />
             </div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Call Declined</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">{t('chat.window.callDeclined')}</h2>
             <p className="text-sm text-tertiary dark:text-tertiary mt-1 font-medium">
-              {otherUser?.name || 'The other party'} declined the call
+              {t('chat.window.otherDeclined', { name: otherUser?.name || t('chat.window.theOtherParty') })}
             </p>
           </div>
         </motion.div>
@@ -1262,7 +1295,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
               type="button"
               onClick={onBack}
               className="neu-btn w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer -ml-1 text-slate-600 dark:text-slate-300 hover:text-link shrink-0"
-              title="Back to conversations"
+              title={t('chat.window.backToConvsTitle')}
             >
               <ArrowLeft className="w-4 h-4" />
             </button>
@@ -1288,17 +1321,17 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   {otherUser.name}
                 </h3>
                 <span
-                  className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 border ${
+                  className={`px-1.5 py-0.5 rounded-md text-[0.5625rem] font-black uppercase tracking-wider shrink-0 border ${
                     isUserOnline(otherUser.id)
                       ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
                       : 'bg-slate-200/70 dark:bg-slate-800 border-slate-300/80 dark:border-white/10 text-tertiary'
                   }`}
                 >
-                  {isUserOnline(otherUser.id) ? 'Online' : 'Offline'}
+                  {isUserOnline(otherUser.id) ? t('chat.list.online') : t('chat.list.offline')}
                 </span>
               </div>
               <p className="text-2xs text-tertiary dark:text-tertiary font-semibold truncate mt-0.5">
-                {isPatientView ? 'Healthcare Provider' : 'Patient'} &bull; Direct Consultation Channel
+                {isPatientView ? t('chat.window.defaultProvider') : t('common.roles.patient')} &bull; {t('chat.window.directChannel')}
               </p>
             </div>
           </Link>
@@ -1312,7 +1345,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-success transition-all ${
               ringingFromPeer ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
             }`}
-            title={ringingFromPeer ? 'Answer the incoming call first' : 'Start Voice Consultation'}
+            title={ringingFromPeer ? t('chat.window.answerIncomingFirst') : t('chat.window.startVoiceTitle')}
           >
             <Phone className="w-4 h-4 text-emerald-500 stroke-[2.2]" />
           </button>
@@ -1324,9 +1357,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             className={`neu-btn w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-slate-700 dark:text-slate-200 hover:text-link transition-all ${
               ringingFromPeer ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
             }`}
-            title={ringingFromPeer ? 'Answer the incoming call first' : 'Start Teleconsultation (Video)'}
+            title={ringingFromPeer ? t('chat.window.answerIncomingFirst') : t('chat.window.startVideoTitle')}
           >
-            <Video className="w-4 h-4 text-link stroke-[2.2]" />
+            <VideoCamera className="w-4 h-4 text-link stroke-[2.2]" />
           </button>
 
           <button
@@ -1337,7 +1370,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 ? 'neu-pressed text-link border border-primary/40'
                 : 'text-slate-700 dark:text-slate-200 hover:text-link'
             }`}
-            title={showProfilePanel ? 'Hide Information' : 'Conversation Information'}
+            title={showProfilePanel ? t('chat.window.hideInfoTitle') : t('chat.window.convInfoTitle')}
           >
             <Info className="w-4 h-4 stroke-[2.2]" />
           </button>
@@ -1357,22 +1390,22 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
             <div className="px-4 md:px-6 py-4">
               {loading ? (
                 <div className="flex flex-col items-center justify-center py-24 text-tertiary">
-                  <Loader2 className="w-8 h-8 text-link animate-spin mb-2" />
-                  <p className="text-xs font-semibold">Loading messages...</p>
+                  <SpinnerGap className="w-8 h-8 text-link animate-spin mb-2" />
+                  <p className="text-xs font-semibold">{t('chat.window.loadingMessages')}</p>
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center py-16 px-4">
                   <div className="neu-flat w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 text-link">
-                    <MessageSquare className="w-7 h-7" />
+                    <ChatText className="w-7 h-7" />
                   </div>
                   <h4 className="text-sm sm:text-base font-extrabold text-slate-800 dark:text-slate-100">
-                    Start Direct Consultation
+                    {t('chat.window.startConsultTitle')}
                   </h4>
                   <p className="text-xs text-tertiary dark:text-tertiary max-w-xs mt-1 leading-relaxed">
-                    Send a message, share care instructions, or launch a voice or video session with {otherUser.name}.
+                    {t('chat.window.startConsultSub', { name: otherUser.name })}
                   </p>
                   <div className="mt-4 px-3 py-1.5 rounded-lg neu-flat-sm border border-slate-200/80 dark:border-white/10 text-3xs font-extrabold uppercase tracking-wider text-tertiary">
-                    Messages automatically expire after 24 hours
+                    {t('chat.window.expire24hBadge')}
                   </div>
                 </div>
               ) : (
@@ -1391,7 +1424,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                         {showDate && (
                           <div className="flex justify-center my-4">
                             <span className="neu-flat-sm text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary px-3 py-1 rounded-lg">
-                              {formatDateLabel(msg.created_at)}
+                              {formatDateLabel(msg.created_at, language)}
                             </span>
                           </div>
                         )}
@@ -1432,7 +1465,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                                     return (
                                       <div className="space-y-2 max-w-sm">
                                         <div className="w-56 h-32 rounded-xl neu-inset flex items-center justify-center">
-                                          <Loader2 className="w-5 h-5 animate-spin text-link" />
+                                          <SpinnerGap className="w-5 h-5 animate-spin text-link" />
                                         </div>
                                         {caption && (
                                           <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
@@ -1446,8 +1479,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                                     return (
                                       <div className="space-y-2 max-w-sm">
                                         <div className="w-56 h-32 rounded-xl neu-inset flex flex-col items-center justify-center p-3 text-center text-xs text-tertiary">
-                                          <AlertCircle className="w-5 h-5 text-danger mb-1" />
-                                          <span>Failed to load media</span>
+                                          <WarningCircle className="w-5 h-5 text-danger mb-1" />
+                                          <span>{t('chat.window.failedMedia')}</span>
                                         </div>
                                         {caption && (
                                           <p className="text-sm whitespace-pre-wrap leading-relaxed select-text font-medium px-1">
@@ -1471,8 +1504,8 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                                             loading="lazy"
                                           />
                                           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
-                                            <Maximize2 className="w-4 h-4" />
-                                            <span>Click to view</span>
+                                            <ArrowsOut className="w-4 h-4" />
+                                            <span>{t('chat.window.clickToView')}</span>
                                           </div>
                                         </div>
                                       ) : (
@@ -1539,7 +1572,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   <div className="flex items-center gap-3 my-6 px-4">
                     <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
                     <span className="text-2xs text-tertiary dark:text-tertiary font-bold uppercase tracking-wider select-none shrink-0">
-                      Messages disappear after 24 hours
+                      {t('chat.window.disappear24h')}
                     </span>
                     <div className="flex-1 h-px bg-slate-200/80 dark:bg-white/10" />
                   </div>
@@ -1599,19 +1632,19 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   <img src={selectedAttachment.previewUrl} alt="" className="w-10 h-10 rounded-xl object-cover border border-primary/30 shrink-0" />
                 ) : (
                   <div className="w-10 h-10 rounded-xl bg-slate-900 text-white text-xs font-bold flex items-center justify-center shrink-0">
-                    <Video className="w-4 h-4 text-link" />
+                    <VideoCamera className="w-4 h-4 text-link" />
                   </div>
                 )}
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">{selectedAttachment.name}</p>
-                  <p className="text-2xs text-link font-semibold">{selectedAttachment.size} MB &bull; Ready to send</p>
+                  <p className="text-2xs text-link font-semibold">{t('chat.window.readyToSend', { size: selectedAttachment.size })}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleRemoveAttachment}
                 className="neu-btn w-7 h-7 rounded-xl flex items-center justify-center text-tertiary hover:text-danger transition-colors cursor-pointer shrink-0"
-                title="Remove attachment"
+                title={t('chat.window.removeAttachment')}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -1636,7 +1669,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploadingAttachment}
                 className="neu-btn w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center transition-all shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 hover:text-link"
-                title="Attach photo or video"
+                title={t('chat.window.attachTitle')}
               >
                 <Paperclip className="w-4 h-4 stroke-[2.2]" />
               </button>
@@ -1645,7 +1678,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   type="text"
                   value={newMessage}
                   onChange={handleTyping}
-                  placeholder={selectedAttachment ? 'Add an optional caption...' : `Write a message to ${otherUser.name}...`}
+                  placeholder={selectedAttachment ? t('chat.window.captionPlaceholder') : t('chat.window.messagePlaceholder', { name: otherUser.name })}
                   className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
                 />
               </div>
@@ -1653,14 +1686,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 type="submit"
                 disabled={(!newMessage.trim() && !selectedAttachment) || uploadingAttachment}
                 className="neu-btn-primary px-3.5 sm:px-4 h-10 sm:h-11 rounded-xl flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none shrink-0 cursor-pointer shadow-md text-xs font-black"
-                title="Send Message"
+                title={t('chat.window.sendMsgTitle')}
               >
                 {uploadingAttachment ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <SpinnerGap className="w-4 h-4 animate-spin text-white" />
                 ) : (
                   <>
-                    <span className="hidden sm:inline">Send</span>
-                    <Send className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t('chat.window.sendBtn')}</span>
+                    <PaperPlaneRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
@@ -1699,41 +1732,41 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                         {otherUser.name}
                       </h4>
                       <p className="text-2xs text-tertiary font-semibold truncate">
-                        {partnerProfile?.role ? (partnerProfile.role === 'provider' ? 'Healthcare Provider' : 'Patient') : 'Healthcare Contact'}
+                        {partnerProfile?.role ? (partnerProfile.role === 'provider' ? t('chat.window.defaultProvider') : t('common.roles.patient')) : t('chat.window.healthcareContact')}
                       </p>
                     </div>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 border ${
+                    className={`px-2 py-0.5 rounded-md text-[0.5625rem] font-black uppercase tracking-wider shrink-0 border ${
                       partnerOnline
                         ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
                         : 'bg-slate-200/70 dark:bg-slate-800 border-slate-300/80 dark:border-white/10 text-tertiary'
                     }`}
                   >
-                    {partnerOnline ? 'Online' : 'Offline'}
+                    {partnerOnline ? t('chat.list.online') : t('chat.list.offline')}
                   </span>
                 </div>
 
                 {/* 1. SEARCH IN THREAD */}
                 <div className="space-y-1.5">
                   <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary block">
-                    Search in Thread
+                    {t('chat.window.searchInThread')}
                   </span>
                   <div className="relative flex items-center">
                     <input
                       type="text"
-                      placeholder="Find message in conversation..."
+                      placeholder={t('chat.window.findMsgPlaceholder')}
                       value={searchMessageTerm}
                       onChange={(e) => setSearchMessageTerm(e.target.value)}
                       className="w-full neu-inset rounded-xl pl-9 pr-8 h-9 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none placeholder:text-tertiary"
                     />
-                    <Search className="w-3.5 h-3.5 text-primary absolute left-3 z-10 pointer-events-none shrink-0" />
+                    <MagnifyingGlass className="w-3.5 h-3.5 text-primary absolute left-3 z-10 pointer-events-none shrink-0" />
                     {searchMessageTerm && (
                       <button
                         type="button"
                         onClick={() => setSearchMessageTerm('')}
                         className="absolute right-2 z-10 text-tertiary hover:text-danger p-1 rounded-lg cursor-pointer"
-                        title="Clear search"
+                        title={t('chat.window.clearSearchTitle')}
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
@@ -1745,15 +1778,17 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     <div className="space-y-1 pt-1">
                       <div className="flex items-center justify-between px-0.5">
                         <span className="text-3xs font-black uppercase tracking-wider text-tertiary">
-                          Matching Results
+                          {t('chat.window.matchingResults')}
                         </span>
                         <span className="text-3xs font-black px-1.5 py-0.5 rounded-md bg-link/15 text-link">
-                          {searchResults.length} {searchResults.length === 1 ? 'match' : 'matches'}
+                          {searchResults.length === 1
+                            ? t('chat.window.matchOne', { count: searchResults.length })
+                            : t('chat.window.matchMany', { count: searchResults.length })}
                         </span>
                       </div>
                       {searchResults.length === 0 ? (
                         <div className="neu-flat p-2.5 rounded-xl text-center text-2xs text-tertiary font-medium">
-                          No messages match &ldquo;{searchMessageTerm}&rdquo;
+                          {t('chat.window.noMsgMatches', { term: searchMessageTerm })}
                         </div>
                       ) : (
                         <div className="max-h-44 overflow-y-auto space-y-1.5 pr-0.5">
@@ -1769,11 +1804,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                                 type="button"
                                 onClick={() => handleJumpToMessage(msg.id)}
                                 className="w-full text-left p-2 rounded-xl neu-btn hover:border-link/40 transition-all cursor-pointer flex flex-col gap-0.5 group"
-                                title="Click to jump to this message in chat"
+                                title={t('chat.window.jumpToMsgTitle')}
                               >
                                 <div className="flex items-center justify-between text-3xs w-full">
                                   <span className="font-extrabold text-link">
-                                    {isMe ? 'You' : otherUser.name}
+                                    {isMe ? t('chat.list.youPrefix').replace(':', '') : otherUser.name}
                                   </span>
                                   <span className="text-tertiary font-semibold">{timeStr}</span>
                                 </div>
@@ -1793,9 +1828,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 {isPatientView && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Legal &amp; Consent</span>
+                      <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">{t('chat.window.legalConsent')}</span>
                       <span className={`text-3xs font-black uppercase tracking-wider ${consentEnabled ? 'text-emerald-600' : 'text-slate-400 dark:text-slate-500'}`}>
-                        {consentEnabled ? 'Active' : 'Revoked'}
+                        {consentEnabled ? t('common.status.active') : t('common.status.revoked')}
                       </span>
                     </div>
                     <button
@@ -1806,9 +1841,9 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                           ? 'neu-flat border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
                           : 'neu-pressed border-slate-300 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400'
                       }`}
-                      title={consentEnabled ? 'Click to revoke consent access' : 'Click to grant consent access'}
+                      title={consentEnabled ? t('chat.window.revokeConsentTitle') : t('chat.window.grantConsentTitle')}
                     >
-                      <span className="text-xs font-black">Consent Access</span>
+                      <span className="text-xs font-black">{t('chat.window.consentAccess')}</span>
                       <div className={`w-10 h-5 flex items-center rounded-lg p-0.5 transition-colors duration-200 ${
                         consentEnabled ? 'bg-emerald-500 justify-end' : 'bg-slate-300 dark:bg-slate-600 justify-start'
                       }`}>
@@ -1821,14 +1856,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 {/* 3. ACTIVE APPOINTMENT IF ANY */}
                 {activeRequest && (
                   <div className="space-y-1.5">
-                    <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary block">Current Visit</span>
+                    <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary block">{t('chat.window.currentVisit')}</span>
                     <div className="neu-flat p-3 rounded-xl space-y-1 text-xs border border-slate-200/80 dark:border-white/10">
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-extrabold text-slate-800 dark:text-slate-100 truncate">
-                          {activeRequest.service || 'Care Visit'}
+                          {translateService(activeRequest.service) || t('chat.window.careVisit')}
                         </p>
-                        <span className="px-1.5 py-0.5 rounded-md bg-link/15 text-link text-[9px] font-black uppercase shrink-0">
-                          {activeRequest.status}
+                        <span className="px-1.5 py-0.5 rounded-md bg-link/15 text-link text-[0.5625rem] font-black uppercase shrink-0">
+                          {translateStatus(activeRequest.status)}
                         </span>
                       </div>
                       {activeRequest.date && (
@@ -1843,14 +1878,16 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 {/* 4. SHARED MEDIA & FILES */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">Shared Media</span>
+                    <span className="text-3xs font-extrabold uppercase tracking-wider text-tertiary">{t('chat.window.sharedMedia')}</span>
                     <span className="px-1.5 py-0.5 rounded-md bg-link/15 text-link text-3xs font-black">
-                      {sharedMedia.length} {sharedMedia.length === 1 ? 'Item' : 'Items'}
+                      {sharedMedia.length === 1
+                        ? t('chat.window.itemOne', { count: sharedMedia.length })
+                        : t('chat.window.itemMany', { count: sharedMedia.length })}
                     </span>
                   </div>
                   {sharedMedia.length === 0 ? (
                     <div className="neu-inset p-3 rounded-xl text-center text-2xs text-tertiary font-semibold">
-                      No photos or videos shared yet
+                      {t('chat.window.noSharedMedia')}
                     </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-1.5">
@@ -1867,7 +1904,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                           >
                             {isVid ? (
                               <div className="w-full h-full bg-slate-900 text-white flex items-center justify-center">
-                                <Video className="w-4 h-4 text-link" />
+                                <VideoCamera className="w-4 h-4 text-link" />
                               </div>
                             ) : mediaUrl && !isError ? (
                               <img
@@ -1878,11 +1915,11 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                               />
                             ) : isError ? (
                               <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-danger">
-                                <AlertCircle className="w-4 h-4" />
+                                <WarningCircle className="w-4 h-4" />
                               </div>
                             ) : (
                               <div className="w-full h-full flex items-center justify-center bg-slate-100 dark:bg-slate-800">
-                                <Loader2 className="w-4 h-4 animate-spin text-link" />
+                                <SpinnerGap className="w-4 h-4 animate-spin text-link" />
                               </div>
                             )}
                           </div>
@@ -1920,14 +1957,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                       </div>
                       <div className="px-4 py-2.5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0">
                         <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
-                          Conversation Info
+                          {t('chat.window.convInfoHeader')}
                         </span>
                         <button
                           type="button"
                           onClick={() => setShowProfilePanel(false)}
                           className="neu-btn px-2.5 py-1 rounded-lg text-2xs font-black text-slate-700 dark:text-slate-200 hover:text-danger cursor-pointer"
                         >
-                          Close
+                          {t('common.actions.close')}
                         </button>
                       </div>
                     </div>
@@ -1937,7 +1974,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                         to={profilePath}
                         className="neu-btn-primary w-full py-2.5 px-3 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
                       >
-                        <span>View Full Profile</span>
+                        <span>{t('chat.window.viewFullProfile')}</span>
                         <span>&rarr;</span>
                       </Link>
                     </div>
@@ -1957,14 +1994,14 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-white/10 pb-2.5">
                     <span className="text-2xs font-black uppercase tracking-wider text-tertiary">
-                      Conversation Info
+                      {t('chat.window.convInfoHeader')}
                     </span>
                     <button
                       type="button"
                       onClick={() => setShowProfilePanel(false)}
                       className="neu-btn px-2 py-0.5 rounded-lg text-3xs font-black text-tertiary hover:text-danger cursor-pointer"
                     >
-                      Hide
+                      {t('chat.window.hide')}
                     </button>
                   </div>
                   {dossierBody}
@@ -1974,7 +2011,7 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                     to={profilePath}
                     className="neu-btn w-full py-2.5 px-3 rounded-xl text-xs font-black text-link hover:text-primary-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                   >
-                    <span>View Full Profile</span>
+                    <span>{t('chat.window.viewFullProfile')}</span>
                     <span>&rarr;</span>
                   </Link>
                 </div>
@@ -1991,14 +2028,6 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
           onClick={() => setLightboxMedia(null)}
         >
           <div className="relative max-w-4xl max-h-[90vh] flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
-            <button
-              type="button"
-              onClick={() => setLightboxMedia(null)}
-              className="absolute -top-10 right-0 text-white hover:text-danger p-2 text-xs font-bold flex items-center gap-1 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-              <span>Close</span>
-            </button>
             {lightboxMedia.type === 'video' ? (
               <video
                 src={lightboxMedia.url}

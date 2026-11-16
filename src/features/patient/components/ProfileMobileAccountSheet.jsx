@@ -1,8 +1,9 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CheckCircle2, Download, FileCode, Loader2, LogOut } from 'lucide-react';
+import { CheckCircle, DownloadSimple, FileCode, SpinnerGap, SignOut } from '@phosphor-icons/react';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * Mobile Account Hub bottom sheet consolidating secondary profile details,
@@ -26,6 +27,7 @@ export default function ProfileMobileAccountSheet({
   onExportFhir,
   onLogout,
 }) {
+  const { t } = useLanguage();
   const prefersReducedMotion = useReducedMotion();
   useBodyScrollLock(open);
   const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
@@ -73,10 +75,10 @@ export default function ProfileMobileAccountSheet({
                 />
                 <div className="min-w-0">
                   <DialogPrimitive.Title className="text-base font-black text-slate-900 dark:text-slate-100 truncate">
-                    Account &amp; Health Exports
+                    {t('patient.accountSheet.title')}
                   </DialogPrimitive.Title>
                   <DialogPrimitive.Description className="text-xs text-tertiary dark:text-tertiary truncate mt-0.5">
-                    {fullName || 'Patient'} • {email}
+                    {fullName || t('patient.accountSheet.defaultName')} • {email}
                   </DialogPrimitive.Description>
                 </div>
               </div>
@@ -84,15 +86,15 @@ export default function ProfileMobileAccountSheet({
               <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
                 <div className="flex items-center justify-between gap-2">
                   <span className="neu-flat-sm px-3 py-1 text-link font-black text-2xs uppercase tracking-widest rounded-md">
-                    Patient
+                    {t('patient.accountSheet.roleLabel')}
                   </span>
                   {isComplete ? (
                     <span className="neu-flat-sm px-3 py-1 text-success dark:text-success-dark font-black text-2xs uppercase tracking-widest rounded-md flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Complete
+                      <CheckCircle className="w-3 h-3" /> {t('patient.accountSheet.completeBadge')}
                     </span>
                   ) : (
                     <span className="neu-flat-sm px-3 py-1 text-warning dark:text-warning-dark font-black text-2xs uppercase tracking-widest rounded-md">
-                      {completionPercentage}% Setup
+                      {t('patient.accountSheet.setupPct', { pct: completionPercentage })}
                     </span>
                   )}
                 </div>
@@ -100,24 +102,24 @@ export default function ProfileMobileAccountSheet({
                 {/* Account Quick Info */}
                 <div className="neu-inset p-4 rounded-2xl space-y-2.5 text-xs sm:text-sm text-slate-700 dark:text-slate-200">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-2xs uppercase font-extrabold text-tertiary">Email</span>
+                    <span className="text-2xs uppercase font-extrabold text-tertiary">{t('patient.accountSheet.email')}</span>
                     <span className="truncate font-semibold max-w-[68%] text-right">{email}</span>
                   </div>
                   <div className="border-t border-slate-200/50 dark:border-white/5" />
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-2xs uppercase font-extrabold text-tertiary">Phone</span>
-                    <span className="font-semibold text-right">{phone || 'Not set'}</span>
+                    <span className="text-2xs uppercase font-extrabold text-tertiary">{t('patient.accountSheet.phone')}</span>
+                    <span className="font-semibold text-right">{phone || t('patient.accountSheet.notSet')}</span>
                   </div>
                   <div className="border-t border-slate-200/50 dark:border-white/5" />
                   <div className="flex items-start justify-between gap-3">
-                    <span className="text-2xs uppercase font-extrabold text-tertiary shrink-0 pt-0.5">Home Pin</span>
+                    <span className="text-2xs uppercase font-extrabold text-tertiary shrink-0 pt-0.5">{t('patient.accountSheet.homePin')}</span>
                     <span className="font-semibold text-right leading-relaxed max-w-[70%] break-words">
-                      {address || 'Not set'}
+                      {address || t('patient.accountSheet.notSet')}
                     </span>
                   </div>
                   <div className="border-t border-slate-200/50 dark:border-white/5" />
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-2xs uppercase font-extrabold text-tertiary">Member Since</span>
+                    <span className="text-2xs uppercase font-extrabold text-tertiary">{t('patient.accountSheet.memberSince')}</span>
                     <span className="font-semibold">{memberSince}</span>
                   </div>
                 </div>
@@ -125,26 +127,26 @@ export default function ProfileMobileAccountSheet({
                 {/* Health Data Export */}
                 <div className="space-y-2">
                   <p className="text-2xs font-extrabold text-tertiary dark:text-tertiary uppercase tracking-widest ml-1">
-                    Health Data Export
+                    {t('patient.accountSheet.exportsHeading')}
                   </p>
                   <div className="neu-inset p-2 rounded-2xl space-y-2">
                     <button
                       type="button"
                       onClick={() => runActionThenClose(onExportPdf)}
                       disabled={generatingPdf}
-                      className="neu-btn w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-link transition-all text-xs sm:text-sm cursor-pointer disabled:opacity-50"
+                      className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-link transition-all text-xs sm:text-sm cursor-pointer disabled:opacity-50"
                     >
-                      {generatingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                      <span>{generatingPdf ? 'Generating...' : 'Medical Summary (PDF)'}</span>
+                      {generatingPdf ? <SpinnerGap className="w-4 h-4 animate-spin" /> : <DownloadSimple className="w-4 h-4" />}
+                      <span>{generatingPdf ? t('patient.accountSheet.generatingPdf') : t('patient.accountSheet.pdfBtn')}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => runActionThenClose(onExportFhir)}
                       disabled={fhirLoading}
-                      className="neu-btn w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-success dark:text-success-dark transition-all text-xs sm:text-sm cursor-pointer disabled:opacity-50"
+                      className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-success dark:text-success-dark transition-all text-xs sm:text-sm cursor-pointer disabled:opacity-50"
                     >
-                      {fhirLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />}
-                      <span>{fhirLoading ? 'Exporting...' : 'FHIR Record (JSON)'}</span>
+                      {fhirLoading ? <SpinnerGap className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />}
+                      <span>{fhirLoading ? t('patient.accountSheet.exportingFhir') : t('patient.accountSheet.fhirBtn')}</span>
                     </button>
                   </div>
                 </div>
@@ -153,16 +155,16 @@ export default function ProfileMobileAccountSheet({
                 <div className="pt-1 pb-2 space-y-2">
                   {hasUnsavedChanges && (
                     <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 text-center">
-                      You have unsaved profile edits.
+                      {t('patient.accountSheet.unsavedWarning')}
                     </p>
                   )}
                   <button
                     type="button"
                     onClick={() => runActionThenClose(onLogout)}
-                    className="neu-btn w-full min-h-[44px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-danger dark:text-danger-dark transition-all text-xs sm:text-sm cursor-pointer"
+                    className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-danger dark:text-danger-dark transition-all text-xs sm:text-sm cursor-pointer"
                   >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
+                    <SignOut className="w-4 h-4" />
+                    <span>{t('patient.accountSheet.signOut')}</span>
                   </button>
                 </div>
               </div>

@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2 } from 'lucide-react';
+import { SpinnerGap } from '@phosphor-icons/react';
 import ModernLocationPicker from './ModernLocationPicker';
 import AddressAutocomplete from './AddressAutocomplete';
 import { reverseGeocode } from '../services/geocoding';
 import { formatFullVisitAddress } from '../services/addressFormat';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * VisitDestinationModal — Option 1 (Grab / DoorDash Clean 2-Step Pin Picker)
@@ -20,9 +21,11 @@ export default function VisitDestinationModal({
   initial,
   initialCenter = null,
   homeAddress = '',
-  confirmLabel = 'Use this visit location',
+  confirmLabel,
   onConfirm,
 }) {
+  const { t } = useLanguage();
+  const resolvedConfirmLabel = confirmLabel ?? t('tracking.dest.defaultConfirm');
   const [step, setStep] = useState('pin'); // 'pin' | 'details'
   const [currentPin, setCurrentPin] = useState(initial || null);
   const [baseAddress, setBaseAddress] = useState('');
@@ -88,7 +91,7 @@ export default function VisitDestinationModal({
     }
 
     if (!pin?.lat || !pin?.lng) {
-      setError('Place the pin on your home first: drag the map, search an address, or use the GPS button.');
+      setError(t('tracking.dest.errorPlacePin'));
       return;
     }
     setError(null);
@@ -113,7 +116,7 @@ export default function VisitDestinationModal({
       }
 
       if (!pin?.lat || !pin?.lng) {
-        setError('Place the pin on your home first: drag the map, search an address, or use the GPS button.');
+        setError(t('tracking.dest.errorPlacePin'));
         setSaving(false);
         return;
       }
@@ -139,7 +142,7 @@ export default function VisitDestinationModal({
 
       onClose?.();
     } catch (err) {
-      setError(err?.message || 'Could not save the visit location. Please try again.');
+      setError(err?.message || t('tracking.dest.errorSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -180,27 +183,18 @@ export default function VisitDestinationModal({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h2 id="visit-destination-title" className="text-base sm:text-lg font-display font-extrabold text-slate-900 dark:text-white leading-tight truncate">
-                      {step === 'pin' ? 'Move map to place pin' : 'Exact visit & gate details'}
+                      {step === 'pin' ? t('tracking.dest.titlePin') : t('tracking.dest.titleDetails')}
                     </h2>
                     <span className="px-2 py-0.5 rounded-md bg-primary/10 text-link text-2xs font-extrabold uppercase tracking-wider shrink-0">
-                      {step === 'pin' ? 'Step 1 of 2' : 'Step 2 of 2'}
+                      {step === 'pin' ? t('tracking.dest.step1') : t('tracking.dest.step2')}
                     </span>
                   </div>
                   <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">
                     {step === 'pin'
-                      ? 'Position the center pin at your house or subdivision entrance gate.'
-                      : 'Provide unit, subdivision, or gate instructions for your arriving provider.'}
+                      ? t('tracking.dest.subPin')
+                      : t('tracking.dest.subDetails')}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  title="Close"
-                  aria-label="Close visit location"
-                  className="neu-btn w-9 h-9 min-w-[36px] min-h-[36px] hidden sm:flex items-center justify-center rounded-xl text-tertiary hover:text-slate-900 dark:hover:text-white transition-colors shrink-0 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
               </div>
             </div>
 
@@ -221,7 +215,7 @@ export default function VisitDestinationModal({
                     initial={currentPin}
                     initialCenter={initialCenter}
                     onPinChange={handlePinUpdate}
-                    className="h-[240px] sm:h-[290px]"
+                    className="h-[15rem] sm:h-[18.125rem]"
                   />
 
                   {/* Single Authoritative Pinned Location Well + Tactile Quick Save Button */}
@@ -233,16 +227,16 @@ export default function VisitDestinationModal({
                             ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20'
                             : 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/20'
                         }`}>
-                          {currentPin ? 'Pin Placed' : 'Pin Required'}
+                          {currentPin ? t('tracking.dest.pinPlaced') : t('tracking.dest.pinRequired')}
                         </span>
                         <span className="text-xs font-semibold text-tertiary tabular-nums">
                           {currentPin
                             ? `${currentPin.lat.toFixed(5)}, ${currentPin.lng.toFixed(5)}`
-                            : 'Drag map or search above'}
+                            : t('tracking.dest.dragOrSearch')}
                         </span>
                       </div>
                       <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate mt-1">
-                        {baseAddress || (currentPin ? 'Pinned location' : 'Move map to pinpoint your address')}
+                        {baseAddress || (currentPin ? t('tracking.dest.pinnedLocation') : t('tracking.dest.moveMapPrompt'))}
                       </p>
                     </div>
 
@@ -252,7 +246,7 @@ export default function VisitDestinationModal({
                       disabled={!currentPin || saving}
                       className="neu-btn px-3 py-2 rounded-xl text-xs font-extrabold text-link shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      Quick Save
+                      {t('tracking.dest.quickSave')}
                     </button>
                   </div>
 
@@ -263,7 +257,7 @@ export default function VisitDestinationModal({
                       onClick={onClose}
                       className="w-full neu-btn py-2.5 sm:py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"
                     >
-                      Cancel
+                      {t('common.actions.cancel')}
                     </button>
                     <button
                       type="button"
@@ -271,7 +265,7 @@ export default function VisitDestinationModal({
                       disabled={!currentPin}
                       className="w-full neu-btn-primary py-2.5 sm:py-3 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      Add Gate & Arrival Details
+                      {t('tracking.dest.addGateDetails')}
                     </button>
                   </div>
                 </div>
@@ -287,10 +281,10 @@ export default function VisitDestinationModal({
                   <div className="neu-inset p-3.5 rounded-2xl flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <span className="text-2xs font-extrabold uppercase tracking-wider text-success dark:text-success-dark block">
-                        GPS Pin Confirmed
+                        {t('tracking.dest.gpsConfirmed')}
                       </span>
                       <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate mt-0.5">
-                        {baseAddress || 'Pinned location'}
+                        {baseAddress || t('tracking.dest.pinnedLocation')}
                       </p>
                       <p className="text-xs font-semibold text-tertiary tabular-nums mt-0.5">
                         {currentPin?.lat.toFixed(5)}, {currentPin?.lng.toFixed(5)}
@@ -301,21 +295,21 @@ export default function VisitDestinationModal({
                       onClick={() => setStep('pin')}
                       className="neu-btn px-3 py-1.5 rounded-xl text-xs font-extrabold text-link shrink-0 cursor-pointer"
                     >
-                      Adjust Pin
+                      {t('tracking.dest.adjustPin')}
                     </button>
                   </div>
 
                   {/* House / Building / Street */}
                   <div className="space-y-1">
                     <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block ml-0.5">
-                      House No. / Street / Building Name
+                      {t('tracking.dest.streetLabel')}
                     </label>
                     <div className="neu-inset rounded-xl px-3.5 py-2.5 border border-white/60 dark:border-white/5">
                       <input
                         type="text"
                         value={baseAddress}
                         onChange={(e) => setBaseAddress(e.target.value)}
-                        placeholder="e.g. Block 14 Lot 8, Sampaguita St. or Civic Prime Bldg"
+                        placeholder={t('tracking.dest.streetPlaceholder')}
                         className="w-full bg-transparent text-xs sm:text-sm font-semibold text-slate-900 dark:text-white outline-none placeholder:text-tertiary placeholder:font-normal"
                       />
                     </div>
@@ -325,14 +319,14 @@ export default function VisitDestinationModal({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="space-y-1">
                       <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block ml-0.5">
-                        Unit / Floor (Optional)
+                        {t('tracking.dest.unitLabel')}
                       </label>
                       <div className="neu-inset rounded-xl px-3 py-2.5 border border-white/60 dark:border-white/5">
                         <input
                           type="text"
                           value={unit}
                           onChange={(e) => setUnit(e.target.value)}
-                          placeholder="e.g. Unit 402, 4th Flr"
+                          placeholder={t('tracking.dest.unitPlaceholder')}
                           className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-white outline-none placeholder:text-tertiary placeholder:font-normal"
                         />
                       </div>
@@ -340,14 +334,14 @@ export default function VisitDestinationModal({
 
                     <div className="space-y-1">
                       <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block ml-0.5">
-                        Subdivision / Gate
+                        {t('tracking.dest.subdivisionLabel')}
                       </label>
                       <div className="neu-inset rounded-xl px-3 py-2.5 border border-white/60 dark:border-white/5">
                         <input
                           type="text"
                           value={subdivision}
                           onChange={(e) => setSubdivision(e.target.value)}
-                          placeholder="e.g. Gate 2 near Chapel"
+                          placeholder={t('tracking.dest.subdivisionPlaceholder')}
                           className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-white outline-none placeholder:text-tertiary placeholder:font-normal"
                         />
                       </div>
@@ -357,14 +351,14 @@ export default function VisitDestinationModal({
                   {/* Arrival Notes & Instructions */}
                   <div className="space-y-1">
                     <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block ml-0.5">
-                      Arrival Instructions for Provider (Optional)
+                      {t('tracking.dest.instructionsLabel')}
                     </label>
                     <div className="neu-inset rounded-xl p-3 border border-white/60 dark:border-white/5">
                       <textarea
                         value={instructions}
                         onChange={(e) => setInstructions(e.target.value)}
                         rows={2}
-                        placeholder="e.g. Yellow gate beside sari-sari store, doorbell is on the right pillar..."
+                        placeholder={t('tracking.dest.instructionsPlaceholder')}
                         className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-white outline-none resize-none placeholder:text-tertiary placeholder:font-normal"
                       />
                     </div>
@@ -378,7 +372,7 @@ export default function VisitDestinationModal({
                       disabled={saving}
                       className="w-full neu-btn py-2.5 sm:py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer disabled:opacity-50"
                     >
-                      Back to Map
+                      {t('tracking.dest.backToMap')}
                     </button>
                     <button
                       type="button"
@@ -388,11 +382,11 @@ export default function VisitDestinationModal({
                     >
                       {saving ? (
                         <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Saving…</span>
+                          <SpinnerGap className="w-4 h-4 animate-spin" />
+                          <span>{t('common.actions.saving')}</span>
                         </>
                       ) : (
-                        <span>{confirmLabel}</span>
+                        <span>{resolvedConfirmLabel}</span>
                       )}
                     </button>
                   </div>

@@ -46,16 +46,16 @@ describe('consent permissions', () => {
     });
   });
 
-  it('keeps stored opt-ins and fills missing keys with defaults', () => {
+  it('keeps explicit opt-ins and denies missing keys', () => {
     expect(normalizePermissions({ documents: true })).toEqual({
-      medical_history: true,
+      medical_history: false,
       documents: true,
       visit_notes: false,
     });
   });
 
-  it('falls back to defaults for missing or malformed data', () => {
-    expect(normalizePermissions(null)).toEqual(DEFAULT_CONSENT_PERMS);
-    expect(normalizePermissions('on')).toEqual(DEFAULT_CONSENT_PERMS);
+  it('denies missing or malformed stored permissions', () => {
+    expect(normalizePermissions(null)).toEqual({ medical_history: false, documents: false, visit_notes: false });
+    expect(normalizePermissions('on')).toEqual({ medical_history: false, documents: false, visit_notes: false });
   });
 });

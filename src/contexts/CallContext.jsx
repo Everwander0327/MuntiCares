@@ -91,7 +91,7 @@ export const CallProvider = ({ children }) => {
   useEffect(() => {
     if (!user?.id) return undefined;
 
-    const channel = supabase.channel(`calls_${user.id}`);
+    const channel = supabase.channel('calls_' + user.id, { config: { private: true } });
     channel
       .on('broadcast', { event: 'incoming_call' }, (payload) => {
         const { sender_id, sender_name, call_type, call_id } = payload.payload;
@@ -173,7 +173,7 @@ export const CallProvider = ({ children }) => {
     if (existing) return existing;
 
     const entry = { channel: null, ready: false, queue: [] };
-    const channel = supabase.channel(topic);
+    const channel = supabase.channel(topic, { config: { private: true } });
     entry.channel = channel;
     peerChannelsRef.current.set(topic, entry);
 

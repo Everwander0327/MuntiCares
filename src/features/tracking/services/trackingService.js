@@ -148,25 +148,48 @@ export async function markVisitArrived(requestId, sessionId = null, overrideReas
   return data;
 }
 
-export function formatArrivalFailure(res) {
-  if (!res) return 'Unable to confirm arrival location.';
+export function formatArrivalFailure(res, language = 'en') {
+  const isTl = language === 'tl';
+  if (!res) return isTl ? 'Hindi makumpirma ang lokasyon ng pagdating.' : 'Unable to confirm arrival location.';
   switch (res.reason) {
-    case 'too_far':
-      return `${Math.round(res.distance_m || 0)} m from visit — arrive within 50 m to unlock.`;
-    case 'low_accuracy':
-      return `Waiting for precise GPS (current accuracy is ±${Math.round(res.accuracy_m || 0)} m).`;
-    case 'stale_location':
-      return `Location signal delayed (${res.age_seconds || 45}s old). Waiting for fresh GPS.`;
+    case 'too_far': {
+      const dist = Math.round(res.distance_m || 0);
+      return isTl
+        ? `${dist} m mula sa lokasyon — lumapit sa loob ng 50 m para ma-unlock.`
+        : `${dist} m from visit — arrive within 50 m to unlock.`;
+    }
+    case 'low_accuracy': {
+      const acc = Math.round(res.accuracy_m || 0);
+      return isTl
+        ? `Naghihintay ng mas tumpak na GPS (kasalukuyan ay ±${acc} m).`
+        : `Waiting for precise GPS (current accuracy is ±${acc} m).`;
+    }
+    case 'stale_location': {
+      const age = res.age_seconds || 45;
+      return isTl
+        ? `Naantala ang GPS signal (${age}s na). Naghihintay ng bagong GPS.`
+        : `Location signal delayed (${age}s old). Waiting for fresh GPS.`;
+    }
     case 'no_location':
-      return 'Waiting for GPS location to be recorded.';
+      return isTl
+        ? 'Naghihintay ng maitatalang GPS location.'
+        : 'Waiting for GPS location to be recorded.';
     case 'no_destination':
-      return 'Visit destination coordinates are missing.';
+      return isTl
+        ? 'Kulang ang coordinates ng lokasyon ng pagbisita.'
+        : 'Visit destination coordinates are missing.';
     case 'not_on_the_way':
-      return 'Visit status is no longer "On The Way".';
+      return isTl
+        ? 'Hindi na "Papunta Na" ang status ng pagbisita.'
+        : 'Visit status is no longer "On The Way".';
     case 'override_conditions_not_met':
-      return 'Override conditions not met: must be within 150 m for at least 3 minutes.';
+      return isTl
+        ? 'Hindi naabot ang kundisyon ng override: kailangang nasa loob ng 150 m sa loob ng kahit 3 minuto.'
+        : 'Override conditions not met: must be within 150 m for at least 3 minutes.';
     default:
-      return res.message || 'Arrival criteria not met. Please move closer to the visit location.';
+      return res.message || (isTl
+        ? 'Hindi pa naabot ang kundisyon sa pagdating. Lumapit pa sa lokasyon ng pagbisita.'
+        : 'Arrival criteria not met. Please move closer to the visit location.');
   }
 }
 

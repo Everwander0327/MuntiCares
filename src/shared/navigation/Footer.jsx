@@ -88,7 +88,7 @@ const Footer = () => (
       {/* Bottom Legal Bar */}
       <div className="pt-8 border-t border-slate-800 text-xs text-slate-400 flex flex-col sm:flex-row justify-between items-center gap-4">
         <p>&copy; {new Date().getFullYear()} MuntiCares. All rights reserved.</p>
-        <div className="flex gap-4">
+        <div className="flex flex-wrap justify-center gap-4">
           <Link to="/privacy" className="hover:text-white transition-colors">
             Privacy Policy
           </Link>

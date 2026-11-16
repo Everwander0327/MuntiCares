@@ -1,8 +1,21 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell, FileText, MessageCircle, Star, CheckCircle2, XCircle, Navigation, Clock, X } from 'lucide-react';
+import {
+  Bell,
+  FileText,
+  ChatCircle,
+  Star,
+  CheckCircle,
+  XCircle,
+  NavigationArrow,
+  Clock,
+  X,
+} from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { formatLocalizedDate, formatLocalizedTime, translate, translateServiceName, translateStatus } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -27,20 +40,20 @@ const playChime = () => {
 
 const getNotifIcon = (type) => {
   switch (type) {
-    case 'request_accepted': return <CheckCircle2 className="w-4 h-4 text-success" />;
+    case 'request_accepted': return <CheckCircle className="w-4 h-4 text-success" />;
     case 'request_rejected': return <XCircle className="w-4 h-4 text-danger" />;
-    case 'status_on_the_way': return <Navigation className="w-4 h-4 text-warning" />;
-    case 'status_arrived': return <CheckCircle2 className="w-4 h-4 text-link" />;
+    case 'status_on_the_way': return <NavigationArrow className="w-4 h-4 text-warning" />;
+    case 'status_arrived': return <CheckCircle className="w-4 h-4 text-link" />;
     case 'status_completed': return <Star className="w-4 h-4 text-success" />;
     case 'new_request': return <FileText className="w-4 h-4 text-link" />;
-    case 'new_message': return <MessageCircle className="w-4 h-4 text-link" />;
+    case 'new_message': return <ChatCircle className="w-4 h-4 text-link" />;
     case 'request_cancelled': return <XCircle className="w-4 h-4 text-tertiary" />;
     default: return <Bell className="w-4 h-4 text-tertiary" />;
   }
 };
 
-const timeAgo = (dateStr) => {
-  if (!dateStr) return 'Just now';
+const timeAgo = (dateStr, language = 'en') => {
+  if (!dateStr) return translate(language, 'notif.justNow');
   const now = new Date();
   let then = new Date(dateStr);
 
@@ -49,26 +62,26 @@ const timeAgo = (dateStr) => {
   }
 
   const diffMs = now - then;
-  if (diffMs <= 0) return 'Just now';
+  if (diffMs <= 0) return translate(language, 'notif.justNow');
 
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 1) return translate(language, 'notif.justNow');
+  if (diffMins < 60) return translate(language, 'notif.minsAgo', { count: diffMins });
   const diffHrs = Math.floor(diffMins / 60);
-  if (diffHrs < 24) return `${diffHrs}h ago`;
+  if (diffHrs < 24) return translate(language, 'notif.hrsAgo', { count: diffHrs });
   const diffDays = Math.floor(diffHrs / 24);
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (diffDays < 7) return translate(language, 'notif.daysAgo', { count: diffDays });
+  return formatLocalizedDate(then, language, { month: 'short', day: 'numeric' });
 };
 
-const formatNotifClock = (dateStr) => {
+const formatNotifClock = (dateStr, language = 'en') => {
   if (!dateStr) return '';
   let date = new Date(dateStr);
   if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+') && !/[-+]\d{2}:\d{2}$/.test(dateStr)) {
     date = new Date(dateStr.includes('T') ? `${dateStr}Z` : `${dateStr.replace(' ', 'T')}Z`);
   }
   if (isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return formatLocalizedTime(date, language, { hour: 'numeric', minute: '2-digit', hour12: true });
 };
 
 const getNotifAccent = (type) => {
@@ -117,6 +130,10 @@ const NotificationBell = () => {
   const isFetchingRef = useRef(false);
   const isUpdatingPosRef = useRef(false);
   const { user } = useAuth();
+  const { uiScale } = useTheme();
+  const { language, t } = useLanguage();
+  const languageRef = useRef(language);
+  languageRef.current = language;
   const navigate = useNavigate();
 
   const updatePanelPos = useCallback(() => {
@@ -127,18 +144,20 @@ const NotificationBell = () => {
       if (!buttonRef.current) return;
       const rect = buttonRef.current.getBoundingClientRect();
       const isMobile = window.innerWidth < 640;
-      const width = isMobile ? Math.min(window.innerWidth - 24, 380) : 400;
-      const right = isMobile ? Math.max(12, (window.innerWidth - width) / 2) : Math.max(16, window.innerWidth - rect.right - (400 - width) / 2);
+      const scaledDesktop = Math.round(400 * uiScale);
+      const scaledMobile = Math.round(380 * uiScale);
+      const width = isMobile ? Math.min(window.innerWidth - 24, scaledMobile) : Math.min(window.innerWidth - 32, scaledDesktop);
+      const right = isMobile ? Math.max(12, (window.innerWidth - width) / 2) : Math.max(16, window.innerWidth - rect.right - (scaledDesktop - width) / 2);
       
       setPanelPos(prev => {
-        const nextTop = rect.bottom + 12;
+        const nextTop = rect.bottom + Math.round(12 * uiScale);
         if (prev.top === nextTop && prev.right === right && prev.width === width) {
           return prev;
         }
         return { top: nextTop, right, width };
       });
     });
-  }, []);
+  }, [uiScale]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -171,12 +190,13 @@ const NotificationBell = () => {
     };
   }, [isOpen]);
 
-  const generateNotifications = (requests, role) => {
+  const generateNotifications = (requests, role, lang = 'en') => {
     const notifs = [];
 
     requests.forEach(req => {
-      const providerName = req.provider?.full_name || 'Provider';
-      const patientName = req.patient?.full_name || 'Patient';
+      const providerName = req.provider?.full_name || translate(lang, 'common.roles.provider');
+      const patientName = req.patient?.full_name || translate(lang, 'common.roles.patient');
+      const serviceLabel = translateServiceName(req.service, lang);
       const timestamp = req.created_at;
 
       if (role === 'patient') {
@@ -185,8 +205,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-pending`,
               type: 'new_request',
-              title: 'Booking Requested',
-              message: `Your request for ${req.service} has been sent and is pending approval.`,
+              title: translate(lang, 'notif.patientPendingTitle'),
+              message: translate(lang, 'notif.patientPendingMsg', { service: serviceLabel }),
               time: timestamp,
               link: '/patient/requests'
             });
@@ -195,8 +215,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-cancelled`,
               type: 'request_cancelled',
-              title: 'Booking Cancelled',
-              message: `You cancelled your request for ${req.service}.`,
+              title: translate(lang, 'notif.patientCancelledTitle'),
+              message: translate(lang, 'notif.patientCancelledMsg', { service: serviceLabel }),
               time: timestamp,
               link: '/patient/requests'
             });
@@ -205,8 +225,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-accepted`,
               type: 'request_accepted',
-              title: 'Request Accepted!',
-              message: `${providerName} accepted your ${req.service} booking.`,
+              title: translate(lang, 'notif.patientAcceptedTitle'),
+              message: translate(lang, 'notif.patientAcceptedMsg', { provider: providerName, service: serviceLabel }),
               time: timestamp,
               link: '/patient/requests'
             });
@@ -215,8 +235,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-rejected`,
               type: 'request_rejected',
-              title: 'Request Declined',
-              message: `${providerName} was unable to accept your request.`,
+              title: translate(lang, 'notif.patientRejectedTitle'),
+              message: translate(lang, 'notif.patientRejectedMsg', { provider: providerName }),
               time: timestamp,
               link: '/patient/requests'
             });
@@ -225,8 +245,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-otw`,
               type: 'status_on_the_way',
-              title: 'Provider On The Way!',
-              message: `${providerName} is heading to your location.`,
+              title: translate(lang, 'notif.patientOtwTitle'),
+              message: translate(lang, 'notif.patientOtwMsg', { provider: providerName }),
               time: timestamp,
               link: '/patient/dashboard'
             });
@@ -235,8 +255,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-arrived`,
               type: 'status_arrived',
-              title: 'Provider Has Arrived',
-              message: `${providerName} is at your doorstep.`,
+              title: translate(lang, 'notif.patientArrivedTitle'),
+              message: translate(lang, 'notif.patientArrivedMsg', { provider: providerName }),
               time: timestamp,
               link: '/patient/dashboard'
             });
@@ -245,8 +265,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-completed`,
               type: 'status_completed',
-              title: 'Visit Completed',
-              message: `Your session with ${providerName} is done. Rate your experience!`,
+              title: translate(lang, 'notif.patientCompletedTitle'),
+              message: translate(lang, 'notif.patientCompletedMsg', { provider: providerName }),
               time: timestamp,
               link: '/patient/requests'
             });
@@ -258,8 +278,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-new`,
               type: 'new_request',
-              title: 'New Booking Request',
-              message: `${patientName} is requesting ${req.service}.`,
+              title: translate(lang, 'notif.providerNewTitle'),
+              message: translate(lang, 'notif.providerNewMsg', { patient: patientName, service: serviceLabel }),
               time: timestamp,
               link: '/provider/requests'
             });
@@ -268,8 +288,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-cancelled`,
               type: 'request_cancelled',
-              title: 'Request Cancelled',
-              message: `${patientName} cancelled their ${req.service} booking.`,
+              title: translate(lang, 'notif.providerCancelledTitle'),
+              message: translate(lang, 'notif.providerCancelledMsg', { patient: patientName, service: serviceLabel }),
               time: timestamp,
               link: '/provider/schedule'
             });
@@ -281,8 +301,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-admin-pending`,
               type: 'new_request',
-              title: 'Pending Platform Request',
-              message: `${patientName} requested ${req.service} from ${providerName}.`,
+              title: translate(lang, 'notif.adminPendingTitle'),
+              message: translate(lang, 'notif.adminPendingMsg', { patient: patientName, service: serviceLabel, provider: providerName }),
               time: timestamp,
               link: '/admin/requests'
             });
@@ -291,8 +311,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-admin-completed`,
               type: 'status_completed',
-              title: 'Service Completed',
-              message: `${providerName} completed ${req.service} for ${patientName}.`,
+              title: translate(lang, 'notif.adminCompletedTitle'),
+              message: translate(lang, 'notif.adminCompletedMsg', { provider: providerName, service: serviceLabel, patient: patientName }),
               time: timestamp,
               link: '/admin/requests'
             });
@@ -301,8 +321,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-admin-cancelled`,
               type: 'request_cancelled',
-              title: 'Request Cancelled',
-              message: `${patientName}'s ${req.service} booking was cancelled.`,
+              title: translate(lang, 'notif.adminCancelledTitle'),
+              message: translate(lang, 'notif.adminCancelledMsg', { patient: patientName, service: serviceLabel }),
               time: timestamp,
               link: '/admin/requests'
             });
@@ -311,8 +331,8 @@ const NotificationBell = () => {
             notifs.push({
               id: `${req.id}-admin-${req.status?.toLowerCase()}`,
               type: 'new_request',
-              title: `Request ${req.status}`,
-              message: `${patientName} — ${req.service} (${providerName})`,
+              title: translate(lang, 'notif.adminStatusTitle', { status: translateStatus(req.status, lang) }),
+              message: translate(lang, 'notif.adminStatusMsg', { patient: patientName, service: serviceLabel, provider: providerName }),
               time: timestamp,
               link: '/admin/requests'
             });
@@ -365,7 +385,8 @@ const NotificationBell = () => {
 
       if (error) throw error;
 
-      const notifs = generateNotifications(data || [], user.role);
+      const activeLang = languageRef.current;
+      const notifs = generateNotifications(data || [], user.role, activeLang);
 
       const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: msgData } = await supabase
@@ -385,7 +406,7 @@ const NotificationBell = () => {
         const unreadMsgs = msgData.filter(m => !m.is_read && !readMsgIds.has(m.id));
         const seenSenders = new Set();
         unreadMsgs.forEach(msg => {
-          const senderName = msg.sender?.full_name || 'Someone';
+          const senderName = msg.sender?.full_name || translate(activeLang, 'notif.someone');
           if (!seenSenders.has(msg.sender_id)) {
             seenSenders.add(msg.sender_id);
             let previewText = msg.content || '';
@@ -393,17 +414,17 @@ const NotificationBell = () => {
             const isVid = msg.message_type === 'video' || (msg.content && /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(msg.content.split('\n')[0]));
             if (isImg) {
               const cap = msg.content?.split('\n').slice(1).join('\n').trim();
-              previewText = cap ? `📷 ${cap}` : '📷 Photo';
+              previewText = cap ? `📷 ${cap}` : `📷 ${translate(activeLang, 'notif.photoPreview')}`;
             } else if (isVid) {
               const cap = msg.content?.split('\n').slice(1).join('\n').trim();
-              previewText = cap ? `🎥 ${cap}` : '🎥 Video';
+              previewText = cap ? `🎥 ${cap}` : `🎥 ${translate(activeLang, 'notif.videoPreview')}`;
             } else if (msg.message_type === 'call') {
-              previewText = 'Consultation call';
+              previewText = translate(activeLang, 'notif.callPreview');
             }
             notifs.push({
               id: `msg-${msg.id}`,
               type: 'new_message',
-              title: `New Message from ${senderName}`,
+              title: translate(activeLang, 'notif.newMessageTitle', { sender: senderName }),
               message: previewText.substring(0, 80),
               time: msg.created_at,
               link: user.role === 'patient' ? '/patient/messages' : '/provider/messages',
@@ -437,7 +458,7 @@ const NotificationBell = () => {
           // Message text is PHI: it stays inside the app, the OS tray gets a pointer only.
           fireBrowserNotification(
             notif.title,
-            notif.type === 'new_message' ? 'Open MuntiCares to read the message.' : notif.message
+            notif.type === 'new_message' ? translate(activeLang, 'notif.osMessageBody') : notif.message
           );
         });
       } else {
@@ -527,6 +548,12 @@ const NotificationBell = () => {
     };
   }, [user, fetchNotifications]);
 
+  useEffect(() => {
+    if (user?.id) {
+      fetchNotifications();
+    }
+  }, [language, user?.id, fetchNotifications]);
+
   const markAllAsRead = (e) => {
     if (e) e.stopPropagation();
     if (!user) return;
@@ -535,7 +562,7 @@ const NotificationBell = () => {
     const nextRead = Array.from(new Set([...existingRead, ...allIds]));
     localStorage.setItem(`read_notifs_${user.id}`, JSON.stringify(nextRead));
     setUnreadCount(0);
-    toast.success('All notifications marked as read');
+    toast.success(t('notif.markedAllRead'));
   };
 
   const clearAllNotifications = (e) => {
@@ -547,7 +574,7 @@ const NotificationBell = () => {
     localStorage.setItem(`dismissed_notifs_${user.id}`, JSON.stringify(nextDismissed));
     setNotifications([]);
     setUnreadCount(0);
-    toast.success('All notifications cleared');
+    toast.success(t('notif.clearedAll'));
   };
 
   const handleNotifClick = (notif) => {
@@ -616,7 +643,7 @@ const NotificationBell = () => {
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
           <motion.span
-            className="absolute -top-1 -right-1 min-w-[20px] h-[20px] bg-danger rounded-md sm:rounded-lg border-2 border-white dark:border-[#0E1724] flex items-center justify-center text-3xs font-black text-white px-1 shadow-md"
+            className="absolute -top-1 -right-1 min-w-[1.25rem] h-[1.25rem] bg-danger rounded-md sm:rounded-lg border-2 border-white dark:border-surface-dark flex items-center justify-center text-3xs font-black text-white px-1 shadow-md"
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             key={unreadCount}
@@ -650,22 +677,35 @@ const NotificationBell = () => {
               {/* Header */}
               <div className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-slate-200/80 dark:border-white/10 bg-surface-shell shrink-0">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100">Notifications</h3>
+                  <h3 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-slate-100">{t('notif.header')}</h3>
                   {unreadCount > 0 && (
                     <span className="px-2 py-0.5 rounded-md text-3xs font-black uppercase tracking-wider bg-blue-500/15 text-link dark:text-blue-300 border border-blue-500/25">
-                      {unreadCount} new
+                      {t('notif.newCount', { count: unreadCount })}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1.5">
+                  {(user?.role === 'patient' || user?.role === 'provider') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsOpen(false);
+                        window.dispatchEvent(new Event('munticares-open-weekly-updates'));
+                      }}
+                      className="neu-btn px-2.5 py-1 rounded-xl text-xs font-extrabold text-link hover:opacity-90 cursor-pointer active:scale-95"
+                      title={t('notif.updatesTitle')}
+                    >
+                      {t('notif.updatesBtn')}
+                    </button>
+                  )}
                   {unreadCount > 0 && (
                     <button
                       type="button"
                       onClick={markAllAsRead}
                       className="neu-btn px-2.5 py-1 rounded-xl text-xs font-extrabold text-tertiary hover:text-link dark:text-tertiary dark:hover:text-link cursor-pointer active:scale-95"
-                      title="Mark all notifications as read"
+                      title={t('notif.markReadTitle')}
                     >
-                      Mark read
+                      {t('notif.markRead')}
                     </button>
                   )}
                   {notifications.length > 0 && (
@@ -673,17 +713,17 @@ const NotificationBell = () => {
                       type="button"
                       onClick={clearAllNotifications}
                       className="neu-btn px-2.5 py-1 rounded-xl text-xs font-extrabold text-tertiary hover:text-danger dark:text-tertiary dark:hover:text-red-400 cursor-pointer active:scale-95"
-                      title="Clear all notifications"
+                      title={t('notif.clearAllTitle')}
                     >
-                      Clear all
+                      {t('notif.clearAll')}
                     </button>
                   )}
                 </div>
               </div>
 
               {/* Segmented Filter Track (Option 1 - Strictly NO pills, NO dots) */}
-              <div className="px-3 sm:px-4 py-2 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-[#0B131E]/60 shrink-0">
-                <div className="p-1 rounded-xl bg-slate-200/60 dark:bg-[#0E1724] border border-slate-300/40 dark:border-white/5 flex items-center gap-1">
+              <div className="px-3 sm:px-4 py-2 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-surface-dark/60 shrink-0">
+                <div className="p-1 rounded-xl bg-slate-200/60 dark:bg-surface-dark border border-slate-300/40 dark:border-white/5 flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => setFilterTab('all')}
@@ -693,7 +733,7 @@ const NotificationBell = () => {
                         : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    All ({notifications.length})
+                    {t('notif.tabAll', { count: notifications.length })}
                   </button>
                   <button
                     type="button"
@@ -704,7 +744,7 @@ const NotificationBell = () => {
                         : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    Unread ({unreadCount})
+                    {t('notif.tabUnread', { count: unreadCount })}
                   </button>
                   <button
                     type="button"
@@ -715,14 +755,14 @@ const NotificationBell = () => {
                         : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
                     }`}
                   >
-                    Bookings
+                    {t('notif.tabBookings')}
                   </button>
                 </div>
               </div>
 
               {/* Notification List (Option 1 Linear Feed) */}
               <div 
-                className="max-h-[350px] sm:max-h-[380px] overflow-y-auto overscroll-contain p-2.5 sm:p-3 space-y-2.5"
+                className="max-h-[21.875rem] sm:max-h-[23.75rem] overflow-y-auto overscroll-contain p-2.5 sm:p-3 space-y-2.5"
                 style={{ 
                   WebkitOverflowScrolling: 'touch',
                   touchAction: 'pan-y'
@@ -757,8 +797,8 @@ const NotificationBell = () => {
                           whileTap={{ scale: 0.985 }}
                           className={`w-full text-left p-3 sm:p-3.5 rounded-2xl flex items-start gap-3 transition-all relative group cursor-pointer select-none ${accent.border} ${
                             isUnread 
-                              ? 'neu-flat bg-white/70 dark:bg-[#162438] shadow-sm' 
-                              : 'neu-flat-sm opacity-85 hover:opacity-100 bg-slate-50/50 dark:bg-[#101B2B]'
+                              ? 'neu-flat bg-white/70 dark:bg-surface-darkAlt shadow-sm' 
+                              : 'neu-flat-sm opacity-85 hover:opacity-100 bg-slate-50/50 dark:bg-surface-dark'
                           }`}
                           onClick={() => handleNotifClick(notif)}
                         >
@@ -767,12 +807,12 @@ const NotificationBell = () => {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-1">
-                              <p className={`text-xs sm:text-[13px] truncate ${isUnread ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300'}`}>
+                              <p className={`text-xs sm:text-[0.8125rem] truncate ${isUnread ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300'}`}>
                                 {notif.title}
                               </p>
                               {isUnread && (
                                 <span className={`px-1.5 py-0.2 rounded text-3xs font-black uppercase tracking-wider ${accent.badgeBg} shrink-0`}>
-                                  NEW
+                                  {t('notif.newBadge')}
                                 </span>
                               )}
                             </div>
@@ -782,11 +822,11 @@ const NotificationBell = () => {
                             <div className="flex items-center justify-between gap-2 mt-1.5 text-3xs text-tertiary">
                               <div className="flex items-center gap-1.5 font-semibold">
                                 <Clock className="w-3 h-3 text-tertiary shrink-0" />
-                                <span>{timeAgo(notif.time)}</span>
-                                {formatNotifClock(notif.time) && (
+                                <span>{timeAgo(notif.time, language)}</span>
+                                {formatNotifClock(notif.time, language) && (
                                   <>
                                     <span>&bull;</span>
-                                    <span className="font-mono text-slate-500 dark:text-slate-400 font-bold">{formatNotifClock(notif.time)}</span>
+                                    <span className="font-mono text-slate-500 dark:text-slate-400 font-bold">{formatNotifClock(notif.time, language)}</span>
                                   </>
                                 )}
                               </div>
@@ -796,7 +836,7 @@ const NotificationBell = () => {
                                 type="button"
                                 onClick={(e) => dismissNotification(e, notif.id)}
                                 className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700/60 text-tertiary hover:text-slate-900 dark:hover:text-white transition-opacity cursor-pointer shrink-0"
-                                title="Dismiss notification"
+                                title={t('notif.dismissTitle')}
                               >
                                 <X className="w-3 h-3" />
                               </button>
@@ -814,10 +854,10 @@ const NotificationBell = () => {
                     transition={{ duration: 0.2 }}
                   >
                     <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2 text-success">
-                      <CheckCircle2 className="w-6 h-6" />
+                      <CheckCircle className="w-6 h-6" />
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-extrabold">You&apos;re all caught up!</p>
-                    <p className="text-xs text-tertiary mt-1">No notifications matching this filter.</p>
+                    <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-extrabold">{t('notif.emptyTitle')}</p>
+                    <p className="text-xs text-tertiary mt-1">{t('notif.emptySubtitle')}</p>
                   </motion.div>
                 )}
               </div>
@@ -825,17 +865,21 @@ const NotificationBell = () => {
               {/* Footer */}
               {notifications.length > 0 && (
                 <div className="px-4 sm:px-5 py-2.5 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-2xs text-tertiary font-bold bg-surface-shell shrink-0">
-                  <span>{filteredNotifications.length} of {notifications.length} notification{notifications.length !== 1 ? 's' : ''}</span>
+                  <span>
+                    {notifications.length === 1
+                      ? t('notif.footerCountOne', { shown: filteredNotifications.length, total: notifications.length })
+                      : t('notif.footerCountMany', { shown: filteredNotifications.length, total: notifications.length })}
+                  </span>
                   {unreadCount > 0 ? (
                     <button
                       type="button"
                       onClick={markAllAsRead}
                       className="text-link hover:underline font-extrabold cursor-pointer"
                     >
-                      {unreadCount} unread &bull; Mark all
+                      {t('notif.unreadMarkAll', { count: unreadCount })}
                     </button>
                   ) : (
-                    <span className="text-success font-extrabold">All caught up</span>
+                    <span className="text-success font-extrabold">{t('notif.allCaughtUp')}</span>
                   )}
                 </div>
               )}

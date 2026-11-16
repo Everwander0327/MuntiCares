@@ -1,8 +1,17 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { Map as MapLibreMap, Marker, AttributionControl } from 'maplibre-gl';
-import { Globe, Plus, Minus, Maximize2, Crosshair, LocateFixed, Loader2 } from 'lucide-react';
+import {
+  Globe,
+  Plus,
+  Minus,
+  ArrowsOut,
+  Crosshair,
+  CrosshairSimple,
+  SpinnerGap,
+} from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import BasemapControl from './BasemapControl';
 import { BASEMAP_STYLES, STYLE_STREETS, focusOnLocation, overlayPaintColor } from '../mapStyles';
 
@@ -32,7 +41,7 @@ const providerMarkup = (heading, avatarUrl, providerName, stale = false) => {
       <div class="mc-nav-halo"></div>
       <div class="mc-nav-heading" style="transform: rotate(${deg}deg);">
         <div class="mc-nav-arrow">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="#2F6FB5">
+          <svg viewBox="0 0 24 24" width="20" height="20" style="fill: var(--trk-accent, #2F6FB5);">
             <path d="M12 2L4 21l8-4 8 4L12 2z"/>
           </svg>
         </div>
@@ -180,7 +189,10 @@ const TrackingMap = forwardRef(function TrackingMap({
   controlsAlign = 'center',
   className = '',
 }, ref) {
-  const { dark } = useTheme();
+  const { dark, activeColorTheme } = useTheme();
+  const { t } = useLanguage();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [basemap, setBasemap] = useState('streets');
   const [locatingGps, setLocatingGps] = useState(false);
   const [fitTrigger, setFitTrigger] = useState(0);
@@ -211,7 +223,12 @@ const TrackingMap = forwardRef(function TrackingMap({
   const center = p || d || [14.4081, 121.0415]; // Muntinlupa
   const isFilteredBasemap = basemap !== 'satellite';
   const treatment = isFilteredBasemap ? (dark ? 'dark' : 'muted') : null;
-  const accent = dark ? '#8CBDF0' : '#2F6FB5';
+  const accent = dark
+    ? (activeColorTheme?.dark?.primary || '#8CBDF0')
+    : (activeColorTheme?.light?.primary || '#2F6FB5');
+  const canvasBg = dark
+    ? (activeColorTheme?.dark?.page || '#0E1620')
+    : (activeColorTheme?.light?.page || '#F4F8FC');
   const paintAccent = treatment ? overlayPaintColor(accent, treatment) : accent;
   const paintDash = treatment ? overlayPaintColor('#ffffff', treatment) : '#ffffff';
 
@@ -240,7 +257,7 @@ const TrackingMap = forwardRef(function TrackingMap({
 
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser.');
+      toast.error(t('tracking.map.geoUnsupported'));
       return;
     }
     setLocatingGps(true);
@@ -250,14 +267,14 @@ const TrackingMap = forwardRef(function TrackingMap({
         const { latitude, longitude } = pos.coords;
         onToggleFollowRef.current?.(false);
         focusOnLocation(mapRef.current, [longitude, latitude]);
-        toast.success('Centered on your GPS location');
+        toast.success(t('tracking.map.centeredGps'));
       },
       (err) => {
         setLocatingGps(false);
         if (err.code === 1) {
-          toast.error('Location permission denied. Please allow location access.');
+          toast.error(t('tracking.map.permissionDenied'));
         } else {
-          toast.error('Unable to fetch device location.');
+          toast.error(t('tracking.map.locationFailed'));
         }
       },
       { enableHighAccuracy: true, timeout: 12000 }
@@ -341,7 +358,7 @@ const TrackingMap = forwardRef(function TrackingMap({
       if (!pendingBasemapRef.current) return;
       pendingBasemapRef.current = null;
       setBasemap('streets');
-      toast.error('That base map failed to load; switched back to the street map.');
+      toast.error(tRef.current('tracking.map.basemapFailed'));
     });
 
     const onDragStart = () => onToggleFollowRef.current?.(false);
@@ -543,12 +560,12 @@ const TrackingMap = forwardRef(function TrackingMap({
     <div
       className={`relative w-full h-full mc-map-wrap ${isFilteredBasemap ? (dark ? 'mc-canvas-tiles--dark' : 'mc-canvas-tiles--muted') : ''} ${className}`}
       role="region"
-      aria-label="Live provider map"
+      aria-label={t('tracking.map.ariaLive')}
     >
       <div
         ref={mapContainer}
         className="w-full h-full"
-        style={{ background: dark ? '#0f172a' : '#eaf2f8' }}
+        style={{ background: canvasBg }}
       />
 
       {/* Redesign: waiting state is a skeleton, never a fake/frozen live pin */}
@@ -559,7 +576,7 @@ const TrackingMap = forwardRef(function TrackingMap({
               <span className="mc-status-dot is-caution">
                 <Globe className="w-3 h-3" />
               </span>
-              <span className="mc-map-skeleton__text">Locating provider…</span>
+              <span className="mc-map-skeleton__text">{t('tracking.map.locatingProvider')}</span>
             </div>
             <div className="mc-skeleton-line" />
             <div className="mc-skeleton-line mc-skeleton-line--short" />
@@ -595,24 +612,24 @@ const TrackingMap = forwardRef(function TrackingMap({
           onClick={handleLocateMe}
           disabled={locatingGps}
           className="mc-gps-pill-btn disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Use my current GPS location"
-          aria-label="Use my current GPS location"
+          title={t('tracking.map.useGpsTitle')}
+          aria-label={t('tracking.map.useGpsTitle')}
         >
           {locatingGps ? (
-            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            <SpinnerGap className="w-4 h-4 animate-spin shrink-0" />
           ) : (
-            <LocateFixed className="w-4 h-4 shrink-0" />
+            <CrosshairSimple className="w-4 h-4 shrink-0" />
           )}
-          <span>My GPS</span>
+          <span>{t('tracking.map.myGps')}</span>
         </button>
 
-        <div className="mc-zoom-pod" role="group" aria-label="Map navigation controls">
+        <div className="mc-zoom-pod" role="group" aria-label={t('tracking.map.navControlsAria')}>
           <button
             type="button"
             onClick={() => mapRef.current?.zoomIn()}
             className="mc-zoom-pod__btn"
-            title="Zoom in"
-            aria-label="Zoom in"
+            title={t('tracking.map.zoomIn')}
+            aria-label={t('tracking.map.zoomIn')}
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -620,8 +637,8 @@ const TrackingMap = forwardRef(function TrackingMap({
             type="button"
             onClick={() => mapRef.current?.zoomOut()}
             className="mc-zoom-pod__btn"
-            title="Zoom out"
-            aria-label="Zoom out"
+            title={t('tracking.map.zoomOut')}
+            aria-label={t('tracking.map.zoomOut')}
           >
             <Minus className="w-4 h-4" />
           </button>
@@ -630,18 +647,18 @@ const TrackingMap = forwardRef(function TrackingMap({
             onClick={fitRoute}
             disabled={!p && !d}
             className="mc-zoom-pod__btn disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Fit entire route in view"
-            aria-label="Fit entire route in view"
+            title={t('tracking.map.fitRoute')}
+            aria-label={t('tracking.map.fitRoute')}
           >
-            <Maximize2 className="w-4 h-4" />
+            <ArrowsOut className="w-4 h-4" />
           </button>
           {onToggleFollow && (
             <button
               type="button"
               onClick={() => onToggleFollow(!follow)}
               className="mc-zoom-pod__btn"
-              title={follow ? 'Following provider (click to unlock)' : 'Follow provider'}
-              aria-label={follow ? 'Stop following provider' : 'Follow provider'}
+              title={follow ? t('tracking.map.followingTitle') : t('tracking.map.followTitle')}
+              aria-label={follow ? t('tracking.map.stopFollowingAria') : t('tracking.map.followTitle')}
               aria-pressed={follow}
             >
               <Crosshair className="w-4 h-4" />
@@ -651,7 +668,7 @@ const TrackingMap = forwardRef(function TrackingMap({
       </div>
 
       {compact && (
-        <span className="sr-only">Compact live route map</span>
+        <span className="sr-only">{t('tracking.map.compactSrOnly')}</span>
       )}
     </div>
   );

@@ -4,15 +4,18 @@ import App from './App.jsx'
 import './index.css'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import { ThemeProvider } from './contexts/ThemeContext.jsx'
+import { LanguageProvider } from './contexts/LanguageContext.jsx'
 import { PresenceProvider } from './contexts/PresenceContext.jsx'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
       <ThemeProvider>
-        <PresenceProvider>
-          <App />
-        </PresenceProvider>
+        <LanguageProvider>
+          <PresenceProvider>
+            <App />
+          </PresenceProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </AuthProvider>
   </React.StrictMode>,

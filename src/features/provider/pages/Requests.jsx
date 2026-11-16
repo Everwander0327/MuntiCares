@@ -8,13 +8,26 @@ import ArrivalOverrideDialog from '@/features/tracking/components/ArrivalOverrid
 import { parseLocalDate, slotsOverlap, formatSlotLabel } from '@/lib/localDate';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { 
-  Check, X, MapPin, Calendar, Clock, CheckCircle2, Loader2, 
-  Search, Navigation, Home, MessageSquare, 
-  ChevronLeft, ChevronRight, ChevronDown, Filter
-} from 'lucide-react';
+import {
+  Check,
+  X,
+  MapPin,
+  Calendar,
+  Clock,
+  CheckCircle,
+  SpinnerGap,
+  MagnifyingGlass,
+  NavigationArrow,
+  House,
+  ChatText,
+  CaretLeft,
+  CaretRight,
+  CaretDown,
+  Funnel,
+} from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import toast from 'react-hot-toast';
@@ -28,24 +41,25 @@ const staggerItem = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
 };
 
-const STATUS_FLOW = {
-  Accepted: { next: 'On The Way', icon: <Navigation className="w-3.5 h-3.5" />, label: 'Start Travel (On The Way)', color: 'neu-btn-primary text-white' },
-  'On The Way': { next: 'Arrived', icon: <Home className="w-3.5 h-3.5" />, label: 'Mark Arrived on Site', color: 'neu-btn bg-amber-500 text-white hover:bg-amber-600' },
-  Arrived: { next: 'Completed', icon: <CheckCircle2 className="w-3.5 h-3.5" />, label: 'Complete Visit', color: 'neu-btn bg-emerald-600 text-white hover:bg-emerald-700' },
-};
+const getStatusFlow = (t) => ({
+  Accepted: { next: 'On The Way', icon: <NavigationArrow className="w-3.5 h-3.5" />, label: t('provider.requests.flowStartTravel'), color: 'neu-btn-primary text-white' },
+  'On The Way': { next: 'Arrived', icon: <House className="w-3.5 h-3.5" />, label: t('provider.requests.flowMarkArrived'), color: 'neu-btn bg-amber-500 text-white hover:bg-amber-600' },
+  Arrived: { next: 'Completed', icon: <CheckCircle className="w-3.5 h-3.5" />, label: t('provider.requests.flowCompleteVisit'), color: 'neu-btn bg-emerald-600 text-white hover:bg-emerald-700' },
+});
 
-const getStatusBadge = (status) => {
+const getStatusBadge = (status, translateStatus) => {
+  const label = translateStatus(status);
   switch (status) {
     case 'Completed':
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-success dark:text-success-dark bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30">
-          Completed
+          {label}
         </span>
       );
     case 'Pending':
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-warning dark:text-warning-dark bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30">
-          Pending
+          {label}
         </span>
       );
     case 'Accepted':
@@ -53,25 +67,25 @@ const getStatusBadge = (status) => {
     case 'Arrived':
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-link dark:text-primary-300 bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30">
-          {status}
+          {label}
         </span>
       );
     case 'Rejected':
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-danger dark:text-danger-dark bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30">
-          Rejected
+          {label}
         </span>
       );
     case 'Cancelled':
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary bg-slate-200/60 dark:bg-slate-800/60 border border-slate-300/50 dark:border-white/10">
-          Cancelled
+          {label}
         </span>
       );
     default:
       return (
         <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-2xs font-extrabold uppercase tracking-wider text-tertiary bg-slate-200/50">
-          {status}
+          {label}
         </span>
       );
   }
@@ -91,6 +105,15 @@ const ProviderRequests = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
   const { user } = useAuth();
+  const { t, language, formatDate, translateService, translateStatus } = useLanguage();
+  const STATUS_FLOW = useMemo(() => getStatusFlow(t), [t]);
+  const filterLabels = useMemo(() => ({
+    All: t('provider.requests.tabAll'),
+    Pending: t('provider.requests.tabPending'),
+    Active: t('provider.requests.tabActive'),
+    Completed: t('provider.requests.tabCompleted'),
+    History: t('provider.requests.tabHistory'),
+  }), [t]);
 
   const fetchAll = async () => {
     if (!user) return;
@@ -127,11 +150,10 @@ const ProviderRequests = () => {
         return {
           id: r.id,
           patientId: r.patient_id,
-          patient: r.patient?.full_name || 'Unknown Patient',
+          patient: r.patient?.full_name || '',
           avatarUrl: r.patient?.avatar_url || '',
           service: r.service,
           durationMinutes: r.duration_minutes || 30,
-          date: parseLocalDate(r.date)?.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) || 'Unscheduled',
           time: timeLabel,
           notes: r.notes || '',
           status: r.status,
@@ -185,7 +207,7 @@ const ProviderRequests = () => {
           .maybeSingle();
 
         if (!target || target.status !== 'Pending') {
-          toast.error('This request was handled already.');
+          toast.error(t('provider.requests.alreadyHandled'));
           fetchAll();
           return;
         }
@@ -199,7 +221,7 @@ const ProviderRequests = () => {
           .in('status', ['Accepted', 'On The Way', 'Arrived'])
           .neq('id', id);
         if ((held || []).some(h => slotsOverlap(target.date, target.time, target.date, h.time, target.duration_minutes || 30, h.duration_minutes || 30))) {
-          toast.error('You already have a visit accepted for that time.');
+          toast.error(t('provider.requests.overlapAccepted'));
           fetchAll();
           return;
         }
@@ -215,22 +237,26 @@ const ProviderRequests = () => {
 
       if (error) {
         if (error.code === '23P01' || error.code === '23505') {
-          toast.error('This time slot conflicts with an existing accepted visit.');
+          toast.error(t('provider.requests.slotConflict'));
           fetchAll();
           return;
         }
         throw error;
       }
       if (!updated?.length) {
-        toast.error('This request was handled already.');
+        toast.error(t('provider.requests.alreadyHandled'));
         fetchAll();
         return;
       }
-      toast.success(action === 'accepted' ? `Accepted visit for ${patientName}!` : `Declined request.`);
+      toast.success(
+        action === 'accepted'
+          ? t('provider.requests.acceptedVisitToast', { patient: patientName })
+          : t('provider.requests.declinedRequestToast')
+      );
       fetchAll();
     } catch (err) {
       console.error('Error updating request:', err);
-      toast.error('Failed to update request.');
+      toast.error(t('provider.requests.updateRequestFailed'));
     } finally {
       setActionStates(prev => {
         const next = { ...prev };
@@ -250,11 +276,11 @@ const ProviderRequests = () => {
           if (canOverrideArrival(res)) {
             setArrivalOverride({ id: visitId, failure: res });
           } else {
-            toast.error(formatArrivalFailure(res));
+            toast.error(formatArrivalFailure(res, language));
           }
           return;
         }
-        toast.success('Visit updated to "Arrived"!');
+        toast.success(t('provider.requests.visitArrivedToast'));
         fetchAll();
         return;
       }
@@ -272,22 +298,22 @@ const ProviderRequests = () => {
 
       if (error) {
         if (error.code === '23P01' || error.code === '23505') {
-          toast.error('This time slot conflicts with an existing accepted visit.');
+          toast.error(t('provider.requests.slotConflict'));
           fetchAll();
           return;
         }
         throw error;
       }
       if (!updated?.length) {
-        toast.error(`This visit is no longer "${fromStatus}".`);
+        toast.error(t('provider.requests.visitNoLongerStatus', { status: translateStatus(fromStatus) }));
         fetchAll();
         return;
       }
-      toast.success(`Visit updated to "${nextStatus === 'On The Way' ? 'On Route' : nextStatus}"!`);
+      toast.success(t('provider.requests.visitUpdatedToast', { status: translateStatus(nextStatus) }));
       fetchAll();
     } catch (err) {
       console.error('Error advancing visit:', err);
-      toast.error('Failed to update visit status.');
+      toast.error(t('provider.requests.visitStatusUpdateFailed'));
     } finally {
       setUpdatingVisitId(null);
     }
@@ -304,15 +330,15 @@ const ProviderRequests = () => {
 
       if (error) throw error;
       if (!data?.ok) {
-        toast.error(data?.message || 'Could not extend duration.');
+        toast.error(data?.message || t('provider.requests.extendFailed'));
         return;
       }
 
-      toast.success(`Visit extended to ${data.new_duration_minutes} min (ends at ${data.end_time})!`);
+      toast.success(t('provider.requests.extendSuccess', { minutes: data.new_duration_minutes, endTime: data.end_time }));
       fetchAll();
     } catch (err) {
       console.error('Error extending visit duration:', err);
-      toast.error(err.message || 'Failed to extend visit.');
+      toast.error(err.message || t('provider.requests.extendError'));
     } finally {
       setExtendingVisitId(null);
     }
@@ -326,15 +352,15 @@ const ProviderRequests = () => {
       const res = await markVisitArrived(id, null, ARRIVAL_OVERRIDE_REASON);
       setArrivalOverride(null);
       if (!res?.ok) {
-        toast.error(formatArrivalFailure(res));
+        toast.error(formatArrivalFailure(res, language));
         return;
       }
-      toast.success('Arrived — override recorded.');
+      toast.success(t('provider.requests.arrivedOverrideToast'));
       fetchAll();
     } catch (err) {
       console.error('Error recording arrival override:', err);
       setArrivalOverride(null);
-      toast.error(err?.message || 'Failed to mark arrived.');
+      toast.error(err?.message || t('provider.requests.markArrivedFailed'));
     } finally {
       setUpdatingVisitId(null);
     }
@@ -424,10 +450,10 @@ const ProviderRequests = () => {
         <section className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-4">
           <div>
             <h1 className="font-display font-extrabold tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
-              Incoming & Active Requests
+              {t('provider.requests.title')}
             </h1>
             <p className="text-xs sm:text-sm text-tertiary mt-0.5 sm:mt-1 max-w-xl">
-              Review bookings, update home visits, and coordinate patient consultations across Muntinlupa.
+              {t('provider.requests.subtitle')}
             </p>
           </div>
 
@@ -438,11 +464,11 @@ const ProviderRequests = () => {
             <div className="md:hidden flex items-center gap-2 w-full">
               {/* Searchbox taking flexible space */}
               <div className="neu-inset px-2.5 py-1.5 rounded-xl flex items-center gap-2 h-10 flex-1 min-w-0 border border-slate-200/50 dark:border-white/5">
-                <Search className="w-3.5 h-3.5 text-link shrink-0" />
+                <MagnifyingGlass className="w-3.5 h-3.5 text-link shrink-0" />
                 <input
                   type="text"
-                  aria-label="Search requests"
-                  placeholder="Search patient, service..."
+                  aria-label={t('provider.requests.searchAria')}
+                  placeholder={t('provider.requests.searchPlaceholderMobile')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-transparent border-0 px-0.5 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
@@ -452,7 +478,7 @@ const ProviderRequests = () => {
                     type="button"
                     onClick={() => setSearchTerm('')}
                     className="p-0.5 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                    title="Clear search"
+                    title={t('provider.requests.clearSearch')}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -471,13 +497,13 @@ const ProviderRequests = () => {
                   }`}
                   aria-haspopup="listbox"
                   aria-expanded={showFilterDropdown}
-                  title="Filter requests by status"
+                  title={t('provider.requests.filterStatusTitle')}
                 >
-                  <Filter className="w-3.5 h-3.5 text-link shrink-0" />
+                  <Funnel className="w-3.5 h-3.5 text-link shrink-0" />
                   <span className="text-xs font-bold whitespace-nowrap">
-                    {filter} ({filter === 'All' ? stats.total : filter === 'Pending' ? stats.pending : filter === 'Active' ? stats.active : filter === 'Completed' ? stats.completed : stats.history})
+                    {filterLabels[filter]} ({filter === 'All' ? stats.total : filter === 'Pending' ? stats.pending : filter === 'Active' ? stats.active : filter === 'Completed' ? stats.completed : stats.history})
                   </span>
-                  <ChevronDown
+                  <CaretDown
                     className={`w-3.5 h-3.5 text-tertiary shrink-0 transition-transform duration-200 ${
                       showFilterDropdown ? 'rotate-180 text-link' : ''
                     }`}
@@ -496,20 +522,20 @@ const ProviderRequests = () => {
                     >
                       <div className="px-2.5 py-1.5 border-b border-slate-200/60 dark:border-white/5 mb-1 flex items-center justify-between">
                         <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                          Filter Status
+                          {t('provider.requests.filterStatusHeading')}
                         </span>
                         <span className="text-xs text-link font-extrabold">
-                          {filter}
+                          {filterLabels[filter]}
                         </span>
                       </div>
 
                       <div className="space-y-1" role="listbox">
                         {[
-                          { value: 'All', label: 'All', count: stats.total },
-                          { value: 'Pending', label: 'Pending', count: stats.pending },
-                          { value: 'Active', label: 'Active', count: stats.active },
-                          { value: 'Completed', label: 'Completed', count: stats.completed },
-                          { value: 'History', label: 'History', count: stats.history },
+                          { value: 'All', label: filterLabels.All, count: stats.total },
+                          { value: 'Pending', label: filterLabels.Pending, count: stats.pending },
+                          { value: 'Active', label: filterLabels.Active, count: stats.active },
+                          { value: 'Completed', label: filterLabels.Completed, count: stats.completed },
+                          { value: 'History', label: filterLabels.History, count: stats.history },
                         ].map((opt) => {
                           const isSelected = filter === opt.value;
                           return (
@@ -555,7 +581,7 @@ const ProviderRequests = () => {
 
             {/* DESKTOP / TABLET (hidden md:flex): Segmented Tabs on Left, Searchbox on Right */}
             <div className="hidden md:flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/70 dark:bg-[#0E1724] border border-slate-200/80 dark:border-slate-800">
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/70 dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setFilter('All')}
@@ -565,7 +591,7 @@ const ProviderRequests = () => {
                       : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <span>All</span>
+                  <span>{filterLabels.All}</span>
                   <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
                     filter === 'All' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
                   }`}>
@@ -582,7 +608,7 @@ const ProviderRequests = () => {
                       : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <span>Pending</span>
+                  <span>{filterLabels.Pending}</span>
                   <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
                     filter === 'Pending' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
                   }`}>
@@ -599,7 +625,7 @@ const ProviderRequests = () => {
                       : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <span>Active</span>
+                  <span>{filterLabels.Active}</span>
                   <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
                     filter === 'Active' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
                   }`}>
@@ -616,7 +642,7 @@ const ProviderRequests = () => {
                       : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <span>Completed</span>
+                  <span>{filterLabels.Completed}</span>
                   <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
                     filter === 'Completed' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
                   }`}>
@@ -633,7 +659,7 @@ const ProviderRequests = () => {
                       : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <span>History</span>
+                  <span>{filterLabels.History}</span>
                   <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
                     filter === 'History' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
                   }`}>
@@ -645,11 +671,11 @@ const ProviderRequests = () => {
               {/* Compact Integrated Search Box for Desktop */}
               <div className="relative w-72 shrink-0">
                 <div className="neu-inset px-2.5 py-1.5 rounded-xl flex items-center gap-2 h-10 border border-slate-200/50 dark:border-white/5">
-                  <Search className="w-3.5 h-3.5 text-link shrink-0" />
+                  <MagnifyingGlass className="w-3.5 h-3.5 text-link shrink-0" />
                   <input
                     type="text"
-                    aria-label="Search requests"
-                    placeholder="Search patient, service, address..."
+                    aria-label={t('provider.requests.searchAria')}
+                    placeholder={t('provider.requests.searchPlaceholderDesktop')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full bg-transparent border-0 px-0.5 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
@@ -659,7 +685,7 @@ const ProviderRequests = () => {
                       type="button"
                       onClick={() => setSearchTerm('')}
                       className="p-0.5 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                      title="Clear search"
+                      title={t('provider.requests.clearSearch')}
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
@@ -681,7 +707,14 @@ const ProviderRequests = () => {
               animate="animate"
             >
             <AnimatePresence mode="popLayout">
-              {paginatedRequests.map((req) => (
+              {paginatedRequests.map((req) => {
+                const patientDisplayName = req.patient || t('provider.requests.unknownPatient');
+                const parsedDate = parseLocalDate(req.rawDate);
+                const dateLabel = parsedDate
+                  ? formatDate(parsedDate, { month: 'short', day: 'numeric', year: 'numeric' })
+                  : t('provider.requests.unscheduled');
+
+                return (
                 <motion.div
                   key={req.id}
                   variants={staggerItem}
@@ -697,23 +730,23 @@ const ProviderRequests = () => {
                       >
                         <div className="neu-flat-sm w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl overflow-hidden flex items-center justify-center text-link font-black text-xs sm:text-sm shrink-0 p-0.5">
                           {req.avatarUrl ? (
-                            <img src={req.avatarUrl} alt="" className="w-full h-full object-cover rounded-[10px] sm:rounded-xl" />
+                            <img src={req.avatarUrl} alt="" className="w-full h-full object-cover rounded-[0.625rem] sm:rounded-xl" />
                           ) : (
-                            req.patient.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'
+                            patientDisplayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'
                           )}
                         </div>
                         <div className="min-w-0">
                           <h3 className="font-display font-extrabold text-slate-900 dark:text-white group-hover:text-link transition-colors text-xs sm:text-sm truncate">
-                            {req.patient}
+                            {patientDisplayName}
                           </h3>
                           <p className="text-2xs sm:text-xs font-semibold text-link truncate mt-0.5">
-                            {req.service}
+                            {translateService(req.service)}
                           </p>
                         </div>
                       </Link>
 
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {getStatusBadge(req.status)}
+                        {getStatusBadge(req.status, translateStatus)}
                       </div>
                     </div>
 
@@ -722,7 +755,7 @@ const ProviderRequests = () => {
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-slate-600 dark:text-slate-300 font-medium text-xs w-full">
                         <span className="flex items-center gap-1.5 shrink-0">
                           <Calendar className="w-3.5 h-3.5 text-link shrink-0" />
-                          <span>{req.date}</span>
+                          <span>{dateLabel}</span>
                         </span>
                         {req.time && (
                           <>
@@ -735,7 +768,7 @@ const ProviderRequests = () => {
                         )}
                         <span className="flex items-center gap-1.5 min-w-0 ml-auto">
                           <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
-                          <span className="truncate max-w-[150px] sm:max-w-[210px]" title={req.location}>
+                          <span className="truncate max-w-[9.375rem] sm:max-w-[13.125rem]" title={req.location}>
                             {req.location}
                           </span>
                         </span>
@@ -745,7 +778,7 @@ const ProviderRequests = () => {
                     {/* Patient Notes: Clean Left Accent Line (No Sunken Inset Well) */}
                     <div className="mt-2.5 pl-3 border-l-2 border-slate-300 dark:border-slate-700 py-0.5 space-y-0.5">
                       <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                        Patient Note
+                        {t('provider.requests.patientNoteLabel')}
                       </p>
                       {req.notes && req.notes.trim() ? (
                         <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed italic">
@@ -753,7 +786,7 @@ const ProviderRequests = () => {
                         </p>
                       ) : (
                         <p className="text-xs text-tertiary italic">
-                          No additional notes provided by patient.
+                          {t('provider.requests.noNotesMsg')}
                         </p>
                       )}
                     </div>
@@ -763,18 +796,18 @@ const ProviderRequests = () => {
                   <div className="pt-2.5 border-t border-slate-200/50 dark:border-white/5 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Link
-                        to={`/provider/messages?partner=${req.patientId}&name=${encodeURIComponent(req.patient)}`}
+                        to={`/provider/messages?partner=${req.patientId}&name=${encodeURIComponent(patientDisplayName)}`}
                         className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-link hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center gap-1.5 shrink-0"
-                        title="Chat with Patient"
+                        title={t('provider.requests.chatTooltip')}
                       >
-                        <MessageSquare className="w-3.5 h-3.5 text-link" />
-                        <span>Chat</span>
+                        <ChatText className="w-3.5 h-3.5 text-link" />
+                        <span>{t('provider.requests.chatBtn')}</span>
                       </Link>
                       <Link
                         to={`/provider/patients/${req.patientId}/profile`}
                         className="text-xs font-bold text-tertiary hover:text-link transition-colors px-1"
                       >
-                        Profile &rarr;
+                        {t('provider.requests.profileBtn')} &rarr;
                       </Link>
                     </div>
 
@@ -787,20 +820,20 @@ const ProviderRequests = () => {
                             <button
                               type="button"
                               disabled={!!actionStates[req.id]}
-                              onClick={() => handleAction(req.id, 'accepted', req.patient)}
+                              onClick={() => handleAction(req.id, 'accepted', patientDisplayName)}
                               className="neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all cursor-pointer flex items-center gap-1"
                             >
                               <Check className="w-3.5 h-3.5" />
-                              <span>Accept</span>
+                              <span>{t('provider.requests.acceptBtn')}</span>
                             </button>
                             <button
                               type="button"
                               disabled={!!actionStates[req.id]}
-                              onClick={() => handleAction(req.id, 'rejected', req.patient)}
+                              onClick={() => handleAction(req.id, 'rejected', patientDisplayName)}
                               className="neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-danger hover:bg-rose-500 hover:text-white transition-all cursor-pointer flex items-center gap-1"
                             >
                               <X className="w-3.5 h-3.5" />
-                              <span>Decline</span>
+                              <span>{t('provider.requests.declineBtn')}</span>
                             </button>
                           </div>
                         )}
@@ -812,10 +845,10 @@ const ProviderRequests = () => {
                             disabled={extendingVisitId === req.id || updatingVisitId === req.id}
                             onClick={() => handleExtendDuration(req.id)}
                             className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-link hover:text-primary transition-all cursor-pointer flex items-center gap-1 active:scale-95"
-                            title="Extend visit duration by 30 minutes via RPC"
+                            title={t('provider.requests.extendTooltip')}
                           >
                             {extendingVisitId === req.id ? (
-                              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Extending...</>
+                              <><SpinnerGap className="w-3.5 h-3.5 animate-spin" /> {t('provider.requests.extending')}</>
                             ) : (
                               <><Clock className="w-3.5 h-3.5" /> +30m</>
                             )}
@@ -833,7 +866,7 @@ const ProviderRequests = () => {
                             }`}
                           >
                             {updatingVisitId === req.id ? (
-                              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...</>
+                              <><SpinnerGap className="w-3.5 h-3.5 animate-spin" /> {t('provider.requests.updating')}</>
                             ) : (
                               <>
                                 {STATUS_FLOW[req.status].icon}
@@ -846,7 +879,8 @@ const ProviderRequests = () => {
                     )}
                   </div>
                 </motion.div>
-              ))}
+                );
+              })}
             </AnimatePresence>
           </motion.div>
 
@@ -854,7 +888,7 @@ const ProviderRequests = () => {
           {totalPages > 1 && (
             <div className="neu-flat p-3 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-between gap-3">
               <p className="text-2xs sm:text-xs font-semibold text-tertiary truncate">
-                Showing {paginatedRequests.length} of {filteredRequests.length} requests
+                {t('provider.requests.showingRequests', { shown: paginatedRequests.length, total: filteredRequests.length })}
               </p>
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <button
@@ -862,10 +896,10 @@ const ProviderRequests = () => {
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
                   className="neu-btn px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all flex items-center gap-1 cursor-pointer"
-                  title="Previous page"
+                  title={t('provider.requests.prevPageTitle')}
                 >
-                  <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  <span className="hidden sm:inline">Prev</span>
+                  <CaretLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">{t('provider.requests.prevPage')}</span>
                 </button>
                 <span className="neu-inset px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-extrabold text-slate-800 dark:text-slate-200 select-none">
                   {currentPage} / {totalPages}
@@ -875,10 +909,10 @@ const ProviderRequests = () => {
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage >= totalPages}
                   className="neu-btn px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all flex items-center gap-1 cursor-pointer"
-                  title="Next page"
+                  title={t('provider.requests.nextPageTitle')}
                 >
-                  <span className="hidden sm:inline">Next</span>
-                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">{t('provider.requests.nextPage')}</span>
+                  <CaretRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>
@@ -890,25 +924,25 @@ const ProviderRequests = () => {
               icon={searchTerm ? 'search' : 'inbox'}
               title={
                 searchTerm
-                  ? 'No matching requests found'
+                  ? t('provider.requests.emptySearchTitle')
                   : filter === 'Pending'
-                  ? 'All caught up! No pending requests'
-                  : `No ${filter.toLowerCase()} requests`
+                  ? t('provider.requests.emptyPendingTitle')
+                  : t('provider.requests.emptyFilterTitle', { filter: filterLabels[filter].toLowerCase() })
               }
               message={
                 searchTerm
-                  ? `No bookings matched "${searchTerm}". Try adjusting your keywords.`
+                  ? t('provider.requests.emptySearchMsg', { term: searchTerm })
                   : filter === 'Pending'
-                  ? 'You have responded to all incoming visit requests. Active and upcoming visits can be managed in their respective tabs.'
-                  : `New patient appointments and service requests under "${filter}" will appear here.`
+                  ? t('provider.requests.emptyPendingMsg')
+                  : t('provider.requests.emptyFilterMsg', { filter: filterLabels[filter] })
               }
               action={
                 searchTerm
-                  ? { label: 'Clear Search', onClick: () => setSearchTerm('') }
+                  ? { label: t('provider.requests.clearSearchBtn'), onClick: () => setSearchTerm('') }
                   : filter === 'Pending' && stats.active > 0
-                  ? { label: `View ${stats.active} Active Visits`, onClick: () => setFilter('Active') }
+                  ? { label: t('provider.requests.viewActiveVisits', { count: stats.active }), onClick: () => setFilter('Active') }
                   : filter !== 'All'
-                  ? { label: 'View All Bookings', onClick: () => setFilter('All') }
+                  ? { label: t('provider.requests.viewAllBookings'), onClick: () => setFilter('All') }
                   : null
               }
             />

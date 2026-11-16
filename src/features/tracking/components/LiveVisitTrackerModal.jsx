@@ -3,14 +3,14 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import {
   X,
-  Navigation,
+  NavigationArrow,
   Clock,
-  MessageSquare,
+  ChatText,
   MapPin,
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
+  Warning,
+  CaretLeft,
+  CaretRight,
+} from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +24,7 @@ import { parseFullVisitAddress } from '../services/addressFormat';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useFocusTrap from '@/hooks/useFocusTrap';
 import useMediaQuery from '@/hooks/useMediaQuery';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getTrackingStatus, formatAccuracy, formatFreshness } from './trackingStatus';
 
 const STALE_AFTER_S = 45;
@@ -34,6 +35,9 @@ const SESSION_STALE_AFTER_S = 90;
  * props: isOpen, onClose, request { id, providerId, patientId, provider (name), providerAvatarUrl, service }
  */
 export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
+  const { language, t, formatTime, translateService } = useLanguage();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [provider, setProvider] = useState(null);
   const [destination, setDestination] = useState(null);
   const [status, setStatus] = useState(null);
@@ -177,7 +181,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
         }
       },
       onError: (err) => {
-        if (alive) setConnectionError(err?.message || 'Live updates are reconnecting…');
+        if (alive) setConnectionError(err?.message || tRef.current('tracking.patient.reconnecting'));
       },
     });
 
@@ -239,11 +243,11 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
   const stale = Boolean(provider) && !fixFresh;
   const stationary = Boolean(provider) && !fixFresh && sessionLive;
   const arrived = status === 'Arrived' || status === 'Completed';
-  const eta = duration != null ? new Date(Date.now() + duration * 1000).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null;
+  const eta = duration != null ? formatTime(new Date(Date.now() + duration * 1000), { hour: 'numeric', minute: '2-digit' }) : null;
   const routeReady = Array.isArray(route) && route.length > 1;
   const etaApproximate = Boolean(eta) && (!routeReady || provider?.degraded) && !arrived;
-  const statusMeta = getTrackingStatus({ arrived, approximate, live, stationary, session, provider });
-  const freshness = formatFreshness(ageS);
+  const statusMeta = getTrackingStatus({ arrived, approximate, live, stationary, session, provider, language });
+  const freshness = formatFreshness(ageS, language);
   const accuracyText = arrived ? null : formatAccuracy(provider?.accuracy);
 
   const progressPct = arrived
@@ -255,25 +259,25 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
         : 8;
 
   const providerId = request?.providerId || providerMeta?.id;
-  const providerName = request?.provider || providerMeta?.name || 'Healthcare Provider';
+  const providerName = request?.provider || providerMeta?.name || t('chat.window.defaultProvider');
   const avatarUrl = request?.providerAvatarUrl || providerMeta?.avatarUrl || null;
-  const service = request?.service || 'Home care visit';
+  const service = translateService(request?.service) || t('tracking.provider.homeCareVisit');
   const sessionPaused = Boolean(!arrived && session && session.status !== 'active');
   const destinationAddress = destination?.address
     || (destination
-      ? (destination.confirmed === false ? 'Approximate visit location' : 'Pinned visit location')
-      : 'Visit location not confirmed');
-  const etaValue = arrived ? 'On site' : formatDuration(duration);
+      ? (destination.confirmed === false ? t('tracking.patient.approxDest') : t('tracking.patient.pinnedDest'))
+      : t('tracking.provider.locNotConfirmed'));
+  const etaValue = arrived ? t('tracking.patient.onSite') : formatDuration(duration);
   const etaSub = arrived
-    ? 'Provider is at the visit location'
+    ? t('tracking.patient.atDoorstep')
     : eta
-      ? `${etaApproximate ? 'Approx. arrival' : 'Arrives'} ${eta}`
-      : 'Calculating route…';
+      ? `${etaApproximate ? t('tracking.patient.approxArrival') : t('tracking.patient.arrives')} ${eta}`
+      : t('tracking.patient.calcRoute');
   const distanceText = arrived
-    ? 'At your location'
+    ? t('tracking.patient.atYourLoc')
     : distance != null
-      ? `${formatDistance(distance)} away`
-      : 'Distance pending';
+      ? t('tracking.patient.away', { distance: formatDistance(distance) })
+      : t('tracking.patient.distPending');
 
   const initials = (providerName || 'PR')
     .split(' ')
@@ -291,9 +295,9 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
       ...next,
       source: 'manual',
     });
-    if (!updated) throw new Error('The visit destination could not be saved.');
+    if (!updated) throw new Error(t('tracking.patient.destSaveErr'));
     setDestination({ ...updated, confirmed: true });
-    toast.success('Visit location updated.');
+    toast.success(t('tracking.patient.destUpdated'));
   };
 
   const canEditDestination = !arrived && !['Completed', 'Cancelled', 'Rejected'].includes(status);
@@ -398,9 +402,11 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
     <>
       {approximate && !arrived && (
         <div className="mc-note">
-          <AlertTriangle className="w-4 h-4" />
+          <Warning className="w-4 h-4" />
           <span>
-            GPS accuracy is low{accuracyText ? ` (about ${accuracyText})` : ''}. The map will refine automatically as the signal improves.
+            {t('tracking.patient.lowGpsNote', {
+              accuracy: accuracyText ? t('tracking.patient.lowGpsAbout', { accuracy: accuracyText }) : '',
+            })}
           </span>
         </div>
       )}
@@ -409,23 +415,23 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
           <MapPin className="w-4 h-4" />
           <span className="flex-1">
             {destination?.confirmed === false
-              ? 'This destination is approximate. Place the pin for an exact road ETA.'
-              : 'Set the visit location for an exact road ETA.'}
+              ? t('tracking.patient.approxNote')
+              : t('tracking.patient.setLocNote')}
           </span>
           <button type="button" onClick={() => setDestinationModalOpen(true)} className="mc-link">
-            {destination?.confirmed === false ? 'Pin it' : 'Set'}
+            {destination?.confirmed === false ? t('tracking.patient.pinIt') : t('tracking.patient.set')}
           </button>
         </div>
       )}
       {sessionPaused && (
         <div className="mc-note">
-          <AlertTriangle className="w-4 h-4" />
-          <span>Live sharing is paused. The provider&apos;s app will resume it automatically when connected.</span>
+          <Warning className="w-4 h-4" />
+          <span>{t('tracking.patient.sharingPausedNote')}</span>
         </div>
       )}
       {connectionError && !arrived && (
         <div className="mc-note mc-note--problem" role="alert">
-          <AlertTriangle className="w-4 h-4" />
+          <Warning className="w-4 h-4" />
           <span>{connectionError}</span>
         </div>
       )}
@@ -449,12 +455,18 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
         <Clock className="w-4 h-4" />
         <span>{freshness}</span>
         <span className="mc-dot-sep" />
-        <span>{sessionLive ? 'Live sharing active' : sessionPaused ? 'Sharing paused' : 'Waiting for session'}</span>
+        <span>
+          {sessionLive
+            ? t('tracking.patient.liveSharingActive')
+            : sessionPaused
+              ? t('tracking.patient.sharingPaused')
+              : t('tracking.patient.waitingSession')}
+        </span>
       </div>
       {providerTo && (
         <Link to={providerTo} onClick={onClose} className="mc-link">
-          View {providerName}&apos;s profile
-          <ChevronRight className="w-3.5 h-3.5" />
+          {t('tracking.patient.viewProfileLink', { name: providerName })}
+          <CaretRight className="w-3.5 h-3.5" />
         </Link>
       )}
     </>
@@ -469,7 +481,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
               ref={dialogRef}
               role="dialog"
               aria-modal="true"
-              aria-label="Live provider tracking"
+              aria-label={t('tracking.patient.ariaDialog')}
               className="mc-tracker mc-tracker-shell"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -491,7 +503,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                   controlsAlign={isDesktop ? 'center' : 'top'}
                 />
                 <p className="sr-only">
-                  Live map showing the provider travelling to the confirmed visit location.
+                  {t('tracking.patient.srMap')}
                 </p>
 
                 {/* Redesign: one status line, one close button, no status chip */}
@@ -501,8 +513,8 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                     ref={closeRef}
                     type="button"
                     onClick={onClose}
-                    title="Close tracker"
-                    aria-label="Close live tracker"
+                    title={t('tracking.patient.closeTitle')}
+                    aria-label={t('tracking.patient.closeAria')}
                     className="mc-icon-btn mc-icon-btn--spacer"
                   >
                     <X className="w-4 h-4" />
@@ -518,11 +530,11 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                       initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.2 }}
-                      aria-label="Live visit details"
+                      aria-label={t('tracking.patient.panelAria')}
                     >
                       <div className="mc-panel-head">
                         <div className="min-w-0 flex-1">
-                          <p className="mc-kicker">Live visit</p>
+                          <p className="mc-kicker">{t('tracking.patient.liveVisit')}</p>
                           <h2 id="live-tracker-title" className="mc-title truncate">{providerName}</h2>
                         </div>
                         <button
@@ -530,10 +542,10 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                           type="button"
                           onClick={() => setPanelOpen(false)}
                           className="mc-icon-btn"
-                          title="Collapse details panel"
-                          aria-label="Collapse live visit details"
+                          title={t('tracking.patient.collapseDetailsTitle')}
+                          aria-label={t('tracking.patient.collapseDetailsAria')}
                         >
-                          <ChevronLeft className="w-4 h-4" />
+                          <CaretLeft className="w-4 h-4" />
                         </button>
                       </div>
 
@@ -556,7 +568,7 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                         {details}
 
                         <p className="mc-muted">
-                          Keyboard: <strong>F</strong> follow · <strong>+/−</strong> zoom · <strong>Esc</strong> close
+                          Keyboard: <strong>F</strong> {t('tracking.patient.keyboardFollow')} · <strong>+/−</strong> {t('tracking.patient.keyboardZoom')} · <strong>Esc</strong> {t('tracking.patient.keyboardClose')}
                         </p>
                       </div>
                     </motion.aside>
@@ -571,11 +583,11 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                         setPanelOpen(true);
                       }}
                       className="mc-panel-rail"
-                      title="Open live visit details"
-                      aria-label="Open live visit details"
+                      title={t('tracking.patient.openDetailsTitle')}
+                      aria-label={t('tracking.patient.openDetailsTitle')}
                     >
-                      <ChevronRight className="w-4 h-4" />
-                      <span>Live visit</span>
+                      <CaretRight className="w-4 h-4" />
+                      <span>{t('tracking.patient.liveVisit')}</span>
                     </button>
                   )}
                 </>
@@ -585,12 +597,12 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                   id="live-tracker-sheet"
                   className={`mc-sheet mc-sheet--${mobileSheet}${dragging ? ' is-dragging' : ''}`}
                   style={dragHeight != null ? { height: `${dragHeight}px` } : undefined}
-                  aria-label="Live visit details"
+                  aria-label={t('tracking.patient.panelAria')}
                 >
                   <button
                     type="button"
                     className="mc-sheet-grab"
-                    aria-label={mobileSheet === 'collapsed' ? 'Expand live visit details' : 'Collapse or expand live visit details'}
+                    aria-label={mobileSheet === 'collapsed' ? t('tracking.patient.expandSheetAria') : t('tracking.patient.toggleSheetAria')}
                     aria-expanded={mobileSheet !== 'collapsed'}
                     aria-controls="live-tracker-sheet"
                     onPointerDown={onGrabPointerDown}
@@ -614,8 +626,8 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
                           freshness={freshness}
                           action={(
                             <Link to={chatTo} onClick={onClose} className="mc-btn mc-btn--primary mc-btn--sm">
-                              <MessageSquare className="w-4 h-4" />
-                              Chat
+                              <ChatText className="w-4 h-4" />
+                              {t('tracking.patient.chat')}
                             </Link>
                           )}
                         />
@@ -653,9 +665,9 @@ export default function LiveVisitTrackerModal({ isOpen, onClose, request }) {
         onClose={() => setDestinationModalOpen(false)}
         initial={destination?.confirmed === false ? null : destination}
         initialCenter={destination?.confirmed === false ? destination : null}
-        title="Update visit location"
-        description="This updates the destination for this visit only. Your provider's ETA will refresh automatically."
-        confirmLabel="Update visit location"
+        title={t('tracking.patient.updateDestTitle')}
+        description={t('tracking.patient.updateDestDesc')}
+        confirmLabel={t('tracking.patient.updateDestTitle')}
         onConfirm={saveDestination}
       />
     </MotionConfig>
@@ -702,6 +714,7 @@ function ProviderSummary({
   providerTo,
   onNavigate,
 }) {
+  const { t } = useLanguage();
   const avatar = (
     <div className="mc-avatar">
       {avatarUrl ? <img src={avatarUrl} alt={providerName} /> : initials}
@@ -712,13 +725,13 @@ function ProviderSummary({
   return (
     <div className="mc-provider-row">
       {providerTo ? (
-        <Link to={providerTo} onClick={onNavigate} title="View provider profile" className="shrink-0">
+        <Link to={providerTo} onClick={onNavigate} title={t('tracking.patient.viewProviderTitle')} className="shrink-0">
           {avatar}
         </Link>
       ) : avatar}
 
       <div className="min-w-0 flex-1">
-        <p className="mc-kicker">Your provider</p>
+        <p className="mc-kicker">{t('tracking.monitor.yourProvider')}</p>
         {providerTo ? (
           <Link to={providerTo} onClick={onNavigate} className="mc-provider-name block">
             {providerName}
@@ -730,18 +743,19 @@ function ProviderSummary({
       </div>
 
       <Link to={chatTo} onClick={onNavigate} className="mc-btn mc-btn--secondary mc-btn--sm shrink-0">
-        <MessageSquare className="w-4 h-4" />
-        Chat
+        <ChatText className="w-4 h-4" />
+        {t('tracking.patient.chat')}
       </Link>
     </div>
   );
 }
 
 function EtaSummary({ arrived, etaValue, etaSub, distanceText, freshness, action }) {
+  const { t } = useLanguage();
   return (
     <div className="mc-eta-block">
       <div className="mc-eta-copy min-w-0">
-        <p className="mc-kicker">{arrived ? 'Visit status' : 'Estimated arrival'}</p>
+        <p className="mc-kicker">{arrived ? t('tracking.patient.visitStatus') : t('tracking.provider.estArrival')}</p>
         <div className={`mc-eta-value${arrived ? ' mc-eta-value--text' : ''}`}>{etaValue}</div>
         <p className="mc-eta-meta">
           <span>{etaSub}</span>
@@ -757,22 +771,23 @@ function EtaSummary({ arrived, etaValue, etaSub, distanceText, freshness, action
 }
 
 function JourneyProgress({ progressPct, arrived }) {
+  const { t } = useLanguage();
   return (
     <div className="mc-stack mc-stack--tight">
       <div className="mc-progress-labels">
         <span className="flex items-center gap-1.5">
-          <Navigation className="w-3.5 h-3.5" />
-          On route
+          <NavigationArrow className="w-3.5 h-3.5" />
+          {t('tracking.patient.onRoute')}
         </span>
         <span className="flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5" />
-          {arrived ? 'On site' : 'Visit'}
+          {arrived ? t('tracking.patient.onSite') : t('tracking.patient.visitEnd')}
         </span>
       </div>
       <div
         className="mc-progress"
         role="progressbar"
-        aria-label="Provider journey progress"
+        aria-label={t('tracking.patient.journeyAria')}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={progressPct}
@@ -787,6 +802,7 @@ function JourneyProgress({ progressPct, arrived }) {
 }
 
 function DestinationRow({ address, canEdit, hasDestination, approximate = false, onChange }) {
+  const { t } = useLanguage();
   const parsed = parseFullVisitAddress(address);
   const displayTitle = parsed.baseAddress || address;
   const gateNotes = parsed.instructions;
@@ -797,12 +813,12 @@ function DestinationRow({ address, canEdit, hasDestination, approximate = false,
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <p className="mc-kicker text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary">
-            Delivering care to
+            {t('tracking.patient.deliveringTo')}
           </p>
         </div>
         {canEdit && (
           <button type="button" onClick={onChange} className="mc-link text-xs font-extrabold shrink-0">
-            {hasDestination ? 'Adjust' : 'Set location'}
+            {hasDestination ? t('tracking.patient.adjust') : t('tracking.patient.setLocation')}
           </button>
         )}
       </div>
@@ -817,12 +833,12 @@ function DestinationRow({ address, canEdit, hasDestination, approximate = false,
           </p>
           {approximate && (
             <p className="mt-0.5 text-2xs font-semibold text-[#B45309] dark:text-[#FCD34D]">
-              Approximate location — place the pin to confirm.
+              {t('tracking.patient.approxHint')}
             </p>
           )}
           {gateNotes && (
             <p className="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-slate-900/60 px-2.5 py-1 rounded-lg border border-slate-200/50 dark:border-white/5">
-              <strong className="font-extrabold text-link dark:text-[#8CBDF0]">Gate / Arrival:</strong> {gateNotes}
+              <strong className="font-extrabold text-link">{t('tracking.patient.gateArrival')}</strong> {gateNotes}
             </p>
           )}
         </div>

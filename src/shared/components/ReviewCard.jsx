@@ -1,5 +1,6 @@
-import { Star, ShieldCheck, Calendar, MessageCircle } from 'lucide-react';
+import { Star, ShieldCheck, Calendar, ChatCircle } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * Strips any legacy "[Service: X/5 | Comm: Y/5 | Punctual: Z/5]" prefix,
@@ -19,9 +20,10 @@ const ReviewCard = ({
   className = '',
   onContact,
 }) => {
+  const { t, formatDate, translateService } = useLanguage();
   if (!review) return null;
 
-  const patientName = review.patient?.full_name || review.patientName || 'Verified Patient';
+  const patientName = review.patient?.full_name || review.patientName || t('common.review.verifiedPatient');
   const avatarUrl = review.patient?.avatar_url || review.patientAvatarUrl || '';
   const rating = Number(review.rating) || 5;
   const rawComment = review.review_text || review.comment || '';
@@ -31,7 +33,7 @@ const ReviewCard = ({
   const contactUrl = review.contactUrl || (patientId ? `/provider/messages?partner=${patientId}&name=${encodeURIComponent(patientName)}` : '');
 
   const formattedDate = review.created_at
-    ? new Date(review.created_at).toLocaleDateString('en-US', {
+    ? formatDate(review.created_at, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
@@ -63,10 +65,10 @@ const ReviewCard = ({
             <img
               src={avatarUrl}
               alt={patientName}
-              className="w-full h-full object-cover rounded-[10px] sm:rounded-xl"
+              className="w-full h-full object-cover rounded-[0.625rem] sm:rounded-xl"
             />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/10 text-link font-black text-xs sm:text-sm flex items-center justify-center rounded-[10px] sm:rounded-xl">
+            <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/10 text-link font-black text-xs sm:text-sm flex items-center justify-center rounded-[0.625rem] sm:rounded-xl">
               {getInitials(patientName)}
             </div>
           )}
@@ -86,10 +88,11 @@ const ReviewCard = ({
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
                     key={star}
+                    weight={star <= rating ? 'fill' : 'regular'}
                     className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${
                       star <= rating
-                        ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
-                        : 'text-tertiary/40 fill-none'
+                        ? 'text-amber-400 drop-shadow-sm'
+                        : 'text-tertiary/40'
                     }`}
                   />
                 ))}
@@ -104,7 +107,7 @@ const ReviewCard = ({
           <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
             <span className="inline-flex items-center gap-1 text-2xs sm:text-xs font-bold text-success dark:text-success-dark shrink-0">
               <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Verified Visit</span>
+              <span>{t('common.review.verifiedVisit')}</span>
             </span>
             {formattedDate && (
               <span className="inline-flex items-center gap-1.5 text-2xs sm:text-xs text-tertiary dark:text-tertiary shrink-0">
@@ -128,7 +131,7 @@ const ReviewCard = ({
         </div>
       ) : (
         <p className="text-xs sm:text-sm text-tertiary dark:text-tertiary italic pl-1">
-          Rated {rating} out of 5 stars with no additional comments.
+          {t('common.review.ratedNoComments', { rating })}
         </p>
       )}
 
@@ -136,15 +139,17 @@ const ReviewCard = ({
       {(service || contactUrl || onContact) && (
         <div className="pt-2.5 border-t border-slate-200/50 dark:border-white/5 flex items-center justify-between gap-2 flex-wrap">
           <span className="text-2xs sm:text-xs text-tertiary truncate">
-            {service ? `Service: ${service}` : 'Home Visit Service'}
+            {service
+              ? t('common.review.servicePrefix', { service: translateService(service) })
+              : t('common.review.homeVisitService')}
           </span>
           {contactUrl ? (
             <Link
               to={contactUrl}
               className="neu-btn px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-bold text-tertiary hover:text-link hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center gap-1.5 shrink-0"
             >
-              <MessageCircle className="w-3.5 h-3.5 text-link" />
-              <span>Contact Patient</span>
+              <ChatCircle className="w-3.5 h-3.5 text-link" />
+              <span>{t('common.review.contactPatient')}</span>
             </Link>
           ) : onContact ? (
             <button
@@ -152,8 +157,8 @@ const ReviewCard = ({
               onClick={onContact}
               className="neu-btn px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-xs font-bold text-tertiary hover:text-link hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
             >
-              <MessageCircle className="w-3.5 h-3.5 text-link" />
-              <span>Contact Patient</span>
+              <ChatCircle className="w-3.5 h-3.5 text-link" />
+              <span>{t('common.review.contactPatient')}</span>
             </button>
           ) : null}
         </div>

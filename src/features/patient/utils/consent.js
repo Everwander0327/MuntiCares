@@ -7,6 +7,7 @@ export const DEFAULT_CONSENT_PERMS = {
 };
 
 export const normalizePermissions = (permissions) => ({
-  ...DEFAULT_CONSENT_PERMS,
-  ...(permissions && typeof permissions === 'object' ? permissions : {}),
+  medical_history: permissions?.medical_history === true,
+  documents: permissions?.documents === true,
+  visit_notes: permissions?.visit_notes === true,
 });

@@ -1,16 +1,52 @@
-import { useState, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Search, ShieldCheck, ShieldAlert, Star, X, MapPin, Phone, Mail, Check, Ban, Clock, ExternalLink, FileText, Download, ArrowUpDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { CustomSelect, DateRangePicker, Pagination, SkeletonPage, EmptyState } from '@/shared/ui';
-import useSort from '@/hooks/useSort';
+import {
+  MagnifyingGlass,
+  ShieldCheck,
+  ShieldWarning,
+  Star,
+  X,
+  Clock,
+  DownloadSimple,
+  ArrowsDownUp,
+  SlidersHorizontal,
+} from '@phosphor-icons/react';
+import { MotionConfig } from 'framer-motion';
+import { DateRangePicker, Pagination, SkeletonPage, EmptyState } from '@/shared/ui';
 import { supabase } from '@/lib/supabase';
+import { useLanguage } from '@/contexts/LanguageContext';
 import toast from 'react-hot-toast';
 import { exportToCSV, formatDataForExport } from '@/lib/exportUtils';
+import { parseLocalDate } from '@/lib/localDate';
 import { canApproveProvider } from '@/features/admin/utils/providerEligibility';
+import ProviderVerificationModal from '@/features/admin/components/ProviderVerificationModal';
+import ProviderFilterDrawer from '@/features/admin/components/ProviderFilterDrawer';
+import {
+  getIdStatusMeta,
+  getProviderInitials,
+  getProviderStatusClasses,
+  needsProviderAction,
+} from '@/features/admin/components/providerDisplay';
 
 const PAGE_SIZE = 10;
+
+const STATUS_TAB_KEYS = [
+  { value: 'All', labelKey: 'admin.providers.tabAll' },
+  { value: 'Pending Approval', labelKey: 'admin.providers.tabPending' },
+  { value: 'Approved', labelKey: 'admin.providers.tabApproved' },
+  { value: 'Incomplete', labelKey: 'admin.providers.tabIncomplete' },
+  { value: 'Banned', labelKey: 'admin.providers.tabBanned' },
+];
+
+const SORT_LABEL_KEYS = {
+  name: 'admin.providers.colProfessional',
+  services: 'admin.providers.colSpecialization',
+  rating: 'admin.providers.colRating',
+  joinTimestamp: 'admin.providers.colJoined',
+  status: 'admin.providers.colStatus',
+};
+
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 const getProfessionalIdUrl = (filePath) => {
   if (!filePath) return null;
@@ -18,9 +54,70 @@ const getProfessionalIdUrl = (filePath) => {
   return data?.publicUrl || null;
 };
 
+function IdStatusBadge({ status }) {
+  const { language } = useLanguage();
+  const meta = getIdStatusMeta(status, language);
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-extrabold ${meta.toneClass}`}>
+      {status === 'verified' ? (
+        <ShieldCheck className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      ) : status === 'pending' ? (
+        <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      ) : status === 'rejected' ? (
+        <X className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      ) : (
+        <ShieldWarning className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+      )}
+      <span>{meta.label}</span>
+    </span>
+  );
+}
+
+function ProviderAvatar({ provider }) {
+  return (
+    <div className="w-11 h-11 rounded-full bg-primary-soft dark:bg-primary-800/70 flex items-center justify-center text-xs font-extrabold text-link overflow-hidden shrink-0">
+      {provider.avatar_url ? (
+        <img src={provider.avatar_url} alt="" className="w-full h-full object-cover" />
+      ) : (
+        <span>{getProviderInitials(provider.name)}</span>
+      )}
+    </div>
+  );
+}
+
+function SortableHeader({ label, sortKey, activeSortKey, activeSortDir, onSort, className = '' }) {
+  const isSorted = activeSortKey === sortKey;
+  return (
+    <th
+      scope="col"
+      aria-sort={isSorted ? (activeSortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+      className={`px-4 lg:px-5 py-3 text-left ${className}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wider text-tertiary hover:text-link transition-colors py-1.5 px-1 -mx-1 rounded-lg min-h-[2.75rem]"
+      >
+        <span>{label}</span>
+        <ArrowsDownUp
+          aria-hidden="true"
+          className={`w-3.5 h-3.5 shrink-0 ${isSorted ? 'text-link' : 'opacity-40'}`}
+        />
+        {isSorted && (
+          <span aria-hidden="true" className="text-link">
+            {activeSortDir === 'asc' ? '▲' : '▼'}
+          </span>
+        )}
+      </button>
+    </th>
+  );
+}
+
 const AdminProviders = () => {
+  const { t, formatDate, translateService, translateStatus } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('All');
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState(null);
@@ -30,10 +127,10 @@ const AdminProviders = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [bulkLoading, setBulkLoading] = useState(false);
-
-  const { sorted, sortKey, handleSort, getSortIndicator } = useSort(providers);
+  const [inspectedId, setInspectedId] = useState(null);
+  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+  const [sortKey, setSortKey] = useState('');
+  const [sortDir, setSortDir] = useState('asc');
 
   const fetchProviders = useCallback(async () => {
     try {
@@ -44,7 +141,7 @@ const AdminProviders = () => {
 
       if (error) throw error;
 
-      const shaped = (data || []).map(p => {
+      const shaped = (data || []).map((p) => {
         let status = 'Incomplete';
         if (p.user?.is_banned) {
           status = 'Banned';
@@ -72,9 +169,15 @@ const AdminProviders = () => {
           professional_id_status: p.professional_id_status || 'none',
           trust_score: p.trust_score || 0,
           avatar_url: p.user?.avatar_url || '',
-          joinDate: p.user?.created_at ? new Date(p.user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
+          joinDate: p.user?.created_at
+            ? new Date(p.user.created_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })
+            : 'N/A',
           joinTimestamp: p.user?.created_at ? new Date(p.user.created_at).getTime() : 0,
-          status
+          status,
         };
       });
 
@@ -91,15 +194,138 @@ const AdminProviders = () => {
   }, [fetchProviders]);
 
   useEffect(() => {
-    const paths = (selectedProvider?.professional_id_paths && selectedProvider.professional_id_paths.length > 0)
-      ? selectedProvider.professional_id_paths
-      : (selectedProvider?.professional_id_path ? [selectedProvider.professional_id_path] : []);
-    setProfessionalIdPreviews(paths.map(p => getProfessionalIdUrl(p)).filter(Boolean));
+    const paths =
+      selectedProvider?.professional_id_paths && selectedProvider.professional_id_paths.length > 0
+        ? selectedProvider.professional_id_paths
+        : selectedProvider?.professional_id_path
+          ? [selectedProvider.professional_id_path]
+          : [];
+    setProfessionalIdPreviews(paths.map((p) => getProfessionalIdUrl(p)).filter(Boolean));
   }, [selectedProvider]);
 
+  const needsActionCount = useMemo(
+    () => providers.filter((p) => needsProviderAction(p)).length,
+    [providers]
+  );
+
+  useEffect(() => {
+    if (needsActionCount === 0 && showPendingOnly) {
+      setShowPendingOnly(false);
+    }
+  }, [needsActionCount, showPendingOnly]);
+
+  const handleSort = (key) => {
+    if (!key) {
+      setSortKey('');
+      setSortDir('asc');
+      setCurrentPage(1);
+      return;
+    }
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  const sortedProviders = useMemo(() => {
+    if (!sortKey) {
+      return [...providers].sort(
+        (a, b) => Number(needsProviderAction(b)) - Number(needsProviderAction(a))
+      );
+    }
+
+    return [...providers].sort((a, b) => {
+      let aVal = a[sortKey];
+      let bVal = b[sortKey];
+
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+
+      if (Array.isArray(aVal)) aVal = aVal.join(', ');
+      if (Array.isArray(bVal)) bVal = bVal.join(', ');
+
+      let cmp = 0;
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        cmp = aVal - bVal;
+      } else {
+        cmp = collator.compare(String(aVal), String(bVal));
+      }
+
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [providers, sortKey, sortDir]);
+
+  const filteredProviders = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    const startBound = startDate ? parseLocalDate(startDate) : null;
+    const endBound = endDate ? parseLocalDate(endDate) : null;
+    if (endBound) {
+      endBound.setHours(23, 59, 59, 999);
+    }
+
+    return sortedProviders.filter((p) => {
+      const matchesSearch =
+        !query ||
+        p.name.toLowerCase().includes(query) ||
+        p.email.toLowerCase().includes(query) ||
+        p.services.some((s) => s.toLowerCase().includes(query));
+      const matchesFilter = filter === 'All' || p.status === filter;
+      const matchesPendingOnly = !showPendingOnly || needsProviderAction(p);
+
+      let matchesDate = true;
+      if (startBound) {
+        matchesDate = matchesDate && p.joinTimestamp >= startBound.getTime();
+      }
+      if (endBound) {
+        matchesDate = matchesDate && p.joinTimestamp <= endBound.getTime();
+      }
+
+      return matchesSearch && matchesFilter && matchesPendingOnly && matchesDate;
+    });
+  }, [sortedProviders, searchTerm, filter, showPendingOnly, startDate, endDate]);
+
+  const totalPages = Math.ceil(filteredProviders.length / PAGE_SIZE);
+  const paginatedProviders = filteredProviders.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  const inspectedProvider = useMemo(
+    () =>
+      filteredProviders.find((p) => p.id === inspectedId) ||
+      filteredProviders[0] ||
+      null,
+    [filteredProviders, inspectedId]
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filter, showPendingOnly, startDate, endDate, sortKey, sortDir]);
+
+  const activeFilterCount =
+    (filter !== 'All' ? 1 : 0) + (startDate || endDate ? 1 : 0) + (sortKey ? 1 : 0);
+
+  const sortAnnouncement = sortKey
+    ? t('admin.providers.sortAnnouncement', {
+        field: t(SORT_LABEL_KEYS[sortKey] || sortKey),
+        direction: sortDir === 'asc' ? t('admin.providers.ascending') : t('admin.providers.descending'),
+        count: filteredProviders.length,
+      })
+    : '';
+
+  const formatJoinDate = (p) =>
+    p?.joinTimestamp
+      ? formatDate(p.joinTimestamp, { month: 'short', day: 'numeric', year: 'numeric' })
+      : 'N/A';
+
+  // Backend / Supabase mutations (untouched business logic)
   const handleApprove = async (provider) => {
     if (!canApproveProvider(provider)) {
-      toast.error('This provider cannot be approved until their profile is complete.');
+      toast.error(t('admin.providers.toastIncompleteApprove'));
       return;
     }
     setActionLoading(true);
@@ -111,16 +337,15 @@ const AdminProviders = () => {
       if (error) throw error;
       setSelectedProvider(null);
       await fetchProviders();
-      toast.success(`${provider.name} approved.`);
+      toast.success(t('admin.providers.toastApproved', { name: provider.name }));
     } catch (err) {
-      toast.error('Failed to approve provider.');
+      toast.error(t('admin.providers.toastApproveError'));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleReject = async (provider) => {
-    if (!window.confirm(`Revoke approval for ${provider.name}? They will no longer be visible to patients.`)) return;
     setActionLoading(true);
     try {
       const { error } = await supabase
@@ -130,17 +355,15 @@ const AdminProviders = () => {
       if (error) throw error;
       setSelectedProvider(null);
       await fetchProviders();
-      toast.success(`Approval revoked for ${provider.name}.`);
+      toast.success(t('admin.providers.toastRevoked', { name: provider.name }));
     } catch (err) {
-      toast.error('Failed to revoke approval.');
+      toast.error(t('admin.providers.toastRevokeError'));
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleBan = async (provider) => {
-    const action = provider.is_banned ? 'unban' : 'ban';
-    if (!window.confirm(`Are you sure you want to ${action} ${provider.name}?`)) return;
     setActionLoading(true);
     try {
       const { error } = await supabase
@@ -155,18 +378,29 @@ const AdminProviders = () => {
 
       setSelectedProvider(null);
       await fetchProviders();
-      toast.success(`${provider.name} has been ${action}ned.`);
+      toast.success(
+        provider.is_banned
+          ? t('admin.providers.toastUnbanned', { name: provider.name })
+          : t('admin.providers.toastBanned', { name: provider.name })
+      );
     } catch (err) {
-      toast.error(`Failed to ${action} provider.`);
+      toast.error(
+        provider.is_banned
+          ? t('admin.providers.toastUnbanError')
+          : t('admin.providers.toastBanError')
+      );
     } finally {
       setActionLoading(false);
     }
   };
 
   const deleteProfessionalIdFiles = async (provider) => {
-    const paths = provider.professional_id_paths?.length > 0
-      ? provider.professional_id_paths
-      : (provider.professional_id_path ? [provider.professional_id_path] : []);
+    const paths =
+      provider.professional_id_paths?.length > 0
+        ? provider.professional_id_paths
+        : provider.professional_id_path
+          ? [provider.professional_id_path]
+          : [];
     if (paths.length === 0) return;
     const { error } = await supabase.storage.from('provider-docs').remove(paths);
     if (error) console.error('Error deleting ID files:', error);
@@ -186,14 +420,19 @@ const AdminProviders = () => {
 
       const { error } = await supabase
         .from('providers')
-        .update({ professional_id_status: 'verified', professional_id_paths: [], professional_id_path: null, trust_score: newScore })
+        .update({
+          professional_id_status: 'verified',
+          professional_id_paths: [],
+          professional_id_path: null,
+          trust_score: newScore,
+        })
         .eq('id', provider.id);
       if (error) throw error;
       setSelectedProvider(null);
       await fetchProviders();
-      toast.success('Document verified. ID files have been removed from storage.');
+      toast.success(t('admin.providers.toastDocVerified'));
     } catch (err) {
-      toast.error('Failed to verify document.');
+      toast.error(t('admin.providers.toastDocVerifyError'));
     } finally {
       setDocActionLoading(false);
     }
@@ -212,905 +451,638 @@ const AdminProviders = () => {
 
       const { error } = await supabase
         .from('providers')
-        .update({ professional_id_status: 'rejected', professional_id_paths: [], professional_id_path: null, trust_score: newScore })
+        .update({
+          professional_id_status: 'rejected',
+          professional_id_paths: [],
+          professional_id_path: null,
+          trust_score: newScore,
+        })
         .eq('id', provider.id);
       if (error) throw error;
       setSelectedProvider(null);
       await fetchProviders();
-      toast.success('Document rejected. ID files have been removed from storage.');
+      toast.success(t('admin.providers.toastDocRejected'));
     } catch (err) {
-      toast.error('Failed to reject document.');
+      toast.error(t('admin.providers.toastDocRejectError'));
     } finally {
       setDocActionLoading(false);
     }
   };
 
   const handleRemove = async (provider) => {
-    if (!window.confirm(`⚠️ PERMANENTLY DELETE ${provider.name} and all their data? This cannot be undone!`)) return;
     setActionLoading(true);
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', provider.userId);
+      const { error } = await supabase.from('users').delete().eq('id', provider.userId);
       if (error) throw error;
       setSelectedProvider(null);
       await fetchProviders();
-      toast.success(`${provider.name} has been removed.`);
+      toast.success(t('admin.providers.toastRemoved', { name: provider.name }));
     } catch (err) {
-      toast.error('Failed to remove provider.');
+      toast.error(t('admin.providers.toastRemoveError'));
     } finally {
       setActionLoading(false);
     }
   };
 
-  // Bulk actions
-  const toggleSelect = (id) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filteredProviders.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredProviders.map(p => p.id)));
-    }
-  };
-
-  const handleBulkApprove = async () => {
-    if (!selectedIds.size) return;
-    const selected = providers.filter(p => selectedIds.has(p.id) && canApproveProvider(p));
-    if (!selected.length) {
-      toast.error('No eligible providers selected. Only complete, unbanned, pending providers can be approved.');
-      return;
-    }
-    if (!window.confirm(`Approve ${selected.length} provider(s)?`)) return;
-    setBulkLoading(true);
-    try {
-      const { error } = await supabase
-        .from('providers')
-        .update({ is_approved: true })
-        .in('user_id', selected.map(p => p.userId));
-      if (error) throw error;
-      toast.success(`${selected.length} provider(s) approved.`);
-      setSelectedIds(new Set());
-      await fetchProviders();
-    } catch (err) {
-      toast.error('Failed to approve providers.');
-    } finally {
-      setBulkLoading(false);
-    }
-  };
-
-  const handleBulkUnban = async () => {
-    if (!selectedIds.size) return;
-    const selected = providers.filter(p => selectedIds.has(p.id) && p.is_banned);
-    if (!selected.length) {
-      toast.error('No banned providers selected.');
-      return;
-    }
-    if (!window.confirm(`Unban ${selected.length} provider(s)?`)) return;
-    setBulkLoading(true);
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ is_banned: false })
-        .in('id', selected.map(p => p.userId));
-      if (error) throw error;
-      toast.success(`${selected.length} provider(s) unbanned.`);
-      setSelectedIds(new Set());
-      await fetchProviders();
-    } catch (err) {
-      toast.error('Failed to unban providers.');
-    } finally {
-      setBulkLoading(false);
-    }
-  };
-
-  const handleBulkBan = async () => {
-    if (!selectedIds.size) return;
-    if (!window.confirm(`Ban ${selectedIds.size} provider(s)?`)) return;
-    setBulkLoading(true);
-    try {
-      const selected = providers.filter(p => selectedIds.has(p.id));
-      const { error } = await supabase
-        .from('users')
-        .update({ is_banned: true })
-        .in('id', selected.map(p => p.userId));
-      if (error) throw error;
-      await supabase
-        .from('providers')
-        .update({ is_approved: false })
-        .in('user_id', selected.map(p => p.userId));
-      toast.success(`${selectedIds.size} provider(s) banned.`);
-      setSelectedIds(new Set());
-      await fetchProviders();
-    } catch (err) {
-      toast.error('Failed to ban providers.');
-    } finally {
-      setBulkLoading(false);
-    }
-  };
-
-  const handleBulkDelete = async () => {
-    if (!selectedIds.size) return;
-    if (!window.confirm(`⚠️ PERMANENTLY DELETE ${selectedIds.size} provider(s)? This cannot be undone!`)) return;
-    setBulkLoading(true);
-    try {
-      const selected = providers.filter(p => selectedIds.has(p.id));
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .in('id', selected.map(p => p.userId));
-      if (error) throw error;
-      toast.success(`${selectedIds.size} provider(s) deleted.`);
-      setSelectedIds(new Set());
-      await fetchProviders();
-    } catch (err) {
-      toast.error('Failed to delete providers.');
-    } finally {
-      setBulkLoading(false);
-    }
-  };
-
   const handleExport = () => {
     if (!filteredProviders.length) {
-      toast.error('No providers to export.');
+      toast.error(t('admin.providers.toastNoExport'));
       return;
     }
     const fields = [
-      { key: 'name', label: 'Full Name' },
-      { key: 'email', label: 'Email' },
-      { key: 'status', label: 'Status' },
-      { key: 'services', label: 'Services', transform: (v) => Array.isArray(v) ? v.join('; ') : v },
-      { key: 'rating', label: 'Rating' },
-      { key: 'trust_score', label: 'Trust Score' },
-      { key: 'joinDate', label: 'Joined' },
+      { key: 'name', label: t('admin.providers.csvFullName') },
+      { key: 'email', label: t('admin.providers.csvEmail') },
+      { key: 'status', label: t('admin.providers.csvStatus'), transform: (v) => translateStatus(v) },
+      {
+        key: 'services',
+        label: t('admin.providers.csvServices'),
+        transform: (v) => (Array.isArray(v) ? v.map((s) => translateService(s)).join('; ') : v),
+      },
+      { key: 'rating', label: t('admin.providers.csvRating') },
+      { key: 'trust_score', label: t('admin.providers.csvTrustScore') },
+      { key: 'joinDate', label: t('admin.providers.csvJoined') },
     ];
-    const exportable = formatDataForExport(filteredProviders, fields);
+    const exportRows = filteredProviders.map((p) => ({
+      ...p,
+      joinDate: formatJoinDate(p),
+    }));
+    const exportable = formatDataForExport(exportRows, fields);
     exportToCSV(exportable, 'providers_export');
-    toast.success('Providers exported to CSV.');
+    toast.success(t('admin.providers.toastExported'));
   };
 
-  const _getStatusStyle = (status) => {
-    switch (status) {
-      case 'Approved': return { bg: 'bg-green-100 text-success dark:bg-green-900/30 dark:text-green-300', dot: 'bg-green-500' };
-      case 'Pending Approval': return { bg: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300', dot: 'bg-yellow-500' };
-      case 'Banned': return { bg: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-danger-dark', dot: 'bg-danger' };
-      default: return { bg: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300', dot: 'bg-slate-400' };
-    }
-  };
-
-  // Filters
-  const filteredProviders = sorted.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.services.some(s => s.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesFilter = filter === 'All' || p.status === filter;
-    let matchesDate = true;
-    if (startDate) {
-      matchesDate = matchesDate && new Date(p.joinTimestamp) >= new Date(startDate);
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      matchesDate = matchesDate && new Date(p.joinTimestamp) <= end;
-    }
-    return matchesSearch && matchesFilter && matchesDate;
-  });
-
-  const totalPages = Math.ceil(filteredProviders.length / PAGE_SIZE);
-  const paginatedProviders = filteredProviders.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-
-  useEffect(() => {
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setFilter('All');
+    setShowPendingOnly(false);
+    setStartDate('');
+    setEndDate('');
+    setSortKey('');
+    setSortDir('asc');
     setCurrentPage(1);
-  }, [searchTerm, filter, startDate, endDate, sortKey]);
+  };
 
   if (loading) {
-    return <DashboardLayout role="admin"><SkeletonPage /></DashboardLayout>;
+    return (
+      <DashboardLayout role="admin">
+        <SkeletonPage />
+      </DashboardLayout>
+    );
   }
-
-  const SortableHeader = ({ label, sortKey: sk, className = '' }) => (
-    <th
-      className={`px-6 py-4 font-semibold cursor-pointer hover:text-link transition-colors select-none ${className}`}
-      onClick={() => { handleSort(sk); setCurrentPage(1); }}
-    >
-      <span className="flex items-center gap-1">
-        {label}
-        <ArrowUpDown className={`w-3 h-3 ${sortKey === sk ? 'text-link' : 'opacity-30'}`} />
-        {getSortIndicator(sk)}
-      </span>
-    </th>
-  );
 
   return (
     <DashboardLayout role="admin">
-      <div className="space-y-6">
-        {/* Neumorphic Header & Controls Toolbar */}
-        <motion.div
-          className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-3xl flex flex-col gap-4 relative z-30"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35 }}
-        >
-          {/* Header Title & Subtitle */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 border-b border-white/60 dark:border-white/5 pb-3 sm:pb-0 sm:border-0">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-display font-black tracking-tight text-slate-900 dark:text-white">
-                Manage Providers
+      <MotionConfig reducedMotion="user">
+        <div className="space-y-5 sm:space-y-6 pb-8">
+          {/* Page Header & Global Actions */}
+          <header className="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="font-display font-black tracking-tight text-2xl sm:text-3xl text-ink dark:text-txt-darkPrimary">
+                {t('admin.providers.title')}
               </h1>
-              <p className="text-sm text-tertiary dark:text-tertiary mt-0.5">
-                Review, verify credentials, and administer registered healthcare professionals in Muntinlupa
+              <p className="text-sm text-tertiary dark:text-tertiary mt-1">
+                {t('admin.providers.subtitle')}
               </p>
             </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="neu-flat-sm px-3 py-1 rounded-xl text-xs font-black text-link">
-                {filteredProviders.length} {filteredProviders.length === 1 ? 'Provider' : 'Providers'}
-              </span>
-            </div>
-          </div>
 
-          {/* Controls Bar - Mobile Optimized Grid & Flex */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap lg:flex-nowrap items-stretch sm:items-center gap-2.5 w-full">
-            {/* Neumorphic Inset Search */}
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-link pointer-events-none z-10" />
+            <div className="hidden lg:flex items-center gap-2.5 flex-wrap shrink-0">
+              {/* Desktop 1-Click Status Filters */}
+              <div
+                role="group"
+                aria-label={t('admin.providers.statusAria')}
+                className="inline-flex items-center gap-1 h-[2.75rem] rounded-xl border border-surface-border bg-surface-subtle/70 p-1 shrink-0"
+              >
+                {STATUS_TAB_KEYS.map((tab) => {
+                  const isActive = filter === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      aria-pressed={isActive}
+                      onClick={() => setFilter(tab.value)}
+                      className={`h-full px-3.5 rounded-lg text-xs font-bold whitespace-nowrap transition-colors ${
+                        isActive
+                          ? 'neu-btn-primary text-white dark:text-neu-fg'
+                          : 'text-tertiary hover:text-ink dark:hover:text-txt-darkPrimary'
+                      }`}
+                    >
+                      {t(tab.labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onChange={({ start, end }) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                }}
+                triggerClassName={`w-full neu-btn flex items-center justify-center gap-2 px-4 h-[2.75rem] rounded-xl text-xs font-bold cursor-pointer active:scale-95 transition-all ${
+                  startDate || endDate
+                    ? 'text-link ring-2 ring-primary/20 bg-primary/5'
+                    : 'text-ink dark:text-txt-darkPrimary hover:text-link'
+                }`}
+              />
+
+              <button
+                type="button"
+                onClick={handleExport}
+                className="neu-btn px-4 h-[2.75rem] rounded-xl text-link dark:text-primary-300 font-bold text-xs flex items-center justify-center gap-2 transition-all shrink-0"
+              >
+                <DownloadSimple className="w-3.5 h-3.5" aria-hidden="true" />
+                <span>{t('admin.providers.exportCsv')}</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Needs Action First Smart Banner */}
+          {needsActionCount > 0 && (
+            <div
+              role="region"
+              aria-label={t('admin.providers.needsActionAria')}
+              className="rounded-2xl border border-warning/30 bg-warning-soft/75 dark:bg-warning-darkSoft/70 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Clock
+                  className="w-4 h-4 text-warning dark:text-warning-dark shrink-0"
+                  aria-hidden="true"
+                />
+                <p className="text-xs sm:text-sm font-bold text-ink dark:text-txt-darkPrimary">
+                  <span className="tabular-nums">{needsActionCount}</span>{' '}
+                  {needsActionCount === 1 ? t('admin.providers.needsReviewSingle') : t('admin.providers.needsReviewPlural')}
+                  <span className="font-medium text-tertiary dark:text-tertiary ml-1.5">
+                    {t('admin.providers.needsReviewHint')}
+                  </span>
+                </p>
+              </div>
+              <button
+                type="button"
+                aria-pressed={showPendingOnly}
+                onClick={() => {
+                  setShowPendingOnly((prev) => !prev);
+                  setCurrentPage(1);
+                }}
+                className={`min-h-[2.75rem] px-4 rounded-xl text-xs font-extrabold shrink-0 transition-all ${
+                  showPendingOnly
+                    ? 'neu-btn-primary text-white dark:text-neu-fg'
+                    : 'neu-btn text-warning dark:text-warning-dark'
+                }`}
+              >
+                {showPendingOnly ? t('admin.providers.showAll') : t('admin.providers.showPending')}
+              </button>
+            </div>
+          )}
+
+          {/* Mobile / Tablet Search & Filters Bar (< lg) */}
+          <div className="lg:hidden neu-flat p-4 rounded-2xl flex items-center gap-2.5">
+            <div className="relative flex-1 min-w-0">
+              <MagnifyingGlass
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary pointer-events-none"
+                aria-hidden="true"
+              />
               <input
                 type="text"
-                aria-label="Search providers by name, email, or specialization"
-                placeholder="Search providers by name, email, or specialization..."
+                aria-label={t('admin.providers.searchAria')}
+                placeholder={t('admin.providers.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full neu-inset rounded-xl py-2.5 pl-10 pr-4 text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-100 placeholder:text-tertiary outline-none focus:ring-2 focus:ring-primary/20 transition-all min-h-[42px]"
+                className="w-full h-[2.75rem] rounded-xl border border-surface-border bg-surface-subtle/50 pl-10 pr-4 text-base sm:text-sm font-medium text-ink dark:text-txt-darkPrimary placeholder:text-tertiary outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all"
               />
             </div>
 
-            {/* Filter and Date Grid on Mobile, Inline on Desktop */}
-            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5">
-              <div className="col-span-1 sm:w-auto">
-                <CustomSelect
-                  value={filter}
-                  onChange={setFilter}
-                  options={[
-                    { value: 'All', label: 'All Status' },
-                    { value: 'Approved', label: 'Approved' },
-                    { value: 'Pending Approval', label: 'Pending Approval' },
-                    { value: 'Incomplete', label: 'Incomplete' },
-                    { value: 'Banned', label: 'Banned' },
-                  ]}
-                  className="w-full sm:w-[155px]"
-                />
-              </div>
-
-              <div className="col-span-1 sm:w-auto">
-                <DateRangePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  onChange={({ start, end }) => { setStartDate(start); setEndDate(end); }}
-                  className="w-full sm:w-auto"
-                />
-              </div>
-            </div>
-
-            {/* Export Action Button */}
-            <motion.button
-              whileTap={{ scale: 0.96 }}
-              onClick={handleExport}
-              className="neu-btn px-4 py-2 min-h-[42px] rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 hover:text-link transition-all shrink-0 w-full sm:w-auto shadow-sm"
+            <button
+              type="button"
+              onClick={() => setIsFilterDrawerOpen(true)}
+              className={`neu-btn h-[2.75rem] px-3.5 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition-all ${
+                activeFilterCount > 0 ? 'text-link border-primary/40' : 'text-ink dark:text-txt-darkPrimary'
+              }`}
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
-            </motion.button>
+              <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
+              <span>{activeFilterCount > 0 ? t('admin.providers.filtersCount', { count: activeFilterCount }) : t('admin.providers.filters')}</span>
+            </button>
           </div>
-        </motion.div>
 
-        {/* Neumorphic Table Card */}
-        <motion.div
-          className="rounded-2xl sm:rounded-3xl md:neu-flat md:overflow-hidden"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-        >
-          {/* Mobile Card View - Separated Neumorphic Cards */}
-          <div className="block md:hidden space-y-3.5">
-            {paginatedProviders.length === 0 ? (
-              <div className="neu-flat p-6 rounded-2xl">
-                <EmptyState icon="users" title="No providers found" message="No providers match your current search or filter." variant="compact" />
-              </div>
-            ) : (
-              paginatedProviders.map((p, idx) => {
-                const isSelected = selectedIds.has(p.id);
+        {/* Mobile / Tablet View (< lg): 1/2-Col Safe Cards + Pagination */}
+        <div className="block lg:hidden space-y-3.5">
+          {paginatedProviders.length === 0 ? (
+            <div className="neu-flat p-6 rounded-2xl">
+              <EmptyState
+                icon="users"
+                title={t('admin.providers.emptyTitle')}
+                message={t('admin.providers.emptyMsg')}
+                variant="compact"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {paginatedProviders.map((p) => {
                 return (
-                  <motion.div
+                  <article
                     key={p.id}
-                    className={`neu-flat p-4 sm:p-5 rounded-2xl space-y-3.5 transition-all ${
-                      isSelected ? 'ring-2 ring-primary/60 bg-primary/[0.04] dark:bg-primary/[0.08]' : ''
-                    }`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.04 }}
+                    className="neu-flat p-4 rounded-2xl space-y-3.5 transition-all flex flex-col justify-between"
                   >
-                    <div className="flex justify-between items-start gap-2">
+                    <div className="flex justify-between items-start gap-2.5">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        {/* Interactive Avatar Selection Ring */}
-                        <motion.button
-                          whileTap={{ scale: 0.92 }}
-                          onClick={() => toggleSelect(p.id)}
-                          className={`relative w-11 h-11 rounded-2xl flex items-center justify-center text-xs font-black transition-all shrink-0 overflow-hidden ${
-                            isSelected 
-                              ? 'neu-inset ring-2 ring-primary text-white bg-primary shadow-inner' 
-                              : 'neu-flat-sm text-link hover:ring-1 hover:ring-primary/40'
-                          }`}
-                          title={isSelected ? "Click to deselect" : "Click to select"}
-                        >
-                          {isSelected ? (
-                            <Check className="w-5 h-5 text-link stroke-[3]" />
-                          ) : p.avatar_url ? (
+                        <div className="w-11 h-11 rounded-full bg-primary-soft dark:bg-primary-800/70 flex items-center justify-center text-xs font-extrabold text-link overflow-hidden shrink-0">
+                          {p.avatar_url ? (
                             <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                            <span>{getProviderInitials(p.name)}</span>
                           )}
-                        </motion.button>
+                        </div>
 
-                        <div 
-                          className="min-w-0 flex-1 cursor-pointer"
-                          onClick={() => setSelectedProvider(p)}
-                        >
-                          <p className="font-bold text-sm text-slate-900 dark:text-white truncate hover:text-link transition-colors">{p.name}</p>
-                          <p className="text-sm text-tertiary dark:text-tertiary font-medium truncate mt-0.5">{p.email}</p>
+                        <div className="min-w-0 flex-1">
+                          <h2 className="font-bold text-sm text-ink dark:text-txt-darkPrimary truncate">
+                            {p.name}
+                          </h2>
+                          <p className="text-xs text-tertiary dark:text-tertiary font-medium truncate mt-0.5">
+                            {p.email}
+                          </p>
                         </div>
                       </div>
 
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-2xs font-extrabold uppercase tracking-wider shrink-0 ${
-                        p.status === 'Approved' ? 'neu-flat-sm text-success dark:text-success-dark' :
-                        p.status === 'Pending Approval' ? 'neu-flat-sm text-warning dark:text-warning-dark' :
-                        p.status === 'Banned' ? 'neu-flat-sm text-danger dark:text-danger-dark' :
-                        'neu-flat-sm text-tertiary'
-                      }`}>
-                        {p.status}
+                      <span
+                        className={`inline-flex items-center text-xs font-extrabold uppercase tracking-wider shrink-0 ${getProviderStatusClasses(
+                          p.status
+                        )}`}
+                      >
+                        {translateStatus(p.status)}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs gap-2">
-                      <span className="neu-flat-sm px-2.5 py-1 rounded-xl text-link font-bold text-xs truncate max-w-[200px]">
-                        {p.services.length > 0 ? p.services[0] : 'General Healthcare'}
-                      </span>
-                      <div className="neu-flat-sm px-2.5 py-1 rounded-xl flex items-center gap-1 text-warning dark:text-warning-dark font-black text-xs shrink-0">
-                        <Star className="w-3 h-3 fill-amber-500" />
-                        <span>{Number(p.rating).toFixed(1)}</span>
-                      </div>
-                    </div>
+                    {/* Specializations */}
+                    {p.services.length > 0 ? (
+                      <p className="text-xs font-medium text-txt-secondary dark:text-txt-darkSecondary leading-relaxed">
+                        {p.services.map((s) => translateService(s)).join(', ')}
+                      </p>
+                    ) : (
+                      <p className="text-xs font-medium text-tertiary">{t('admin.providers.generalHealthcare')}</p>
+                    )}
 
-                    <div className="neu-inset px-3 py-2 rounded-xl text-xs text-tertiary font-semibold flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        {p.professional_id_status === 'verified' ? (
-                          <span className="inline-flex items-center gap-1 text-success dark:text-success-dark font-black text-2xs uppercase">
-                            <ShieldCheck className="w-3.5 h-3.5" /> ID Verified
-                          </span>
-                        ) : p.professional_id_status === 'pending' ? (
-                          <span className="inline-flex items-center gap-1 text-warning dark:text-warning-dark font-black text-2xs uppercase">
-                            <Clock className="w-3.5 h-3.5" /> Pending ID
-                          </span>
-                        ) : p.professional_id_status === 'rejected' ? (
-                          <span className="inline-flex items-center gap-1 text-danger dark:text-danger-dark font-black text-2xs uppercase">
-                            <X className="w-3.5 h-3.5" /> Rejected ID
+                    {/* Calm flat credentials, rating, and trust score */}
+                    <div className="border-t border-surface-border/70 pt-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <IdStatusBadge status={p.professional_id_status} />
+
+                      <div className="flex items-center gap-3 tabular-nums">
+                        {Number(p.rating) > 0 ? (
+                          <span className="inline-flex items-center gap-1 font-extrabold text-ink dark:text-txt-darkPrimary">
+                            <Star weight="fill" className="w-3.5 h-3.5 text-warning fill-current" aria-hidden="true" />
+                            <span>{Number(p.rating).toFixed(1)}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-tertiary dark:text-tertiary font-black text-2xs uppercase">
-                            <ShieldAlert className="w-3.5 h-3.5 text-tertiary" /> Unverified
+                          <span className="text-xs font-semibold text-tertiary">
+                            {t('admin.providers.noReviews')}
                           </span>
                         )}
+                        <span className="font-bold text-link">
+                          {t('admin.providers.trustPct', { score: p.trust_score })}
+                        </span>
                       </div>
+                    </div>
+
+                    {/* Safe Card Bottom Row (No Ban button on scroll surface) */}
+                    <div className="pt-0.5">
                       <button
+                        type="button"
                         onClick={() => setSelectedProvider(p)}
-                        className="text-link font-bold hover:underline flex items-center gap-1 text-2xs uppercase tracking-wider"
+                        className="w-full neu-btn min-h-[2.75rem] py-2.5 px-4 rounded-xl text-xs font-extrabold text-link hover:text-primary-focus transition-all text-center"
                       >
-                        Verification Record →
+                        {t('admin.providers.reviewFullDetails')}
                       </button>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      {p.status === 'Pending Approval' ? (
-                        <motion.button
-                          whileTap={{ scale: 0.96 }}
-                          className="text-xs font-bold py-2.5 rounded-xl neu-btn text-success dark:text-success-dark transition-all text-center"
-                          onClick={() => handleApprove(p)}
-                          disabled={actionLoading}
-                        >
-                          Approve Provider
-                        </motion.button>
-                      ) : (
-                        <motion.button
-                          whileTap={{ scale: 0.96 }}
-                          className={`text-xs font-bold py-2.5 rounded-xl neu-btn transition-all text-center ${
-                            p.is_banned ? 'text-success dark:text-success-dark' : 'text-danger dark:text-danger-dark'
-                          }`}
-                          onClick={() => handleBan(p)}
-                          disabled={actionLoading}
-                        >
-                          {p.is_banned ? 'Unban Provider' : 'Ban Provider'}
-                        </motion.button>
-                      )}
-                      <motion.button
-                        whileTap={{ scale: 0.96 }}
-                        className="text-xs font-bold text-slate-700 dark:text-slate-200 neu-btn py-2.5 rounded-xl transition-all text-center hover:text-link"
-                        onClick={() => setSelectedProvider(p)}
-                      >
-                        Full Details
-                      </motion.button>
-                    </div>
-                  </motion.div>
+                  </article>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
 
-          {/* Desktop Table View */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-white/80 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30 text-tertiary dark:text-tertiary text-2xs font-black uppercase tracking-wider">
-                  <th className="px-6 py-4 w-12 text-center select-none">
-                    <span className="text-xs font-mono opacity-60">SELECT</span>
-                  </th>
-                  <SortableHeader label="Healthcare Professional" sortKey="name" />
-                  <SortableHeader label="Specialization" sortKey="services" />
-                  <SortableHeader label="Rating" sortKey="rating" />
-                  <th className="px-6 py-4 font-black">Credentials</th>
-                  <SortableHeader label="Joined Date" sortKey="joinTimestamp" />
-                  <SortableHeader label="Status" sortKey="status" />
-                  <th className="px-6 py-4 font-black text-right">Review Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/60 dark:divide-white/5">
-                {paginatedProviders.length === 0 ? (
-                  <tr>
-                    <td colSpan="8"><EmptyState icon="users" title="No providers found" message="No providers match your current search or filter." variant="compact" /></td>
-                  </tr>
-                ) : (
-                  paginatedProviders.map((p, idx) => {
-                    const isSelected = selectedIds.has(p.id);
-                    return (
-                      <motion.tr
-                        key={p.id}
-                        className={`transition-colors cursor-pointer ${
-                          isSelected 
-                            ? 'bg-primary/[0.08] dark:bg-primary/[0.15]' 
-                            : 'hover:bg-primary/5'
-                        }`}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.15 + idx * 0.02 }}
-                        onClick={() => setSelectedProvider(p)}
-                      >
-                        {/* Interactive Avatar Selection Column */}
-                        <td className="px-6 py-3.5 text-center" onClick={e => e.stopPropagation()}>
-                          <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => toggleSelect(p.id)}
-                            className={`w-11 h-11 mx-auto rounded-xl flex items-center justify-center text-xs font-black transition-all overflow-hidden ${
-                              isSelected
-                                ? 'neu-inset ring-2 ring-primary text-link bg-primary/10 shadow-inner'
-                                : 'neu-flat-sm text-link hover:ring-2 hover:ring-primary/40'
-                            }`}
-                            title={isSelected ? "Selected (Click to deselect)" : "Click avatar to select"}
-                          >
-                            {isSelected ? (
-                              <Check className="w-4 h-4 text-link stroke-[3]" />
-                            ) : p.avatar_url ? (
-                              <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              p.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                            )}
-                          </motion.button>
-                        </td>
+          {totalPages > 1 && (
+            <div className="neu-flat rounded-2xl p-3">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          )}
+        </div>
 
-                        <td className="px-6 py-3.5">
-                          <div>
-                            <span className="font-bold text-slate-800 dark:text-slate-100 block group-hover:text-link transition-colors">{p.name}</span>
-                            <span className="text-sm text-tertiary font-medium">{p.email}</span>
-                          </div>
-                        </td>
+        {/* Desktop Clinical Split (col-span-8 Directory + col-span-4 Sticky Inspector) */}
+        <div className="hidden lg:grid lg:grid-cols-12 lg:gap-5 items-start">
+          <section
+            className="col-span-8 neu-flat rounded-3xl p-5 space-y-4"
+            aria-label={t('admin.providers.directoryAria')}
+          >
+            {/* Live Sort Status Region for Screen Readers */}
+            <div role="status" className="sr-only">
+              {sortAnnouncement}
+            </div>
 
-                        <td className="px-6 py-3.5">
-                          <span className="neu-flat-sm px-2.5 py-1 rounded-xl text-link font-bold text-sm inline-block max-w-[240px] truncate">
-                            {p.services.length > 0 ? p.services.join(', ') : '—'}
-                          </span>
-                        </td>
+            <div className="relative">
+              <MagnifyingGlass
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-tertiary pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                type="text"
+                aria-label={t('admin.providers.searchAria')}
+                placeholder={t('admin.providers.searchPlaceholder')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-[2.75rem] rounded-xl border border-surface-border bg-surface-subtle/50 pl-10 pr-4 text-sm font-medium text-ink dark:text-txt-darkPrimary placeholder:text-tertiary outline-none focus-visible:ring-2 focus-visible:ring-primary transition-all"
+              />
+            </div>
 
-                        <td className="px-6 py-3.5 text-slate-700 dark:text-slate-200">
-                          <div className="neu-flat-sm px-2.5 py-1 rounded-xl inline-flex items-center gap-1 text-warning dark:text-warning-dark font-black text-xs">
-                            <Star className="w-3 h-3 fill-amber-500" />
-                            <span>{Number(p.rating).toFixed(1)}</span>
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-3.5">
-                          {p.professional_id_status === 'verified' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-black uppercase tracking-wider neu-flat-sm text-success dark:text-success-dark">
-                              <ShieldCheck className="w-3 h-3" /> Verified
-                            </span>
-                          ) : p.professional_id_status === 'pending' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-black uppercase tracking-wider neu-flat-sm text-warning dark:text-warning-dark">
-                              <Clock className="w-3 h-3" /> Pending ID
-                            </span>
-                          ) : p.professional_id_status === 'rejected' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-black uppercase tracking-wider neu-flat-sm text-danger dark:text-danger-dark">
-                              <X className="w-3 h-3" /> Rejected
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-2xs font-black uppercase tracking-wider neu-flat-sm text-tertiary dark:text-tertiary">
-                              <ShieldAlert className="w-3 h-3 text-tertiary" /> Unverified
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-6 py-3.5 text-tertiary font-mono text-xs">{p.joinDate}</td>
-
-                        <td className="px-6 py-3.5">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider ${
-                            p.status === 'Approved' ? 'neu-flat-sm text-success dark:text-success-dark' :
-                            p.status === 'Pending Approval' ? 'neu-flat-sm text-warning dark:text-warning-dark' :
-                            p.status === 'Banned' ? 'neu-flat-sm text-danger dark:text-danger-dark' :
-                            'neu-flat-sm text-tertiary'
-                          }`}>
-                            {p.status}
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-3.5 text-right" onClick={e => e.stopPropagation()}>
-                          <motion.button
-                            whileTap={{ scale: 0.94 }}
-                            className="neu-btn px-3.5 py-1.5 text-xs font-black rounded-xl text-link hover:text-primary-focus transition-all"
-                            onClick={() => setSelectedProvider(p)}
-                          >
-                            Review
-                          </motion.button>
-                        </td>
-                      </motion.tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="p-4 border-t border-white/60 dark:border-white/5">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
-          </div>
-        </motion.div>
-
-        {/* Floating Dynamic Island Bulk Action Dock Teleported to document.body */}
-        {typeof document !== 'undefined' && createPortal(
-          <AnimatePresence>
-            {selectedIds.size > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 70, scale: 0.92 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 70, scale: 0.92 }}
-                transition={{ type: "spring", stiffness: 420, damping: 30 }}
-                className="fixed bottom-20 lg:bottom-8 inset-x-0 z-[60] flex justify-center px-3 sm:px-4 pointer-events-none"
-                style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
-              >
-                <div className="neu-flat px-4 sm:px-6 py-2.5 sm:py-3 rounded-full border border-white/90 dark:border-white/10 shadow-2xl bg-surface-shell/95 backdrop-blur-2xl flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 pointer-events-auto max-w-[94vw]">
-                  {/* Count Badge & Select All Toggle */}
-                  <div className="flex items-center gap-1.5 sm:gap-2 pr-2.5 sm:pr-3.5 border-r border-slate-300 dark:border-slate-700 shrink-0">
-                    <span className="w-6 h-6 rounded-full bg-primary text-white font-display font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
-                      {selectedIds.size}
-                    </span>
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100 hidden sm:inline">
-                      Selected
-                    </span>
-                    <motion.button
-                      whileTap={{ scale: 0.92 }}
-                      onClick={toggleSelectAll}
-                      className="neu-btn px-2.5 py-1 rounded-full text-xs font-extrabold text-link flex items-center gap-1 hover:text-primary-focus transition-all ml-1"
-                      title={selectedIds.size === filteredProviders.length ? "Deselect All Providers" : "Select All Filtered Providers"}
-                    >
-                      <Check className="w-3 h-3" />
-                      <span>{selectedIds.size === filteredProviders.length ? 'Deselect All' : 'Select All'}</span>
-                    </motion.button>
-                  </div>
-
-                  {/* Bulk Actions */}
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <motion.button
-                      whileTap={{ scale: 0.92 }}
-                      onClick={handleBulkApprove}
-                      disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-success dark:text-success-dark flex items-center gap-1.5 transition-all shrink-0"
-                      title="Approve All Selected"
-                    >
-                      <Check className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden xs:inline">Approve</span>
-                    </motion.button>
-
-                    <motion.button
-                      whileTap={{ scale: 0.92 }}
-                      onClick={handleBulkUnban}
-                      disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-link dark:text-primary-300 flex items-center gap-1.5 transition-all shrink-0"
-                      title="Unban All Selected"
-                    >
-                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden xs:inline">Unban</span>
-                    </motion.button>
-
-                    <motion.button
-                      whileTap={{ scale: 0.92 }}
-                      onClick={handleBulkBan}
-                      disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-danger dark:text-danger-dark flex items-center gap-1.5 transition-all shrink-0"
-                      title="Ban All Selected"
-                    >
-                      <Ban className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden xs:inline">Ban</span>
-                    </motion.button>
-
-                    <motion.button
-                      whileTap={{ scale: 0.92 }}
-                      onClick={handleBulkDelete}
-                      disabled={bulkLoading}
-                      className="neu-btn px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-danger dark:text-danger-dark flex items-center gap-1.5 transition-all shrink-0"
-                      title="Delete All Selected"
-                    >
-                      <X className="w-3.5 h-3.5 shrink-0" />
-                      <span className="hidden xs:inline">Delete</span>
-                    </motion.button>
-
-                    <motion.button
-                      whileTap={{ scale: 0.92 }}
-                      onClick={() => setSelectedIds(new Set())}
-                      className="neu-btn h-11 w-11 flex items-center justify-center rounded-full text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-all shrink-0 ml-0.5"
-                      title="Clear Selection"
-                    >
-                      <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
-          document.body
-        )}
-      </div>
-
-      {/* Neumorphic Provider Detail Modal Teleported to document.body */}
-      {typeof document !== 'undefined' && createPortal(
-        <AnimatePresence>
-          {selectedProvider && (
-            <motion.div
-              className="fixed inset-0 bg-slate-900/60 dark:bg-black/75 sm:backdrop-blur-sm z-[60] flex items-center justify-center p-3 sm:p-4 md:p-6"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-              onClick={() => setSelectedProvider(null)}
+            <div
+              role="region"
+              aria-label={t('admin.providers.tableAria')}
+              tabIndex={0}
+              className="overflow-x-auto focus-visible:outline-none"
             >
-              <motion.div
-                className="neu-flat rounded-[2rem] max-w-lg w-full max-h-[90vh] flex flex-col overflow-hidden border border-white/80 dark:border-white/10 shadow-2xl bg-surface-shell transform-gpu will-change-transform"
-                initial={{ scale: 0.96, opacity: 0, y: 10 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.96, opacity: 0, y: 10 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                onClick={e => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div className="p-4 sm:p-6 border-b border-white/60 dark:border-white/5 flex items-center justify-between sticky top-0 bg-surface-shell z-10">
-                  <div>
-                    <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Provider Verification</h2>
-                    <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">Credentials & Status</p>
+              <table className="w-full text-left border-collapse text-sm">
+                <caption className="sr-only">{t('admin.providers.tableCaption')}</caption>
+                <thead>
+                  <tr className="border-b border-surface-border">
+                    <SortableHeader
+                      label={t('admin.providers.colProfessional')}
+                      sortKey="name"
+                      activeSortKey={sortKey}
+                      activeSortDir={sortDir}
+                      onSort={handleSort}
+                    />
+                    <th scope="col" className="py-2 px-3 font-extrabold text-xs uppercase tracking-wider text-tertiary">
+                      {t('admin.providers.colCredentials')}
+                    </th>
+                    <SortableHeader
+                      label={t('admin.providers.colJoined')}
+                      sortKey="joinTimestamp"
+                      activeSortKey={sortKey}
+                      activeSortDir={sortDir}
+                      onSort={handleSort}
+                    />
+                    <SortableHeader
+                      label={t('admin.providers.colStatus')}
+                      sortKey="status"
+                      activeSortKey={sortKey}
+                      activeSortDir={sortDir}
+                      onSort={handleSort}
+                    />
+                    <th
+                      scope="col"
+                      className="py-2 px-3 font-extrabold text-xs uppercase tracking-wider text-tertiary text-right"
+                    >
+                      {t('admin.providers.colInspector')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-border/70">
+                  {paginatedProviders.length === 0 ? (
+                    <tr>
+                      <td colSpan="5">
+                        <EmptyState
+                          icon="users"
+                          title={t('admin.providers.emptyTitle')}
+                          message={t('admin.providers.emptyMsg')}
+                          variant="compact"
+                        />
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedProviders.map((p) => {
+                      const isInspected = inspectedProvider?.id === p.id;
+                      return (
+                        <tr
+                          key={p.id}
+                          className={`group transition-colors cursor-pointer ${
+                            isInspected
+                              ? 'bg-primary-soft/55 dark:bg-primary-800/40'
+                              : 'hover:bg-surface-subtle/60'
+                          }`}
+                          onClick={() => setInspectedId(p.id)}
+                        >
+                          <td className="py-2.5 px-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <ProviderAvatar provider={p} />
+                              <div className="min-w-0">
+                                <span className="font-bold text-ink dark:text-txt-darkPrimary block truncate group-hover:text-link transition-colors">
+                                  {p.name}
+                                </span>
+                                <span className="text-xs text-tertiary font-medium truncate block">
+                                  {p.email}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="py-2.5 px-3">
+                            <div className="flex flex-col gap-0.5">
+                              <IdStatusBadge status={p.professional_id_status} />
+                              <span className="text-xs font-bold text-tertiary tabular-nums">
+                                {t('admin.providers.trustScorePct', { score: p.trust_score })}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-2.5 px-3 text-tertiary font-mono text-xs whitespace-nowrap tabular-nums">
+                            {formatJoinDate(p)}
+                          </td>
+
+                          <td className="py-2.5 px-3 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center text-xs font-extrabold uppercase tracking-wider ${getProviderStatusClasses(
+                                p.status
+                              )}`}
+                            >
+                              {translateStatus(p.status)}
+                            </span>
+                          </td>
+
+                          <td
+                            className="py-2.5 px-3 text-right whitespace-nowrap"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              className={`min-h-[2.75rem] px-3 rounded-xl text-xs font-bold transition-colors ${
+                                isInspected
+                                  ? 'text-link dark:text-primary-300'
+                                  : 'text-tertiary hover:text-ink dark:hover:text-txt-darkPrimary'
+                              }`}
+                              onClick={() => setInspectedId(p.id)}
+                            >
+                              {isInspected ? t('admin.providers.inspecting') : t('admin.providers.inspect')}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="pt-2 border-t border-surface-border flex items-center justify-between gap-3">
+              <p className="text-xs font-semibold text-tertiary tabular-nums">
+                {filteredProviders.length === 0
+                  ? t('admin.providers.zeroProviders')
+                  : t('admin.providers.showingRange', {
+                      start: (currentPage - 1) * PAGE_SIZE + 1,
+                      end: Math.min(currentPage * PAGE_SIZE, filteredProviders.length),
+                      total: filteredProviders.length,
+                    })}
+              </p>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          </section>
+
+          <aside
+            className="col-span-4 neu-flat rounded-3xl p-5 sticky top-6"
+            aria-label={t('admin.providers.inspectorAria')}
+          >
+            <div className="pb-3.5 mb-4 border-b border-surface-border">
+              <h2 className="font-display font-black text-base text-ink dark:text-txt-darkPrimary">
+                {t('admin.providers.recordTitle')}
+              </h2>
+              <p className="text-xs text-tertiary mt-0.5">
+                {t('admin.providers.recordSubtitle')}
+              </p>
+            </div>
+
+            {!inspectedProvider ? (
+              <div className="py-10 text-center space-y-1.5">
+                <p className="text-sm font-bold text-ink dark:text-txt-darkPrimary">
+                  {t('admin.providers.noneSelected')}
+                </p>
+                <p className="text-xs text-tertiary">
+                  {t('admin.providers.noneSelectedHint')}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <ProviderAvatar provider={inspectedProvider} />
+                    <div className="min-w-0">
+                      <h3 className="font-display font-black text-base text-ink dark:text-txt-darkPrimary truncate">
+                        {inspectedProvider.name}
+                      </h3>
+                      <p className="text-xs text-tertiary font-medium truncate">
+                        {inspectedProvider.email}
+                      </p>
+                    </div>
                   </div>
-                  <span className="neu-flat-sm px-3 py-1 rounded-xl text-2xs font-extrabold text-link uppercase tracking-wider">
-                    {selectedProvider.status}
+                  <span
+                    className={`inline-flex items-center text-xs font-extrabold uppercase tracking-wider shrink-0 ${getProviderStatusClasses(
+                      inspectedProvider.status
+                    )}`}
+                  >
+                    {translateStatus(inspectedProvider.status)}
                   </span>
                 </div>
 
-                <div className="p-5 sm:p-6 space-y-6 overflow-y-auto flex-1">
-                  {/* Avatar + Name */}
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl neu-inset flex items-center justify-center text-xl font-black text-primary-700 overflow-hidden shrink-0 shadow-inner">
-                      {selectedProvider.avatar_url ? (
-                        <img src={selectedProvider.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        selectedProvider.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-display font-black text-slate-900 dark:text-white">{selectedProvider.name}</h3>
-                      <p className="text-link text-xs font-semibold">{selectedProvider.bio || 'General Healthcare Provider'}</p>
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-2xs font-extrabold uppercase tracking-wider mt-1.5 ${
-                        selectedProvider.status === 'Approved' ? 'neu-flat-sm text-success dark:text-success-dark' :
-                        selectedProvider.status === 'Pending Approval' ? 'neu-flat-sm text-warning dark:text-warning-dark' :
-                        selectedProvider.status === 'Banned' ? 'neu-flat-sm text-danger dark:text-danger-dark' :
-                        'neu-flat-sm text-tertiary'
-                      }`}>
-                        {selectedProvider.status}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Contact Info */}
-                  <div className="neu-flat-sm p-4 rounded-2xl space-y-2.5 text-xs">
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
-                      <Mail className="w-4 h-4 text-link shrink-0" />
-                      <span className="truncate">{selectedProvider.email}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
-                      <Phone className="w-4 h-4 text-link shrink-0" />
-                      <span>{selectedProvider.phone || 'Not provided'}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
-                      <MapPin className="w-4 h-4 text-link shrink-0" />
-                      <span>{selectedProvider.location}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300 font-medium">
-                      <Star className="w-4 h-4 text-warning fill-current shrink-0" />
-                      <span>{Number(selectedProvider.rating).toFixed(1)} rating ({selectedProvider.trust_score}% Trust Score)</span>
-                    </div>
-                  </div>
-
-                  {/* Specializations */}
+                <div className="grid grid-cols-2 gap-2.5 rounded-2xl border border-surface-border bg-surface-subtle/40 p-3.5 text-xs">
                   <div>
-                    <p className="text-2xs text-tertiary dark:text-tertiary font-black uppercase tracking-wider mb-2">Specializations</p>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProvider.services.length > 0 ? (
-                        selectedProvider.services.map((s, i) => (
-                          <span key={i} className="px-3 py-1 neu-flat-sm text-link rounded-xl text-xs font-bold">{s}</span>
-                        ))
-                      ) : (
-                        <p className="text-tertiary text-xs">No specializations listed.</p>
-                      )}
-                    </div>
+                    <p className="text-tertiary font-semibold">{t('admin.providers.joinedLabel')}</p>
+                    <p className="font-bold text-ink dark:text-txt-darkPrimary mt-0.5 font-mono tabular-nums">
+                      {formatJoinDate(inspectedProvider)}
+                    </p>
                   </div>
-
-                  {/* Professional ID Verification */}
-                  {(selectedProvider.professional_id_paths?.length > 0 || selectedProvider.professional_id_path || selectedProvider.professional_id_status === 'verified' || selectedProvider.professional_id_status === 'rejected') ? (
-                    <div>
-                      <p className="text-2xs text-tertiary dark:text-tertiary font-black uppercase tracking-wider mb-2">Professional ID Documents</p>
-                      {professionalIdPreviews.length > 0 ? (
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                          {professionalIdPreviews.map((url, i) => (
-                            <div key={i} className="rounded-2xl overflow-hidden neu-inset p-1.5">
-                              {url.endsWith('.pdf') ? (
-                                <div className="flex items-center gap-2 p-2">
-                                  <FileText className="w-5 h-5 text-link shrink-0" />
-                                  <span className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">Document {i + 1}</span>
-                                  <a href={url} target="_blank" rel="noopener noreferrer" className="ml-auto shrink-0 neu-btn p-1 rounded-lg">
-                                    <ExternalLink className="w-3.5 h-3.5 text-link" />
-                                  </a>
-                                </div>
-                              ) : (
-                                <a href={url} target="_blank" rel="noopener noreferrer" className="block">
-                                  <img src={url} alt={`Professional ID ${i + 1}`} className="w-full h-28 object-contain rounded-xl" />
-                                </a>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (selectedProvider.professional_id_paths?.length > 0 || selectedProvider.professional_id_path) ? (
-                        <p className="text-xs text-tertiary p-2 mb-3">Loading preview...</p>
-                      ) : null}
-                      {selectedProvider.professional_id_status === 'pending' && (
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                          <motion.button
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => handleVerifyDocument(selectedProvider)}
-                            disabled={docActionLoading}
-                            className="neu-btn flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-success dark:text-success-dark transition-all disabled:opacity-50"
-                          >
-                            <Check className="w-4 h-4" />
-                            {docActionLoading ? '...' : 'Verify ID'}
-                          </motion.button>
-                          <motion.button
-                            whileTap={{ scale: 0.96 }}
-                            onClick={() => handleRejectDocument(selectedProvider)}
-                            disabled={docActionLoading}
-                            className="neu-btn flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs text-danger dark:text-danger-dark transition-all disabled:opacity-50"
-                          >
-                            <X className="w-4 h-4" />
-                            {docActionLoading ? '...' : 'Reject ID'}
-                          </motion.button>
-                        </div>
-                      )}
-                      {selectedProvider.professional_id_status === 'verified' && (
-                        <div className="flex items-center gap-2 px-3.5 py-2 neu-flat-sm text-success dark:text-success-dark rounded-xl text-xs font-bold mb-3">
-                          <ShieldCheck className="w-4 h-4 shrink-0" />
-                          Professional ID has been verified.
-                        </div>
-                      )}
-                      {selectedProvider.professional_id_status === 'rejected' && (
-                        <div className="flex items-center gap-2 px-3.5 py-2 neu-flat-sm text-danger dark:text-danger-dark rounded-xl text-xs font-bold mb-3">
-                          <X className="w-4 h-4 shrink-0" />
-                          Professional ID was rejected.
-                        </div>
-                      )}
+                  <div>
+                    <p className="text-tertiary font-semibold">{t('admin.providers.trustScoreLabel')}</p>
+                    <p className="font-bold text-link mt-0.5 tabular-nums">
+                      {inspectedProvider.trust_score}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-tertiary font-semibold">{t('admin.providers.ratingLabel')}</p>
+                    <p className="font-bold text-ink dark:text-txt-darkPrimary mt-0.5 tabular-nums">
+                      {Number(inspectedProvider.rating) > 0
+                        ? `${Number(inspectedProvider.rating).toFixed(1)} / 5.0`
+                        : t('admin.providers.noReviews')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-tertiary font-semibold">{t('admin.providers.idStatusLabel')}</p>
+                    <div className="mt-0.5">
+                      <IdStatusBadge status={inspectedProvider.professional_id_status} />
                     </div>
-                  ) : (
-                    <div>
-                      <p className="text-2xs text-tertiary dark:text-tertiary font-black uppercase tracking-wider mb-2">Professional ID Documents</p>
-                      <div className="flex items-center gap-2.5 p-3.5 neu-inset rounded-2xl text-xs font-semibold text-tertiary dark:text-tertiary">
-                        <ShieldAlert className="w-4 h-4 text-tertiary shrink-0" />
-                        <span>No professional credentials uploaded yet (<strong className="text-slate-700 dark:text-slate-200">Unverified</strong>).</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="space-y-2.5 pt-2 border-t border-white/60 dark:border-white/5">
-                    {selectedProvider.status === 'Pending Approval' && (
-                      <motion.button
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => handleApprove(selectedProvider)}
-                        disabled={actionLoading}
-                        className="w-full neu-btn flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs text-success dark:text-success-dark transition-all disabled:opacity-50"
-                      >
-                        <Check className="w-4 h-4" />
-                        {actionLoading ? 'Processing...' : 'Approve Provider'}
-                      </motion.button>
-                    )}
-                    {selectedProvider.status === 'Approved' && (
-                      <motion.button
-                        whileTap={{ scale: 0.96 }}
-                        onClick={() => handleReject(selectedProvider)}
-                        disabled={actionLoading}
-                        className="w-full neu-btn flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs text-warning dark:text-warning-dark transition-all disabled:opacity-50"
-                      >
-                        <ShieldCheck className="w-4 h-4" />
-                        {actionLoading ? 'Processing...' : 'Revoke Approval'}
-                      </motion.button>
-                    )}
-
-                    <motion.button
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => handleBan(selectedProvider)}
-                      disabled={actionLoading}
-                      className={`w-full neu-btn flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs transition-all disabled:opacity-50 ${
-                        selectedProvider.is_banned ? 'text-success dark:text-success-dark' : 'text-danger dark:text-danger-dark'
-                      }`}
-                    >
-                      <Ban className="w-4 h-4" />
-                      {actionLoading ? 'Processing...' : selectedProvider.is_banned ? 'Unban Provider' : 'Ban Provider'}
-                    </motion.button>
-
-                    <motion.button
-                      whileTap={{ scale: 0.96 }}
-                      onClick={() => handleRemove(selectedProvider)}
-                      disabled={actionLoading}
-                      className="w-full neu-btn flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs text-danger dark:text-danger-dark transition-all disabled:opacity-50"
-                    >
-                      <X className="w-4 h-4" />
-                      {actionLoading ? 'Processing...' : 'Permanently Remove'}
-                    </motion.button>
                   </div>
                 </div>
 
-                {/* Modal Footer - Full Width Close Button */}
-                <div className="p-4 sm:p-5 border-t border-white/60 dark:border-white/5 bg-surface-shell/60">
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setSelectedProvider(null)}
-                    className="w-full neu-btn py-3 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-black text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-2 shadow-sm"
+                <div className="space-y-1.5">
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-tertiary">
+                    {t('admin.providers.specializationsLabel')}
+                  </p>
+                  <p className="text-xs font-medium text-txt-secondary dark:text-txt-darkSecondary leading-relaxed">
+                    {inspectedProvider.services.length > 0
+                      ? inspectedProvider.services.map((s) => translateService(s)).join(', ')
+                      : t('admin.providers.generalHealthcare')}
+                  </p>
+                </div>
+
+                <div className="pt-2 border-t border-surface-border">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProvider(inspectedProvider)}
+                    className="w-full neu-btn-primary text-white dark:text-neu-fg min-h-[2.75rem] px-4 rounded-xl text-xs font-extrabold transition-all"
                   >
-                    Close Verification
-                  </motion.button>
+                    {t('admin.providers.reviewAndVerify')}
+                  </button>
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+              </div>
+            )}
+          </aside>
+        </div>
+      </div>
+
+      {/* Choice 5B: Mobile Filter & Sort Bottom Drawer */}
+      <ProviderFilterDrawer
+        open={isFilterDrawerOpen}
+        onOpenChange={setIsFilterDrawerOpen}
+        filter={filter}
+        onFilterChange={setFilter}
+        startDate={startDate}
+        endDate={endDate}
+        onDateChange={({ start, end }) => {
+          setStartDate(start);
+          setEndDate(end);
+        }}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onSortChange={(nextKey) => {
+          setSortKey(nextKey);
+          if (!nextKey) setSortDir('asc');
+          setCurrentPage(1);
+        }}
+        onSortDirChange={(nextDir) => {
+          setSortDir(nextDir);
+          setCurrentPage(1);
+        }}
+        onResetAll={handleResetFilters}
+        onExport={handleExport}
+      />
+
+      {/* Choice 4B: Centered 2-Tab Accessible Provider Verification Modal */}
+      <ProviderVerificationModal
+        provider={selectedProvider}
+        professionalIdPreviews={professionalIdPreviews}
+        actionLoading={actionLoading}
+        docActionLoading={docActionLoading}
+        onClose={() => setSelectedProvider(null)}
+        onApprove={handleApprove}
+        onRevokeApproval={handleReject}
+        onBanToggle={handleBan}
+        onVerifyDocument={handleVerifyDocument}
+        onRejectDocument={handleRejectDocument}
+        onRemove={handleRemove}
+      />
+      </MotionConfig>
     </DashboardLayout>
   );
 };

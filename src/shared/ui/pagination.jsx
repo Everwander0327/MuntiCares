@@ -1,7 +1,9 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  const { t } = useLanguage();
   if (totalPages <= 1) return null;
 
   const getVisiblePages = () => {
@@ -34,9 +36,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className="neu-btn w-11 h-11 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-link disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-          title="Previous Page"
+          title={t('common.pagination.previous')}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <CaretLeft className="w-4 h-4" />
         </motion.button>
         {getVisiblePages().map((page, i) =>
           page === '...' ? (
@@ -61,9 +63,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className="neu-btn w-11 h-11 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:text-link disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-          title="Next Page"
+          title={t('common.pagination.next')}
         >
-          <ChevronRight className="w-4 h-4" />
+          <CaretRight className="w-4 h-4" />
         </motion.button>
       </div>
     </div>

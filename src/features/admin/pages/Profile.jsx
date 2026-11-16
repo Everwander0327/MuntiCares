@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { 
-  LogOut, Shield, Users, Briefcase, FileText, 
-  User, BarChart3, Lock, Save
-} from 'lucide-react';
+import {
+  SignOut,
+  Shield,
+  Users,
+  Briefcase,
+  FileText,
+  User,
+  ChartBar,
+  Lock,
+  FloppyDisk,
+} from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage } from '@/shared/ui';
 import { useNavigate } from 'react-router-dom';
@@ -34,6 +42,7 @@ const AdminProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { user, logout, updateUser } = useAuth();
+  const { t, formatDate } = useLanguage();
   const navigate = useNavigate();
   
   const [profile, setProfile] = useState({
@@ -65,7 +74,7 @@ const AdminProfile = () => {
         if (userError) throw userError;
 
         setProfile({
-          full_name: userData.full_name || 'System Administrator',
+          full_name: userData.full_name || '',
           email: userData.email || user.email || '',
           created_at: userData.created_at || ''
         });
@@ -112,7 +121,7 @@ const AdminProfile = () => {
   const handleSaveProfile = async (e) => {
     e?.preventDefault();
     if (!editName.trim()) {
-      toast.error('Full Name cannot be empty.');
+      toast.error(t('admin.profile.toastEmptyName'));
       return;
     }
     setSaving(true);
@@ -125,10 +134,10 @@ const AdminProfile = () => {
       if (error) throw error;
       setProfile(prev => ({ ...prev, full_name: editName.trim() }));
       updateUser?.({ full_name: editName.trim() });
-      toast.success('Admin name updated successfully!');
+      toast.success(t('admin.profile.toastUpdated'));
     } catch (err) {
       console.error('Error updating name:', err);
-      toast.error('Failed to update name.');
+      toast.error(t('admin.profile.toastUpdateError'));
     } finally {
       setSaving(false);
     }
@@ -154,10 +163,10 @@ const AdminProfile = () => {
           transition={{ duration: 0.35 }}
         >
           <h1 className="text-xl sm:text-2xl font-display font-black tracking-tight text-slate-900 dark:text-white">
-            System Admin Profile
+            {t('admin.profile.pageTitle')}
           </h1>
           <p className="text-sm text-tertiary dark:text-tertiary mt-1">
-            Manage your administrative credentials, oversee platform telemetry, and system statistics
+            {t('admin.profile.pageSubtitle')}
           </p>
         </motion.div>
 
@@ -174,7 +183,7 @@ const AdminProfile = () => {
                 <div className="relative">
                   <ProfilePhotoUpload
                     userId={user.id}
-                    fullName={profile.full_name}
+                    fullName={profile.full_name || t('admin.profile.fallbackName')}
                     currentUrl={avatarUrl}
                     onUpdate={setAvatarUrl}
                   />
@@ -182,7 +191,7 @@ const AdminProfile = () => {
 
                 <div className="mt-4">
                   <h2 className="text-lg sm:text-xl font-display font-black text-slate-900 dark:text-white">
-                    {profile.full_name}
+                    {profile.full_name || t('admin.profile.fallbackName')}
                   </h2>
                   <p className="text-xs sm:text-sm font-medium text-tertiary dark:text-tertiary mt-0.5">
                     {profile.email}
@@ -193,7 +202,7 @@ const AdminProfile = () => {
                 <div className="mt-3">
                   <span className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-2xs font-extrabold uppercase tracking-wider text-link">
                     <Shield className="w-3.5 h-3.5 text-link" />
-                    System Administrator
+                    {t('admin.profile.roleBadge')}
                   </span>
                 </div>
               </div>
@@ -201,18 +210,18 @@ const AdminProfile = () => {
               {/* Inset Account Info Details */}
               <div className="neu-inset p-4 rounded-2xl space-y-3 text-xs">
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">Role Level:</span>
-                  <span className="font-black text-link">Super Administrator</span>
+                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">{t('admin.profile.roleLevelLabel')}</span>
+                  <span className="font-black text-link">{t('admin.profile.superAdmin')}</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">Joined Platform:</span>
+                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">{t('admin.profile.joinedLabel')}</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-200">
-                    {profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                    {profile.created_at ? formatDate(profile.created_at, { month: 'short', day: 'numeric', year: 'numeric' }) : t('admin.profile.na')}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
-                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">Jurisdiction:</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-100">Muntinlupa City</span>
+                  <span className="text-tertiary font-bold uppercase tracking-wider text-2xs">{t('admin.profile.jurisdictionLabel')}</span>
+                  <span className="font-bold text-slate-800 dark:text-slate-100">{t('admin.profile.jurisdictionValue')}</span>
                 </div>
               </div>
 
@@ -223,8 +232,8 @@ const AdminProfile = () => {
                   onClick={handleLogout}
                   className="w-full neu-btn py-3 rounded-2xl font-black text-xs sm:text-sm text-danger dark:text-danger-dark hover:bg-rose-500/10 transition-all flex items-center justify-center gap-2"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span>Sign Out of Admin Console</span>
+                  <SignOut className="w-4 h-4" />
+                  <span>{t('admin.profile.signOutBtn')}</span>
                 </motion.button>
               </div>
             </motion.div>
@@ -250,7 +259,7 @@ const AdminProfile = () => {
                   }`}
                 >
                   <User className="w-4 h-4" />
-                  <span>Account Details</span>
+                  <span>{t('admin.profile.tabDetails')}</span>
                 </button>
                 <button
                   type="button"
@@ -261,8 +270,8 @@ const AdminProfile = () => {
                       : 'text-tertiary hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
-                  <BarChart3 className="w-4 h-4" />
-                  <span>System Telemetry</span>
+                  <ChartBar className="w-4 h-4" />
+                  <span>{t('admin.profile.tabTelemetry')}</span>
                 </button>
               </div>
 
@@ -275,31 +284,31 @@ const AdminProfile = () => {
                 >
                   <div className="border-b border-white/60 dark:border-white/5 pb-4">
                     <h3 className="text-base sm:text-lg font-display font-black text-slate-900 dark:text-white">
-                      Profile Information
+                      {t('admin.profile.cardTitle')}
                     </h3>
                     <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">
-                      Personalize your identity as seen on audits
+                      {t('admin.profile.cardSubtitle')}
                     </p>
                   </div>
 
                   <form onSubmit={handleSaveProfile} className="space-y-4">
                     <div className="space-y-2">
                       <label htmlFor="admin-full-name" className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">
-                        Admin Full Name
+                        {t('admin.profile.nameLabel')}
                       </label>
                       <input
                         id="admin-full-name"
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        placeholder="e.g., Juan Dela Cruz"
+                        placeholder={t('admin.profile.namePlaceholder')}
                         className="w-full neu-inset rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">
-                        Email Address (Read-only)
+                        {t('admin.profile.emailLabel')}
                       </label>
                       <div className="neu-inset rounded-xl px-4 py-3 text-xs sm:text-sm font-bold text-tertiary dark:text-tertiary flex items-center justify-between cursor-not-allowed">
                         <span className="truncate">{profile.email}</span>
@@ -314,8 +323,8 @@ const AdminProfile = () => {
                         disabled={saving}
                         className="w-full neu-btn-primary py-3 rounded-2xl text-xs sm:text-sm font-black text-white flex items-center justify-center gap-2 shadow-lg transition-all disabled:opacity-50"
                       >
-                        <Save className="w-4 h-4" />
-                        <span>{saving ? 'Updating...' : 'Save Profile Changes'}</span>
+                        <FloppyDisk className="w-4 h-4" />
+                        <span>{saving ? t('admin.profile.updating') : t('admin.profile.saveBtn')}</span>
                       </motion.button>
                     </div>
                   </form>
@@ -331,28 +340,28 @@ const AdminProfile = () => {
                 >
                   <div className="border-b border-white/60 dark:border-white/5 pb-4">
                     <h3 className="text-base sm:text-lg font-display font-black text-slate-900 dark:text-white">
-                      Platform Statistics
+                      {t('admin.profile.statsTitle')}
                     </h3>
                     <p className="text-2xs text-tertiary font-bold uppercase tracking-wider mt-0.5">
-                      Live entity metrics across the Muntinlupa network
+                      {t('admin.profile.statsSubtitle')}
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     <QuickStat 
-                      label="Patients" 
+                      label={t('admin.profile.statPatients')}
                       value={stats.patients} 
                       icon={<Users />} 
                       colorClass="text-link" 
                     />
                     <QuickStat 
-                      label="Providers" 
+                      label={t('admin.profile.statProviders')}
                       value={stats.providers} 
                       icon={<Briefcase />} 
                       colorClass="text-link dark:text-primary-400" 
                     />
                     <QuickStat 
-                      label="Requests" 
+                      label={t('admin.profile.statRequests')}
                       value={stats.requests} 
                       icon={<FileText />} 
                       colorClass="text-warning dark:text-warning-dark" 

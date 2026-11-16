@@ -41,12 +41,12 @@ const Hero = () => {
           viewport={{ once: true, margin: '-100px' }}
         >
           <motion.div variants={heroItem} className="space-y-4">
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-primary dark:text-[#8CBDF0]">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-link">
               MuntiCares
             </span>
             <h1 id="hero-heading" className="font-display font-black text-3xl sm:text-5xl md:text-6xl text-slate-900 dark:text-white tracking-tight leading-[1.12] max-w-4xl mx-auto">
               Quality home care <br className="hidden sm:inline" />right at your{' '}
-              <span className="text-primary dark:text-[#8CBDF0]">
+              <span className="text-link">
                 doorstep
               </span>
             </h1>

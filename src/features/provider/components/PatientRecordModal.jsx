@@ -1,12 +1,26 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { 
-  X, Activity, FileText, ClipboardList, Send, Loader2, ExternalLink, 
-  Trash2, Paperclip, HeartPulse, ShieldAlert, AlertCircle, 
-  ChevronLeft, ChevronRight, User, ShieldCheck
-} from 'lucide-react';
+import {
+  X,
+  Pulse,
+  FileText,
+  ClipboardText,
+  PaperPlaneRight,
+  SpinnerGap,
+  ArrowSquareOut,
+  Trash,
+  Paperclip,
+  Heartbeat,
+  ShieldWarning,
+  WarningCircle,
+  CaretLeft,
+  CaretRight,
+  User,
+  ShieldCheck,
+} from '@phosphor-icons/react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import { fetchConsentGrant } from '../lib/consent';
@@ -27,6 +41,9 @@ const PatientRecordModal = ({
   triggerRef = null 
 }) => {
   const { user } = useAuth();
+  const { t, formatDate, translateService } = useLanguage();
+  const tRef = useRef(t);
+  tRef.current = t;
   const fileInputRef = useRef(null);
   const permsRef = useRef(null);
   const [activeTab, setActiveTab] = useState('history');
@@ -75,23 +92,6 @@ const PatientRecordModal = ({
     setGrantedPermissions(next);
     return changed;
   }, []);
-
-  const logDataAccess = useCallback(async () => {
-    if (!user) return;
-    try {
-      const { error } = await supabase
-        .from('consent_access')
-        .update({ last_access: new Date().toISOString() })
-        .eq('patient_id', patientId)
-        .eq('provider_id', user.id);
-
-      if (error && error.code !== 'PGRST116') {
-        console.warn('Data access log skipped (RLS may block update):', error.message);
-      }
-    } catch (err) {
-      console.warn('Could not log data access:', err.message);
-    }
-  }, [patientId, user]);
 
   const fetchPatientData = useCallback(async (perms) => {
     const granted = perms || {};
@@ -148,7 +148,7 @@ const PatientRecordModal = ({
       }
     } catch (error) {
       console.error('Error fetching patient data:', error);
-      toast.error('Failed to load patient records');
+      toast.error(tRef.current('provider.recordModal.loadRecordsFailed'));
       setHistory(null);
       setDocuments([]);
       setNotes([]);
@@ -176,17 +176,15 @@ const PatientRecordModal = ({
       const perms = grant.permissions;
       applyPerms(perms);
       fetchPatientData(perms);
-      if (canView(perms, 'medical_history') || canView(perms, 'documents') || canView(perms, 'visit_notes')) {
-        logDataAccess();
-      }
+
     } catch (err) {
       console.warn('Consent check failed:', err.message);
       // Fail closed: an unreadable consent row is not consent.
       setGrantedPermissions(null);
-      setAccessError('Sharing settings could not be verified. Records stay hidden until this loads.');
+      setAccessError('provider.recordModal.accessErrorMsg');
       setLoading(false);
     }
-  }, [patientId, user, applyPerms, fetchPatientData, logDataAccess]);
+  }, [patientId, user, applyPerms, fetchPatientData]);
 
   useEffect(() => {
     if (isOpen && patientId) {
@@ -239,7 +237,7 @@ const PatientRecordModal = ({
   const handleSaveNote = async (e) => {
     e.preventDefault();
     if (!newNote.text.trim()) {
-      toast.error("Please enter assessment notes.");
+      toast.error(t('provider.recordModal.enterNotesError'));
       return;
     }
 
@@ -280,20 +278,20 @@ const PatientRecordModal = ({
 
       if (error) throw error;
       
-      toast.success("Progress note added!");
+      toast.success(t('provider.recordModal.noteAdded'));
       setNewNote({ bp: '', temp: '', hr: '', rr: '', spo2: '', pain: '', services: [], text: '', file: null });
       if (fileInputRef.current) fileInputRef.current.value = '';
       fetchPatientData(permsRef.current); // refresh
     } catch (error) {
       console.error('Error saving note:', error);
-      toast.error("Failed to add note.");
+      toast.error(t('provider.recordModal.noteAddFailed'));
     } finally {
       setSavingNote(false);
     }
   };
 
   const handleDeleteNote = async (noteId, filePath) => {
-    if (!window.confirm("Are you sure you want to delete this progress note?")) return;
+    if (!window.confirm(t('provider.recordModal.deleteNoteConfirm'))) return;
     
     try {
       if (filePath) {
@@ -303,14 +301,14 @@ const PatientRecordModal = ({
       const { error } = await supabase.from('visit_notes').delete().eq('id', noteId);
       if (error) throw error;
       
-      toast.success("Note deleted.");
+      toast.success(t('provider.recordModal.noteDeleted'));
       const updated = notes.filter(n => n.id !== noteId);
       setNotes(updated);
       const maxPage = Math.max(1, Math.ceil(updated.length / NOTES_PER_PAGE));
       setNotesPage(curr => Math.min(curr, maxPage));
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete note.");
+      toast.error(t('provider.recordModal.noteDeleteFailed'));
     }
   };
 
@@ -325,8 +323,8 @@ const PatientRecordModal = ({
 
   const getFileUrl = async (filePath) => {
     try {
-      const { getSignedUrl } = await import('@/lib/supabaseHelpers');
-      return await getSignedUrl(filePath, 3600);
+      const { getAuditedDocumentUrl } = await import('../lib/documentAccess');
+      return await getAuditedDocumentUrl(patientId, filePath);
     } catch (err) {
       console.warn('Could not get signed url', err);
       return null;
@@ -365,10 +363,12 @@ const PatientRecordModal = ({
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-hidden pointer-events-none"
+            onClick={onClose}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-hidden"
           >
             <motion.div
               className="relative w-full max-w-5xl h-[92dvh] sm:h-[88vh] max-h-[92dvh] sm:max-h-[88vh] neu-flat rounded-t-[2rem] sm:rounded-[2.25rem] flex flex-col overflow-hidden border-t sm:border border-slate-200/80 dark:border-white/10 shadow-2xl pointer-events-auto bg-surface-shell select-text overscroll-contain"
+              onClick={(e) => e.stopPropagation()}
               {...drawerMotionProps}
             >
               {/* Modal Top Header Bar (100% Solid, Non-Collapsing Surface) */}
@@ -384,11 +384,11 @@ const PatientRecordModal = ({
                   <div className="hidden md:block min-w-0">
                     <DialogPrimitive.Title asChild>
                       <h2 className="font-display font-extrabold text-base sm:text-lg text-slate-900 dark:text-white truncate">
-                        Clinical Chart &amp; Record
+                        {t('provider.recordModal.title')}
                       </h2>
                     </DialogPrimitive.Title>
                     <p className="text-xs font-semibold text-tertiary truncate">
-                      Patient: <strong className="text-slate-800 dark:text-slate-100">{patientName}</strong> &bull; Muntinlupa Care Network
+                      {t('provider.recordModal.subtitle')} <strong className="text-slate-800 dark:text-slate-100">{patientName}</strong> &bull; {t('provider.recordModal.network')}
                     </p>
                   </div>
 
@@ -414,11 +414,11 @@ const PatientRecordModal = ({
                           </h2>
                         </DialogPrimitive.Title>
                         <span className="px-1.5 py-0.2 rounded text-3xs font-extrabold uppercase text-success dark:text-success-dark bg-emerald-500/10 border border-emerald-500/30 shrink-0">
-                          Verified
+                          {t('provider.recordModal.verified')}
                         </span>
                       </div>
                       <p className="text-2xs font-semibold text-tertiary truncate">
-                        Clinical Chart &bull; Muntinlupa
+                        {t('provider.recordModal.mobileSubtitle')}
                       </p>
                     </div>
                   </div>
@@ -429,18 +429,11 @@ const PatientRecordModal = ({
                       to={`/provider/patients/${patientId}/profile`}
                       onClick={onClose}
                       className="md:hidden neu-btn px-2.5 py-1.5 rounded-xl text-2xs font-bold text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center gap-1 cursor-pointer shrink-0"
-                      title="View Full Profile"
+                      title={t('provider.recordModal.viewFullProfileTitle')}
                     >
-                      <span>Profile</span>
+                      <span>{t('provider.recordModal.profileBtn')}</span>
                       <span aria-hidden="true">&rarr;</span>
                     </Link>
-
-                    <DialogPrimitive.Close
-                      aria-label="Close"
-                      className="neu-btn w-10 h-10 rounded-xl hidden sm:flex items-center justify-center text-tertiary hover:text-slate-800 dark:hover:text-white transition-all cursor-pointer shrink-0"
-                    >
-                      <X className="w-4 h-4" />
-                    </DialogPrimitive.Close>
                   </div>
                 </div>
               </div>
@@ -449,37 +442,37 @@ const PatientRecordModal = ({
               {accessError ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center my-auto">
                   <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-warning">
-                    <AlertCircle className="w-8 h-8" />
+                    <WarningCircle className="w-8 h-8" />
                   </div>
                   <h3 className="text-lg font-display font-extrabold text-slate-900 dark:text-white mb-2">
-                    Records Unavailable
+                    {t('provider.recordModal.recordsUnavailableTitle')}
                   </h3>
-                  <p className="text-sm text-tertiary max-w-md mb-6 leading-relaxed">{accessError}</p>
+                  <p className="text-sm text-tertiary max-w-md mb-6 leading-relaxed">{t(accessError)}</p>
                   <button
                     type="button"
                     onClick={checkConsentThenLoad}
                     className="neu-btn px-6 py-2.5 rounded-xl font-bold text-xs cursor-pointer"
                   >
-                    Try again
+                    {t('provider.recordModal.tryAgainBtn')}
                   </button>
                 </div>
               ) : consentBlocked ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center my-auto">
                   <div className="neu-flat w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-danger">
-                    <ShieldAlert className="w-8 h-8" />
+                    <ShieldWarning className="w-8 h-8" />
                   </div>
                   <h3 className="text-lg font-display font-extrabold text-slate-900 dark:text-white mb-2">
-                    Data Access Revoked
+                    {t('provider.recordModal.revokedTitle')}
                   </h3>
                   <p className="text-sm text-tertiary max-w-md mb-6 leading-relaxed">
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{patientName}</span> has revoked consent for medical record sharing.
+                    {t('provider.recordModal.revokedMsg', { patient: patientName })}
                   </p>
                   <button
                     type="button"
                     onClick={onClose}
                     className="neu-btn px-6 py-2.5 rounded-xl font-bold text-xs cursor-pointer"
                   >
-                    Close Record
+                    {t('provider.recordModal.closeRecordBtn')}
                   </button>
                 </div>
               ) : (
@@ -487,7 +480,7 @@ const PatientRecordModal = ({
                 <div className="flex-1 flex flex-col md:grid md:grid-cols-12 overflow-hidden min-h-0">
                   
                   {/* LEFT DOCK: PATIENT IDENTITY & CLINICAL METADATA (Desktop only) */}
-                  <aside className="hidden md:flex md:col-span-4 p-4 sm:p-5 border-r border-slate-200/50 dark:border-white/5 flex-col justify-between overflow-y-auto space-y-4 bg-slate-50/60 dark:bg-[#0B131E]/40 shrink-0">
+                  <aside className="hidden md:flex md:col-span-4 p-4 sm:p-5 border-r border-slate-200/50 dark:border-white/5 flex-col justify-between overflow-y-auto space-y-4 bg-slate-50/60 dark:bg-surface-dark/40 shrink-0">
                     <div className="space-y-4">
                       {/* Patient Avatar Card */}
                       <div className="flex items-center gap-3">
@@ -511,15 +504,15 @@ const PatientRecordModal = ({
                       </div>
 
                       {/* Clinical Status Strip (NO pills, NO dots) */}
-                      <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-[#111B29] border border-slate-200/70 dark:border-slate-800 space-y-2 text-xs">
+                      <div className="p-3 rounded-xl bg-slate-100/80 dark:bg-surface-darkAlt border border-slate-200/70 dark:border-slate-800 space-y-2 text-xs">
                         <div className="flex items-center justify-between">
-                          <span className="text-2xs font-bold text-tertiary uppercase tracking-wider">Access Status</span>
+                          <span className="text-2xs font-bold text-tertiary uppercase tracking-wider">{t('provider.recordModal.accessStatusLabel')}</span>
                           <span className="px-2 py-0.5 rounded-md text-2xs font-extrabold uppercase tracking-wider text-success dark:text-success-dark bg-emerald-500/10 border border-emerald-500/30">
-                            Verified
+                            {t('provider.recordModal.verified')}
                           </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-2xs font-bold text-tertiary uppercase tracking-wider">Location</span>
+                          <span className="text-2xs font-bold text-tertiary uppercase tracking-wider">{t('provider.recordModal.locationLabel')}</span>
                           <span className="font-semibold text-slate-700 dark:text-slate-300">Muntinlupa City</span>
                         </div>
                       </div>
@@ -527,39 +520,39 @@ const PatientRecordModal = ({
                       {/* Sharing Permissions Audit */}
                       <div className="space-y-1.5">
                         <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                          Data Sharing Permissions
+                          {t('provider.recordModal.permissionsHeading')}
                         </p>
                         <div className="space-y-1 text-xs">
                           <div className="flex items-center justify-between p-2 rounded-lg bg-white/70 dark:bg-slate-800/40 border border-slate-200/50 dark:border-white/5">
-                            <span className="text-slate-600 dark:text-slate-300 font-medium">Medical History</span>
+                            <span className="text-slate-600 dark:text-slate-300 font-medium">{t('provider.recordModal.permMedicalHistory')}</span>
                             <span className={`text-2xs font-extrabold uppercase px-1.5 py-0.2 rounded ${
                               canView(grantedPermissions, 'medical_history') 
                                 ? 'text-success bg-emerald-500/10' 
                                 : 'text-tertiary bg-slate-200/50 dark:bg-slate-700/50'
                             }`}>
-                              {canView(grantedPermissions, 'medical_history') ? 'Granted' : 'Locked'}
+                              {canView(grantedPermissions, 'medical_history') ? t('provider.recordModal.grantedBadge') : t('provider.recordModal.lockedBadge')}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between p-2 rounded-lg bg-white/70 dark:bg-slate-800/40 border border-slate-200/50 dark:border-white/5">
-                            <span className="text-slate-600 dark:text-slate-300 font-medium">Uploaded Docs</span>
+                            <span className="text-slate-600 dark:text-slate-300 font-medium">{t('provider.recordModal.permUploadedDocs')}</span>
                             <span className={`text-2xs font-extrabold uppercase px-1.5 py-0.2 rounded ${
                               canView(grantedPermissions, 'documents') 
                                 ? 'text-success bg-emerald-500/10' 
                                 : 'text-tertiary bg-slate-200/50 dark:bg-slate-700/50'
                             }`}>
-                              {canView(grantedPermissions, 'documents') ? 'Granted' : 'Locked'}
+                              {canView(grantedPermissions, 'documents') ? t('provider.recordModal.grantedBadge') : t('provider.recordModal.lockedBadge')}
                             </span>
                           </div>
 
                           <div className="flex items-center justify-between p-2 rounded-lg bg-white/70 dark:bg-slate-800/40 border border-slate-200/50 dark:border-white/5">
-                            <span className="text-slate-600 dark:text-slate-300 font-medium">Clinical Notes</span>
+                            <span className="text-slate-600 dark:text-slate-300 font-medium">{t('provider.recordModal.permClinicalNotes')}</span>
                             <span className={`text-2xs font-extrabold uppercase px-1.5 py-0.2 rounded ${
                               canView(grantedPermissions, 'visit_notes') 
                                 ? 'text-success bg-emerald-500/10' 
                                 : 'text-tertiary bg-slate-200/50 dark:bg-slate-700/50'
                             }`}>
-                              {canView(grantedPermissions, 'visit_notes') ? 'Granted' : 'Locked'}
+                              {canView(grantedPermissions, 'visit_notes') ? t('provider.recordModal.grantedBadge') : t('provider.recordModal.lockedBadge')}
                             </span>
                           </div>
                         </div>
@@ -573,8 +566,8 @@ const PatientRecordModal = ({
                         onClick={() => setActiveTab('notes')}
                         className="w-full neu-btn px-3 py-2 rounded-xl text-xs font-bold text-link hover:text-primary transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                       >
-                        <ClipboardList className="w-3.5 h-3.5 text-link" />
-                        <span>+ Log Clinical Note</span>
+                        <ClipboardText className="w-3.5 h-3.5 text-link" />
+                        <span>{t('provider.recordModal.addNoteQuickBtn')}</span>
                       </button>
 
                       <Link
@@ -583,7 +576,7 @@ const PatientRecordModal = ({
                         className="w-full neu-btn px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-link transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span>View Full Profile &rarr;</span>
+                        <span>{t('provider.recordModal.viewFullProfileBtn')} &rarr;</span>
                       </Link>
                     </div>
                   </aside>
@@ -595,23 +588,23 @@ const PatientRecordModal = ({
                     <div className="bg-surface-shell border-b border-slate-200/80 dark:border-white/10 shrink-0 z-10 shadow-sm">
                       {/* Mobile Quick Data Sharing Strip */}
                       <div className="md:hidden px-4 pt-2.5 pb-1 flex items-center justify-between text-2xs text-tertiary">
-                        <span className="font-bold uppercase tracking-wider text-3xs">Consent:</span>
+                        <span className="font-bold uppercase tracking-wider text-3xs">{t('provider.recordModal.consentMobileLabel')}</span>
                         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
                           <span className={`px-1.5 py-0.5 rounded text-3xs font-bold whitespace-nowrap ${canView(grantedPermissions, 'medical_history') ? 'text-success bg-emerald-500/10 border border-emerald-500/20' : 'text-tertiary bg-slate-200/50 dark:bg-slate-800'}`}>
-                            History: {canView(grantedPermissions, 'medical_history') ? 'Granted' : 'Locked'}
+                            {t('provider.recordModal.historyMobilePrefix')} {canView(grantedPermissions, 'medical_history') ? t('provider.recordModal.grantedBadge') : t('provider.recordModal.lockedBadge')}
                           </span>
                           <span className={`px-1.5 py-0.5 rounded text-3xs font-bold whitespace-nowrap ${canView(grantedPermissions, 'documents') ? 'text-success bg-emerald-500/10 border border-emerald-500/20' : 'text-tertiary bg-slate-200/50 dark:bg-slate-800'}`}>
-                            Docs: {canView(grantedPermissions, 'documents') ? 'Granted' : 'Locked'}
+                            {t('provider.recordModal.docsMobilePrefix')} {canView(grantedPermissions, 'documents') ? t('provider.recordModal.grantedBadge') : t('provider.recordModal.lockedBadge')}
                           </span>
                           <span className={`px-1.5 py-0.5 rounded text-3xs font-bold whitespace-nowrap ${canView(grantedPermissions, 'visit_notes') ? 'text-success bg-emerald-500/10 border border-emerald-500/20' : 'text-tertiary bg-slate-200/50 dark:bg-slate-800'}`}>
-                            Notes: {canView(grantedPermissions, 'visit_notes') ? 'Granted' : 'Locked'}
+                            {t('provider.recordModal.notesMobilePrefix')} {canView(grantedPermissions, 'visit_notes') ? t('provider.recordModal.grantedBadge') : t('provider.recordModal.lockedBadge')}
                           </span>
                         </div>
                       </div>
 
                       {/* Neumorphic Segmented Tab Bar (Strictly NO pills, NO dots) */}
                       <div className="p-3 sm:p-4">
-                        <div className="p-1 rounded-xl bg-slate-100/70 dark:bg-[#0E1724] border border-slate-200/80 dark:border-slate-800 flex items-center gap-1 overflow-x-auto no-scrollbar">
+                        <div className="p-1 rounded-xl bg-slate-100/70 dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800 flex items-center gap-1 overflow-x-auto no-scrollbar">
                           <button
                             type="button"
                             onClick={() => setActiveTab('history')}
@@ -621,8 +614,8 @@ const PatientRecordModal = ({
                                 : 'text-tertiary hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/40 dark:hover:bg-slate-800/40'
                             }`}
                           >
-                            <Activity className="w-3.5 h-3.5 shrink-0" />
-                            <span>Medical History</span>
+                            <Pulse className="w-3.5 h-3.5 shrink-0" />
+                            <span>{t('provider.recordModal.tabHistory')}</span>
                           </button>
 
                           <button
@@ -635,7 +628,7 @@ const PatientRecordModal = ({
                             }`}
                           >
                             <FileText className="w-3.5 h-3.5 shrink-0" />
-                            <span>Docs</span>
+                            <span>{t('provider.recordModal.tabDocs')}</span>
                             <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
                               activeTab === 'documents' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
                             }`}>
@@ -652,8 +645,8 @@ const PatientRecordModal = ({
                                 : 'text-tertiary hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/40 dark:hover:bg-slate-800/40'
                             }`}
                           >
-                            <ClipboardList className="w-3.5 h-3.5 shrink-0" />
-                            <span>Visit Notes</span>
+                            <ClipboardText className="w-3.5 h-3.5 shrink-0" />
+                            <span>{t('provider.recordModal.tabVisitNotes')}</span>
                             <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
                               activeTab === 'notes' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
                             }`}>
@@ -671,8 +664,8 @@ const PatientRecordModal = ({
                     >
                       {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 text-tertiary">
-                          <Loader2 className="w-8 h-8 animate-spin text-link mb-3" />
-                          <p className="text-xs font-semibold">Loading clinical records...</p>
+                          <SpinnerGap className="w-8 h-8 animate-spin text-link mb-3" />
+                          <p className="text-xs font-semibold">{t('provider.recordModal.loadingRecords')}</p>
                         </div>
                       ) : (
                         <>
@@ -681,9 +674,9 @@ const PatientRecordModal = ({
                             <div className="space-y-4">
                               {!canView(grantedPermissions, 'medical_history') ? (
                                 <div className="neu-inset p-8 rounded-2xl text-center">
-                                  <AlertCircle className="w-8 h-8 text-warning mx-auto mb-2" />
-                                  <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Medical History Restricted</p>
-                                  <p className="text-xs text-tertiary mt-1">Patient has not granted permission to view this section.</p>
+                                  <WarningCircle className="w-8 h-8 text-warning mx-auto mb-2" />
+                                  <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{t('provider.recordModal.historyRestrictedTitle')}</p>
+                                  <p className="text-xs text-tertiary mt-1">{t('provider.recordModal.historyRestrictedBody')}</p>
                                 </div>
                               ) : (
                                 <div className="space-y-4">
@@ -691,15 +684,15 @@ const PatientRecordModal = ({
                                   <div className="neu-flat rounded-2xl p-4 sm:p-5 border-l-4 border-rose-500 space-y-2">
                                     <div className="flex items-center justify-between">
                                       <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-rose-500 dark:text-rose-400">
-                                        <AlertCircle className="w-4 h-4" />
-                                        <span>Allergies &amp; Adverse Reactions</span>
+                                        <WarningCircle className="w-4 h-4" />
+                                        <span>{t('provider.recordModal.allergiesHeading')}</span>
                                       </div>
-                                      <span className="text-2xs font-bold text-tertiary uppercase">Self-Reported</span>
+                                      <span className="text-2xs font-bold text-tertiary uppercase">{t('provider.recordModal.selfReported')}</span>
                                     </div>
                                     <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium pl-6">
                                       {history?.allergies && history.allergies.trim() 
                                         ? history.allergies 
-                                        : 'No known drug, food, or environmental allergies reported by patient.'}
+                                        : t('provider.recordModal.noAllergies')}
                                     </p>
                                   </div>
 
@@ -709,17 +702,17 @@ const PatientRecordModal = ({
                                     <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-2">
                                       <div className="flex items-center justify-between">
                                         <h4 className="font-display font-extrabold text-xs uppercase tracking-wider text-tertiary flex items-center gap-1.5">
-                                          <HeartPulse className="w-3.5 h-3.5 text-link" />
-                                          <span>Chronic Conditions</span>
+                                          <Heartbeat className="w-3.5 h-3.5 text-link" />
+                                          <span>{t('provider.recordModal.chronicHeading')}</span>
                                         </h4>
                                         <span className="text-2xs text-tertiary font-semibold">
-                                          {history?.chronic_conditions?.trim() ? 'Active' : 'None reported'}
+                                          {history?.chronic_conditions?.trim() ? t('provider.recordModal.activeTag') : t('provider.recordModal.noneReported')}
                                         </span>
                                       </div>
                                       <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
                                         {history?.chronic_conditions && history.chronic_conditions.trim()
                                           ? history.chronic_conditions
-                                          : 'No active chronic illnesses (e.g. Hypertension, Diabetes, Asthma) registered.'}
+                                          : t('provider.recordModal.noChronic')}
                                       </p>
                                     </div>
 
@@ -728,25 +721,25 @@ const PatientRecordModal = ({
                                       <div className="flex items-center justify-between">
                                         <h4 className="font-display font-extrabold text-xs uppercase tracking-wider text-tertiary flex items-center gap-1.5">
                                           <FileText className="w-3.5 h-3.5 text-link" />
-                                          <span>Past Surgeries &amp; Procedures</span>
+                                          <span>{t('provider.recordModal.surgeriesHeading')}</span>
                                         </h4>
                                         <span className="text-2xs text-tertiary font-semibold">
-                                          {history?.past_surgeries?.trim() ? 'Recorded' : 'None reported'}
+                                          {history?.past_surgeries?.trim() ? t('provider.recordModal.recordedTag') : t('provider.recordModal.noneReported')}
                                         </span>
                                       </div>
                                       <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-medium">
                                         {history?.past_surgeries && history.past_surgeries.trim()
                                           ? history.past_surgeries
-                                          : 'No major prior surgical history or hospitalizations on file.'}
+                                          : t('provider.recordModal.noSurgeries')}
                                       </p>
                                     </div>
                                   </div>
 
                                   {/* Bottom Informational Sync Notice */}
-                                  <div className="p-3.5 rounded-xl bg-slate-100/60 dark:bg-[#0F1926] border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs text-tertiary">
+                                  <div className="p-3.5 rounded-xl bg-slate-100/60 dark:bg-surface-darkAlt border border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs text-tertiary">
                                     <div className="flex items-center gap-2">
                                       <ShieldCheck className="w-4 h-4 text-link shrink-0" />
-                                      <span>Medical history is maintained by the patient and updated during consultations.</span>
+                                      <span>{t('provider.recordModal.syncNotice')}</span>
                                     </div>
                                   </div>
                                 </div>
@@ -759,16 +752,16 @@ const PatientRecordModal = ({
                             <div className="space-y-4">
                               {!canView(grantedPermissions, 'documents') ? (
                                 <div className="neu-inset p-8 rounded-2xl text-center">
-                                  <AlertCircle className="w-8 h-8 text-warning mx-auto mb-2" />
-                                  <p className="font-bold text-sm text-slate-800 dark:text-slate-200">Documents Restricted</p>
-                                  <p className="text-xs text-tertiary mt-1">Patient has not granted permission to view uploaded files.</p>
+                                  <WarningCircle className="w-8 h-8 text-warning mx-auto mb-2" />
+                                  <p className="font-bold text-sm text-slate-800 dark:text-slate-200">{t('provider.recordModal.docsRestrictedTitle')}</p>
+                                  <p className="text-xs text-tertiary mt-1">{t('provider.recordModal.docsRestrictedBody')}</p>
                                 </div>
                               ) : documents.length === 0 ? (
                                 <div className="neu-inset p-8 rounded-2xl text-center">
                                   <EmptyState
                                     icon="document"
-                                    title="No Documents Uploaded"
-                                    message="The patient has not shared any medical certificates, prescriptions, or lab results yet."
+                                    title={t('provider.recordModal.noDocsTitle')}
+                                    message={t('provider.recordModal.noDocsBody')}
                                     variant="compact"
                                   />
                                 </div>
@@ -788,7 +781,7 @@ const PatientRecordModal = ({
                                             {doc.document_title}
                                           </p>
                                           <p className="text-xs text-tertiary mt-0.5">
-                                            {new Date(doc.uploaded_at).toLocaleDateString()}
+                                            {formatDate(doc.uploaded_at)}
                                           </p>
                                         </div>
                                       </div>
@@ -798,12 +791,12 @@ const PatientRecordModal = ({
                                         onClick={async () => {
                                           const url = await getFileUrl(doc.file_path);
                                           if (url) window.open(url, '_blank');
-                                          else toast.error('Could not open file URL.');
+                                          else toast.error(t('provider.recordModal.couldNotOpenUrl'));
                                         }}
                                         className="neu-btn p-2 rounded-xl text-link hover:text-primary transition-all cursor-pointer shrink-0"
-                                        title="Open Document in New Tab"
+                                        title={t('provider.recordModal.openDocNewTab')}
                                       >
-                                        <ExternalLink className="w-4 h-4" />
+                                        <ArrowSquareOut className="w-4 h-4" />
                                       </button>
                                     </div>
                                   ))}
@@ -817,8 +810,8 @@ const PatientRecordModal = ({
                             <div className="space-y-6">
                               {!canView(grantedPermissions, 'visit_notes') && (
                                 <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                                  <AlertCircle className="w-4 h-4 shrink-0" />
-                                  <span>Viewing past notes from other providers is restricted by patient consent. You can still record and review your consultation notes.</span>
+                                  <WarningCircle className="w-4 h-4 shrink-0" />
+                                  <span>{t('provider.recordModal.notesConsentBanner')}</span>
                                 </div>
                               )}
                               <div className="space-y-6">
@@ -826,10 +819,10 @@ const PatientRecordModal = ({
                                   <div className="neu-flat rounded-2xl p-4 sm:p-5 space-y-4">
                                     <div>
                                       <h4 className="font-display font-extrabold text-sm text-slate-900 dark:text-white">
-                                        Log Clinical Progress Note &amp; Vitals
+                                        {t('provider.recordModal.logFormTitle')}
                                       </h4>
                                       <p className="text-xs text-tertiary mt-0.5">
-                                        Record patient biometrics, treatments, and clinical observations.
+                                        {t('provider.recordModal.logFormSubtitle')}
                                       </p>
                                     </div>
 
@@ -837,11 +830,11 @@ const PatientRecordModal = ({
                                       {/* Vital Signs Grid */}
                                       <div className="space-y-2">
                                         <p className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                                          Vital Signs
+                                          {t('provider.recordModal.vitalSignsHeading')}
                                         </p>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                                           <div>
-                                            <label htmlFor="note-bp" className="text-xs font-bold text-tertiary block mb-1">BP (mmHg)</label>
+                                            <label htmlFor="note-bp" className="text-xs font-bold text-tertiary block mb-1">{t('provider.recordModal.bpLabel')}</label>
                                             <input
                                               id="note-bp"
                                               type="text"
@@ -852,7 +845,7 @@ const PatientRecordModal = ({
                                             />
                                           </div>
                                           <div>
-                                            <label htmlFor="note-temp" className="text-xs font-bold text-tertiary block mb-1">Temp (°C)</label>
+                                            <label htmlFor="note-temp" className="text-xs font-bold text-tertiary block mb-1">{t('provider.recordModal.tempLabel')}</label>
                                             <input
                                               id="note-temp"
                                               type="text"
@@ -863,7 +856,7 @@ const PatientRecordModal = ({
                                             />
                                           </div>
                                           <div>
-                                            <label htmlFor="note-hr" className="text-xs font-bold text-tertiary block mb-1">Heart Rate (bpm)</label>
+                                            <label htmlFor="note-hr" className="text-xs font-bold text-tertiary block mb-1">{t('provider.recordModal.hrLabel')}</label>
                                             <input
                                               id="note-hr"
                                               type="number"
@@ -874,7 +867,7 @@ const PatientRecordModal = ({
                                             />
                                           </div>
                                           <div>
-                                            <label htmlFor="note-rr" className="text-xs font-bold text-tertiary block mb-1">Respiratory Rate (bpm)</label>
+                                            <label htmlFor="note-rr" className="text-xs font-bold text-tertiary block mb-1">{t('provider.recordModal.rrLabel')}</label>
                                             <input
                                               id="note-rr"
                                               type="number"
@@ -885,7 +878,7 @@ const PatientRecordModal = ({
                                             />
                                           </div>
                                           <div>
-                                            <label htmlFor="note-spo2" className="text-xs font-bold text-tertiary block mb-1">SpO2 (%)</label>
+                                            <label htmlFor="note-spo2" className="text-xs font-bold text-tertiary block mb-1">{t('provider.recordModal.spo2Label')}</label>
                                             <input
                                               id="note-spo2"
                                               type="number"
@@ -896,7 +889,7 @@ const PatientRecordModal = ({
                                             />
                                           </div>
                                           <div>
-                                            <label htmlFor="note-pain" className="text-xs font-bold text-tertiary block mb-1">Pain Scale (0-10)</label>
+                                            <label htmlFor="note-pain" className="text-xs font-bold text-tertiary block mb-1">{t('provider.recordModal.painLabel')}</label>
                                             <input
                                               id="note-pain"
                                               type="number"
@@ -914,7 +907,7 @@ const PatientRecordModal = ({
                                       {/* Services Rendered (Rectangular buttons, NO pills) */}
                                       <div>
                                         <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block mb-1.5">
-                                          Services Rendered
+                                          {t('provider.recordModal.servicesRendered')}
                                         </label>
                                         <div className="flex flex-wrap gap-1.5">
                                           {availableServices.map((service) => {
@@ -930,7 +923,7 @@ const PatientRecordModal = ({
                                                     : 'neu-btn text-slate-600 dark:text-slate-300'
                                                 }`}
                                               >
-                                                {service}
+                                                {translateService(service)}
                                               </button>
                                             );
                                           })}
@@ -940,13 +933,13 @@ const PatientRecordModal = ({
                                       {/* Clinical Assessment Textarea */}
                                       <div>
                                         <label htmlFor="note-assessment" className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block mb-1">
-                                          Clinical Evaluation &amp; Treatment Plan
+                                          {t('provider.recordModal.evalLabel')}
                                         </label>
                                         <textarea
                                           id="note-assessment"
                                           required
                                           rows={3}
-                                          placeholder="Document clinical observations, wound assessment, or medication guidance..."
+                                          placeholder={t('provider.recordModal.evalPlaceholder')}
                                           value={newNote.text}
                                           onChange={(e) => setNewNote({ ...newNote, text: e.target.value })}
                                           className="w-full neu-inset rounded-xl p-2.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 bg-transparent outline-none resize-none"
@@ -965,7 +958,7 @@ const PatientRecordModal = ({
                                             onChange={(e) => {
                                               const file = e.target.files[0];
                                               if (file && file.size > 2 * 1024 * 1024) {
-                                                toast.error('File exceeds max size (2MB).');
+                                                toast.error(t('provider.recordModal.fileTooLarge'));
                                                 if (fileInputRef.current) fileInputRef.current.value = '';
                                                 else e.target.value = '';
                                               } else {
@@ -980,7 +973,7 @@ const PatientRecordModal = ({
                                             >
                                               <Paperclip className="w-3.5 h-3.5 text-link shrink-0" />
                                               <span className="truncate">
-                                                {newNote.file ? newNote.file.name : 'Attach Image/Document (Max 2MB)'}
+                                                {newNote.file ? newNote.file.name : t('provider.recordModal.attachLabel')}
                                               </span>
                                             </label>
                                             {newNote.file && (
@@ -991,7 +984,7 @@ const PatientRecordModal = ({
                                                   if (fileInputRef.current) fileInputRef.current.value = '';
                                                 }}
                                                 className="neu-btn p-2 rounded-xl text-tertiary hover:text-danger cursor-pointer shrink-0"
-                                                title="Remove attachment"
+                                                title={t('provider.recordModal.removeAttachment')}
                                               >
                                                 <X className="w-3.5 h-3.5" />
                                               </button>
@@ -1007,13 +1000,13 @@ const PatientRecordModal = ({
                                         >
                                           {savingNote ? (
                                             <>
-                                              <Loader2 className="w-4 h-4 animate-spin" />
-                                              <span>Saving Note...</span>
+                                              <SpinnerGap className="w-4 h-4 animate-spin" />
+                                              <span>{t('provider.recordModal.savingNote')}</span>
                                             </>
                                           ) : (
                                             <>
-                                              <Send className="w-4 h-4" />
-                                              <span>Log Progress Note</span>
+                                              <PaperPlaneRight className="w-4 h-4" />
+                                              <span>{t('provider.recordModal.logNoteSubmit')}</span>
                                             </>
                                           )}
                                         </button>
@@ -1026,10 +1019,10 @@ const PatientRecordModal = ({
                                     <div className="flex items-center justify-between gap-3 border-b border-slate-200/50 dark:border-white/5 pb-2">
                                       <div>
                                         <h4 className="font-display font-extrabold text-sm text-slate-900 dark:text-white">
-                                          Historical Progress Notes
+                                          {t('provider.recordModal.historicalTitle')}
                                         </h4>
                                         <p className="text-xs text-tertiary mt-0.5">
-                                          Chronological record of clinical notes for this patient.
+                                          {t('provider.recordModal.historicalSubtitle')}
                                         </p>
                                       </div>
 
@@ -1043,9 +1036,9 @@ const PatientRecordModal = ({
                                               disabled={notesPage <= 1}
                                               onClick={() => setNotesPage((p) => Math.max(1, p - 1))}
                                               className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
-                                              title="Previous notes"
+                                              title={t('provider.recordModal.prevNotes')}
                                             >
-                                              <ChevronLeft className="w-3.5 h-3.5" />
+                                              <CaretLeft className="w-3.5 h-3.5" />
                                             </button>
                                             <span className="text-xs font-extrabold text-tertiary px-1 select-none whitespace-nowrap">
                                               {notesPage} / {totalNotesPages}
@@ -1055,9 +1048,9 @@ const PatientRecordModal = ({
                                               disabled={notesPage >= totalNotesPages}
                                               onClick={() => setNotesPage((p) => Math.min(totalNotesPages, p + 1))}
                                               className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:cursor-not-allowed hover:text-link transition-all cursor-pointer"
-                                              title="Next notes"
+                                              title={t('provider.recordModal.nextNotes')}
                                             >
-                                              <ChevronRight className="w-3.5 h-3.5" />
+                                              <CaretRight className="w-3.5 h-3.5" />
                                             </button>
                                           </div>
                                         );
@@ -1068,8 +1061,8 @@ const PatientRecordModal = ({
                                       <div className="neu-inset p-8 rounded-2xl text-center">
                                         <EmptyState
                                           icon="inbox"
-                                          title="No Visit Notes Yet"
-                                          message="Clinical progress notes logged during patient consultations will be displayed here."
+                                          title={t('provider.recordModal.noNotesTitle')}
+                                          message={t('provider.recordModal.noNotesBody')}
                                           variant="compact"
                                         />
                                       </div>
@@ -1085,10 +1078,10 @@ const PatientRecordModal = ({
                                               <div className="flex items-start justify-between gap-2">
                                                 <div>
                                                   <h5 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
-                                                    Dr. {note.provider?.full_name || 'Healthcare Provider'}
+                                                    Dr. {note.provider?.full_name || t('provider.recordModal.healthcareProviderFallback')}
                                                   </h5>
                                                   <p className="text-xs text-tertiary mt-0.5">
-                                                    {new Date(note.created_at).toLocaleString('en-US', {
+                                                    {formatDate(note.created_at, {
                                                       month: 'short',
                                                       day: 'numeric',
                                                       year: 'numeric',
@@ -1103,9 +1096,9 @@ const PatientRecordModal = ({
                                                     type="button"
                                                     onClick={() => handleDeleteNote(note.id, note.attachment_url)}
                                                     className="neu-btn p-1.5 rounded-lg text-tertiary hover:text-danger transition-colors cursor-pointer"
-                                                    title="Delete Note"
+                                                    title={t('provider.recordModal.deleteNoteTitle')}
                                                   >
-                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                    <Trash className="w-3.5 h-3.5" />
                                                   </button>
                                                 )}
                                               </div>
@@ -1149,7 +1142,10 @@ const PatientRecordModal = ({
                                               {/* Services Tag */}
                                               {note.services_rendered && (
                                                 <p className="text-xs font-bold text-link">
-                                                  Services: <span className="font-medium text-slate-600 dark:text-slate-300">{note.services_rendered}</span>
+                                                  {t('provider.recordModal.servicesPrefix')}{' '}
+                                                  <span className="font-medium text-slate-600 dark:text-slate-300">
+                                                    {note.services_rendered.split(',').map((s) => translateService(s.trim())).filter(Boolean).join(', ')}
+                                                  </span>
                                                 </p>
                                               )}
 
@@ -1157,7 +1153,7 @@ const PatientRecordModal = ({
                                               {note.notes && (
                                                 <div className="neu-inset p-3 rounded-xl border border-slate-200/40 dark:border-white/5 space-y-1">
                                                   <p className="text-2xs font-extrabold uppercase tracking-wider text-link">
-                                                    Clinical Assessment
+                                                    {t('provider.recordModal.clinicalAssessmentLabel')}
                                                   </p>
                                                   <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed italic whitespace-pre-wrap">
                                                     &ldquo;{note.notes}&rdquo;
@@ -1172,12 +1168,12 @@ const PatientRecordModal = ({
                                                   onClick={async () => {
                                                     const url = await getFileUrl(note.attachment_url);
                                                     if (url) window.open(url, '_blank');
-                                                    else toast.error('Could not load attachment.');
+                                                    else toast.error(t('provider.recordModal.attachmentLoadError'));
                                                   }}
                                                   className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-link flex items-center gap-1.5 cursor-pointer mt-1"
                                                 >
                                                   <Paperclip className="w-3 h-3" />
-                                                  <span>View Attached Document</span>
+                                                  <span>{t('provider.recordModal.viewAttachedDoc')}</span>
                                                 </button>
                                               )}
                                             </div>

@@ -112,7 +112,7 @@ const FormCheckbox = React.forwardRef(({ label, error, className, labelClassName
             </svg>
           </div>
         </div>
-        <span className={cn("text-xs sm:text-[13px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors", labelClassName)}>
+        <span className={cn("text-xs sm:text-[0.8125rem] font-bold text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors", labelClassName)}>
           {label}
         </span>
       </label>

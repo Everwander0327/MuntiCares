@@ -2,9 +2,10 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { X, RefreshCw, ShieldAlert } from 'lucide-react';
+import { ArrowsClockwise, ShieldWarning } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { normalizePermissions } from '@/features/patient/utils/consent';
 import toast from 'react-hot-toast';
@@ -14,45 +15,49 @@ import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 const PERMISSION_CONFIG = [
   {
     key: 'medical_history',
-    label: 'Medical History',
-    desc: 'Diagnoses, allergies, blood type, and conditions',
+    labelKey: 'patient.consent.permHistoryLabel',
+    descKey: 'patient.consent.permHistoryDesc',
   },
   {
     key: 'documents',
-    label: 'Clinical Documents',
-    desc: 'Uploaded test results, lab clearances, and imaging',
+    labelKey: 'patient.consent.permDocsLabel',
+    descKey: 'patient.consent.permDocsDesc',
   },
   {
     key: 'visit_notes',
-    label: 'Visit & Session Notes',
-    desc: 'Past consultation logs and provider encounter notes',
+    labelKey: 'patient.consent.permVisitNotesLabel',
+    descKey: 'patient.consent.permVisitNotesDesc',
   },
 ];
 
-const PERMISSION_LABELS = {
-  medical_history: 'Medical History',
-  documents: 'Documents',
-  visit_notes: 'Visit Notes',
+const PERMISSION_LABEL_KEYS = {
+  medical_history: 'patient.consent.shortHistory',
+  documents: 'patient.consent.shortDocuments',
+  visit_notes: 'patient.consent.shortVisitNotes',
 };
 
 const EXPIRY_CHOICES = [
-  { label: '30 days', days: 30 },
-  { label: '90 days', days: 90 },
-  { label: '1 year', days: 365 },
-  { label: 'No expiry', days: null },
+  { labelKey: 'patient.consent.exp30Days', days: 30 },
+  { labelKey: 'patient.consent.exp90Days', days: 90 },
+  { labelKey: 'patient.consent.exp1Year', days: 365 },
+  { labelKey: 'patient.consent.expNoExpiry', days: null },
 ];
 
 const DEFAULT_GRANT_DAYS = 90;
 
-const getExpirySummary = (expiresAt, isEnabled) => {
-  if (!isEnabled) return 'Paused';
-  if (!expiresAt) return 'No expiry set';
+const getExpirySummary = (expiresAt, isEnabled, t, locale = 'en-US') => {
+  if (!isEnabled) return t('patient.consent.expSummaryPaused');
+  if (!expiresAt) return t('patient.consent.expSummaryNever');
   const date = new Date(expiresAt);
-  if (Number.isNaN(date.getTime())) return 'No expiry set';
+  if (Number.isNaN(date.getTime())) return t('patient.consent.expSummaryNever');
   if (date <= new Date()) {
-    return `Expired ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+    return t('patient.consent.expSummaryExpiredDate', {
+      date: date.toLocaleDateString(locale, { month: 'short', day: 'numeric' }),
+    });
   }
-  return `Ends ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  return t('patient.consent.expSummaryEndsDate', {
+    date: date.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' }),
+  });
 };
 
 const getActiveExpiryDays = (consent) => {
@@ -80,7 +85,7 @@ const ConsentSwitch = ({ checked, onToggle, disabled, ariaLabel }) => (
       event.stopPropagation();
       onToggle();
     }}
-    className={`min-h-[44px] min-w-[52px] inline-flex items-center justify-center cursor-pointer select-none ${
+    className={`min-h-[2.75rem] min-w-[3.25rem] inline-flex items-center justify-center cursor-pointer select-none ${
       disabled ? 'opacity-50 pointer-events-none' : ''
     }`}
   >
@@ -105,16 +110,18 @@ const PermissionEditor = ({
   onToggleAllCategories,
   onSelectExpiry,
 }) => {
+  const { t, isTagalog } = useLanguage();
+  const locale = isTagalog ? 'tl-PH' : 'en-US';
   const activeCount = PERMISSION_CONFIG.filter(({ key }) => !!consent.permissions?.[key]).length;
   const allEnabled = activeCount === PERMISSION_CONFIG.length;
   const activeExpiryDays = getActiveExpiryDays(consent);
-  const expirySummary = getExpirySummary(consent.expiresAt, consent.isEnabled);
+  const expirySummary = getExpirySummary(consent.expiresAt, consent.isEnabled, t, locale);
 
   return (
     <div className="space-y-4">
       {!consent.isEnabled && (
         <div className="neu-inset p-3.5 rounded-2xl text-warning dark:text-warning-dark text-sm font-semibold">
-          Master access is paused. Turn ON access to share medical record categories.
+          {t('patient.consent.masterPausedWarning')}
         </div>
       )}
 
@@ -122,24 +129,26 @@ const PermissionEditor = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 px-0.5">
           <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-            Shared Record Categories
+            {t('patient.consent.sharedCategoriesTitle')}
           </span>
           <button
             type="button"
             disabled={!consent.isEnabled}
             onClick={() => onToggleAllCategories(consent, !allEnabled)}
-            className={`min-h-[36px] px-2 text-xs font-bold transition-colors ${
+            className={`min-h-[2.25rem] px-2 text-xs font-bold transition-colors ${
               consent.isEnabled
                 ? 'text-link dark:text-primary-400 hover:underline cursor-pointer'
                 : 'text-tertiary opacity-50 cursor-not-allowed'
             }`}
           >
-            {allEnabled ? 'Pause all' : 'Enable all'}
+            {allEnabled ? t('patient.consent.pauseAllBtn') : t('patient.consent.enableAllBtn')}
           </button>
         </div>
 
         <div className="neu-inset rounded-2xl divide-y divide-surface-border/70 dark:divide-white/5 overflow-hidden">
-          {PERMISSION_CONFIG.map(({ key, label, desc }) => {
+          {PERMISSION_CONFIG.map(({ key, labelKey, descKey }) => {
+            const label = t(labelKey);
+            const desc = t(descKey);
             const isChecked = !!consent.permissions?.[key] && consent.isEnabled;
             return (
               <div
@@ -167,7 +176,7 @@ const PermissionEditor = ({
                 <ConsentSwitch
                   checked={isChecked}
                   disabled={!consent.isEnabled}
-                  ariaLabel={`Toggle ${label} for ${consent.providerName}`}
+                  ariaLabel={t('patient.consent.toggleCatAria', { label, name: consent.providerName })}
                   onToggle={() => onToggleCategory(consent.providerId, consent.providerName, key)}
                 />
               </div>
@@ -180,7 +189,7 @@ const PermissionEditor = ({
       <div className="neu-flat-sm rounded-2xl p-4 space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <p className="text-sm font-bold text-ink dark:text-white">
-            Access expiry
+            {t('patient.consent.accessExpiryTitle')}
           </p>
           <span className="text-xs font-bold text-link dark:text-primary-400 tabular-nums">
             {expirySummary}
@@ -192,24 +201,24 @@ const PermissionEditor = ({
             const isSelected = activeExpiryDays === opt.days;
             return (
               <button
-                key={opt.label}
+                key={opt.labelKey}
                 type="button"
                 aria-pressed={isSelected}
                 onClick={() => onSelectExpiry(consent, opt.days)}
-                className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-[0.98] ${
+                className={`min-h-[2.75rem] px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-[0.98] ${
                   isSelected
                     ? 'neu-btn-primary'
                     : 'neu-btn text-ink dark:text-slate-200'
                 }`}
               >
-                {opt.label}
+                {t(opt.labelKey)}
               </button>
             );
           })}
         </div>
 
         <p className="text-sm text-tertiary leading-relaxed font-medium">
-          Providers lose access automatically on this date. Re-enabling access always sets a future expiry.
+          {t('patient.consent.expiryHelper')}
         </p>
       </div>
     </div>
@@ -234,8 +243,10 @@ const ProviderAvatar = ({ url, name, sizeClass = 'w-11 h-11' }) => (
   </div>
 );
 
-const PatientConsent = () => {
+const PatientConsent = ({ embedded = false }) => {
   const { user } = useAuth();
+  const { t, isTagalog, translateService } = useLanguage();
+  const locale = isTagalog ? 'tl-PH' : 'en-US';
   const [consents, setConsents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState(null);
@@ -244,6 +255,9 @@ const PatientConsent = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const auditTriggerRef = useRef(null);
   const [consentHistory, setConsentHistory] = useState([]);
+  const [accessLogs, setAccessLogs] = useState([]);
+  const [accessLogsError, setAccessLogsError] = useState(false);
+  const [accessLogsLoading, setAccessLogsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showAuditModal, setShowAuditModal] = useState(false);
   const [auditTab, setAuditTab] = useState('history');
@@ -301,19 +315,19 @@ const PatientConsent = () => {
         return {
           id: c.id,
           providerId: c.provider_id,
-          providerName: c.provider?.full_name || 'Care Specialist',
+          providerName: c.provider?.full_name || t('patient.consent.providerFallback'),
           providerAvatarUrl: c.provider?.avatar_url || '',
           service:
             provInfo?.services && provInfo.services.length > 0
               ? provInfo.services[0]
               : 'General Care',
           lastAccess: c.last_access
-            ? new Date(c.last_access).toLocaleDateString('en-US', {
+            ? new Date(c.last_access).toLocaleDateString(locale, {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric',
               })
-            : 'Never',
+            : t('patient.consent.neverAccessed'),
           lastAccessRaw: c.last_access,
           isEnabled: c.is_enabled,
           expiresAt: c.expires_at || null,
@@ -333,7 +347,7 @@ const PatientConsent = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, locale, t]);
 
   useEffect(() => {
     fetchConsents();
@@ -388,21 +402,21 @@ const PatientConsent = () => {
           providerName,
           providerId,
           action: 'Granted',
-          details: 'Full data sharing enabled',
+          details: t('patient.consent.detailFullEnabled'),
         });
-        toast.success(`Access granted for ${providerName}`, { id: 'consent-status' });
+        toast.success(t('patient.consent.toastAccessGranted', { name: providerName }), { id: 'consent-status' });
       } else {
         addHistoryEntry({
           providerName,
           providerId,
           action: 'Revoked',
-          details: 'Data access paused',
+          details: t('patient.consent.detailAccessPaused'),
         });
-        toast(`Access paused for ${providerName}`, { id: 'consent-status', icon: 'pause' });
+        toast(t('patient.consent.toastAccessPaused', { name: providerName }), { id: 'consent-status', icon: 'pause' });
       }
     } catch (err) {
       console.error('Error toggling consent:', err);
-      toast.error('Failed to update. Check your connection.');
+      toast.error(t('patient.consent.toastToggleError'));
     } finally {
       setTogglingId(null);
     }
@@ -410,7 +424,9 @@ const PatientConsent = () => {
 
   const handleExpiryChoice = async (consent, days) => {
     const iso = days === null ? null : new Date(Date.now() + days * 86400000).toISOString();
-    const label = days === null ? 'has no expiry date' : `expires in ${days} days`;
+    const label = days === null
+      ? t('patient.consent.expiryDescNever')
+      : t('patient.consent.expiryDescDays', { days });
 
     const { error } = await supabase
       .from('consent_access')
@@ -418,11 +434,11 @@ const PatientConsent = () => {
       .eq('id', consent.id);
 
     if (isMissingColumnError(error)) {
-      toast.error('This database has no consent_expiry column yet. Apply the consent expiry migration first.');
+      toast.error(t('patient.consent.toastMissingExpiryCol'));
       return;
     }
     if (error) {
-      toast.error('Failed to change the expiry. Check your connection.');
+      toast.error(t('patient.consent.toastExpiryError'));
       return;
     }
 
@@ -437,9 +453,9 @@ const PatientConsent = () => {
       providerName: consent.providerName,
       providerId: consent.providerId,
       action: 'Expiry set',
-      details: `Access ${label}`,
+      details: t('patient.consent.detailAccessExpiry', { desc: label }),
     });
-    toast.success(`Access ${label}`, { id: 'expiry-status' });
+    toast.success(t('patient.consent.toastExpirySuccess', { desc: label }), { id: 'expiry-status' });
   };
 
   const handlePermChange = async (providerId, providerName, permKey) => {
@@ -465,24 +481,25 @@ const PatientConsent = () => {
         )
       );
 
+      const permLabel = t(PERMISSION_LABEL_KEYS[permKey]);
       addHistoryEntry({
         providerName,
         providerId,
         action: 'Updated',
-        details: `${updatedPerms[permKey] ? 'Granted' : 'Revoked'} ${PERMISSION_LABELS[permKey]}`,
+        details: t(updatedPerms[permKey] ? 'patient.consent.detailPermGranted' : 'patient.consent.detailPermRevoked', { perm: permLabel }),
       });
 
       if (updatedPerms[permKey]) {
-        toast.success(`Enabled ${PERMISSION_LABELS[permKey]}`, { id: 'permission-status' });
+        toast.success(t('patient.consent.toastPermEnabled', { perm: permLabel }), { id: 'permission-status' });
       } else {
-        toast(`Disabled ${PERMISSION_LABELS[permKey]}`, {
+        toast(t('patient.consent.toastPermDisabled', { perm: permLabel }), {
           id: 'permission-status',
           icon: 'pause',
         });
       }
     } catch (err) {
       console.error('Error updating permissions:', err);
-      toast.error('Failed to update permission.');
+      toast.error(t('patient.consent.toastPermError'));
     }
   };
 
@@ -511,22 +528,22 @@ const PatientConsent = () => {
         providerName: consent.providerName,
         providerId: consent.providerId,
         action: 'Updated',
-        details: `${targetEnabled ? 'Enabled all' : 'Paused all'} record categories`,
+        details: t(targetEnabled ? 'patient.consent.detailEnabledAll' : 'patient.consent.detailPausedAll'),
       });
 
       if (targetEnabled) {
-        toast.success(`Enabled all categories for ${consent.providerName}`, {
+        toast.success(t('patient.consent.toastAllEnabled', { name: consent.providerName }), {
           id: 'permission-status',
         });
       } else {
-        toast(`Paused all categories for ${consent.providerName}`, {
+        toast(t('patient.consent.toastAllPaused', { name: consent.providerName }), {
           id: 'permission-status',
           icon: 'pause',
         });
       }
     } catch (err) {
       console.error('Error updating all categories:', err);
-      toast.error('Failed to update categories.');
+      toast.error(t('patient.consent.toastAllError'));
     }
   };
 
@@ -534,10 +551,25 @@ const PatientConsent = () => {
     const d = new Date(ts);
     const now = new Date();
     const diff = now - d;
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (diff < 60000) return t('patient.consent.justNow');
+    if (diff < 3600000) return t('patient.consent.minsAgo', { count: Math.floor(diff / 60000) });
+    if (diff < 86400000) return t('patient.consent.hoursAgo', { count: Math.floor(diff / 3600000) });
+    return d.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const getActionLabel = (action) => {
+    switch (action) {
+      case 'Granted':
+        return t('patient.consent.actionGranted');
+      case 'Revoked':
+        return t('patient.consent.actionRevoked');
+      case 'Updated':
+        return t('patient.consent.actionUpdated');
+      case 'Expiry set':
+        return t('patient.consent.actionExpirySet');
+      default:
+        return action;
+    }
   };
 
   const getActionBadge = (action) => {
@@ -580,11 +612,28 @@ const PatientConsent = () => {
     );
   }, [filteredConsents, selectedProviderId]);
 
-  const accessLogs = useMemo(() => {
-    return consents
-      .filter((c) => c.lastAccessRaw)
-      .sort((a, b) => new Date(b.lastAccessRaw) - new Date(a.lastAccessRaw));
-  }, [consents]);
+  useEffect(() => {
+    if (!showAuditModal || auditTab !== 'access' || !user?.id) return;
+    let active = true;
+    setAccessLogs([]);
+    setAccessLogsError(false);
+    setAccessLogsLoading(true);
+    supabase.from('document_access_events')
+      .select('id, provider_name, document_title, category, accessed_at')
+      .eq('patient_id', user.id)
+      .order('accessed_at', { ascending: false })
+      .limit(100)
+      .then(({ data, error }) => {
+        if (!active) return;
+        setAccessLogsError(Boolean(error));
+        setAccessLogs(error ? [] : data || []);
+      }).catch(() => {
+        if (active) setAccessLogsError(true);
+      }).finally(() => {
+        if (active) setAccessLogsLoading(false);
+      });
+    return () => { active = false; };
+  }, [showAuditModal, auditTab, user?.id]);
 
   useBodyScrollLock(showAuditModal);
   const {
@@ -594,17 +643,22 @@ const PatientConsent = () => {
     onClose: () => setShowAuditModal(false),
   });
 
-  return (
-    <DashboardLayout role="patient">
+  const content = (
       <div className="space-y-5 sm:space-y-6 relative w-full max-w-full pb-10">
         {/* Minimal Slim Header (No decorative icon) */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 px-1">
           <div className="min-w-0">
-            <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-ink dark:text-white">
-              Consent & Data Privacy
-            </h1>
+            {embedded ? (
+              <h2 className="font-display font-extrabold tracking-tight text-lg sm:text-xl text-ink dark:text-white">
+                {t('patient.consent.embeddedTitle')}
+              </h2>
+            ) : (
+              <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-ink dark:text-white">
+                {t('patient.consent.pageTitle')}
+              </h1>
+            )}
             <p className="text-sm text-tertiary mt-1 font-medium">
-              Select a provider to govern medical record permissions and automatic expiry in real time.
+              {t('patient.consent.pageSubtitle')}
             </p>
           </div>
 
@@ -614,20 +668,20 @@ const PatientConsent = () => {
               auditTriggerRef.current = event.currentTarget;
               setShowAuditModal(true);
             }}
-            className="neu-btn w-full sm:w-auto px-4 py-2.5 min-h-[44px] rounded-2xl flex items-center justify-center transition-all cursor-pointer font-bold text-xs sm:text-sm text-ink dark:text-slate-200 hover:text-link active:scale-[0.98] shrink-0"
-            title="Open Access & Consent Audit Log"
+            className="neu-btn w-full sm:w-auto px-4 py-2.5 min-h-[2.75rem] rounded-2xl flex items-center justify-center transition-all cursor-pointer font-bold text-xs sm:text-sm text-ink dark:text-slate-200 hover:text-link active:scale-[0.98] shrink-0"
+            title={t('patient.consent.auditTrailTitle')}
           >
-            Audit Trail
+            {t('patient.consent.auditTrailBtn')}
           </button>
         </header>
 
         {/* Search & Status Filter Strip */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="neu-inset flex-1 px-4 rounded-2xl flex items-center gap-2 min-h-[46px] border border-surface-border/70">
+          <div className="neu-inset flex-1 px-4 rounded-2xl flex items-center gap-2 min-h-[2.875rem] border border-surface-border/70">
             <input
               type="text"
-              aria-label="Search providers or services"
-              placeholder="Search providers or services..."
+              aria-label={t('patient.consent.searchAria')}
+              placeholder={t('patient.consent.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-transparent border-0 text-sm font-semibold text-ink dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
@@ -638,16 +692,16 @@ const PatientConsent = () => {
                 onClick={() => setSearchQuery('')}
                 className="text-xs font-bold text-link dark:text-primary-400 hover:underline px-2 py-1 cursor-pointer shrink-0"
               >
-                Clear
+                {t('patient.consent.clearBtn')}
               </button>
             )}
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
             {[
-              { id: 'all', label: `All (${consents.length})` },
-              { id: 'active', label: `Active (${activeCountTotal})` },
-              { id: 'paused', label: `Paused (${pausedCountTotal})` },
+              { id: 'all', label: t('patient.consent.filterAll', { count: consents.length }) },
+              { id: 'active', label: t('patient.consent.filterActive', { count: activeCountTotal }) },
+              { id: 'paused', label: t('patient.consent.filterPaused', { count: pausedCountTotal }) },
             ].map((tab) => {
               const active = statusFilter === tab.id;
               return (
@@ -655,7 +709,7 @@ const PatientConsent = () => {
                   key={tab.id}
                   type="button"
                   onClick={() => setStatusFilter(tab.id)}
-                  className={`min-h-[44px] px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
+                  className={`min-h-[2.75rem] px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 ${
                     active
                       ? 'neu-btn-primary'
                       : 'neu-btn text-ink dark:text-slate-200'
@@ -671,23 +725,23 @@ const PatientConsent = () => {
         {/* Main Content: Loading / Empty / Split View (Desktop) + Inline Accordion (Mobile) */}
         {loading ? (
           <div className="neu-flat p-8 sm:p-12 rounded-[2rem] text-center text-tertiary flex flex-col items-center justify-center gap-2.5">
-            <RefreshCw className="w-6 h-6 animate-spin text-link" />
-            <p className="text-sm font-bold">Loading consent records...</p>
+            <ArrowsClockwise className="w-6 h-6 animate-spin text-link" />
+            <p className="text-sm font-bold">{t('patient.consent.loadingRecords')}</p>
           </div>
         ) : filteredConsents.length === 0 ? (
           <div className="neu-flat p-6 sm:p-12 rounded-[2rem] text-center">
             <div className="neu-flat-sm w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-tertiary mb-3">
-              <ShieldAlert className="w-6 h-6 opacity-70" />
+              <ShieldWarning className="w-6 h-6 opacity-70" />
             </div>
             <h3 className="font-extrabold text-base sm:text-lg text-ink dark:text-white">
               {searchQuery || statusFilter !== 'all'
-                ? 'No matching providers found'
-                : 'No Authorized Providers'}
+                ? t('patient.consent.noMatchTitle')
+                : t('patient.consent.noAuthTitle')}
             </h3>
             <p className="text-sm text-tertiary max-w-md mx-auto mt-1">
               {searchQuery || statusFilter !== 'all'
-                ? 'Try clearing your search or switching the status filter to view all authorized providers.'
-                : 'When you book a consultation or request care, the provider will appear here with granular permission controls.'}
+                ? t('patient.consent.noMatchMsg')
+                : t('patient.consent.noAuthMsg')}
             </p>
             {(searchQuery || statusFilter !== 'all') && (
               <button
@@ -696,9 +750,9 @@ const PatientConsent = () => {
                   setSearchQuery('');
                   setStatusFilter('all');
                 }}
-                className="mt-4 neu-btn px-4 py-2.5 min-h-[44px] rounded-xl text-xs font-bold text-link cursor-pointer active:scale-[0.98]"
+                className="mt-4 neu-btn px-4 py-2.5 min-h-[2.75rem] rounded-xl text-xs font-bold text-link cursor-pointer active:scale-[0.98]"
               >
-                Reset Filters
+                {t('patient.consent.resetFiltersBtn')}
               </button>
             )}
           </div>
@@ -710,7 +764,7 @@ const PatientConsent = () => {
                 const isSelectedDesktop = activeInspectorConsent?.id === c.id;
                 const isExpandedMobile = mobileExpandedId === c.id;
                 const activeCategories = Object.values(c.permissions || {}).filter(Boolean).length;
-                const expiryText = getExpirySummary(c.expiresAt, c.isEnabled);
+                const expiryText = getExpirySummary(c.expiresAt, c.isEnabled, t, locale);
 
                 return (
                   <div
@@ -745,12 +799,12 @@ const PatientConsent = () => {
                                     : 'text-danger dark:text-danger-dark border border-rose-500/30 bg-rose-500/10'
                                 }`}
                               >
-                                {c.isEnabled ? 'Active' : 'Paused'}
+                                {c.isEnabled ? t('patient.common.active') : t('patient.common.paused')}
                               </span>
                             </div>
 
                             <p className="text-xs sm:text-sm font-semibold text-tertiary truncate mt-0.5">
-                              {c.service}
+                              {translateService(c.service)}
                             </p>
                           </div>
                         </button>
@@ -758,7 +812,7 @@ const PatientConsent = () => {
                         <ConsentSwitch
                           checked={c.isEnabled}
                           disabled={togglingId === c.id}
-                          ariaLabel={`Master access for ${c.providerName}`}
+                          ariaLabel={t('patient.consent.masterAccessAria', { name: c.providerName })}
                           onToggle={() =>
                             handleToggle(c.id, c.isEnabled, c.providerName, c.providerId)
                           }
@@ -769,8 +823,8 @@ const PatientConsent = () => {
                       <div className="mt-3 pt-3 border-t border-surface-border/60 dark:border-white/5 flex items-center justify-between gap-2 text-xs font-medium text-tertiary">
                         <span>
                           {c.isEnabled
-                            ? `${activeCategories}/3 categories shared`
-                            : 'Sharing paused'}
+                            ? t('patient.consent.categoriesShared', { count: activeCategories })
+                            : t('patient.consent.sharingPausedText')}
                         </span>
                         <span
                           className={`font-semibold tabular-nums ${
@@ -785,18 +839,18 @@ const PatientConsent = () => {
                       <div className="lg:hidden mt-2 flex items-center justify-between text-xs font-bold text-link dark:text-primary-400">
                         <Link
                           to={`/patient/providers/${c.providerId}/profile`}
-                          className="hover:underline min-h-[36px] inline-flex items-center"
+                          className="hover:underline min-h-[2.25rem] inline-flex items-center"
                         >
-                          View profile
+                          {t('patient.consent.viewProfileBtn')}
                         </Link>
                         <button
                           type="button"
                           onClick={() =>
                             setMobileExpandedId((prev) => (prev === c.id ? null : c.id))
                           }
-                          className="hover:underline min-h-[36px] inline-flex items-center cursor-pointer"
+                          className="hover:underline min-h-[2.25rem] inline-flex items-center cursor-pointer"
                         >
-                          {isExpandedMobile ? 'Hide permissions' : 'Manage permissions'}
+                          {isExpandedMobile ? t('patient.consent.hidePermissionsBtn') : t('patient.consent.managePermissionsBtn')}
                         </button>
                       </div>
                     </div>
@@ -853,24 +907,26 @@ const PatientConsent = () => {
                                 : 'text-danger dark:text-danger-dark border border-rose-500/30 bg-rose-500/10'
                             }`}
                           >
-                            {activeInspectorConsent.isEnabled ? 'Active' : 'Paused'}
+                            {activeInspectorConsent.isEnabled ? t('patient.common.active') : t('patient.common.paused')}
                           </span>
                         </div>
                         <p className="text-sm font-medium text-tertiary mt-0.5">
-                          {activeInspectorConsent.service} — Last accessed:{' '}
-                          {activeInspectorConsent.lastAccess}
+                          {t('patient.consent.lastAccessedLine', {
+                            service: translateService(activeInspectorConsent.service),
+                            when: activeInspectorConsent.lastAccess,
+                          })}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2.5 shrink-0">
                       <span className="text-xs font-extrabold uppercase tracking-wider text-tertiary">
-                        {activeInspectorConsent.isEnabled ? 'ON' : 'OFF'}
+                        {activeInspectorConsent.isEnabled ? t('patient.consent.onBadge') : t('patient.consent.offBadge')}
                       </span>
                       <ConsentSwitch
                         checked={activeInspectorConsent.isEnabled}
                         disabled={togglingId === activeInspectorConsent.id}
-                        ariaLabel={`Master access for ${activeInspectorConsent.providerName}`}
+                        ariaLabel={t('patient.consent.masterAccessAria', { name: activeInspectorConsent.providerName })}
                         onToggle={() =>
                           handleToggle(
                             activeInspectorConsent.id,
@@ -927,7 +983,7 @@ const PatientConsent = () => {
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                     onClick={(e) => e.stopPropagation()}
                     {...auditDrawerMotionProps}
-                    className="neu-flat bg-surface-shell w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 md:p-7 space-y-4 h-[82vh] sm:h-[560px] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-surface-border transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                    className="neu-flat bg-surface-shell w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 md:p-7 space-y-4 h-[82vh] sm:h-[35rem] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-surface-border transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
                   >
                     {/* Modal Header (No header icon) */}
                     <div
@@ -942,20 +998,13 @@ const PatientConsent = () => {
                         <div className="min-w-0">
                           <DialogPrimitive.Title asChild>
                             <h3 className="font-display font-extrabold text-base sm:text-xl text-ink dark:text-white truncate">
-                              Audit Trail
+                              {t('patient.consent.auditModalTitle')}
                             </h3>
                           </DialogPrimitive.Title>
                           <p className="text-sm text-tertiary truncate mt-0.5">
-                            Inspection records and permission history
+                            {t('patient.consent.auditModalSub')}
                           </p>
                         </div>
-
-                        <DialogPrimitive.Close
-                          aria-label="Close"
-                          className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl hidden sm:flex items-center justify-center text-tertiary hover:text-ink dark:hover:text-white cursor-pointer active:scale-95 shrink-0"
-                        >
-                          <X className="w-4 h-4 stroke-[2.5]" />
-                        </DialogPrimitive.Close>
                       </div>
                     </div>
 
@@ -964,24 +1013,24 @@ const PatientConsent = () => {
                       <button
                         type="button"
                         onClick={() => setAuditTab('history')}
-                        className={`flex-1 min-h-[40px] py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer truncate ${
+                        className={`flex-1 min-h-[2.5rem] py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer truncate ${
                           auditTab === 'history'
                             ? 'neu-btn-primary shadow-sm'
                             : 'text-tertiary'
                         }`}
                       >
-                        Permission Changes ({consentHistory.length})
+                        {t('patient.consent.auditTabChanges', { count: consentHistory.length })}
                       </button>
                       <button
                         type="button"
                         onClick={() => setAuditTab('access')}
-                        className={`flex-1 min-h-[40px] py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer truncate ${
+                        className={`flex-1 min-h-[2.5rem] py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer truncate ${
                           auditTab === 'access'
                             ? 'neu-btn-primary shadow-sm'
                             : 'text-tertiary'
                         }`}
                       >
-                        File Views ({accessLogs.length})
+                        {t('patient.consent.auditTabOpens', { count: accessLogs.length })}
                       </button>
                     </div>
 
@@ -991,10 +1040,10 @@ const PatientConsent = () => {
                         consentHistory.length === 0 ? (
                           <div className="h-full flex flex-col items-center justify-center text-center py-10 text-tertiary">
                             <p className="text-sm font-bold text-ink dark:text-white">
-                              No permission changes logged yet
+                              {t('patient.consent.auditEmptyChangesTitle')}
                             </p>
                             <p className="text-sm text-tertiary mt-1">
-                              Toggle a provider&apos;s access to see audit entries here.
+                              {t('patient.consent.auditEmptyChangesSub')}
                             </p>
                           </div>
                         ) : (
@@ -1013,7 +1062,7 @@ const PatientConsent = () => {
                                       entry.action
                                     )}`}
                                   >
-                                    {entry.action}
+                                    {getActionLabel(entry.action)}
                                   </span>
                                 </div>
                                 <p className="text-sm text-tertiary mt-0.5 truncate">
@@ -1026,13 +1075,17 @@ const PatientConsent = () => {
                             </div>
                           ))
                         )
+                      ) : accessLogsLoading ? (
+                        <p role="status">{t('patient.consent.auditAccessLoading')}</p>
+                      ) : accessLogsError ? (
+                        <p role="alert">{t('patient.consent.auditAccessError')}</p>
                       ) : accessLogs.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center py-10 text-tertiary">
                           <p className="text-sm font-bold text-ink dark:text-white">
-                            No recorded provider file views
+                            {t('patient.consent.auditEmptyOpensTitle')}
                           </p>
                           <p className="text-sm text-tertiary mt-1">
-                            When doctors view your medical profile, logs will appear here.
+                            {t('patient.consent.auditEmptyOpensSub')}
                           </p>
                         </div>
                       ) : (
@@ -1043,18 +1096,14 @@ const PatientConsent = () => {
                           >
                             <div className="min-w-0 flex-1">
                               <h5 className="font-bold text-ink dark:text-white text-sm truncate">
-                                {c.providerName}
+                                {c.provider_name}
                               </h5>
                               <p className="text-sm text-tertiary truncate mt-0.5">
-                                Inspected:{' '}
-                                {Object.entries(PERMISSION_LABELS)
-                                  .filter(([k]) => c.permissions?.[k])
-                                  .map(([, v]) => v)
-                                  .join(', ') || 'records'}
+                                {t('patient.consent.requestedDoc', { title: c.document_title })}
                               </p>
                             </div>
                             <span className="text-xs font-semibold text-tertiary shrink-0 tabular-nums">
-                              {new Date(c.lastAccessRaw).toLocaleDateString('en-US', {
+                              {new Date(c.accessed_at).toLocaleDateString(locale, {
                                 month: 'short',
                                 day: 'numeric',
                                 hour: '2-digit',
@@ -1068,18 +1117,18 @@ const PatientConsent = () => {
 
                     {/* Modal Footer */}
                     <div className="flex items-center justify-between pt-3 border-t border-surface-border/70 dark:border-white/5 text-xs text-tertiary shrink-0">
-                      <span className="truncate">Stored locally</span>
+                      <span className="truncate">{auditTab === 'history' ? t('patient.consent.storedLocally') : t('patient.consent.opensRetentionNote')}</span>
                       {consentHistory.length > 0 && auditTab === 'history' && (
                         <button
                           type="button"
                           onClick={() => {
                             localStorage.removeItem(getHistoryKey());
                             setConsentHistory([]);
-                            toast.success('Audit history cleared');
+                            toast.success(t('patient.consent.auditClearedToast'));
                           }}
-                          className="text-danger dark:text-danger-dark hover:underline font-bold cursor-pointer shrink-0 min-h-[36px] px-2"
+                          className="text-danger dark:text-danger-dark hover:underline font-bold cursor-pointer shrink-0 min-h-[2.25rem] px-2"
                         >
-                          Clear log
+                          {t('patient.consent.clearLogBtn')}
                         </button>
                       )}
                     </div>
@@ -1090,6 +1139,13 @@ const PatientConsent = () => {
           )}
         </DialogPrimitive.Root>
       </div>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <DashboardLayout role="patient">
+      {content}
     </DashboardLayout>
   );
 };

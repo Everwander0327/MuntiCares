@@ -2,15 +2,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Search,
+  CaretLeft,
+  CaretRight,
+  CaretDown,
+  MagnifyingGlass,
   X,
-  Loader2,
-} from 'lucide-react';
+  SpinnerGap,
+} from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage } from '@/shared/ui';
 import PatientRecordModal from '../components/PatientRecordModal';
@@ -24,17 +25,11 @@ import {
 import toast from 'react-hot-toast';
 import { formatSlotLabel, slotMinutes, toLocalDateKey, parseLocalDate } from '@/lib/localDate';
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const STATUS_FLOW = {
-  Accepted: { next: 'On The Way', label: 'On The Way', color: 'neu-btn-primary text-white' },
-  'On The Way': { next: 'Arrived', label: 'Mark Arrived', color: 'neu-btn bg-amber-500 text-white hover:bg-amber-600' },
-  Arrived: { next: 'Completed', label: 'Complete Visit', color: 'neu-btn bg-emerald-600 text-white hover:bg-emerald-700' },
-};
+const getStatusFlow = (t) => ({
+  Accepted: { next: 'On The Way', label: t('provider.schedule.flowOnTheWay'), color: 'neu-btn-primary text-white' },
+  'On The Way': { next: 'Arrived', label: t('provider.schedule.flowMarkArrived'), color: 'neu-btn bg-amber-500 text-white hover:bg-amber-600' },
+  Arrived: { next: 'Completed', label: t('provider.schedule.flowCompleteVisit'), color: 'neu-btn bg-emerald-600 text-white hover:bg-emerald-700' },
+});
 
 const STATUS_BADGE = {
   Accepted: 'neu-flat-sm text-link dark:text-primary-300 border border-blue-500/20',
@@ -50,11 +45,11 @@ const STATUS_BORDER = {
   Completed: 'border-l-4 border-l-emerald-500',
 };
 
-const STATUS_STEPS = [
-  { key: 'Accepted', label: 'Accepted' },
-  { key: 'On The Way', label: 'On Route' },
-  { key: 'Arrived', label: 'Arrived' },
-  { key: 'Completed', label: 'Completed' },
+const getStatusSteps = (t) => [
+  { key: 'Accepted', label: t('provider.schedule.stepAccepted') },
+  { key: 'On The Way', label: t('provider.schedule.stepOnRoute') },
+  { key: 'Arrived', label: t('provider.schedule.stepArrived') },
+  { key: 'Completed', label: t('provider.schedule.stepCompleted') },
 ];
 
 const DEFAULT_START_HOUR = 8;
@@ -82,6 +77,9 @@ const formatHourLabel = (h, compact = false) => {
 
 const ProviderSchedule = () => {
   const { user } = useAuth();
+  const { t, language, formatDate, formatTime, translateService, translateStatus } = useLanguage();
+  const STATUS_FLOW = useMemo(() => getStatusFlow(t), [t]);
+  const STATUS_STEPS = useMemo(() => getStatusSteps(t), [t]);
   const [loading, setLoading] = useState(true);
   const [appointments, setAppointments] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -152,7 +150,7 @@ const ProviderSchedule = () => {
           return {
             id: r.id,
             patientId: r.patient_id,
-            patient: r.patient?.full_name || 'Unknown',
+            patient: r.patient?.full_name || '',
             avatarUrl: r.patient?.avatar_url || '',
             service: r.service,
             date: r.date,
@@ -161,14 +159,14 @@ const ProviderSchedule = () => {
             durationMinutes: r.duration_minutes || 30,
             status: r.status,
             notes: r.notes || '',
-            address: profile?.address || 'Address not provided',
+            address: profile?.address || '',
           };
         });
 
         setAppointments(formatted);
       } catch (err) {
         console.error(err);
-        toast.error('Failed to load schedule.');
+        toast.error(t('provider.schedule.loadFailed'));
       } finally {
         setLoading(false);
       }
@@ -197,7 +195,7 @@ const ProviderSchedule = () => {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, t]);
 
   // Compute 7 days of the selected week (Sunday to Saturday)
   const weekDays = useMemo(() => {
@@ -261,25 +259,25 @@ const ProviderSchedule = () => {
         type="text"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search patient"
-        aria-label="Search bookings by patient name"
+        placeholder={t('provider.schedule.searchLabel')}
+        aria-label={t('provider.schedule.searchAria')}
         className="neu-inset w-full text-xs font-semibold pl-10 pr-8 py-2 rounded-xl text-slate-700 dark:text-slate-200 placeholder:text-tertiary border border-primary/30 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
       />
-      <Search className="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" strokeWidth={2.5} />
+      <MagnifyingGlass className="w-4 h-4 text-primary absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none z-10" weight="bold" />
       {searchQuery && (
         <button
           type="button"
           onClick={() => setSearchQuery('')}
           className="absolute right-2 top-1/2 -translate-y-1/2 z-10 text-tertiary hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer"
-          aria-label="Clear search"
+          aria-label={t('provider.schedule.clearSearch')}
         >
           <X className="w-3.5 h-3.5" />
         </button>
       )}
       {searchQuery.trim() && (
-        <div className="absolute z-30 left-0 right-0 sm:right-auto sm:w-80 mt-1.5 neu-flat rounded-xl border border-slate-200/60 dark:border-white/10 shadow-xl p-1.5 min-w-[220px]">
+        <div className="absolute z-30 left-0 right-0 sm:right-auto sm:w-80 mt-1.5 neu-flat rounded-xl border border-slate-200/60 dark:border-white/10 shadow-xl p-1.5 min-w-[13.75rem]">
           {searchResults.length === 0 ? (
-            <p className="text-xs text-tertiary font-semibold px-2.5 py-2">No matching bookings</p>
+            <p className="text-xs text-tertiary font-semibold px-2.5 py-2">{t('provider.schedule.noMatchingBookings')}</p>
           ) : (
             searchResults.map(a => (
               <button
@@ -288,9 +286,9 @@ const ProviderSchedule = () => {
                 onClick={() => pickSearchResult(a)}
                 className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-primary/10 transition-colors cursor-pointer"
               >
-                <span className="block text-xs font-black text-slate-800 dark:text-slate-100 truncate">{a.patient}</span>
+                <span className="block text-xs font-black text-slate-800 dark:text-slate-100 truncate">{a.patient || t('provider.schedule.unknown')}</span>
                 <span className="block text-2xs text-tertiary font-semibold truncate">
-                  {parseLocalDate(String(a.date).split('T')[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {a.timeLabel} - {a.status}
+                  {formatDate(parseLocalDate(String(a.date).split('T')[0]), { month: 'short', day: 'numeric' })} - {a.timeLabel} - {translateStatus(a.status)}
                 </span>
               </button>
             ))
@@ -364,12 +362,12 @@ const ProviderSchedule = () => {
           if (canOverrideArrival(res)) {
             setArrivalOverride({ id: appointmentId, failure: res });
           } else {
-            toast.error(formatArrivalFailure(res));
+            toast.error(formatArrivalFailure(res, language));
           }
           return;
         }
         setAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'Arrived' } : a));
-        toast.success('Status updated to "Arrived"');
+        toast.success(t('provider.schedule.arrivedToast'));
         return;
       }
 
@@ -386,7 +384,7 @@ const ProviderSchedule = () => {
 
       if (error) throw error;
       if (!updated?.length) {
-        toast.error('This visit changed status somewhere else. Reopen it to continue.');
+        toast.error(t('provider.schedule.statusChangedElsewhere'));
         return;
       }
 
@@ -394,17 +392,17 @@ const ProviderSchedule = () => {
 
       if (newStatus === 'Completed') {
         if (appt) {
-          toast.success('Visit completed! Opening patient record...');
+          toast.success(t('provider.schedule.completedToast'));
           setTimeout(() => {
             setModalPatient({ id: appt.patientId, name: appt.patient, avatarUrl: appt.avatarUrl });
           }, 600);
         }
       } else {
-        toast.success(`Status updated to "${newStatus}"`);
+        toast.success(t('provider.schedule.updatedToToast', { status: translateStatus(newStatus) }));
       }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to update status.');
+      toast.error(t('provider.schedule.updateFailed'));
     } finally {
       setUpdatingId(null);
     }
@@ -418,15 +416,15 @@ const ProviderSchedule = () => {
       const res = await markVisitArrived(id, null, ARRIVAL_OVERRIDE_REASON);
       setArrivalOverride(null);
       if (!res?.ok) {
-        toast.error(formatArrivalFailure(res));
+        toast.error(formatArrivalFailure(res, language));
         return;
       }
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: 'Arrived' } : a));
-      toast.success('Arrived - override recorded.');
+      toast.success(t('provider.schedule.overrideRecorded'));
     } catch (err) {
       console.error(err);
       setArrivalOverride(null);
-      toast.error(err?.message || 'Failed to mark arrived.');
+      toast.error(err?.message || t('provider.schedule.markArrivedFailed'));
     } finally {
       setUpdatingId(null);
     }
@@ -441,14 +439,13 @@ const ProviderSchedule = () => {
   }
 
   const isTodaySelected = isSameDay(currentTime, selectedDate);
-  const selectedDayLabel = selectedDate.toLocaleDateString('en-US', {
+  const selectedDayLabel = formatDate(selectedDate, {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
     year: 'numeric',
   });
-  const monthName = MONTHS[selectedDate.getMonth()];
-  const yearNumber = selectedDate.getFullYear();
+  const monthYearLabel = formatDate(selectedDate, { month: 'long', year: 'numeric' });
 
   return (
     <DashboardLayout role="provider">
@@ -461,10 +458,10 @@ const ProviderSchedule = () => {
         >
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight truncate">
-              Clinical Schedule
+              {t('provider.schedule.title')}
             </h1>
             <p className="text-tertiary text-xs sm:text-xs font-semibold mt-0.5 truncate">
-              Continuous visual time stream - Patient home visits
+              {t('provider.schedule.subtitle')}
             </p>
           </div>
 
@@ -481,7 +478,7 @@ const ProviderSchedule = () => {
                   }
                 }}
                 className="neu-btn text-xs font-bold px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl text-slate-700 dark:text-slate-200 cursor-pointer border border-slate-200/50 dark:border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                title="Jump to date"
+                title={t('provider.schedule.jumpToDate')}
               />
             </div>
 
@@ -492,7 +489,7 @@ const ProviderSchedule = () => {
                 isTodaySelected ? 'text-link font-black neu-pressed' : 'text-slate-700 dark:text-slate-200'
               }`}
             >
-              <span>Today</span>
+              <span>{t('provider.schedule.todayBtn')}</span>
             </motion.button>
           </div>
         </motion.div>
@@ -507,7 +504,7 @@ const ProviderSchedule = () => {
           {/* Week Bar Header (Month and Year, clean without arrow buttons per user request) */}
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-display font-black text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight">
-              {monthName} {yearNumber}
+              {monthYearLabel}
             </h3>
           </div>
 
@@ -537,7 +534,7 @@ const ProviderSchedule = () => {
                   <span className={`text-3xs font-extrabold uppercase tracking-wider block ${
                     isSelected ? 'text-white/90' : isDayToday ? 'text-link' : 'text-tertiary'
                   }`}>
-                    {DAYS[day.getDay()]}
+                    {formatDate(day, { weekday: 'short' })}
                   </span>
                   <span className={`text-sm sm:text-base font-black block mt-0.5 ${
                     isSelected ? 'text-white' : isDayToday ? 'text-link' : 'text-slate-800 dark:text-slate-100'
@@ -546,14 +543,14 @@ const ProviderSchedule = () => {
                   </span>
 
                   {/* Visit Tag */}
-                  <div className="mt-1 min-h-[18px] flex items-center justify-center">
+                  <div className="mt-1 min-h-[1.125rem] flex items-center justify-center">
                     {hasAppts ? (
                       <span className={`text-3xs font-extrabold px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${
                         isSelected
                           ? 'bg-white/20 text-white'
                           : 'bg-primary/15 text-link'
                       }`}>
-                        {dayAppts.length} {dayAppts.length === 1 ? 'visit' : 'visits'}
+                        {dayAppts.length} {dayAppts.length === 1 ? t('provider.schedule.visitSingular') : t('provider.schedule.visitPlural')}
                       </span>
                     ) : (
                       <span className="text-3xs text-tertiary font-bold opacity-40">-</span>
@@ -576,9 +573,9 @@ const ProviderSchedule = () => {
             type="button"
             onClick={prevDay}
             className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-link cursor-pointer shrink-0"
-            title="Previous Day"
+            title={t('provider.schedule.prevDay')}
           >
-            <ChevronLeft className="w-4 h-4" />
+            <CaretLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0 flex-1 text-center sm:text-left">
             <h2 className="font-display font-black text-slate-800 dark:text-slate-100 text-sm sm:text-base tracking-tight truncate">
@@ -586,8 +583,12 @@ const ProviderSchedule = () => {
             </h2>
             <p className="text-xs text-tertiary font-semibold mt-0.5 truncate">
               {selectedAppts.length === 0
-                ? 'No patient visits scheduled for this date'
-                : `${selectedAppts.length} ${selectedAppts.length === 1 ? 'visit' : 'visits'} scheduled - ${completedCount} completed`}
+                ? t('provider.schedule.noVisitsScheduled')
+                : t('provider.schedule.daySummary', {
+                    total: selectedAppts.length,
+                    visitWord: selectedAppts.length === 1 ? t('provider.schedule.visitSingular') : t('provider.schedule.visitPlural'),
+                    completed: completedCount,
+                  })}
             </p>
           </div>
           {renderSearchBar('hidden sm:block w-64 lg:w-80 shrink-0')}
@@ -595,9 +596,9 @@ const ProviderSchedule = () => {
             type="button"
             onClick={nextDay}
             className="neu-btn w-8 h-8 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-link cursor-pointer shrink-0"
-            title="Next Day"
+            title={t('provider.schedule.nextDay')}
           >
-            <ChevronRight className="w-4 h-4" />
+            <CaretRight className="w-4 h-4" />
           </button>
         </motion.div>
 
@@ -610,10 +611,10 @@ const ProviderSchedule = () => {
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-3 border-b border-slate-200/50 dark:border-white/5">
             <h3 className="font-display font-extrabold text-slate-800 dark:text-slate-100 text-xs sm:text-sm tracking-tight uppercase">
-              Daily Visual Time Stream
+              {t('provider.schedule.streamHeading')}
             </h3>
             <span className="text-3xs text-tertiary font-mono">
-              Operating Range: {formatHourLabel(operatingHours[0])} - {formatHourLabel(operatingHours[operatingHours.length - 1])}
+              {t('provider.schedule.operatingRange')} {formatHourLabel(operatingHours[0])} - {formatHourLabel(operatingHours[operatingHours.length - 1])}
             </span>
           </div>
 
@@ -640,7 +641,7 @@ const ProviderSchedule = () => {
                   {isCurrentHour && (
                     <div className="flex items-center gap-2 mb-2 pl-12 sm:pl-24">
                       <span className="px-2 py-0.5 rounded-md bg-danger text-white text-3xs font-black uppercase tracking-wider shrink-0 shadow-sm">
-                        NOW - {currentTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        {t('provider.schedule.nowLabel', { time: formatTime(currentTime) })}
                       </span>
                       <div className="flex-1 h-0.5 bg-danger/70" />
                     </div>
@@ -691,16 +692,16 @@ const ProviderSchedule = () => {
                                       to={`/provider/patients/${appt.patientId}/profile`}
                                       onClick={(e) => e.stopPropagation()}
                                       className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl neu-inset overflow-hidden flex items-center justify-center font-black text-link text-xs sm:text-sm shrink-0 p-0.5 border border-slate-200/50 dark:border-white/5 hover:ring-2 hover:ring-primary/40 transition-all"
-                                      title="View Profile"
+                                      title={t('provider.schedule.viewProfile')}
                                     >
                                       {appt.avatarUrl ? (
                                         <img
                                           src={appt.avatarUrl}
                                           alt=""
-                                          className="w-full h-full object-cover rounded-[10px]"
+                                          className="w-full h-full object-cover rounded-[0.625rem]"
                                         />
                                       ) : (
-                                        appt.patient
+                                        (appt.patient || t('provider.schedule.unknown'))
                                           .split(' ')
                                           .map(n => n[0])
                                           .join('')
@@ -714,10 +715,10 @@ const ProviderSchedule = () => {
                                         onClick={(e) => e.stopPropagation()}
                                         className="font-display font-black text-slate-800 dark:text-slate-100 group-hover:text-link transition-colors text-xs sm:text-sm md:text-base truncate block"
                                       >
-                                        {appt.patient}
+                                        {appt.patient || t('provider.schedule.unknown')}
                                       </Link>
                                       <p className="text-2xs sm:text-xs text-link font-bold truncate mt-0.5">
-                                        {appt.service}
+                                        {translateService(appt.service)}
                                       </p>
                                     </div>
                                   </div>
@@ -729,7 +730,7 @@ const ProviderSchedule = () => {
                                         STATUS_BADGE[appt.status] || 'neu-btn text-tertiary'
                                       }`}
                                     >
-                                      {appt.status}
+                                      {translateStatus(appt.status)}
                                     </span>
                                     <button
                                       type="button"
@@ -738,9 +739,9 @@ const ProviderSchedule = () => {
                                         toggleApptExpand(appt.id, appt.status);
                                       }}
                                       className="neu-btn w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer shrink-0"
-                                      title={isExpanded ? 'Collapse card' : 'Expand card'}
+                                      title={isExpanded ? t('provider.schedule.collapseCard') : t('provider.schedule.expandCard')}
                                     >
-                                      <ChevronDown
+                                      <CaretDown
                                         className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform duration-200 ${
                                           isExpanded ? 'rotate-180' : ''
                                         }`}
@@ -760,7 +761,7 @@ const ProviderSchedule = () => {
                                     </span>
                                   </div>
                                   <span className="text-3xs uppercase tracking-wider font-semibold text-tertiary select-none">
-                                    {isExpanded ? 'Tap to collapse' : 'Tap for details'}
+                                    {isExpanded ? t('provider.schedule.tapToCollapse') : t('provider.schedule.tapForDetails')}
                                   </span>
                                 </div>
                               </div>
@@ -779,15 +780,15 @@ const ProviderSchedule = () => {
                                     {/* Patient Address and Google Maps Navigation */}
                                     <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                                       <div className="text-slate-700 dark:text-slate-300 min-w-0 font-medium text-2xs sm:text-xs">
-                                        <span className="break-words sm:truncate block">{appt.address}</span>
+                                        <span className="break-words sm:truncate block">{appt.address || t('provider.schedule.addressNotProvided')}</span>
                                       </div>
                                       <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(appt.address)}`}
+                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(appt.address || 'Muntinlupa City')}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="neu-btn px-2.5 py-1 rounded-lg text-link hover:text-link text-2xs sm:text-xs font-bold shrink-0 self-start sm:self-auto cursor-pointer"
                                       >
-                                        <span>Open in Maps</span>
+                                        <span>{t('provider.schedule.openInMaps')}</span>
                                       </a>
                                     </div>
 
@@ -795,7 +796,7 @@ const ProviderSchedule = () => {
                                     {appt.notes && (
                                       <div className="p-2.5 sm:p-3 rounded-xl bg-amber-500/10 border-l-4 border-amber-500 space-y-1">
                                         <span className="text-3xs font-black uppercase tracking-wider text-amber-500 block">
-                                          Patient Request Note
+                                          {t('provider.schedule.patientRequestNote')}
                                         </span>
                                         <p className="text-xs text-slate-700 dark:text-slate-200 italic font-medium leading-relaxed">
                                           &quot;{appt.notes}&quot;
@@ -806,7 +807,7 @@ const ProviderSchedule = () => {
                                     {/* Segmented Squircle Stepper */}
                                     <div className="space-y-1.5 pt-1">
                                       <span className="text-3xs font-extrabold text-tertiary uppercase tracking-wider">
-                                        Visit Lifecycle Progress
+                                        {t('provider.schedule.visitLifecycle')}
                                       </span>
                                       <div className="grid grid-cols-4 gap-1 sm:gap-2">
                                         {STATUS_STEPS.map((step, idx) => {
@@ -866,13 +867,13 @@ const ProviderSchedule = () => {
                                         onClick={() =>
                                           setModalPatient({
                                             id: appt.patientId,
-                                            name: appt.patient,
+                                            name: appt.patient || t('provider.schedule.unknown'),
                                             avatarUrl: appt.avatarUrl,
                                           })
                                         }
                                         className="neu-btn px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm text-slate-700 dark:text-slate-200 cursor-pointer text-center"
                                       >
-                                        <span>View Patient Record</span>
+                                        <span>{t('provider.schedule.viewPatientRecord')}</span>
                                       </motion.button>
 
                                       {statusAction && (
@@ -883,7 +884,7 @@ const ProviderSchedule = () => {
                                           className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md text-white ${statusAction.color}`}
                                         >
                                           {isUpdating && (
-                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <SpinnerGap className="w-4 h-4 animate-spin" />
                                           )}
                                           <span>{statusAction.label}</span>
                                         </motion.button>
@@ -899,20 +900,20 @@ const ProviderSchedule = () => {
                         /* Travel and Rest Window */
                         <div className="neu-flat-sm rounded-xl p-2.5 sm:p-3 border border-dashed border-amber-500/30 dark:border-amber-500/20 bg-amber-500/5 flex items-center justify-between gap-2 text-2xs text-amber-500/90">
                           <span className="font-semibold truncate">
-                            Travel and Rest Window
+                            {t('provider.schedule.travelRestWindow')}
                           </span>
                           <span className="text-3xs uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15 shrink-0">
-                            Buffer
+                            {t('provider.schedule.bufferBadge')}
                           </span>
                         </div>
                       ) : (
                         /* Open Clinical Slot */
                         <div className="neu-flat-sm rounded-xl p-2.5 sm:p-3 border border-dashed border-slate-200/50 dark:border-white/5 flex items-center justify-between gap-2 text-2xs text-tertiary">
                           <span className="font-medium truncate">
-                            Available Clinical Slot
+                            {t('provider.schedule.availableClinicalSlot')}
                           </span>
                           <span className="text-3xs uppercase tracking-wider font-extrabold opacity-50 shrink-0">
-                            Available
+                            {t('provider.schedule.availableBadge')}
                           </span>
                         </div>
                       )}

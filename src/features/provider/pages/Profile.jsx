@@ -1,9 +1,22 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { Mail, Phone, MapPin, Award, Clock, LogOut, CheckCircle2, ShieldCheck, Save, Shield, User } from 'lucide-react';
+import {
+  Envelope,
+  Phone,
+  MapPin,
+  Medal,
+  Clock,
+  SignOut,
+  CheckCircle,
+  ShieldCheck,
+  FloppyDisk,
+  Shield,
+  User,
+} from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { isMissingColumnError } from '@/features/patient/utils/patientProfile';
 
@@ -21,17 +34,18 @@ const calculateTrustScore = (data) => {
   return Math.min(100, score);
 };
 
-const getTrustLevel = (score) => {
-  if (score >= 90) return { label: 'Highly Trusted', color: 'text-success dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-900/50' };
-  if (score >= 70) return { label: 'Trusted', color: 'text-success dark:text-green-300', bg: 'bg-green-50 dark:bg-green-900/30', border: 'border-green-200 dark:border-green-900/50' };
-  if (score >= 40) return { label: 'Developing', color: 'text-warning dark:text-warning-dark', bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-900/50' };
-  return { label: 'Needs Improvement', color: 'text-danger dark:text-danger-dark', bg: 'bg-red-50 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-900/50' };
+const getTrustLevel = (score, t) => {
+  if (score >= 90) return { label: t('provider.profile.trustHighlyTrusted'), color: 'text-success dark:text-emerald-300', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-900/50' };
+  if (score >= 70) return { label: t('provider.profile.trustTrusted'), color: 'text-success dark:text-green-300', bg: 'bg-green-50 dark:bg-green-900/30', border: 'border-green-200 dark:border-green-900/50' };
+  if (score >= 40) return { label: t('provider.profile.trustDeveloping'), color: 'text-warning dark:text-warning-dark', bg: 'bg-amber-50 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-900/50' };
+  return { label: t('provider.profile.trustNeedsImprovement'), color: 'text-danger dark:text-danger-dark', bg: 'bg-red-50 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-900/50' };
 };
 
 const ProviderProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { user, logout } = useAuth();
+  const { t, formatDate, translateService } = useLanguage();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState({
@@ -132,7 +146,7 @@ const ProviderProfile = () => {
 
   const handleSaveOverview = async () => {
     if (!editForm.phone.trim() || !editForm.location.trim() || !editForm.bio.trim()) {
-      toast.error('Please fill out all fields (Phone, Location, Bio).');
+      toast.error(t('provider.profile.validationFillFields'));
       return;
     }
 
@@ -145,7 +159,7 @@ const ProviderProfile = () => {
       const hasRadius = radiusInput !== '' && radiusInput !== null && radiusInput !== undefined;
       const serviceRadius = hasRadius && Number.isFinite(Number(radiusInput)) ? Number(radiusInput) : null;
       if (serviceRadius !== null && (serviceRadius < 1 || serviceRadius > 100)) {
-        toast.error('Service radius must be between 1 and 100 km.');
+        toast.error(t('provider.profile.validationRadiusRange'));
         return;
       }
 
@@ -201,10 +215,10 @@ const ProviderProfile = () => {
         trust_score: calculateTrustScore({ ...prev, ...editForm, is_profile_complete: true }),
       }));
       setEditingOverview(false);
-      toast.success('Profile updated successfully!');
+      toast.success(t('provider.profile.profileUpdated'));
     } catch (err) {
       console.error('Error saving profile:', err);
-      toast.error('Failed to save profile. Please try again.');
+      toast.error(t('provider.profile.profileSaveFailed'));
     } finally {
       setSaving(false);
     }
@@ -214,7 +228,7 @@ const ProviderProfile = () => {
     const servicesList = servicesInput.split(',').map(s => s.trim()).filter(s => s);
 
     if (servicesList.length === 0) {
-      toast.error('Please add at least one specialization.');
+      toast.error(t('provider.profile.validationMinSpec'));
       return;
     }
 
@@ -229,10 +243,10 @@ const ProviderProfile = () => {
 
       setProfile(prev => ({ ...prev, services: servicesList }));
       setEditingSpecializations(false);
-      toast.success('Specializations updated!');
+      toast.success(t('provider.profile.specializationsUpdated'));
     } catch (err) {
       console.error('Error saving specializations:', err);
-      toast.error('Failed to save specializations.');
+      toast.error(t('provider.profile.specializationsFailed'));
     } finally {
       setSaving(false);
     }
@@ -243,7 +257,7 @@ const ProviderProfile = () => {
     navigate('/login');
   };
 
-  const trustLevel = getTrustLevel(profile.trust_score);
+  const trustLevel = getTrustLevel(profile.trust_score, t);
 
   if (loading) {
     return <DashboardLayout role="provider"><SkeletonPage /></DashboardLayout>;
@@ -255,10 +269,10 @@ const ProviderProfile = () => {
         {/* Header */}
         <div className="pt-0.5 pb-1 sm:pt-1 sm:pb-2">
           <h1 className="font-display font-black tracking-tight text-lg sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
-            Provider Profile
+            {t('provider.profile.title')}
           </h1>
           <p className="text-sm text-tertiary dark:text-tertiary mt-0.5 font-medium">
-            Manage your credentials, professional bio, services offered, and trust score.
+            {t('provider.profile.subtitle')}
           </p>
         </div>
 
@@ -270,12 +284,12 @@ const ProviderProfile = () => {
             animate={{ opacity: 1, y: 0 }}
           >
             <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-warning shrink-0">
-              <Award className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Medal className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="text-amber-800 dark:text-warning-dark font-extrabold text-xs sm:text-base">Profile Incomplete</h3>
+              <h3 className="text-amber-800 dark:text-warning-dark font-extrabold text-xs sm:text-base">{t('provider.profile.incompleteTitle')}</h3>
               <p className="text-warning dark:text-warning-dark text-xs sm:text-xs mt-0.5 leading-relaxed">
-                Please fill out your contact details and bio so you can be approved by an Admin and become visible to patients.
+                {t('provider.profile.incompleteMsg')}
               </p>
             </div>
           </motion.div>
@@ -291,9 +305,9 @@ const ProviderProfile = () => {
               <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="text-blue-800 dark:text-primary-300 font-extrabold text-xs sm:text-base">Under Review</h3>
+              <h3 className="text-blue-800 dark:text-primary-300 font-extrabold text-xs sm:text-base">{t('provider.profile.underReviewTitle')}</h3>
               <p className="text-blue-700/80 dark:text-blue-200/70 text-xs sm:text-xs mt-0.5 leading-relaxed">
-                Your profile is currently under review by the municipal health office. You will appear to patients once approved.
+                {t('provider.profile.underReviewMsg')}
               </p>
             </div>
           </motion.div>
@@ -321,34 +335,36 @@ const ProviderProfile = () => {
                     {profile.full_name}
                   </h2>
                   <span className="px-2 py-0.5 rounded-md bg-link/15 border border-link/30 text-link font-black text-3xs uppercase tracking-wider shrink-0">
-                    Healthcare Provider
+                    {t('provider.profile.roleLabel')}
                   </span>
                   {profile.is_approved ? (
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-black text-3xs uppercase tracking-wider flex items-center gap-1 shrink-0">
                       <ShieldCheck className="w-3 h-3 text-emerald-500" />
-                      <span>Approved</span>
+                      <span>{t('provider.profile.badgeApproved')}</span>
                     </span>
                   ) : profile.is_profile_complete ? (
                     <span className="px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/40 text-amber-700 dark:text-amber-300 font-black text-3xs uppercase tracking-wider flex items-center gap-1 shrink-0">
                       <Clock className="w-3 h-3 text-warning" />
-                      <span>In Review</span>
+                      <span>{t('provider.profile.badgeInReview')}</span>
                     </span>
                   ) : null}
                 </div>
 
                 <p className="text-xs text-tertiary dark:text-tertiary font-semibold mt-1 truncate">
-                  <span className="text-link font-bold">{profile.bio || 'Healthcare Professional'}</span>
-                  {' \u2022 Joined '}
-                  {profile.created_at
-                    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                    : 'N/A'}
+                  <span className="text-link font-bold">{profile.bio || t('provider.profile.defaultSpecialty')}</span>
+                  {' \u2022 '}
+                  {t('provider.profile.joinedDate', {
+                    date: profile.created_at
+                      ? formatDate(profile.created_at, { month: 'short', year: 'numeric' })
+                      : 'N/A',
+                  })}
                 </p>
 
                 {/* Inline Trust Score Progress */}
                 <div className="flex flex-wrap items-center gap-2.5 mt-2">
                   <div className={`px-2 py-0.5 rounded-md border text-2xs font-black flex items-center gap-1.5 ${trustLevel.bg} ${trustLevel.border} ${trustLevel.color}`}>
                     <Shield className="w-3 h-3 shrink-0" />
-                    <span>Trust Score: {profile.trust_score}/100</span>
+                    <span>{t('provider.profile.trustScoreLabel', { score: profile.trust_score })}</span>
                   </div>
                   <div className="w-24 sm:w-32 h-2 rounded-xs bg-slate-200 dark:bg-slate-800 overflow-hidden">
                     <div
@@ -373,8 +389,8 @@ const ProviderProfile = () => {
                 }}
                 className="neu-btn px-3.5 py-2 rounded-xl font-black text-xs text-link flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <Save className="w-3.5 h-3.5" />
-                <span>Edit Profile</span>
+                <FloppyDisk className="w-3.5 h-3.5" />
+                <span>{t('provider.profile.editProfileBtn')}</span>
               </motion.button>
               <motion.button
                 type="button"
@@ -382,8 +398,8 @@ const ProviderProfile = () => {
                 onClick={handleLogout}
                 className="neu-btn px-3.5 py-2 rounded-xl font-black text-xs text-danger dark:text-danger-dark flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
+                <SignOut className="w-3.5 h-3.5" />
+                <span>{t('provider.profile.signOutBtn')}</span>
               </motion.button>
             </div>
           </div>
@@ -398,9 +414,9 @@ const ProviderProfile = () => {
           <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
             <Tabs.List className="neu-inset p-1.5 rounded-xl mb-4 grid grid-cols-3 gap-1.5">
               {[
-                { value: 'overview', icon: User, label: 'Overview' },
-                { value: 'specializations', icon: Award, label: `Services (${profile.services.length})` },
-                { value: 'trust', icon: Shield, label: 'Trust Score' },
+                { value: 'overview', icon: User, label: t('provider.profile.tabOverview') },
+                { value: 'specializations', icon: Medal, label: t('provider.profile.tabServices', { count: profile.services.length }) },
+                { value: 'trust', icon: Shield, label: t('provider.profile.tabTrust') },
               ].map(tab => (
                 <Tabs.Trigger
                   key={tab.value}
@@ -422,9 +438,9 @@ const ProviderProfile = () => {
               <div className="neu-flat rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10">
                 <div className="p-4 sm:p-6 border-b border-slate-200/60 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Professional Details</h3>
+                    <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">{t('provider.profile.detailsTitle')}</h3>
                     <p className="text-tertiary dark:text-tertiary text-xs sm:text-sm mt-0.5">
-                      Your contact coverage and PRC credentials displayed during patient booking
+                      {t('provider.profile.detailsSubtitle')}
                     </p>
                   </div>
                   {!editingOverview ? (
@@ -434,8 +450,8 @@ const ProviderProfile = () => {
                       onClick={() => { setEditingOverview(true); setEditForm(profile); setLanguagesInput((profile.languages || []).join(', ')); }}
                       className="neu-btn px-4 py-2 rounded-xl font-black text-xs text-link flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                     >
-                      <Save className="w-3.5 h-3.5" />
-                      <span>Edit Details</span>
+                      <FloppyDisk className="w-3.5 h-3.5" />
+                      <span>{t('provider.profile.editDetailsBtn')}</span>
                     </motion.button>
                   ) : (
                     <div className="flex gap-2 w-full sm:w-auto">
@@ -445,7 +461,7 @@ const ProviderProfile = () => {
                         onClick={() => { setEditingOverview(false); setEditForm(profile); setLanguagesInput((profile.languages || []).join(', ')); }}
                         className="neu-btn px-3.5 py-2 rounded-xl font-bold text-xs text-tertiary hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
                       >
-                        Cancel
+                        {t('provider.profile.cancelBtn')}
                       </motion.button>
                       <motion.button
                         type="button"
@@ -454,8 +470,8 @@ const ProviderProfile = () => {
                         disabled={saving}
                         className="neu-btn-primary px-4 py-2 rounded-xl font-black text-xs text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
                       >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+                        <FloppyDisk className="w-3.5 h-3.5" />
+                        <span>{saving ? t('provider.profile.saving') : t('provider.profile.saveChangesBtn')}</span>
                       </motion.button>
                     </div>
                   )}
@@ -469,26 +485,26 @@ const ProviderProfile = () => {
                       <div className="neu-flat-sm p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3">
                         <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-white/10 pb-2">
                           <span className="text-xs font-black uppercase tracking-wider text-link">
-                            Contact &amp; Coverage
+                            {t('provider.profile.contactCoverage')}
                           </span>
                           <span className="text-3xs font-bold uppercase tracking-wider text-tertiary">
-                            Booking Info
+                            {t('provider.profile.bookingInfo')}
                           </span>
                         </div>
                         <div className="space-y-2.5 text-xs">
                           <div className="flex items-center justify-between gap-3 py-1 border-b border-slate-200/40 dark:border-white/5">
                             <span className="text-2xs font-extrabold uppercase text-tertiary flex items-center gap-1.5 shrink-0">
                               <Phone className="w-3.5 h-3.5 text-link" />
-                              <span>Phone</span>
+                              <span>{t('provider.profile.phoneLabel')}</span>
                             </span>
                             <span className="font-bold text-slate-800 dark:text-slate-100 text-right">
-                              {profile.phone || 'Not provided'}
+                              {profile.phone || t('provider.profile.notProvided')}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-3 py-1 border-b border-slate-200/40 dark:border-white/5">
                             <span className="text-2xs font-extrabold uppercase text-tertiary flex items-center gap-1.5 shrink-0">
-                              <Mail className="w-3.5 h-3.5 text-link" />
-                              <span>Email</span>
+                              <Envelope className="w-3.5 h-3.5 text-link" />
+                              <span>{t('provider.profile.emailLabel')}</span>
                             </span>
                             <span className="font-semibold text-slate-700 dark:text-slate-200 truncate text-right">
                               {profile.email}
@@ -497,18 +513,18 @@ const ProviderProfile = () => {
                           <div className="flex items-start justify-between gap-3 py-1 border-b border-slate-200/40 dark:border-white/5">
                             <span className="text-2xs font-extrabold uppercase text-tertiary flex items-center gap-1.5 shrink-0 pt-0.5">
                               <MapPin className="w-3.5 h-3.5 text-link" />
-                              <span>Location</span>
+                              <span>{t('provider.profile.locationLabel')}</span>
                             </span>
                             <span className="font-bold text-slate-800 dark:text-slate-100 text-right break-words">
-                              {profile.location || 'No location set'}
+                              {profile.location || t('provider.profile.noLocationSet')}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-3 py-1">
                             <span className="text-2xs font-extrabold uppercase text-tertiary shrink-0">
-                              Service Radius
+                              {t('provider.profile.radiusLabel')}
                             </span>
                             <span className="font-bold text-slate-800 dark:text-slate-100 text-right">
-                              {profile.service_radius_km ? `${profile.service_radius_km} km` : 'Not provided'}
+                              {profile.service_radius_km ? `${profile.service_radius_km} ${t('provider.profile.kmUnit')}` : t('provider.profile.notProvided')}
                             </span>
                           </div>
                         </div>
@@ -518,36 +534,36 @@ const ProviderProfile = () => {
                       <div className="neu-flat-sm p-4 rounded-xl border border-slate-200/80 dark:border-white/10 space-y-3">
                         <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-white/10 pb-2">
                           <span className="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                            PRC &amp; Credentials
+                            {t('provider.profile.credentialsHeading')}
                           </span>
-                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${
+                          <span className={`px-2 py-0.5 rounded-md text-[0.5625rem] font-black uppercase tracking-wider border ${
                             profile.professional_id_status === 'verified'
                               ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
                               : 'bg-slate-200/70 dark:bg-slate-800 border-slate-300/80 dark:border-white/10 text-tertiary'
                           }`}>
-                            {profile.professional_id_status === 'verified' ? 'ID Verified' : 'Standard'}
+                            {profile.professional_id_status === 'verified' ? t('provider.profile.idVerified') : t('provider.profile.standard')}
                           </span>
                         </div>
                         <div className="space-y-2.5 text-xs">
                           <div className="flex items-center justify-between gap-3 py-1 border-b border-slate-200/40 dark:border-white/5">
                             <span className="text-2xs font-extrabold uppercase text-tertiary shrink-0">
-                              PRC / License No.
+                              {t('provider.profile.licenseNoLabel')}
                             </span>
                             <span className="font-mono font-bold text-slate-800 dark:text-slate-100 text-right">
-                              {profile.license_number || 'Not provided'}
+                              {profile.license_number || t('provider.profile.notProvided')}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-3 py-1 border-b border-slate-200/40 dark:border-white/5">
                             <span className="text-2xs font-extrabold uppercase text-tertiary shrink-0">
-                              License Expiry
+                              {t('provider.profile.licenseExpiryLabel')}
                             </span>
                             <span className="font-mono font-bold text-slate-800 dark:text-slate-100 text-right">
-                              {profile.license_expiry || 'Not provided'}
+                              {profile.license_expiry || t('provider.profile.notProvided')}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-3 py-1 border-b border-slate-200/40 dark:border-white/5">
                             <span className="text-2xs font-extrabold uppercase text-tertiary shrink-0">
-                              Languages
+                              {t('provider.profile.languagesLabel')}
                             </span>
                             <div className="flex flex-wrap justify-end gap-1">
                               {(profile.languages || []).length > 0 ? (
@@ -560,16 +576,16 @@ const ProviderProfile = () => {
                                   </span>
                                 ))
                               ) : (
-                                <span className="font-semibold text-tertiary">Not provided</span>
+                                <span className="font-semibold text-tertiary">{t('provider.profile.notProvided')}</span>
                               )}
                             </div>
                           </div>
                           <div className="flex items-start justify-between gap-3 py-1">
                             <span className="text-2xs font-extrabold uppercase text-tertiary shrink-0 pt-0.5">
-                              Bio / Title
+                              {t('provider.profile.bioLabel')}
                             </span>
                             <span className="font-bold text-slate-800 dark:text-slate-100 text-right break-words">
-                              {profile.bio || 'No bio provided'}
+                              {profile.bio || t('provider.profile.noBioProvided')}
                             </span>
                           </div>
                         </div>
@@ -579,21 +595,21 @@ const ProviderProfile = () => {
                     /* Edit Mode Form */
                     <div className="space-y-4 sm:space-y-5">
                       <div>
-                        <label htmlFor="provider-bio" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Bio / Professional Title</label>
+                        <label htmlFor="provider-bio" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">{t('provider.profile.fieldBio')}</label>
                         <input
                           id="provider-bio"
                           type="text"
                           name="bio"
                           value={editForm.bio}
                           onChange={e => setEditForm({ ...editForm, bio: e.target.value })}
-                          placeholder="E.g. Registered Nurse • Wound Care Specialist"
+                          placeholder={t('provider.profile.fieldBioPlaceholder')}
                           className="w-full neu-inset rounded-xl py-2.5 sm:py-3 px-3.5 sm:px-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                         />
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-5">
                         <div>
-                          <label htmlFor="provider-phone" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Phone Number</label>
+                          <label htmlFor="provider-phone" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">{t('provider.profile.fieldPhone')}</label>
                           <div className="relative flex items-center">
                             <input
                               id="provider-phone"
@@ -609,7 +625,7 @@ const ProviderProfile = () => {
                         </div>
 
                         <div>
-                          <label htmlFor="provider-location" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Service Location / Area</label>
+                          <label htmlFor="provider-location" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">{t('provider.profile.fieldLocation')}</label>
                           <div className="relative flex items-center">
                             <input
                               id="provider-location"
@@ -617,7 +633,7 @@ const ProviderProfile = () => {
                               name="location"
                               value={editForm.location}
                               onChange={e => setEditForm({ ...editForm, location: e.target.value })}
-                              placeholder="e.g. Poblacion, Muntinlupa"
+                              placeholder={t('provider.profile.fieldLocationPlaceholder')}
                               className="w-full neu-inset rounded-xl py-2.5 sm:py-3 pl-10 pr-3.5 sm:pr-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                             />
                             <MapPin className="absolute left-3.5 w-4 h-4 text-primary z-10 pointer-events-none" />
@@ -625,15 +641,15 @@ const ProviderProfile = () => {
                         </div>
 
                         <div>
-                          <p className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5">Email (Read Only)</p>
+                          <p className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5">{t('provider.profile.emailReadOnly')}</p>
                           <div className="neu-inset p-2.5 sm:p-3 rounded-xl flex items-center gap-2.5 text-xs sm:text-sm font-semibold text-slate-600 dark:text-slate-300">
-                            <Mail className="w-4 h-4 text-tertiary shrink-0" />
+                            <Envelope className="w-4 h-4 text-tertiary shrink-0" />
                             <span className="truncate">{profile.email}</span>
                           </div>
                         </div>
 
                         <div>
-                          <label htmlFor="provider-service-radius" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Service Radius</label>
+                          <label htmlFor="provider-service-radius" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">{t('provider.profile.fieldRadius')}</label>
                           <div className="relative flex items-center">
                             <input
                               id="provider-service-radius"
@@ -648,12 +664,12 @@ const ProviderProfile = () => {
                               placeholder="15"
                               className="w-full neu-inset rounded-xl py-2.5 sm:py-3 pl-3.5 sm:pl-4 pr-11 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                             />
-                            <span id="provider-service-radius-unit" className="absolute right-3.5 z-10 text-xs font-extrabold text-tertiary pointer-events-none">km</span>
+                            <span id="provider-service-radius-unit" className="absolute right-3.5 z-10 text-xs font-extrabold text-tertiary pointer-events-none">{t('provider.profile.kmUnit')}</span>
                           </div>
                         </div>
 
                         <div>
-                          <label htmlFor="provider-license-number" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">PRC / License Number</label>
+                          <label htmlFor="provider-license-number" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">{t('provider.profile.fieldLicenseNo')}</label>
                           <input
                             id="provider-license-number"
                             type="text"
@@ -666,7 +682,7 @@ const ProviderProfile = () => {
                         </div>
 
                         <div>
-                          <label htmlFor="provider-license-expiry" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">License Expiry</label>
+                          <label htmlFor="provider-license-expiry" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">{t('provider.profile.fieldLicenseExpiry')}</label>
                           <input
                             id="provider-license-expiry"
                             type="date"
@@ -678,14 +694,14 @@ const ProviderProfile = () => {
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label htmlFor="provider-languages" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Languages</label>
+                          <label htmlFor="provider-languages" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">{t('provider.profile.fieldLanguages')}</label>
                           <input
                             id="provider-languages"
                             type="text"
                             name="languages"
                             value={languagesInput}
                             onChange={e => setLanguagesInput(e.target.value)}
-                            placeholder="English, Filipino"
+                            placeholder={t('provider.profile.fieldLanguagesPlaceholder')}
                             className="w-full neu-inset rounded-xl py-2.5 sm:py-3 px-3.5 sm:px-4 text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 outline-none focus:ring-2 focus:ring-primary/30 transition-all"
                           />
                         </div>
@@ -701,8 +717,8 @@ const ProviderProfile = () => {
               <div className="neu-flat rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10">
                 <div className="p-4 sm:p-6 border-b border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Specializations &amp; Services</h3>
-                    <p className="text-tertiary dark:text-tertiary text-xs mt-0.5">List of medical and healthcare services you deliver</p>
+                    <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">{t('provider.profile.specializationsTitle')}</h3>
+                    <p className="text-tertiary dark:text-tertiary text-xs mt-0.5">{t('provider.profile.specializationsSubtitle')}</p>
                   </div>
                   {!editingSpecializations ? (
                     <motion.button
@@ -711,8 +727,8 @@ const ProviderProfile = () => {
                       onClick={() => setEditingSpecializations(true)}
                       className="neu-btn px-4 py-2 rounded-xl font-black text-xs text-link flex items-center justify-center gap-2 cursor-pointer w-full sm:w-auto"
                     >
-                      <Save className="w-3.5 h-3.5" />
-                      <span>Edit Specializations</span>
+                      <FloppyDisk className="w-3.5 h-3.5" />
+                      <span>{t('provider.profile.editSpecializationsBtn')}</span>
                     </motion.button>
                   ) : (
                     <div className="flex gap-2 w-full sm:w-auto">
@@ -722,7 +738,7 @@ const ProviderProfile = () => {
                         onClick={() => { setEditingSpecializations(false); setServicesInput((profile.services || []).join(', ')); }}
                         className="neu-btn px-3 sm:px-4 py-2 rounded-xl font-bold text-xs text-tertiary hover:text-slate-700 cursor-pointer flex-1 sm:flex-initial"
                       >
-                        Cancel
+                        {t('provider.profile.cancelBtn')}
                       </motion.button>
                       <motion.button
                         type="button"
@@ -731,8 +747,8 @@ const ProviderProfile = () => {
                         disabled={saving}
                         className="neu-btn-primary px-4 py-2 rounded-xl font-black text-xs text-white flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 flex-1 sm:flex-initial"
                       >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>{saving ? 'Saving...' : 'Save'}</span>
+                        <FloppyDisk className="w-3.5 h-3.5" />
+                        <span>{saving ? t('provider.profile.saving') : t('provider.profile.saveBtn')}</span>
                       </motion.button>
                     </div>
                   )}
@@ -742,7 +758,7 @@ const ProviderProfile = () => {
                   {editingSpecializations ? (
                     <div className="space-y-3.5 sm:space-y-4">
                       <div>
-                        <label htmlFor="provider-services" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">Comma-Separated Services</label>
+                        <label htmlFor="provider-services" className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-1.5 block">{t('provider.profile.commaSeparatedLabel')}</label>
                         <textarea
                           id="provider-services"
                           name="services"
@@ -754,7 +770,7 @@ const ProviderProfile = () => {
                       </div>
 
                       <div>
-                        <p className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-2">Suggested Services to Add:</p>
+                        <p className="text-2xs uppercase font-extrabold text-tertiary dark:text-tertiary mb-2">{t('provider.profile.suggestedServicesHeading')}</p>
                         <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {['Wound Care', 'Elderly Care', 'Post-Surgery Recovery', 'Physical Therapy', 'Vital Signs Monitoring', 'Medication Administration', 'Dementia Care', 'Stroke Rehab']
                             .filter(s => !(servicesInput || '').toLowerCase().includes(s.toLowerCase()))
@@ -770,7 +786,7 @@ const ProviderProfile = () => {
                                 }}
                                 className="neu-btn px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-bold text-link cursor-pointer active:scale-95"
                               >
-                                + {s}
+                                + {translateService(s)}
                               </motion.button>
                             ))}
                         </div>
@@ -787,13 +803,13 @@ const ProviderProfile = () => {
                             animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: 0.05 + i * 0.04 }}
                           >
-                            {s}
+                            {translateService(s)}
                           </motion.span>
                         ))
                       ) : (
                         <div className="neu-inset p-3.5 sm:p-4 rounded-xl text-center w-full">
                           <p className="text-tertiary dark:text-tertiary text-xs sm:text-sm">
-                            No specializations added yet. Click &ldquo;Edit Specializations&rdquo; to add services you provide.
+                            {t('provider.profile.noSpecializationsMsg')}
                           </p>
                         </div>
                       )}
@@ -807,29 +823,29 @@ const ProviderProfile = () => {
             <Tabs.Content value="trust" className="outline-none">
               <div className="neu-flat rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10">
                 <div className="p-4 sm:p-6 border-b border-slate-200/50 dark:border-white/5">
-                  <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">Trust Score Breakdown</h3>
-                  <p className="text-tertiary dark:text-tertiary text-xs mt-0.5">Calculated based on credentials, verification status, and profile completion</p>
+                  <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-slate-100">{t('provider.profile.trustBreakdownTitle')}</h3>
+                  <p className="text-tertiary dark:text-tertiary text-xs mt-0.5">{t('provider.profile.trustBreakdownSubtitle')}</p>
                 </div>
 
                 <div className="p-4 sm:p-6">
                   <div className="neu-inset p-3.5 sm:p-5 rounded-2xl space-y-2.5 sm:space-y-3">
                     {[
-                      { label: 'Profile Completed', met: profile.is_profile_complete, points: 20 },
-                      { label: 'PRC / Medical ID Verified', met: profile.professional_id_status === 'verified', points: 30 },
-                      { label: 'Approved by City Health Office', met: profile.is_approved, points: 30 },
-                      { label: 'Patient Rating 4.0 or Higher', met: profile.rating >= 4.0, points: 20 },
+                      { label: t('provider.profile.trustCriteriaCompleted'), met: profile.is_profile_complete, points: 20 },
+                      { label: t('provider.profile.trustCriteriaIdVerified'), met: profile.professional_id_status === 'verified', points: 30 },
+                      { label: t('provider.profile.trustCriteriaApproved'), met: profile.is_approved, points: 30 },
+                      { label: t('provider.profile.trustCriteriaRating'), met: profile.rating >= 4.0, points: 20 },
                     ].map((item, i) => (
                       <div key={i} className="flex items-center justify-between py-1.5 border-b border-slate-200/40 dark:border-white/5 last:border-0">
                         <div className="flex items-center gap-2.5">
                           <div className={`w-5 h-5 rounded-md flex items-center justify-center ${item.met ? 'bg-emerald-500 text-white' : 'neu-pressed text-tertiary'}`}>
-                            {item.met ? <CheckCircle2 className="w-3.5 h-3.5" /> : <span className="text-3xs font-black">-</span>}
+                            {item.met ? <CheckCircle className="w-3.5 h-3.5" /> : <span className="text-3xs font-black">-</span>}
                           </div>
                           <span className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200">{item.label}</span>
                         </div>
                         <span className={`px-2 py-0.5 rounded-md text-2xs font-black ${
                           item.met ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'text-tertiary'
                         }`}>
-                          +{item.points} pts
+                          +{item.points} {t('provider.profile.pts')}
                         </span>
                       </div>
                     ))}
@@ -837,8 +853,8 @@ const ProviderProfile = () => {
 
                   <div className="mt-4 neu-flat-sm p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-white/10 flex items-center justify-between">
                     <div>
-                      <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 block">Total Calculated Score</span>
-                      <span className="text-2xs uppercase tracking-wider font-bold text-tertiary">Level: {trustLevel.label}</span>
+                      <span className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 block">{t('provider.profile.totalCalculatedScore')}</span>
+                      <span className="text-2xs uppercase tracking-wider font-bold text-tertiary">{t('provider.profile.levelPrefix', { level: trustLevel.label })}</span>
                     </div>
                     <div className="text-right">
                       <span className={`text-lg sm:text-2xl font-black ${trustLevel.color}`}>

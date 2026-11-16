@@ -1,24 +1,32 @@
 import { useState, useEffect, useMemo } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Clock, AlertTriangle, ArrowRight, ShieldCheck, CalendarClock, Check } from 'lucide-react';
+import {
+  Clock,
+  Warning,
+  ArrowRight,
+  ShieldCheck,
+  CalendarCheck,
+  Check,
+} from '@phosphor-icons/react';
 import { supabase } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 import { WORKING_HOURS, getServiceDurationMinutes } from '@/config/constants';
 import { slotsOverlap, toLocalDateKey, formatSlotLabel, parseLocalDate } from '@/lib/localDate';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const WORKING_HOURS_START = WORKING_HOURS.START;
 const WORKING_HOURS_END = WORKING_HOURS.END;
 
-const CANCEL_REASONS = [
-  'Schedule conflict',
-  'Found another provider',
-  'Emergency / health issue',
-  'Transportation issue',
-  'Not feeling ready',
-  'Changed my mind',
-  'Other',
+const CANCEL_REASON_OPTIONS = [
+  { value: 'Schedule conflict', key: 'patient.cancelReschedule.reasonScheduleConflict' },
+  { value: 'Found another provider', key: 'patient.cancelReschedule.reasonFoundAnother' },
+  { value: 'Emergency / health issue', key: 'patient.cancelReschedule.reasonEmergency' },
+  { value: 'Transportation issue', key: 'patient.cancelReschedule.reasonTransport' },
+  { value: 'Not feeling ready', key: 'patient.cancelReschedule.reasonNotReady' },
+  { value: 'Changed my mind', key: 'patient.cancelReschedule.reasonChangedMind' },
+  { value: 'Other', key: 'patient.cancelReschedule.reasonOther' },
 ];
 
 const normalizeHHMM = (timeStr) => {
@@ -36,7 +44,7 @@ const getProviderInitials = (name) => {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 };
 
-const formatSlotParts = (timeStr, durationMinutes = 30) => {
+const formatSlotParts = (timeStr, durationMinutes = 30, t = null) => {
   const hhmm = normalizeHHMM(timeStr) || '09:00';
   const [hStr, mStr] = hhmm.split(':');
   const m = Number(hStr) * 60 + Number(mStr);
@@ -51,26 +59,27 @@ const formatSlotParts = (timeStr, durationMinutes = 30) => {
   const endMin = endM % 60;
   const endPeriod = endH >= 12 ? 'PM' : 'AM';
   const displayEndH = endH % 12 === 0 ? 12 : endH % 12;
-  const endLabel = `to ${displayEndH}:${String(endMin).padStart(2, '0')} ${endPeriod}`;
+  const endTimeText = `${displayEndH}:${String(endMin).padStart(2, '0')} ${endPeriod}`;
+  const endLabel = t ? t('patient.cancelReschedule.timeRangeTo', { end: endTimeText }) : `to ${endTimeText}`;
 
   return { startLabel, endLabel };
 };
 
-const getReadableDateInfo = (dateStr) => {
+const getReadableDateInfo = (dateStr, locale = 'en-US', fallbackLabel = 'Scheduled Date') => {
   const parsed = parseLocalDate(dateStr);
   if (!parsed || Number.isNaN(parsed.getTime())) {
     return {
       monthShort: '--',
       dayNum: '--',
       weekdayShort: '',
-      fullLabel: String(dateStr || 'Scheduled Date'),
+      fullLabel: String(dateStr || fallbackLabel),
     };
   }
   return {
-    monthShort: parsed.toLocaleDateString('en-US', { month: 'short' }),
+    monthShort: parsed.toLocaleDateString(locale, { month: 'short' }),
     dayNum: parsed.getDate(),
-    weekdayShort: parsed.toLocaleDateString('en-US', { weekday: 'short' }),
-    fullLabel: parsed.toLocaleDateString('en-US', {
+    weekdayShort: parsed.toLocaleDateString(locale, { weekday: 'short' }),
+    fullLabel: parsed.toLocaleDateString(locale, {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -79,6 +88,8 @@ const getReadableDateInfo = (dateStr) => {
 };
 
 const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) => {
+  const { t, isTagalog, translateService } = useLanguage();
+  const dateLocale = isTagalog ? 'tl-PH' : 'en-US';
   const [mode, setMode] = useState('choose'); // 'choose' | 'cancel' | 'reschedule'
   const [navDir, setNavDir] = useState('right');
   const [slotPeriod, setSlotPeriod] = useState('am');
@@ -108,14 +119,14 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         continue;
       }
 
-      const weekdayShort = d.toLocaleDateString('en-US', { weekday: 'short' });
-      const monthShort = d.toLocaleDateString('en-US', { month: 'short' });
+      const weekdayShort = d.toLocaleDateString(dateLocale, { weekday: 'short' });
+      const monthShort = d.toLocaleDateString(dateLocale, { month: 'short' });
       const dayNum = d.getDate();
-      const fullDate = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const fullDate = d.toLocaleDateString(dateLocale, { weekday: 'short', month: 'short', day: 'numeric' });
       const label = isToday
-        ? `Today (${monthShort} ${dayNum})`
+        ? t('patient.cancelReschedule.todayDateLabel', { date: `${monthShort} ${dayNum}` })
         : isTomorrow
-          ? `Tomorrow (${fullDate})`
+          ? t('patient.cancelReschedule.tomorrowDateLabel', { date: fullDate })
           : fullDate;
 
       list.push({
@@ -123,7 +134,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         label,
         isToday,
         isTomorrow,
-        dayShort: isToday ? 'Today' : isTomorrow ? 'Tmrw' : weekdayShort,
+        dayShort: isToday ? t('patient.cancelReschedule.today') : isTomorrow ? t('patient.cancelReschedule.tmrw') : weekdayShort,
         weekdayShort,
         monthShort,
         dayNum,
@@ -131,7 +142,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
       });
     }
     return list;
-  }, []);
+  }, [dateLocale, t]);
 
   const currentHHMM = useMemo(() => normalizeHHMM(request?.time), [request?.time]);
 
@@ -287,15 +298,15 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
   };
 
   const formatRescheduleDateLabel = (dateStr) => {
-    if (!dateStr) return 'Select a date';
+    if (!dateStr) return t('patient.cancelReschedule.selectDatePrompt');
     const match = dateOptions.find((d) => d.key === dateStr);
     if (match) return match.label;
-    return getReadableDateInfo(dateStr).fullLabel;
+    return getReadableDateInfo(dateStr, dateLocale, t('patient.cancelReschedule.scheduledDateFallback')).fullLabel;
   };
 
   const handleCancel = async () => {
     setSubmitting(true);
-    const reason = cancelReason || selectedReason || 'No reason provided';
+    const reason = cancelReason || selectedReason || t('patient.cancelReschedule.noReasonFallback');
 
     try {
       // A provider already on the way or on site cannot be cancelled from here;
@@ -314,16 +325,16 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
       if (error) throw error;
       if (!updated?.length) {
-        toast.error('This visit is already underway, so it cannot be cancelled here.');
+        toast.error(t('patient.cancelReschedule.cannotCancelUnderway'));
         return;
       }
 
-      toast.success('Request has been cancelled.');
+      toast.success(t('patient.cancelReschedule.cancelSuccess'));
       onActionComplete?.();
       resetAndClose();
     } catch (err) {
       console.error('Error cancelling request:', err);
-      toast.error('Failed to update server. The request may still be active.');
+      toast.error(t('patient.cancelReschedule.cancelServerError'));
     } finally {
       setSubmitting(false);
     }
@@ -332,7 +343,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
   const handleReschedule = async (e) => {
     e.preventDefault();
     if (!newDate || !newTime) {
-      toast.error('Please select both a new date and time.');
+      toast.error(t('patient.cancelReschedule.selectDateTimeError'));
       return;
     }
 
@@ -348,7 +359,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
         .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
 
       if ((sameDay || []).some(r => slotsOverlap(newDate, newTime, newDate, r.time, reqDuration, r.duration_minutes || 30))) {
-        toast.error('This time slot has just been taken. Please choose another.');
+        toast.error(t('patient.cancelReschedule.slotTakenError'));
         setSubmitting(false);
         return;
       }
@@ -369,26 +380,26 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
       if (error) {
         if (error.code === '23P01' || error.code === '23505') {
-          toast.error('This time slot has just been taken. Please choose another.');
+          toast.error(t('patient.cancelReschedule.slotTakenError'));
           return;
         }
         throw error;
       }
 
       if (!moved?.length) {
-        toast.error('This visit is already underway, so it cannot be rescheduled here.');
+        toast.error(t('patient.cancelReschedule.cannotRescheduleUnderway'));
         return;
       }
 
-      toast.success('Appointment rescheduled successfully!');
+      toast.success(t('patient.cancelReschedule.rescheduleSuccess'));
       onActionComplete?.();
       resetAndClose();
     } catch (err) {
       console.error('Error rescheduling request:', err);
       if (err.code === '23P01' || err.code === '23505') {
-        toast.error('This time slot has just been taken. Please choose another.');
+        toast.error(t('patient.cancelReschedule.slotTakenError'));
       } else {
-        toast.error('Reschedule failed on the server. The original schedule remains.');
+        toast.error(t('patient.cancelReschedule.rescheduleServerError'));
       }
     } finally {
       setSubmitting(false);
@@ -397,13 +408,13 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
   if (!request) return null;
 
-  const currentDateInfo = getReadableDateInfo(request.date);
+  const currentDateInfo = getReadableDateInfo(request.date, dateLocale, t('patient.cancelReschedule.scheduledDateFallback'));
   const currentTimeWindow = formatSlotLabel(currentHHMM || request.time, reqDuration);
   const visibleDateChips = dateOptions.slice(0, 5);
   const isCustomDateSelected = Boolean(newDate) && !visibleDateChips.some((d) => d.key === newDate);
   const customDateObj = isCustomDateSelected ? parseLocalDate(newDate) : null;
   const isSameAsCurrent = Boolean(newDate && newTime) && newDate === request.date && newTime === currentHHMM;
-  const selectedNewSlotParts = newTime && !isSameAsCurrent ? formatSlotParts(newTime, reqDuration) : null;
+  const selectedNewSlotParts = newTime && !isSameAsCurrent ? formatSlotParts(newTime, reqDuration, t) : null;
 
   const slideOffset = prefersReducedMotion ? 0 : navDir === 'left' ? -20 : 20;
   const isSwitchableSlot = (slot) =>
@@ -416,10 +427,10 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
 
   const modalTitle =
     mode === 'choose'
-      ? 'Manage Appointment'
+      ? t('patient.cancelReschedule.titleManage')
       : mode === 'reschedule'
-        ? 'Pick New Time'
-        : 'Cancel Appointment';
+        ? t('patient.cancelReschedule.titlePickNewTime')
+        : t('patient.cancelReschedule.titleCancel');
 
   return (
     <DialogPrimitive.Root
@@ -473,7 +484,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                     }`}
                   >
                     {mode === 'cancel' ? (
-                      <AlertTriangle className="w-5 h-5" />
+                      <Warning className="w-5 h-5" />
                     ) : (
                       <span className="text-xs sm:text-sm font-black">
                         {getProviderInitials(request.providerName)}
@@ -488,13 +499,16 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                       </h2>
                     </DialogPrimitive.Title>
                     <DialogPrimitive.Description className="sr-only">
-                      Reschedule or cancel your {request.service} appointment with {request.providerName}.
+                      {t('patient.cancelReschedule.srDesc', {
+                        service: translateService(request.service),
+                        name: request.providerName,
+                      })}
                     </DialogPrimitive.Description>
                     <p className="text-xs text-tertiary dark:text-tertiary truncate mt-0.5">
                       <span className="font-extrabold text-link dark:text-primary-400">
                         {request.providerName}
                       </span>
-                      {' '}&bull; {request.service} ({reqDuration} min)
+                      {' '}&bull; {translateService(request.service)} ({t('patient.cancelReschedule.durationBadge', { mins: reqDuration })})
                     </p>
                   </div>
                 </div>
@@ -514,13 +528,13 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                       {/* Current Schedule Card */}
                       <div className="neu-inset rounded-2xl p-4 space-y-3 border border-white/60 dark:border-white/5">
                         <div className="flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary">
-                          <CalendarClock className="w-3.5 h-3.5 text-link dark:text-primary-400 shrink-0" />
-                          <span>Current Schedule</span>
+                          <CalendarCheck className="w-3.5 h-3.5 text-link dark:text-primary-400 shrink-0" />
+                          <span>{t('patient.cancelReschedule.currentScheduleLabel')}</span>
                         </div>
 
                         <div className="flex items-center gap-3.5">
                           <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary-400/15 border border-primary/20 dark:border-primary-400/25 flex flex-col items-center justify-center shrink-0">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-link dark:text-primary-400 leading-none">
+                            <span className="text-[0.625rem] font-extrabold uppercase tracking-wider text-link dark:text-primary-400 leading-none">
                               {currentDateInfo.monthShort}
                             </span>
                             <span className="text-xl font-black text-slate-900 dark:text-white leading-none mt-1 tabular-nums">
@@ -535,15 +549,15 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                             <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 mt-1 tabular-nums">
                               <Clock className="w-3.5 h-3.5 text-tertiary shrink-0" />
                               <span className="truncate">
-                                {currentTimeWindow} ({reqDuration} mins)
+                                {currentTimeWindow} ({t('patient.cancelReschedule.durationMinsWord', { mins: reqDuration })})
                               </span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="pt-2.5 border-t border-slate-200/70 dark:border-white/10 flex items-center gap-2 text-[11px] font-medium text-slate-600 dark:text-slate-300">
+                        <div className="pt-2.5 border-t border-slate-200/70 dark:border-white/10 flex items-center gap-2 text-[0.6875rem] font-medium text-slate-600 dark:text-slate-300">
                           <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                          <span>Provider isn&apos;t en route yet &mdash; adjust or cancel anytime.</span>
+                          <span>{t('patient.cancelReschedule.notEnRouteNote')}</span>
                         </div>
                       </div>
 
@@ -552,9 +566,9 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                         <button
                           type="button"
                           onClick={enterCancelMode}
-                          className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-danger dark:hover:text-red-400 hover:bg-danger/5 dark:hover:bg-red-500/10 transition-colors cursor-pointer active:scale-[0.98]"
+                          className="min-h-[2.75rem] px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-danger dark:hover:text-red-400 hover:bg-danger/5 dark:hover:bg-red-500/10 transition-colors cursor-pointer active:scale-[0.98]"
                         >
-                          Need to cancel this appointment?
+                          {t('patient.cancelReschedule.needCancelBtn')}
                         </button>
                       </div>
                     </div>
@@ -564,17 +578,17 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                       <button
                         type="button"
                         onClick={enterRescheduleMode}
-                        className="w-full neu-btn-primary min-h-[48px] py-3.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-2 active:scale-[0.98] transition-transform cursor-pointer"
+                        className="w-full neu-btn-primary min-h-[3rem] py-3.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-2 active:scale-[0.98] transition-transform cursor-pointer"
                       >
-                        <span>Pick New Time</span>
+                        <span>{t('patient.cancelReschedule.pickNewTimeBtn')}</span>
                         <ArrowRight className="w-4 h-4 shrink-0" />
                       </button>
                       <button
                         type="button"
                         onClick={resetAndClose}
-                        className="w-full neu-btn min-h-[44px] py-3 px-4 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center active:scale-[0.98] transition-transform cursor-pointer"
+                        className="w-full neu-btn min-h-[2.75rem] py-3 px-4 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center active:scale-[0.98] transition-transform cursor-pointer"
                       >
-                        Keep Current Schedule
+                        {t('patient.cancelReschedule.keepCurrentScheduleBtn')}
                       </button>
                     </div>
                   </motion.div>
@@ -594,7 +608,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                       {/* Compact Current Booking Reminder */}
                       <div className="neu-flat-sm rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2 border border-white/75 dark:border-white/10 text-xs">
                         <span className="text-tertiary font-semibold truncate">
-                          Current:{' '}
+                          {t('patient.cancelReschedule.currentPrefix')}{' '}
                           <strong className="text-slate-800 dark:text-slate-100">
                             {currentDateInfo.fullLabel}
                           </strong>
@@ -609,7 +623,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0">
                             <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block leading-none">
-                              New Day &amp; Arrival Window
+                              {t('patient.cancelReschedule.newDayWindowLabel')}
                             </span>
                             <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white mt-1 block truncate">
                               {formatRescheduleDateLabel(newDate)}
@@ -622,20 +636,20 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                               if (switchableSlots.length > 0) {
                                 return (
                                   <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 tabular-nums">
-                                    {switchableSlots.length} open
+                                    {t('patient.cancelReschedule.openCount', { count: switchableSlots.length })}
                                   </span>
                                 );
                               }
                               if (allPast) {
                                 return (
                                   <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                                    Clinic closed
+                                    {t('patient.cancelReschedule.clinicClosed')}
                                   </span>
                                 );
                               }
                               return (
                                 <span className="text-2xs font-extrabold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                                  Fully booked
+                                  {t('patient.cancelReschedule.fullyBooked')}
                                 </span>
                               );
                             })()}
@@ -645,13 +659,13 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                               onClick={() => setShowCustomDatePicker((prev) => !prev)}
                               className="neu-btn px-2.5 py-1.5 rounded-lg text-2xs font-extrabold text-link dark:text-primary-400 cursor-pointer active:scale-95 transition-transform"
                             >
-                              {showCustomDatePicker ? 'Hide calendar' : 'More dates'}
+                              {showCustomDatePicker ? t('patient.cancelReschedule.hideCalendar') : t('patient.cancelReschedule.moreDates')}
                             </button>
                           </div>
                         </div>
 
                         {/* Horizontal Date Chips */}
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5" role="listbox" aria-label="Reschedule dates">
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5" role="listbox" aria-label={t('patient.cancelReschedule.rescheduleDatesAria')}>
                           {visibleDateChips.map((opt) => {
                             const isActive = newDate === opt.key;
                             return (
@@ -666,9 +680,9 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                     setNewTime('');
                                   }
                                 }}
-                                className={`min-w-[66px] min-h-[54px] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 transition-all active:scale-[0.96] select-none outline-none ${
+                                className={`min-w-[4.125rem] min-h-[3.375rem] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 transition-all active:scale-[0.96] select-none outline-none ${
                                   isActive
-                                    ? 'bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20'
+                                    ? 'bg-primary text-white dark:bg-primary-400 dark:text-neu-fg shadow-md shadow-primary/25 dark:shadow-primary-400/20'
                                     : 'neu-flat-sm text-slate-800 dark:text-slate-100 border border-white/70 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40'
                                 }`}
                               >
@@ -688,13 +702,13 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                               role="option"
                               aria-selected={true}
                               onClick={() => setShowCustomDatePicker(true)}
-                              className="min-w-[70px] min-h-[54px] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20 select-none"
+                              className="min-w-[4.375rem] min-h-[3.375rem] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 bg-primary text-white dark:bg-primary-400 dark:text-neu-fg shadow-md shadow-primary/25 dark:shadow-primary-400/20 select-none"
                             >
                               <span className="block text-2xs font-bold uppercase opacity-90">
-                                {customDateObj.toLocaleDateString('en-US', { weekday: 'short' })}
+                                {customDateObj.toLocaleDateString(dateLocale, { weekday: 'short' })}
                               </span>
                               <span className="block text-xs sm:text-sm font-extrabold leading-tight mt-0.5 tabular-nums">
-                                {customDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                {customDateObj.toLocaleDateString(dateLocale, { month: 'short', day: 'numeric' })}
                               </span>
                             </button>
                           )}
@@ -712,7 +726,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                             >
                               <div className="neu-flat-sm rounded-xl px-3 py-2 flex items-center justify-between gap-2 border border-white/70 dark:border-white/5">
                                 <span className="text-xs font-bold text-slate-600 dark:text-slate-300 shrink-0">
-                                  Jump to date:
+                                  {t('patient.cancelReschedule.jumpToDate')}
                                 </span>
                                 <input
                                   type="date"
@@ -733,7 +747,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                         {/* Slots State & Animated Period Switcher */}
                         {!newDate ? (
                           <div className="p-3 text-center text-xs text-tertiary">
-                            Select a date above to view available slots.
+                            {t('patient.cancelReschedule.selectDateAbove')}
                           </div>
                         ) : loadingSlots ? (
                           <div className="space-y-2 py-1" aria-live="polite">
@@ -746,20 +760,20 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                               ))}
                             </div>
                             <p className="text-center text-xs font-semibold text-link dark:text-primary-400">
-                              Checking provider availability...
+                              {t('patient.cancelReschedule.checkingSlots')}
                             </p>
                           </div>
                         ) : availableSlots.length === 0 ? (
                           <div className="p-3 text-center text-xs text-tertiary">
-                            No available slots for this date.
+                            {t('patient.cancelReschedule.noSlotsForDate')}
                           </div>
                         ) : (
                           <div className="space-y-2.5">
                             {switchableSlots.length === 0 && (
                               <div className="p-2.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-800 dark:text-amber-300 font-medium">
                                 {availableSlots.every((s) => s.isPast)
-                                  ? 'Clinic working hours for today have ended (9:00 AM – 5:00 PM). Please pick tomorrow or an upcoming date.'
-                                  : 'No other time slots are open for this date. Please choose another day.'}
+                                  ? t('patient.cancelReschedule.hoursEndedNotice')
+                                  : t('patient.cancelReschedule.allBookedNotice')}
                               </div>
                             )}
 
@@ -777,22 +791,22 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                 onClick={() => setSlotPeriod('am')}
                                 className={`relative z-10 py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none ${
                                   slotPeriod === 'am'
-                                    ? 'text-white dark:text-[#08182A]'
+                                    ? 'text-white dark:text-neu-fg'
                                     : 'text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400'
                                 }`}
                               >
-                                Morning ({amOpenCount} open)
+                                {t('patient.cancelReschedule.morningTab', { count: amOpenCount })}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setSlotPeriod('pm')}
                                 className={`relative z-10 py-1.5 px-2.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer select-none ${
                                   slotPeriod === 'pm'
-                                    ? 'text-white dark:text-[#08182A]'
+                                    ? 'text-white dark:text-neu-fg'
                                     : 'text-slate-600 dark:text-slate-300 hover:text-link dark:hover:text-primary-400'
                                 }`}
                               >
-                                Afternoon ({pmOpenCount} open)
+                                {t('patient.cancelReschedule.afternoonTab', { count: pmOpenCount })}
                               </button>
                             </div>
 
@@ -804,7 +818,11 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                 return (
                                   <div className="p-3 rounded-xl bg-white/60 dark:bg-slate-800/50 border border-dashed border-slate-300/80 dark:border-white/10 text-center space-y-2">
                                     <p className="text-xs text-tertiary">
-                                      No {slotPeriod === 'am' ? 'morning' : 'afternoon'} slots for this service duration.
+                                      {t('patient.cancelReschedule.noPeriodSlots', {
+                                        period: slotPeriod === 'am'
+                                          ? t('patient.cancelReschedule.morningWord')
+                                          : t('patient.cancelReschedule.afternoonWord'),
+                                      })}
                                     </p>
                                     {otherOpenCount > 0 && (
                                       <button
@@ -812,7 +830,12 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                         onClick={() => setSlotPeriod(otherPeriod)}
                                         className="px-3 py-1.5 rounded-lg bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 text-xs font-extrabold cursor-pointer active:scale-95 transition-transform"
                                       >
-                                        Switch to {otherOpenCount} {otherPeriod === 'am' ? 'Morning' : 'Afternoon'} slots &rarr;
+                                        {t('patient.cancelReschedule.switchPeriodBtn', {
+                                          count: otherOpenCount,
+                                          period: otherPeriod === 'am'
+                                            ? t('patient.cancelReschedule.morningCap')
+                                            : t('patient.cancelReschedule.afternoonCap'),
+                                        })} &rarr;
                                       </button>
                                     )}
                                   </div>
@@ -830,14 +853,21 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                   {periodOpenCount === 0 && otherOpenCount > 0 && (
                                     <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/10 dark:bg-primary-400/10 border border-primary/20 dark:border-primary-400/20">
                                       <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                        {slotPeriod === 'am' ? 'Morning' : 'Afternoon'} slots are full.
+                                        {t('patient.cancelReschedule.periodFullNotice', {
+                                          period: slotPeriod === 'am'
+                                            ? t('patient.cancelReschedule.morningCap')
+                                            : t('patient.cancelReschedule.afternoonCap'),
+                                        })}
                                       </span>
                                       <button
                                         type="button"
                                         onClick={() => setSlotPeriod(otherPeriod)}
                                         className="text-xs font-extrabold text-link dark:text-primary-400 cursor-pointer shrink-0 hover:underline"
                                       >
-                                        View {otherOpenCount} {otherPeriod === 'am' ? 'AM' : 'PM'} open &rarr;
+                                        {t('patient.cancelReschedule.viewPeriodOpenBtn', {
+                                          count: otherOpenCount,
+                                          period: otherPeriod === 'am' ? 'AM' : 'PM',
+                                        })} &rarr;
                                       </button>
                                     </div>
                                   )}
@@ -847,7 +877,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                       const isCurrentSlot = newDate === request.date && slot.time === currentHHMM;
                                       const isSelected = newTime === slot.time && !isCurrentSlot;
                                       const isDisabled = !slot.available || isCurrentSlot;
-                                      const { startLabel, endLabel } = formatSlotParts(slot.time, reqDuration);
+                                      const { startLabel, endLabel } = formatSlotParts(slot.time, reqDuration, t);
 
                                       return (
                                         <button
@@ -855,13 +885,13 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                           type="button"
                                           disabled={isDisabled}
                                           onClick={() => setNewTime(slot.time)}
-                                          className={`min-h-[48px] py-2.5 px-2 rounded-xl text-center transition-all outline-none select-none ${
+                                          className={`min-h-[3rem] py-2.5 px-2 rounded-xl text-center transition-all outline-none select-none ${
                                             isCurrentSlot
                                               ? 'bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 border border-primary/35 dark:border-primary-400/35 cursor-not-allowed'
                                               : !slot.available
                                                 ? 'bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-600 border border-slate-200/60 dark:border-white/5 cursor-not-allowed'
                                                 : isSelected
-                                                  ? 'bg-primary text-white dark:bg-primary-400 dark:text-[#08182A] shadow-md shadow-primary/25 dark:shadow-primary-400/20 cursor-pointer ring-2 ring-primary/35 dark:ring-primary-400/45 active:scale-[0.97]'
+                                                  ? 'bg-primary text-white dark:bg-primary-400 dark:text-neu-fg shadow-md shadow-primary/25 dark:shadow-primary-400/20 cursor-pointer ring-2 ring-primary/35 dark:ring-primary-400/45 active:scale-[0.97]'
                                                   : 'neu-flat-sm text-slate-800 dark:text-slate-100 border border-white/75 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40 cursor-pointer active:scale-[0.96]'
                                           }`}
                                         >
@@ -869,7 +899,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                             {startLabel}
                                           </span>
                                           <span
-                                            className={`text-[11px] font-semibold block mt-0.5 leading-tight tabular-nums ${
+                                            className={`text-[0.6875rem] font-semibold block mt-0.5 leading-tight tabular-nums ${
                                               isCurrentSlot
                                                 ? 'text-link dark:text-primary-400 font-bold'
                                                 : !slot.available
@@ -879,7 +909,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                                                     : 'text-tertiary'
                                             }`}
                                           >
-                                            {isCurrentSlot ? 'Current slot' : endLabel}
+                                            {isCurrentSlot ? t('patient.cancelReschedule.currentSlotTag') : endLabel}
                                           </span>
                                         </button>
                                       );
@@ -897,7 +927,11 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                         <div className="px-3.5 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 flex items-center gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-300">
                           <Check className="w-4 h-4 shrink-0" />
                           <span className="truncate tabular-nums">
-                            Moving to: {formatRescheduleDateLabel(newDate)}, {selectedNewSlotParts.startLabel} ({reqDuration} mins)
+                            {t('patient.cancelReschedule.movingToPreview', {
+                              date: formatRescheduleDateLabel(newDate),
+                              time: selectedNewSlotParts.startLabel,
+                              mins: reqDuration,
+                            })}
                           </span>
                         </div>
                       )}
@@ -910,21 +944,21 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                           type="button"
                           disabled={submitting}
                           onClick={goBackToChoose}
-                          className="w-full neu-btn min-h-[46px] py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
+                          className="w-full neu-btn min-h-[2.875rem] py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
                         >
-                          Back
+                          {t('patient.common.back')}
                         </button>
                         <button
                           type="submit"
                           disabled={submitting || !newDate || !newTime || isSameAsCurrent}
-                          className="w-full neu-btn-primary min-h-[46px] py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full neu-btn-primary min-h-[2.875rem] py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span>
                             {submitting
-                              ? 'Saving...'
+                              ? t('patient.cancelReschedule.savingBtn')
                               : selectedNewSlotParts
-                                ? `Confirm ${selectedNewSlotParts.startLabel}`
-                                : 'Pick a Time'}
+                                ? t('patient.cancelReschedule.confirmTimeBtn', { time: selectedNewSlotParts.startLabel })
+                                : t('patient.cancelReschedule.pickATimeBtn')}
                           </span>
                         </button>
                       </div>
@@ -946,10 +980,10 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                       <div className="rounded-2xl px-3.5 py-3 bg-primary/5 dark:bg-primary-400/10 border border-primary/20 dark:border-primary-400/20 flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-xs font-extrabold text-slate-900 dark:text-white leading-snug">
-                            Need a different time instead?
+                            {t('patient.cancelReschedule.differentTimeTitle')}
                           </p>
-                          <p className="text-[11px] font-medium text-tertiary dark:text-tertiary mt-0.5">
-                            Pick another arrival window without cancelling.
+                          <p className="text-[0.6875rem] font-medium text-tertiary dark:text-tertiary mt-0.5">
+                            {t('patient.cancelReschedule.differentTimeSub')}
                           </p>
                         </div>
                         <button
@@ -957,7 +991,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                           onClick={enterRescheduleMode}
                           className="neu-btn shrink-0 px-3 py-2 rounded-xl text-xs font-extrabold text-link dark:text-primary-400 inline-flex items-center gap-1 cursor-pointer active:scale-95 transition-transform"
                         >
-                          <span>Switch time</span>
+                          <span>{t('patient.cancelReschedule.switchTimeBtn')}</span>
                           <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -965,29 +999,29 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                       {/* Tactile Cancel Reasons Grid */}
                       <div className="space-y-2.5">
                         <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary block">
-                          Reason for cancelling
+                          {t('patient.cancelReschedule.reasonPrompt')}
                         </label>
 
                         <div className="grid grid-cols-2 gap-2">
-                          {CANCEL_REASONS.map((reason) => {
-                            const isSelected = selectedReason === reason;
+                          {CANCEL_REASON_OPTIONS.map((option) => {
+                            const isSelected = selectedReason === option.value;
                             return (
                               <button
-                                key={reason}
+                                key={option.value}
                                 type="button"
                                 onClick={() => {
-                                  setSelectedReason(reason);
-                                  if (reason !== 'Other') setCancelReason('');
+                                  setSelectedReason(option.value);
+                                  if (option.value !== 'Other') setCancelReason('');
                                 }}
-                                className={`min-h-[44px] px-3 py-2.5 rounded-xl text-left text-xs transition-all flex items-center justify-between gap-2 cursor-pointer active:scale-[0.98] ${
-                                  reason === 'Other' ? 'col-span-2' : ''
+                                className={`min-h-[2.75rem] px-3 py-2.5 rounded-xl text-left text-xs transition-all flex items-center justify-between gap-2 cursor-pointer active:scale-[0.98] ${
+                                  option.value === 'Other' ? 'col-span-2' : ''
                                 } ${
                                   isSelected
                                     ? 'bg-danger/10 dark:bg-red-500/15 border border-danger/55 dark:border-red-400/55 text-danger dark:text-red-300 font-extrabold ring-1 ring-danger/25'
                                     : 'neu-flat-sm text-slate-700 dark:text-slate-200 border border-white/75 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/20 font-semibold'
                                 }`}
                               >
-                                <span className="leading-snug">{reason}</span>
+                                <span className="leading-snug">{t(option.key)}</span>
                                 {isSelected && <Check className="w-3.5 h-3.5 shrink-0" />}
                               </button>
                             );
@@ -1006,7 +1040,7 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                               <textarea
                                 value={cancelReason}
                                 onChange={(e) => setCancelReason(e.target.value)}
-                                placeholder="Please specify your reason..."
+                                placeholder={t('patient.cancelReschedule.otherPlaceholder')}
                                 rows={2}
                                 className="w-full p-3 rounded-xl neu-inset border border-white/60 dark:border-white/10 text-xs text-slate-800 dark:text-slate-100 placeholder:text-tertiary outline-none focus:ring-2 focus:ring-danger/30"
                               />
@@ -1023,17 +1057,17 @@ const CancelRescheduleModal = ({ isOpen, onClose, request, onActionComplete }) =
                           type="button"
                           disabled={submitting}
                           onClick={goBackToChoose}
-                          className="w-full neu-btn min-h-[46px] py-3 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
+                          className="w-full neu-btn min-h-[2.875rem] py-3 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98] disabled:opacity-50"
                         >
-                          Keep Visit
+                          {t('patient.cancelReschedule.keepVisitBtn')}
                         </button>
                         <button
                           type="button"
                           onClick={handleCancel}
                           disabled={submitting || (!selectedReason && !cancelReason)}
-                          className="w-full min-h-[46px] py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-danger text-white shadow-md shadow-danger/25 hover:brightness-105 flex items-center justify-center cursor-pointer active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full min-h-[2.875rem] py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold bg-danger text-white shadow-md shadow-danger/25 hover:brightness-105 flex items-center justify-center cursor-pointer active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {submitting ? 'Cancelling...' : 'Confirm Cancellation'}
+                          {submitting ? t('patient.cancelReschedule.cancellingBtn') : t('patient.cancelReschedule.confirmCancelBtn')}
                         </button>
                       </div>
                     </div>

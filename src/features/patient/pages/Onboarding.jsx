@@ -1,11 +1,19 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, MapPin, RotateCcw } from 'lucide-react';
-import { Heart } from '@phosphor-icons/react';
+import {
+  Heart,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  SpinnerGap,
+  MapPin,
+  ArrowCounterClockwise,
+} from '@phosphor-icons/react';
 import { toLocalDateKey } from '@/lib/localDate';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { IMAGES } from '@/lib/images';
 import AddressAutocomplete from '@/features/tracking/components/AddressAutocomplete';
@@ -14,11 +22,10 @@ import {
   isCoordinateAddress,
   splitVisitAddress,
 } from '@/features/tracking/services/addressFormat';
-import { isValidPhPhone, normalizePhPhone, PHONE_ERROR } from '@/features/patient/utils/phone';
+import { isValidPhPhone, normalizePhPhone } from '@/features/patient/utils/phone';
 import {
   ACCESS_NEEDS,
   BLOOD_TYPES,
-  accessNeedLabel,
   normalizeAccessNeeds,
   toggleAccessNeed,
 } from '@/features/patient/utils/accessNeeds';
@@ -36,17 +43,17 @@ const FLUID = [0.22, 1, 0.36, 1];
 const TOTAL_STEPS = 5;
 const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const FIELD_ERRORS = {
-  phone: PHONE_ERROR,
-  fullName: 'Enter the name providers should use for you.',
-  emergencyContactName: "Enter your emergency contact's name.",
-  emergencyContactPhone: PHONE_ERROR,
-  emergencyContactSame: 'Emergency contact must be a different number from yours.',
-  coords: 'Place the pin on your home entrance before continuing.',
-  street: 'Enter your street and barangay.',
-  streetCoordinates: 'Enter a street and barangay instead of map coordinates.',
-  consent: 'Tick the consent box to save medical details, or clear those fields.',
-};
+const getFieldErrors = (t) => ({
+  phone: t('patient.phone.invalid'),
+  fullName: t('patient.onboarding.errFullNameRequired'),
+  emergencyContactName: t('patient.onboarding.errEmergencyNameRequired'),
+  emergencyContactPhone: t('patient.phone.invalid'),
+  emergencyContactSame: t('patient.onboarding.errEmergencyPhoneSame'),
+  coords: t('patient.onboarding.errCoordsRequired'),
+  street: t('patient.onboarding.errStreetRequired'),
+  streetCoordinates: t('patient.onboarding.errStreetCoordinates'),
+  consent: t('patient.onboarding.errConsentRequired'),
+});
 
 const FIELD_IDS = {
   fullName: 'onboard-name',
@@ -120,14 +127,15 @@ const clearDraft = (key) => {
   }
 };
 
-const formatReviewDate = (value) => {
+const formatReviewDate = (value, locale = 'en-PH') => {
   if (!value) return '';
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('en-PH', { day: 'numeric', month: 'short', year: 'numeric' });
+  return date.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
 function ReviewRow({ label, value, onEdit, error, children }) {
+  const { t } = useLanguage();
   return (
     <div className="px-4 py-3 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
@@ -142,10 +150,10 @@ function ReviewRow({ label, value, onEdit, error, children }) {
         <button
           type="button"
           onClick={onEdit}
-          aria-label={`Edit ${label}`}
+          aria-label={t('patient.onboarding.editLabelAria', { label })}
           className={`${smallActionClass} -mr-2 shrink-0`}
         >
-          Edit
+          {t('patient.common.edit')}
         </button>
       )}
     </div>
@@ -155,6 +163,8 @@ function ReviewRow({ label, value, onEdit, error, children }) {
 export default function Onboarding({ isPreview = false }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t, isTagalog } = useLanguage();
+  const locale = isTagalog ? 'tl-PH' : 'en-PH';
   const pickerRef = useRef(null);
   const mainRef = useRef(null);
   const reduceMotion = useReducedMotion();
@@ -205,7 +215,7 @@ export default function Onboarding({ isPreview = false }) {
   const [omitMedical, setOmitMedical] = useState(false);
 
   useEffect(() => {
-    if (draft) toast('Restored your saved progress');
+    if (draft) toast(t('patient.onboarding.restoredDraftToast'));
     // Restore notice is intentionally one-shot for the mounted flow.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -292,7 +302,7 @@ export default function Onboarding({ isPreview = false }) {
         if (mounted) {
           setLoadError(
             err?.message ||
-              'We could not load your saved details. Check your connection and try again.'
+              t('patient.onboarding.loadErrorBanner')
           );
         }
       } finally {
@@ -413,40 +423,41 @@ export default function Onboarding({ isPreview = false }) {
   };
 
   const validateCurrentStep = () => {
+    const fieldErrors = getFieldErrors(t);
     const nextErrors = {};
 
     if (step === 1) {
       const trimmedPhone = phone.trim();
       const trimmedEmergencyPhone = emergencyContactPhone.trim();
       if (!trimmedPhone) {
-        nextErrors.phone = 'Enter your mobile number.';
+        nextErrors.phone = t('patient.onboarding.errPhoneEmpty');
       } else if (!isValidPhPhone(trimmedPhone)) {
-        nextErrors.phone = FIELD_ERRORS.phone;
+        nextErrors.phone = fieldErrors.phone;
       }
       if (!emergencyContactName.trim()) {
-        nextErrors.emergencyContactName = FIELD_ERRORS.emergencyContactName;
+        nextErrors.emergencyContactName = fieldErrors.emergencyContactName;
       }
       if (!trimmedEmergencyPhone) {
-        nextErrors.emergencyContactPhone = 'Enter your emergency contact number.';
+        nextErrors.emergencyContactPhone = t('patient.onboarding.errEmergencyPhoneEmpty');
       } else if (!isValidPhPhone(trimmedEmergencyPhone)) {
-        nextErrors.emergencyContactPhone = FIELD_ERRORS.emergencyContactPhone;
+        nextErrors.emergencyContactPhone = fieldErrors.emergencyContactPhone;
       } else if (
         !nextErrors.phone &&
         normalizePhPhone(trimmedPhone) === normalizePhPhone(trimmedEmergencyPhone)
       ) {
-        nextErrors.emergencyContactPhone = FIELD_ERRORS.emergencyContactSame;
+        nextErrors.emergencyContactPhone = fieldErrors.emergencyContactSame;
       }
     }
 
     if (step === 2 && (!coords || coords.lat == null || coords.lng == null)) {
-      nextErrors.coords = FIELD_ERRORS.coords;
+      nextErrors.coords = fieldErrors.coords;
     }
 
     if (step === 3) {
       if (!baseAddress.trim()) {
-        nextErrors.street = FIELD_ERRORS.street;
+        nextErrors.street = fieldErrors.street;
       } else if (isCoordinateAddress(baseAddress)) {
-        nextErrors.street = FIELD_ERRORS.streetCoordinates;
+        nextErrors.street = fieldErrors.streetCoordinates;
       }
     }
 
@@ -460,24 +471,24 @@ export default function Onboarding({ isPreview = false }) {
           medicalHistory.trim()
       );
       if (hasMedicalDetails && !privacyConsent) {
-        nextErrors.consent = FIELD_ERRORS.consent;
+        nextErrors.consent = fieldErrors.consent;
       }
     }
 
     if (step === 5) {
       if (!isPreview && !fullName.trim()) {
-        nextErrors.fullName = FIELD_ERRORS.fullName;
+        nextErrors.fullName = fieldErrors.fullName;
       }
       // Re-run the same contact rules on the review screen: the name and numbers
       // shown there are what providers will use.
       if (!isValidPhPhone(phone.trim())) {
-        nextErrors.phone = FIELD_ERRORS.phone;
+        nextErrors.phone = fieldErrors.phone;
       }
       if (!isValidPhPhone(emergencyContactPhone.trim())) {
-        nextErrors.emergencyContactPhone = FIELD_ERRORS.emergencyContactPhone;
+        nextErrors.emergencyContactPhone = fieldErrors.emergencyContactPhone;
       }
       if (!privacyConsent && !omitMedical && (dateOfBirth || allergies.trim() || chronicConditions.trim() || medications.trim() || bloodType || medicalHistory.trim())) {
-        nextErrors.consent = FIELD_ERRORS.consent;
+        nextErrors.consent = fieldErrors.consent;
       }
     }
 
@@ -645,7 +656,7 @@ export default function Onboarding({ isPreview = false }) {
       return;
     }
     if (!user?.id) {
-      toast.error('Please sign in to save your profile.');
+      toast.error(t('patient.onboarding.errSignInRequired'));
       return;
     }
 
@@ -654,9 +665,9 @@ export default function Onboarding({ isPreview = false }) {
       await saveProfile({ skipMedical });
       clearDraft(draftKey);
       setCompleted(true);
-      toast.success('Profile setup complete');
+      toast.success(t('patient.onboarding.saveSuccessToast'));
     } catch (err) {
-      toast.error(err?.message || 'Could not save your setup details. Please try again.');
+      toast.error(err?.message || t('patient.onboarding.saveFallbackError'));
     } finally {
       setSaving(false);
     }
@@ -695,7 +706,7 @@ export default function Onboarding({ isPreview = false }) {
   if (loading) {
     return (
       <div className="min-h-[100dvh] bg-surface-page px-6 py-10">
-        <div className="mx-auto w-full max-w-xl space-y-6" aria-busy="true" aria-label="Loading your saved details">
+        <div className="mx-auto w-full max-w-xl space-y-6" aria-busy="true" aria-label={t('patient.onboarding.loadingSavedAria')}>
           <div className="h-4 w-24 rounded-full bg-surface-subtle animate-pulse" />
           <div className="h-9 w-3/4 rounded-xl bg-surface-subtle animate-pulse" />
           <div className="h-4 w-full rounded-lg bg-surface-subtle animate-pulse" />
@@ -722,16 +733,16 @@ export default function Onboarding({ isPreview = false }) {
           className="w-full max-w-md text-center space-y-5"
         >
           <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-            <CheckCircle2 className="w-7 h-7 text-link" />
+            <CheckCircle className="w-7 h-7 text-link" />
           </div>
           <div className="space-y-1.5">
             <h1 className="font-display text-2xl font-bold tracking-tight">
-              {isPreview ? 'Preview complete' : "You're all set"}
+              {isPreview ? t('patient.onboarding.donePreviewHeading') : t('patient.onboarding.doneRealHeading')}
             </h1>
             <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
               {isPreview
-                ? 'This was a preview of the onboarding flow. Nothing was saved.'
-                : 'Your home care profile is saved. Providers you book will use this address and pin for visits.'}
+                ? t('patient.onboarding.donePreviewBody')
+                : t('patient.onboarding.doneRealBody')}
             </p>
           </div>
           {isPreview ? (
@@ -740,8 +751,8 @@ export default function Onboarding({ isPreview = false }) {
               onClick={restartPreview}
               className="neu-btn-primary w-full py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" />
-              <span>Start over</span>
+              <ArrowCounterClockwise className="w-4 h-4" />
+              <span>{t('patient.onboarding.startOverBtn')}</span>
             </button>
           ) : (
             <button
@@ -749,7 +760,7 @@ export default function Onboarding({ isPreview = false }) {
               onClick={() => navigate('/patient/dashboard', { replace: true })}
               className="neu-btn-primary w-full py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
             >
-              <span>Go to dashboard</span>
+              <span>{t('patient.onboarding.goToDashboardBtn')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           )}
@@ -762,8 +773,8 @@ export default function Onboarding({ isPreview = false }) {
   const isContinueDisabled = saving;
 
   const emergencySummary = emergencyContactName.trim()
-    ? `${emergencyContactName.trim()} · ${emergencyContactPhone || 'No number'}`
-    : 'Not added';
+    ? `${emergencyContactName.trim()} · ${emergencyContactPhone || t('patient.onboarding.noNumber')}`
+    : t('patient.onboarding.notAdded');
 
   const addressSummary =
     formatFullVisitAddress({
@@ -772,21 +783,21 @@ export default function Onboarding({ isPreview = false }) {
       baseAddress: baseAddress.trim(),
     }) ||
     baseAddress.trim() ||
-    'Not set';
+    t('patient.onboarding.notSet');
 
   const accessSummary = accessNeeds.length
-    ? accessNeeds.map(accessNeedLabel).join(', ')
-    : 'None selected';
+    ? accessNeeds.map((val) => t(`patient.accessNeeds.${val}`)).join(', ')
+    : t('patient.onboarding.noneSelected');
 
   const healthItems = omitMedical
     ? []
     : [
-        dateOfBirth && { label: 'Date of birth', value: formatReviewDate(dateOfBirth) },
-        bloodType && bloodType !== 'Unknown' && { label: 'Blood type', value: bloodType },
-        allergies.trim() && { label: 'Allergies', value: allergies.trim() },
-        chronicConditions.trim() && { label: 'Conditions', value: chronicConditions.trim() },
-        medications.trim() && { label: 'Medications', value: medications.trim() },
-        medicalHistory.trim() && { label: 'Mobility notes', value: medicalHistory.trim() },
+        dateOfBirth && { label: t('patient.onboarding.healthDob'), value: formatReviewDate(dateOfBirth, locale) },
+        bloodType && bloodType !== 'Unknown' && { label: t('patient.onboarding.healthBloodType'), value: bloodType },
+        allergies.trim() && { label: t('patient.onboarding.healthAllergies'), value: allergies.trim() },
+        chronicConditions.trim() && { label: t('patient.onboarding.healthConditions'), value: chronicConditions.trim() },
+        medications.trim() && { label: t('patient.onboarding.healthMedications'), value: medications.trim() },
+        medicalHistory.trim() && { label: t('patient.onboarding.healthMobilityNotes'), value: medicalHistory.trim() },
       ].filter(Boolean);
 
   return (
@@ -820,7 +831,7 @@ export default function Onboarding({ isPreview = false }) {
                     className="inline-flex min-h-11 items-center gap-2 -ml-2 px-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>Back</span>
+                    <span>{t('patient.onboarding.backBtn')}</span>
                   </button>
                 ) : alreadyComplete ? (
                   <Link
@@ -828,12 +839,12 @@ export default function Onboarding({ isPreview = false }) {
                     className="inline-flex min-h-11 items-center gap-2 -ml-2 px-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    <span>Back to Dashboard</span>
+                    <span>{t('patient.onboarding.backToDashboard')}</span>
                   </Link>
                 ) : null}
               </div>
               <span className="shrink-0 text-xs font-semibold text-tertiary tabular-nums">
-                Step {step} of {TOTAL_STEPS}
+                {t('patient.onboarding.stepCounter', { step, total: TOTAL_STEPS })}
               </span>
             </header>
 
@@ -843,7 +854,7 @@ export default function Onboarding({ isPreview = false }) {
               aria-valuemin={1}
               aria-valuemax={TOTAL_STEPS}
               aria-valuenow={step}
-              aria-label={`Step ${step} of ${TOTAL_STEPS}`}
+              aria-label={t('patient.onboarding.stepCounter', { step, total: TOTAL_STEPS })}
               className="w-full h-0.5 bg-slate-200/70 dark:bg-slate-800 overflow-hidden"
             >
               <motion.div
@@ -868,14 +879,14 @@ export default function Onboarding({ isPreview = false }) {
                 className="mb-5 flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 dark:border-warning-dark/30 dark:bg-warning-darkSoft"
               >
                 <p className="text-sm font-medium text-warning dark:text-warning-dark">
-                  We could not load your saved details. You can keep filling the form, or try again.
+                  {t('patient.onboarding.loadErrorBanner')}
                 </p>
                 <button
                   type="button"
                   onClick={() => setReloadToken((token) => token + 1)}
                   className={`${smallActionClass} self-start -ml-2 text-warning dark:text-warning-dark`}
                 >
-                  Try again
+                  {t('patient.common.tryAgain')}
                 </button>
               </div>
             )}
@@ -898,18 +909,17 @@ export default function Onboarding({ isPreview = false }) {
                       id="onboard-step-1-heading"
                       className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
                     >
-                      How can providers reach you?
+                      {t('patient.onboarding.step1Title')}
                     </h1>
                     <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
-                      Used for visit coordination and emergencies. Only providers you book can see
-                      these numbers.
+                      {t('patient.onboarding.step1Subtitle')}
                     </p>
                   </div>
 
                   <div className="space-y-4 pt-2">
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-phone" className={labelClass}>
-                        Your mobile number
+                        {t('patient.onboarding.mobileLabel')}
                       </label>
                       <input
                         id="onboard-phone"
@@ -930,11 +940,11 @@ export default function Onboarding({ isPreview = false }) {
                         onBlur={() => {
                           if (isValidPhPhone(phone)) setPhone(normalizePhPhone(phone));
                         }}
-                        placeholder="0917 123 4567"
+                        placeholder={t('patient.onboarding.mobilePlaceholder')}
                         className={inputClass}
                       />
                       <p id="onboard-phone-help" className="text-sm text-tertiary dark:text-tertiary">
-                        PH mobile (09…) or landline (02…). We only use this for visit coordination.
+                        {t('patient.onboarding.mobileHelp')}
                       </p>
                       {errors.phone && (
                         <p id="onboard-phone-error" className={errorClass}>
@@ -947,12 +957,12 @@ export default function Onboarding({ isPreview = false }) {
 
                     <fieldset className="space-y-4">
                       <legend className="text-xs font-semibold uppercase tracking-wider text-tertiary">
-                        Primary emergency contact
+                        {t('patient.onboarding.emergencyLegend')}
                       </legend>
 
                       <div className="space-y-1.5">
                         <label htmlFor="onboard-emergency-name" className={labelClass}>
-                          Contact name
+                          {t('patient.onboarding.emergencyNameLabel')}
                         </label>
                         <input
                           id="onboard-emergency-name"
@@ -969,7 +979,7 @@ export default function Onboarding({ isPreview = false }) {
                             setEmergencyContactName(e.target.value);
                             clearError('emergencyContactName');
                           }}
-                          placeholder="Family member or guardian"
+                          placeholder={t('patient.onboarding.emergencyNamePlaceholder')}
                           className={inputClass}
                         />
                         {errors.emergencyContactName && (
@@ -981,7 +991,7 @@ export default function Onboarding({ isPreview = false }) {
 
                       <div className="space-y-1.5">
                         <label htmlFor="onboard-emergency-phone" className={labelClass}>
-                          Contact mobile number
+                          {t('patient.onboarding.emergencyPhoneLabel')}
                         </label>
                         <input
                           id="onboard-emergency-phone"
@@ -1004,7 +1014,7 @@ export default function Onboarding({ isPreview = false }) {
                               setEmergencyContactPhone(normalizePhPhone(emergencyContactPhone));
                             }
                           }}
-                          placeholder="0918 765 4321"
+                          placeholder={t('patient.onboarding.emergencyPhonePlaceholder')}
                           className={inputClass}
                         />
                         {errors.emergencyContactPhone && (
@@ -1036,11 +1046,10 @@ export default function Onboarding({ isPreview = false }) {
                       id="onboard-step-2-heading"
                       className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
                     >
-                      Pin your home entrance
+                      {t('patient.onboarding.step2Title')}
                     </h1>
                     <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
-                      Search your street, or drag the map until the pin sits exactly on the door providers
-                      should reach.
+                      {t('patient.onboarding.step2Subtitle')}
                     </p>
                   </div>
 
@@ -1052,14 +1061,14 @@ export default function Onboarding({ isPreview = false }) {
 
                     <Suspense
                       fallback={
-                        <div className="h-[260px] sm:h-[300px] w-full animate-pulse rounded-2xl bg-surface-subtle" />
+                        <div className="h-[16.25rem] sm:h-[18.75rem] w-full animate-pulse rounded-2xl bg-surface-subtle" />
                       }
                     >
                       <ModernLocationPicker
                         ref={pickerRef}
                         initial={coords}
                         onPinChange={handlePinChange}
-                        className="h-[260px] sm:h-[300px]"
+                        className="h-[16.25rem] sm:h-[18.75rem]"
                       />
                     </Suspense>
 
@@ -1068,13 +1077,13 @@ export default function Onboarding({ isPreview = false }) {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                           {baseAddress ||
-                            (coords ? 'Pin placed on the map' : 'Move the map to select your street')}
+                            (coords ? t('patient.onboarding.pinPlaced') : t('patient.onboarding.moveMapPrompt'))}
                         </p>
                         {coords && pinStatus !== 'resolved' && (
                           <p className="mt-0.5 text-xs text-tertiary">
                             {pinStatus === 'pending'
-                              ? 'Looking up this address…'
-                              : 'Address lookup unavailable. You can type the street in the next step.'}
+                              ? t('patient.onboarding.pinLookupPending')
+                              : t('patient.onboarding.pinLookupUnavailable')}
                           </p>
                         )}
                       </div>
@@ -1106,19 +1115,19 @@ export default function Onboarding({ isPreview = false }) {
                       id="onboard-step-3-heading"
                       className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
                     >
-                      Add address details
+                      {t('patient.onboarding.step3Title')}
                     </h1>
                     <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
-                      Saved to your profile so future home visits go to the right door.
+                      {t('patient.onboarding.step3Subtitle')}
                     </p>
                   </div>
 
                   <div className="space-y-4 pt-1">
                     <div className="flex items-center justify-between gap-3 border-b border-surface-border pb-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-tertiary">Pinned location</p>
+                        <p className="text-xs font-semibold text-tertiary">{t('patient.onboarding.pinnedLocationLabel')}</p>
                         <p className="mt-0.5 truncate text-sm font-medium text-slate-800 dark:text-slate-200">
-                          {baseAddress || 'Location pinned on map'}
+                          {baseAddress || t('patient.onboarding.locationPinnedDefault')}
                         </p>
                       </div>
                       <button
@@ -1126,13 +1135,13 @@ export default function Onboarding({ isPreview = false }) {
                         onClick={() => goToStep(2)}
                         className={`${smallActionClass} -mr-2 shrink-0`}
                       >
-                        Adjust pin
+                        {t('patient.onboarding.adjustPinBtn')}
                       </button>
                     </div>
 
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-street" className={labelClass}>
-                        Street &amp; barangay
+                        {t('patient.onboarding.streetLabel')}
                       </label>
                       <input
                         id="onboard-street"
@@ -1146,7 +1155,7 @@ export default function Onboarding({ isPreview = false }) {
                           setBaseAddress(e.target.value);
                           clearError('street');
                         }}
-                        placeholder="e.g. Sampaguita St., Brgy. Tunasan, Muntinlupa City"
+                        placeholder={t('patient.onboarding.streetPlaceholder')}
                         className={inputClass}
                       />
                       {errors.street && (
@@ -1159,28 +1168,28 @@ export default function Onboarding({ isPreview = false }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       <div className="space-y-1.5">
                         <label htmlFor="onboard-unit" className={labelClass}>
-                          House / unit / lot no.
+                          {t('patient.onboarding.unitLabel')}
                         </label>
                         <input
                           id="onboard-unit"
                           type="text"
                           value={unitFloor}
                           onChange={(e) => setUnitFloor(e.target.value)}
-                          placeholder="e.g. Block 14 Lot 8"
+                          placeholder={t('patient.onboarding.unitPlaceholder')}
                           className={inputClass}
                         />
                       </div>
 
                       <div className="space-y-1.5">
                         <label htmlFor="onboard-subdivision" className={labelClass}>
-                          Subdivision or village
+                          {t('patient.onboarding.subdivisionLabel')}
                         </label>
                         <input
                           id="onboard-subdivision"
                           type="text"
                           value={subdivisionGate}
                           onChange={(e) => setSubdivisionGate(e.target.value)}
-                          placeholder="e.g. Victoria Homes"
+                          placeholder={t('patient.onboarding.subdivisionPlaceholder')}
                           className={inputClass}
                         />
                       </div>
@@ -1188,14 +1197,14 @@ export default function Onboarding({ isPreview = false }) {
 
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-instructions" className={labelClass}>
-                        Gate or landmark notes (optional)
+                        {t('patient.onboarding.gateLabel')}
                       </label>
                       <textarea
                         id="onboard-instructions"
                         rows={2}
                         value={arrivalInstructions}
                         onChange={(e) => setArrivalInstructions(e.target.value)}
-                        placeholder="e.g. White gate near the chapel, ring doorbell on the right"
+                        placeholder={t('patient.onboarding.gatePlaceholder')}
                         className={textareaClass}
                       />
                     </div>
@@ -1204,9 +1213,9 @@ export default function Onboarding({ isPreview = false }) {
 
                     <fieldset className="space-y-2">
                       <legend className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Access needs at home
+                        {t('patient.onboarding.accessNeedsLegend')}
                         <span className="ml-1.5 font-normal text-tertiary">
-                          Optional · helps providers prepare
+                          {t('patient.onboarding.accessNeedsOptional')}
                         </span>
                       </legend>
                       <div className="flex flex-wrap gap-2">
@@ -1224,7 +1233,7 @@ export default function Onboarding({ isPreview = false }) {
                                   : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
                               }`}
                             >
-                              {option.label}
+                              {t(`patient.accessNeeds.${option.value}`)}
                             </button>
                           );
                         })}
@@ -1248,17 +1257,16 @@ export default function Onboarding({ isPreview = false }) {
                 >
                   <div className="space-y-1.5">
                     <p className="text-xs font-semibold uppercase tracking-widest text-link">
-                      Optional
+                      {t('patient.onboarding.step4OptionalTag')}
                     </p>
                     <h1
                       id="onboard-step-4-heading"
                       className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
                     >
-                      Health basics
+                      {t('patient.onboarding.step4Title')}
                     </h1>
                     <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
-                      Helps your care provider prepare before arriving. Skip anything you would rather discuss
-                      in person — you can update this anytime.
+                      {t('patient.onboarding.step4Subtitle')}
                     </p>
                   </div>
 
@@ -1266,7 +1274,7 @@ export default function Onboarding({ isPreview = false }) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       <div className="space-y-1.5">
                         <label htmlFor="onboard-dob" className={labelClass}>
-                          Date of birth
+                          {t('patient.onboarding.dobLabel')}
                         </label>
                         <input
                           id="onboard-dob"
@@ -1284,7 +1292,7 @@ export default function Onboarding({ isPreview = false }) {
 
                       <div className="space-y-1.5">
                         <label htmlFor="onboard-blood-type" className={labelClass}>
-                          Blood type
+                          {t('patient.onboarding.bloodTypeLabel')}
                         </label>
                         <select
                           id="onboard-blood-type"
@@ -1295,10 +1303,10 @@ export default function Onboarding({ isPreview = false }) {
                           }}
                           className={`${inputClass} cursor-pointer`}
                         >
-                          <option value="">Not sure</option>
+                          <option value="">{t('patient.onboarding.notSureOption')}</option>
                           {BLOOD_TYPES.map((type) => (
                             <option key={type} value={type}>
-                              {type}
+                              {type === 'Unknown' ? t('patient.accessNeeds.unknownBloodType') : type}
                             </option>
                           ))}
                         </select>
@@ -1307,7 +1315,7 @@ export default function Onboarding({ isPreview = false }) {
 
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-allergies" className={labelClass}>
-                        Known allergies
+                        {t('patient.onboarding.allergiesLabel')}
                       </label>
                       <input
                         id="onboard-allergies"
@@ -1317,14 +1325,14 @@ export default function Onboarding({ isPreview = false }) {
                           setAllergies(e.target.value);
                           clearError('consent');
                         }}
-                        placeholder="e.g. Penicillin, Aspirin, or leave blank"
+                        placeholder={t('patient.onboarding.allergiesPlaceholder')}
                         className={inputClass}
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-conditions" className={labelClass}>
-                        Chronic conditions
+                        {t('patient.onboarding.conditionsLabel')}
                       </label>
                       <input
                         id="onboard-conditions"
@@ -1334,14 +1342,14 @@ export default function Onboarding({ isPreview = false }) {
                           setChronicConditions(e.target.value);
                           clearError('consent');
                         }}
-                        placeholder="e.g. Hypertension, Type 2 diabetes"
+                        placeholder={t('patient.onboarding.conditionsPlaceholder')}
                         className={inputClass}
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-medications" className={labelClass}>
-                        Current medications
+                        {t('patient.onboarding.medicationsLabel')}
                       </label>
                       <input
                         id="onboard-medications"
@@ -1351,14 +1359,14 @@ export default function Onboarding({ isPreview = false }) {
                           setMedications(e.target.value);
                           clearError('consent');
                         }}
-                        placeholder="e.g. Amlodipine 5mg once daily"
+                        placeholder={t('patient.onboarding.medicationsPlaceholder')}
                         className={inputClass}
                       />
                     </div>
 
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-history" className={labelClass}>
-                        Medical or mobility notes
+                        {t('patient.onboarding.historyLabel')}
                       </label>
                       <textarea
                         id="onboard-history"
@@ -1368,7 +1376,7 @@ export default function Onboarding({ isPreview = false }) {
                           setMedicalHistory(e.target.value);
                           clearError('consent');
                         }}
-                        placeholder="e.g. Post-stroke recovery, needs wheelchair assistance"
+                        placeholder={t('patient.onboarding.historyPlaceholder')}
                         className={textareaClass}
                       />
                     </div>
@@ -1388,8 +1396,7 @@ export default function Onboarding({ isPreview = false }) {
                           className="mt-0.5 h-5 w-5 shrink-0 rounded border-field accent-[var(--primary)]"
                         />
                         <span className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
-                          I agree to MuntiCares storing these medical details. Only providers I approve during a
-                          visit can see them, and I can change this anytime in Privacy &amp; Consent.
+                          {t('patient.onboarding.consentCheckbox')}
                         </span>
                       </label>
                       {errors.consent && (
@@ -1419,17 +1426,17 @@ export default function Onboarding({ isPreview = false }) {
                       id="onboard-step-5-heading"
                       className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
                     >
-                      Check your details
+                      {t('patient.onboarding.step5Title')}
                     </h1>
                     <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
-                      This is what your care provider will see and use on the day of the visit.
+                      {t('patient.onboarding.step5Subtitle')}
                     </p>
                   </div>
 
                   <div className="space-y-3 pt-1">
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-name" className={labelClass}>
-                        Name providers will use
+                        {t('patient.onboarding.preferredNameLabel')}
                       </label>
                       <input
                         id="onboard-name"
@@ -1444,11 +1451,11 @@ export default function Onboarding({ isPreview = false }) {
                           setFullName(e.target.value);
                           clearError('fullName');
                         }}
-                        placeholder="e.g. Maria Santos"
+                        placeholder={t('patient.onboarding.preferredNamePlaceholder')}
                         className={inputClass}
                       />
                       <p id="onboard-name-help" className="text-sm text-tertiary dark:text-tertiary">
-                        Changing this also updates your account name.
+                        {t('patient.onboarding.preferredNameHelp')}
                       </p>
                       {errors.fullName && (
                         <p id="onboard-name-error" className={errorClass}>
@@ -1459,32 +1466,32 @@ export default function Onboarding({ isPreview = false }) {
 
                     <div className="overflow-hidden rounded-2xl border border-surface-border divide-y divide-surface-border">
                       <ReviewRow
-                        label="Mobile number"
-                        value={phone || 'Not added'}
+                        label={t('patient.onboarding.reviewPhoneLabel')}
+                        value={phone || t('patient.onboarding.notAdded')}
                         onEdit={() => editFromReview(1)}
                         error={errors.phone}
                       />
 
                       <ReviewRow
-                        label="Emergency contact"
+                        label={t('patient.onboarding.reviewEmergencyLabel')}
                         value={emergencySummary}
                         onEdit={() => editFromReview(1)}
                         error={errors.emergencyContactPhone}
                       />
 
                       <ReviewRow
-                        label="Home address"
+                        label={t('patient.onboarding.reviewAddressLabel')}
                         value={addressSummary}
                         onEdit={() => editFromReview(3)}
                         error={errors.street || errors.coords}
                       >
                         {coords && (
                           <div className="mt-2 overflow-hidden rounded-xl border border-surface-border">
-                            <Suspense fallback={<div className="h-[160px] w-full bg-surface-subtle" />}>
+                            <Suspense fallback={<div className="h-[10rem] w-full bg-surface-subtle" />}>
                               <ModernLocationPicker
                                 readOnly
                                 initial={coords}
-                                className="h-[160px]"
+                                className="h-[10rem]"
                               />
                             </Suspense>
                           </div>
@@ -1492,27 +1499,27 @@ export default function Onboarding({ isPreview = false }) {
                       </ReviewRow>
 
                       <ReviewRow
-                        label="Gate & landmark notes"
-                        value={arrivalInstructions.trim() || 'None added'}
+                        label={t('patient.onboarding.reviewGateLabel')}
+                        value={arrivalInstructions.trim() || t('patient.onboarding.noneAdded')}
                         onEdit={() => editFromReview(3)}
                       />
 
                       <ReviewRow
-                        label="Access needs"
+                        label={t('patient.onboarding.reviewAccessLabel')}
                         value={accessSummary}
                         onEdit={() => editFromReview(3)}
                       />
 
                       <div className="px-4 py-3">
                         <div className="flex items-start justify-between gap-3">
-                          <p className="text-xs font-semibold text-tertiary">Health basics</p>
+                          <p className="text-xs font-semibold text-tertiary">{t('patient.onboarding.reviewHealthLabel')}</p>
                           <button
                             type="button"
                             onClick={() => editFromReview(4)}
-                            aria-label="Edit health basics"
+                            aria-label={t('patient.onboarding.editHealthAria')}
                             className={`${smallActionClass} -mr-2 shrink-0`}
                           >
-                            Edit
+                            {t('patient.common.edit')}
                           </button>
                         </div>
                         {healthItems.length ? (
@@ -1529,8 +1536,8 @@ export default function Onboarding({ isPreview = false }) {
                         ) : (
                           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                             {omitMedical
-                              ? 'Skipped. Nothing will be saved.'
-                              : 'Nothing added. Nothing will be saved.'}
+                              ? t('patient.onboarding.skippedNotSaved')
+                              : t('patient.onboarding.nothingAddedNotSaved')}
                           </p>
                         )}
                       </div>
@@ -1541,20 +1548,19 @@ export default function Onboarding({ isPreview = false }) {
                         {omitMedical || !healthItems.length ? (
                           <>
                             <span className="font-bold text-slate-900 dark:text-white">
-                              No medical details will be saved.
+                              {t('patient.onboarding.noMedicalSavedBold')}
                             </span>{' '}
-                            You can add them later from your profile whenever you need to.
+                            {t('patient.onboarding.addLaterNote')}
                           </>
                         ) : privacyConsent ? (
                           <>
-                            <span className="font-bold text-slate-900 dark:text-white">You consented to storing these details.</span>{' '}
-                            They are saved to your MuntiCares record and shown only to providers you approve during a
-                            visit. You can revoke this in Privacy &amp; Consent.
+                            <span className="font-bold text-slate-900 dark:text-white">{t('patient.onboarding.consentedBold')}</span>{' '}
+                            {t('patient.onboarding.consentedBody')}
                           </>
                         ) : (
                           <>
-                            <span className="font-bold text-slate-900 dark:text-white">No medical details will be saved</span>{' '}
-                            because consent is unchecked. You can add them later from your profile.
+                            <span className="font-bold text-slate-900 dark:text-white">{t('patient.onboarding.uncheckedConsentBold')}</span>{' '}
+                            {t('patient.onboarding.uncheckedConsentBody')}
                           </>
                         )}
                       </p>
@@ -1563,7 +1569,7 @@ export default function Onboarding({ isPreview = false }) {
 
                     {isPreview && (
                       <p className="text-sm text-tertiary dark:text-tertiary">
-                        This is a preview — nothing is saved.
+                        {t('patient.onboarding.previewNotice')}
                       </p>
                     )}
                   </div>
@@ -1583,16 +1589,16 @@ export default function Onboarding({ isPreview = false }) {
               >
                 {saving ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Saving…</span>
+                    <SpinnerGap className="w-4 h-4 animate-spin" />
+                    <span>{t('patient.onboarding.savingBtn')}</span>
                   </>
                 ) : step < TOTAL_STEPS ? (
                   <>
-                    <span>Continue</span>
+                    <span>{t('patient.onboarding.continueBtn')}</span>
                     <ArrowRight className="w-4 h-4" />
                   </>
                 ) : (
-                  <span>Complete setup</span>
+                  <span>{t('patient.onboarding.completeSetupBtn')}</span>
                 )}
               </motion.button>
 
@@ -1606,7 +1612,7 @@ export default function Onboarding({ isPreview = false }) {
                   disabled={saving}
                   className="inline-flex min-h-11 w-full items-center justify-center text-sm font-semibold text-tertiary transition-colors hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
                 >
-                  Skip health details
+                  {t('patient.onboarding.skipHealthBtn')}
                 </button>
               )}
             </div>
@@ -1636,7 +1642,7 @@ export default function Onboarding({ isPreview = false }) {
         {/* Top Brand Wordmark */}
         <div className="relative z-10 flex items-center gap-2.5">
           <div className="neu-flat-sm p-2 rounded-xl">
-            <Heart size={20} weight="fill" className="text-link fill-primary" />
+            <Heart weight="fill" className="w-5 h-5 text-link fill-primary" aria-hidden="true" />
           </div>
           <span className="font-display text-xl font-black text-link tracking-tight">
             MuntiCares
@@ -1646,20 +1652,20 @@ export default function Onboarding({ isPreview = false }) {
         {/* Center Hero Typography */}
         <div className="relative z-10 my-auto max-w-lg space-y-6">
           <h2 className="font-display text-4xl xl:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight leading-[1.12]">
-            Quality home care{' '}
+            {t('patient.onboarding.heroHeadline1')}{' '}
             <br />
-            right at your{' '}
-            <span className="text-primary dark:text-primary-400">doorstep</span>
+            {t('patient.onboarding.heroHeadline2')}{' '}
+            <span className="text-primary dark:text-primary-400">{t('patient.onboarding.heroHeadlineAccent')}</span>
           </h2>
 
           <p className="text-base xl:text-lg font-medium text-slate-700 dark:text-slate-200 leading-relaxed dark:drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)]">
-            Connecting Muntinlupa City residents with trusted, verified home care providers — fast, secure, and patient-first.
+            {t('patient.onboarding.heroSubtext')}
           </p>
         </div>
 
         {/* Bottom Subtle Caption */}
         <div className="relative z-10 text-xs font-medium text-tertiary dark:text-tertiary">
-          <span>Muntinlupa City Home Care Network</span>
+          <span>{t('patient.onboarding.heroFooter')}</span>
         </div>
       </aside>
     </div>

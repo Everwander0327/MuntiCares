@@ -4,14 +4,16 @@ import DashboardLayout from '@/layouts/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { initialsAvatar } from '@/lib/avatar';
-import { MessageCircle, Search, X } from 'lucide-react';
+import { ChatCircle, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
 import { useLocation } from 'react-router-dom';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const PatientMessages = () => {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const location = useLocation();
 
   const [view, setView] = useState('list');
@@ -23,7 +25,7 @@ const PatientMessages = () => {
     user
       ? {
           id: user.id,
-          name: user.full_name || 'Patient',
+          name: user.full_name || t('patient.messages.patientFallback'),
           email: user.email,
           avatar_url: user.avatar_url || '',
         }
@@ -46,7 +48,7 @@ const PatientMessages = () => {
         ? prev
         : {
             id: user.id,
-            name: user.full_name || 'Patient',
+            name: user.full_name || t('patient.messages.patientFallback'),
             email: user.email,
             avatar_url: user.avatar_url || '',
           }
@@ -61,7 +63,7 @@ const PatientMessages = () => {
         setCurrentUserData((prev) => {
           const next = {
             id: user.id,
-            name: data.full_name || user.full_name || 'Patient',
+            name: data.full_name || user.full_name || t('patient.messages.patientFallback'),
             email: data.email || user.email,
             avatar_url: data.avatar_url || user.avatar_url || '',
           };
@@ -77,14 +79,14 @@ const PatientMessages = () => {
           return next;
         });
       });
-  }, [user]);
+  }, [user, t]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const targetId = params.get('provider') || params.get('partner') || params.get('user');
     if (targetId && currentUserData) {
       const partnerName = params.get('name') || undefined;
-      const initialName = partnerName || 'Provider';
+      const initialName = partnerName || t('patient.messages.providerFallback');
       setSelectedPartner({
         id: targetId,
         name: initialName,
@@ -96,7 +98,7 @@ const PatientMessages = () => {
         .eq('id', targetId)
         .single()
         .then(({ data: partData }) => {
-          const resolvedName = partData?.full_name || partnerName || 'Provider';
+          const resolvedName = partData?.full_name || partnerName || t('patient.messages.providerFallback');
           setSelectedPartner({
             id: targetId,
             name: resolvedName,
@@ -127,7 +129,7 @@ const PatientMessages = () => {
       }
       window.history.replaceState({}, '', location.pathname);
     }
-  }, [location.search, currentUserData, location.pathname]);
+  }, [location.search, currentUserData, location.pathname, t]);
 
   useBodyScrollLock(view === 'chat' && !isDesktop);
 
@@ -151,34 +153,34 @@ const PatientMessages = () => {
         {/* ================= UNIFIED MESSENGER CONTAINER (OPTION 1: FOCUSED CLINICAL INBOX) ================= */}
         <div className="flex-1 neu-flat rounded-2xl overflow-hidden flex flex-col lg:flex-row h-full max-h-full min-h-0 border border-slate-200/80 dark:border-white/10 shadow-sm w-full">
           {/* Threads List Pane (Full width on mobile, 320px-360px on desktop) */}
-          <div className="w-full lg:w-80 xl:w-[360px] border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-white/10 flex flex-col h-full bg-surface-shell/40 shrink-0 select-text">
+          <div className="w-full lg:w-80 xl:w-[22.5rem] border-b lg:border-b-0 lg:border-r border-slate-200/80 dark:border-white/10 flex flex-col h-full bg-surface-shell/40 shrink-0 select-text">
             <div className="p-4 border-b border-slate-200/80 dark:border-white/10 space-y-3 shrink-0">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <h1 className="font-display font-black text-xl sm:text-2xl text-slate-900 dark:text-white leading-tight">
-                    Messages
+                    {t('patient.messages.title')}
                   </h1>
                   <span className="text-2xs font-extrabold uppercase tracking-wider text-link block">
-                    Direct Communication
+                    {t('patient.messages.subtitle')}
                   </span>
                 </div>
               </div>
               <div className="relative flex items-center">
                 <input
                   type="text"
-                  aria-label="Search conversations"
-                  placeholder="Search provider or message..."
+                  aria-label={t('patient.messages.searchLabel')}
+                  placeholder={t('patient.messages.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full neu-inset rounded-xl pl-9 pr-8 h-10 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none placeholder:text-tertiary"
                 />
-                <Search className="w-4 h-4 text-primary absolute left-3 z-10 pointer-events-none shrink-0" />
+                <MagnifyingGlass className="w-4 h-4 text-primary absolute left-3 z-10 pointer-events-none shrink-0" />
                 {searchTerm && (
                   <button
                     type="button"
                     onClick={() => setSearchTerm('')}
                     className="absolute right-2.5 z-10 text-tertiary hover:text-danger p-1 rounded-lg cursor-pointer"
-                    title="Clear search"
+                    title={t('patient.messages.clearSearch')}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -209,11 +211,11 @@ const PatientMessages = () => {
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-tertiary">
                   <div className="neu-flat w-14 h-14 rounded-2xl flex items-center justify-center mb-3 text-link">
-                    <MessageCircle className="w-7 h-7" />
+                    <ChatCircle className="w-7 h-7" />
                   </div>
-                  <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">Select a conversation</h3>
+                  <h3 className="text-base font-extrabold text-slate-800 dark:text-slate-100">{t('patient.messages.selectTitle')}</h3>
                   <p className="text-xs text-tertiary mt-1 max-w-xs">
-                    Choose a provider from your clinical inbox on the left to start or continue a direct consultation.
+                    {t('patient.messages.selectMessage')}
                   </p>
                 </div>
               )

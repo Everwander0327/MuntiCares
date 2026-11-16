@@ -1,3 +1,28 @@
+const SOUND_STORAGE_KEY = 'mc_sound_enabled';
+
+export const isSoundEnabled = () => {
+  try {
+    if (typeof localStorage === 'undefined') return true;
+    const raw = localStorage.getItem(SOUND_STORAGE_KEY);
+    return raw !== 'false';
+  } catch {
+    return true;
+  }
+};
+
+export const setSoundEnabled = (enabled) => {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(SOUND_STORAGE_KEY, enabled ? 'true' : 'false');
+    }
+    if (!enabled) {
+      stopRingtone();
+    }
+  } catch {
+    // ignore
+  }
+};
+
 let audioCtx = null;
 let unlocked = false;
 let ringtoneInterval = null;
@@ -39,6 +64,7 @@ const scheduleRing = (time) => {
 };
 
 export const playRingtone = () => {
+  if (!isSoundEnabled()) return;
   try {
     if (!audioCtx) unlockAudio();
     if (audioCtx?.state === 'suspended') audioCtx.resume();
@@ -87,6 +113,7 @@ export const stopRingtone = () => {
  * Satisfying Apple-like / Dynamic Island pop chime for toasts
  */
 export const playToastSound = (type = 'success') => {
+  if (!isSoundEnabled()) return;
   try {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();

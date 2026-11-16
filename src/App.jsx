@@ -7,6 +7,8 @@ import { unlockAudio } from '@/lib/audio';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { CallProvider } from '@/contexts/CallContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { isPortalPath } from '@/i18n';
 import { IncomingCallOverlay } from '@/features/chat';
 import { useCallPushNotifications } from '@/lib/pushNotifications';
 import SeoManager from '@/components/SeoManager';
@@ -49,12 +51,20 @@ const AdminProviders = lazy(() => import('@/features/admin/pages/Providers'));
 const AdminRequests = lazy(() => import('@/features/admin/pages/Requests'));
 const AdminProfile = lazy(() => import('@/features/admin/pages/Profile'));
 const AdminAnnouncements = lazy(() => import('@/features/admin/pages/Announcements'));
+const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'));
 
 function AppContent() {
   const location = useLocation();
 
   const auth = useAuth();
   const user = auth?.user;
+  const { language } = useLanguage();
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = isPortalPath(location.pathname) ? language : 'en';
+    }
+  }, [location.pathname, language]);
 
   useCallPushNotifications(user);
 
@@ -109,6 +119,7 @@ function AppContent() {
               <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientMessages /></Suspense></ErrorBoundary>} />
               <Route path="consent" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientConsent /></Suspense></ErrorBoundary>} />
               <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientProfile /></Suspense></ErrorBoundary>} />
+              <Route path="settings" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><SettingsPage /></Suspense></ErrorBoundary>} />
             </Route>
           </Route>
 
@@ -122,6 +133,7 @@ function AppContent() {
               <Route path="schedule" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderSchedule /></Suspense></ErrorBoundary>} />
               <Route path="messages" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderMessages /></Suspense></ErrorBoundary>} />
               <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderProfile /></Suspense></ErrorBoundary>} />
+              <Route path="settings" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><SettingsPage /></Suspense></ErrorBoundary>} />
             </Route>
           </Route>
 
@@ -134,6 +146,7 @@ function AppContent() {
               <Route path="requests" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminRequests /></Suspense></ErrorBoundary>} />
               <Route path="profile" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminProfile /></Suspense></ErrorBoundary>} />
               <Route path="announcements" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><AdminAnnouncements /></Suspense></ErrorBoundary>} />
+              <Route path="settings" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><SettingsPage /></Suspense></ErrorBoundary>} />
             </Route>
           </Route>
         </Routes>

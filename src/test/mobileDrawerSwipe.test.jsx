@@ -176,7 +176,7 @@ describe('Mobile bottom drawers: zero mobile X close buttons & swipe-down dismis
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('ProfileConfirmDialog and ProfileAddressModal hide X on mobile (hidden sm:flex) and close on downward drag', () => {
+  it('ProfileConfirmDialog and ProfileAddressModal have no top-right X close button and close on downward drag', () => {
     const onCancel = vi.fn();
     const { unmount } = render(
       <ProfileConfirmDialog
@@ -188,9 +188,7 @@ describe('Mobile bottom drawers: zero mobile X close buttons & swipe-down dismis
       />,
     );
 
-    const confirmClose = screen.getByRole('button', { name: /Close confirmation dialog/i });
-    expect(confirmClose.className).toContain('hidden');
-    expect(confirmClose.className).toContain('sm:flex');
+    expect(screen.queryByRole('button', { name: /Close confirmation dialog/i })).not.toBeInTheDocument();
 
     act(() => {
       dragState.latestOnDragEnd?.({}, { offset: { y: 110 }, velocity: { y: 0 } });
@@ -207,9 +205,7 @@ describe('Mobile bottom drawers: zero mobile X close buttons & swipe-down dismis
       />,
     );
 
-    const addressClose = screen.getByRole('button', { name: /Close address editor/i });
-    expect(addressClose.className).toContain('hidden');
-    expect(addressClose.className).toContain('sm:flex');
+    expect(screen.queryByRole('button', { name: /Close address editor/i })).not.toBeInTheDocument();
 
     act(() => {
       dragState.latestOnDragEnd?.({}, { offset: { y: 0 }, velocity: { y: 450 } });
@@ -217,7 +213,7 @@ describe('Mobile bottom drawers: zero mobile X close buttons & swipe-down dismis
     expect(onCloseAddress).toHaveBeenCalledTimes(1);
   });
 
-  it('SheetContent (side=bottom) hides Close X on mobile and dismisses on downward touch slide', () => {
+  it('SheetContent (side=bottom) renders no visible Close X button and dismisses on downward touch slide', () => {
     function BottomSheetHarness() {
       const [open, setOpen] = useState(true);
       return (
@@ -233,9 +229,7 @@ describe('Mobile bottom drawers: zero mobile X close buttons & swipe-down dismis
 
     render(<BottomSheetHarness />);
     const sheet = screen.getByTestId('bottom-sheet');
-    const closeBtn = screen.getByRole('button', { name: /^Close$/i });
-    expect(closeBtn.className).toContain('hidden');
-    expect(closeBtn.className).toContain('sm:flex');
+    expect(screen.queryByRole('button', { name: /^Close$/i })).not.toBeInTheDocument();
 
     // Small downward movement (< 75px) does NOT close the drawer
     act(() => {

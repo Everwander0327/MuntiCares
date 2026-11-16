@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import {
-  Home,
-  Loader2,
-  AlertTriangle,
-  MapPinned,
-  Minimize2,
-  Maximize2,
-  MessageSquare,
+  House,
+  SpinnerGap,
+  Warning,
+  MapPinLine,
+  ArrowsIn,
+  ArrowsOut,
+  ChatText,
   Clock,
-  Route,
+  Path,
   MapPin,
-} from 'lucide-react';
+} from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import {
   TRACKING_STATUS,
@@ -80,6 +81,9 @@ export default function ProviderTrackingManager() {
 }
 
 function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
+  const { language, t, translateService } = useLanguage();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [fix, setFix] = useState(null);
   const [destination, setDestination] = useState(
     visit.dest_lat != null
@@ -194,12 +198,12 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
             setNear(true);
             setView('map');
             setMinimized(false);
-            toast.success("You're near the patient's address. Tap \"Arrived\" when you're there.", { duration: 6000 });
+            toast.success(tRef.current('tracking.provider.nearToast'), { duration: 6000 });
           },
         });
         if (cancelled) session.current?.stop();
       } catch (err) {
-        if (!cancelled) setSyncError(err?.message || 'Unable to start live tracking.');
+        if (!cancelled) setSyncError(err?.message || tRef.current('tracking.provider.unableStart'));
       }
     })();
 
@@ -240,7 +244,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
     if (!override) {
       const fixAge = fix?.timestamp ? Date.now() - fix.timestamp : null;
       if (!fix || fix.degraded || fixAge == null || fixAge >= TRACKING_STALE_MS) {
-        toast.error('Waiting for a fresh, precise GPS fix before marking arrived.');
+        toast.error(t('tracking.provider.needFreshGps'));
         return;
       }
     }
@@ -253,16 +257,16 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
       );
       if (res?.ok) {
         setOverrideOpen(false);
-        toast.success(res.override ? 'Arrived — override recorded.' : 'Marked as arrived!');
+        toast.success(res.override ? t('tracking.provider.arrivedOverride') : t('tracking.provider.markedArrived'));
         try {
           await session.current?.stop('arrived');
         } catch { /* ignore */ }
         onArrived?.();
       } else {
-        toast.error(formatArrivalFailure(res));
+        toast.error(formatArrivalFailure(res, language));
       }
     } catch (err) {
-      toast.error(err?.message || 'Failed to mark arrived.');
+      toast.error(err?.message || t('tracking.provider.failedArrived'));
     } finally {
       setArriving(false);
     }
@@ -275,38 +279,44 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   const ageS = fix?.timestamp ? Math.max(0, Math.round((now - fix.timestamp) / 1000)) : null;
   const fixFresh = ageS != null && ageS < STALE_AFTER_S;
   const stale = Boolean(fix) && !fixFresh;
-  const statusMeta = getProviderStatus({ fix, error, stale });
-  const freshness = formatFreshness(ageS);
+  const statusMeta = getProviderStatus({ fix, error, stale, language });
+  const freshness = formatFreshness(ageS, language);
   const accuracy = formatAccuracy(fix?.accuracy);
   const preciseFix = Boolean(fix) && !fix.degraded && fixFresh;
-  const fixQuality = !fix ? 'No GPS fix' : stale ? 'Last known fix' : fix.degraded ? 'Approximate GPS' : 'Precise GPS';
+  const fixQuality = !fix
+    ? t('tracking.provider.fixNone')
+    : stale
+      ? t('tracking.provider.fixLast')
+      : fix.degraded
+        ? t('tracking.provider.fixApprox')
+        : t('tracking.provider.fixPrecise');
 
   // Redesign: arrival stays locked until a fresh, precise fix AND within 50 m.
   const withinArrival = near || (distance != null && distance <= ARRIVAL_RADIUS_M);
   const canArrive = preciseFix && withinArrival;
   const arrivalReason = !fix
-    ? 'Waiting for GPS'
+    ? t('tracking.provider.reasonWaitGps')
     : stale
-      ? 'GPS signal delayed — wait for a fresh fix'
+      ? t('tracking.provider.reasonDelayed')
       : fix.degraded
-        ? 'Waiting for precise GPS'
+        ? t('tracking.provider.reasonApprox')
         : withinArrival
           ? null
           : distance == null
-            ? 'Visit location not set'
-            : `${formatDistance(distance)} from the visit — arrive within 50 m to unlock`;
+            ? t('tracking.provider.reasonNoLoc')
+            : t('tracking.provider.reasonTooFar', { distance: formatDistance(distance) });
 
   const overrideCause = !fix
-    ? 'GPS is unavailable'
+    ? t('tracking.provider.causeNoGps')
     : stale
-      ? 'the GPS signal is delayed'
+      ? t('tracking.provider.causeDelayed')
       : fix.degraded
-        ? `GPS is ${formatAccuracy(fix.rawAccuracy || fix.accuracy) || 'imprecise'}`
+        ? t('tracking.provider.causeImprecise', { accuracy: formatAccuracy(fix.rawAccuracy || fix.accuracy) || t('tracking.provider.impreciseWord') })
         : distance != null
-          ? `you are ${formatDistance(distance)} from the visit location`
-          : 'the arrival location could not be verified';
+          ? t('tracking.provider.causeDistance', { distance: formatDistance(distance) })
+          : t('tracking.provider.causeUnverified');
 
-  const patientName = visit.patient?.full_name || 'Patient';
+  const patientName = visit.patient?.full_name || t('common.roles.patient');
   const patientAvatar = visit.patient?.avatar_url || null;
   const patientInitials = patientName
     .split(' ')
@@ -324,7 +334,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   const patientRow = (
     <div className="mc-provider-row">
       {patientTo ? (
-        <Link to={patientTo} title="View Patient Profile" className="shrink-0">
+        <Link to={patientTo} title={t('tracking.provider.viewPatientTitle')} className="shrink-0">
           <div className="mc-avatar">
             {patientAvatar ? <img src={patientAvatar} alt={patientName} /> : patientInitials}
             <span className={`mc-avatar__dot${statusMeta.level === 'good' ? '' : statusMeta.level === 'caution' ? ' is-caution' : ' is-problem'}`} />
@@ -337,34 +347,34 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
       )}
 
       <div className="min-w-0 flex-1">
-        <p className="mc-kicker">On the way to</p>
+        <p className="mc-kicker">{t('tracking.provider.onTheWayTo')}</p>
         {patientTo ? (
           <Link to={patientTo} className="mc-provider-name block">{patientName}</Link>
         ) : (
           <p className="mc-provider-name">{patientName}</p>
         )}
-        <p className="mc-muted truncate">{visit.service || 'Home care visit'}</p>
+        <p className="mc-muted truncate">{translateService(visit.service) || t('tracking.provider.homeCareVisit')}</p>
       </div>
 
       {chatTo && (
         <Link
           to={chatTo}
-          title="Message Patient"
-          aria-label={`Message ${patientName}`}
+          title={t('tracking.provider.msgPatientTitle')}
+          aria-label={t('tracking.provider.msgPatientAria', { name: patientName })}
           className="mc-icon-btn"
         >
-          <MessageSquare className="w-4 h-4" />
+          <ChatText className="w-4 h-4" />
         </Link>
       )}
       <button
         ref={minimizeRef}
         type="button"
         onClick={() => setMinimized(true)}
-        title="Collapse live tracking"
-        aria-label="Collapse live tracking panel"
+        title={t('tracking.provider.collapseTitle')}
+        aria-label={t('tracking.provider.collapseAria')}
         className="mc-icon-btn"
       >
-        <Minimize2 className="w-4 h-4" />
+        <ArrowsIn className="w-4 h-4" />
       </button>
     </div>
   );
@@ -394,7 +404,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   const etaBlock = (
     <div className="mc-eta-block">
       <div className="mc-eta-copy min-w-0">
-        <p className="mc-kicker">Estimated arrival</p>
+        <p className="mc-kicker">{t('tracking.provider.estArrival')}</p>
         <div className="mc-eta-value">{formatDuration(duration)}</div>
         <p className="mc-eta-meta">
           <span>{freshness}</span>
@@ -403,7 +413,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
         </p>
       </div>
       <div className="shrink-0 text-right">
-        <p className="mc-kicker">Distance</p>
+        <p className="mc-kicker">{t('tracking.provider.distance')}</p>
         <div className="mc-distance-value">{formatDistance(distance)}</div>
       </div>
     </div>
@@ -415,10 +425,10 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
       onClick={() => markArrived()}
       disabled={arriving || !canArrive}
       className="mc-btn mc-btn--success mc-btn--block"
-      title={arrivalReason || 'Mark arrived'}
+      title={arrivalReason || t('tracking.provider.arrivedBtn')}
     >
-      {arriving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Home className="w-4 h-4" />}
-      {arriving ? 'Marking arrived…' : 'Arrived'}
+      {arriving ? <SpinnerGap className="w-4 h-4 animate-spin" /> : <House className="w-4 h-4" />}
+      {arriving ? t('tracking.provider.markingArrived') : t('tracking.provider.arrivedBtn')}
     </button>
   ) : (
     <a
@@ -428,8 +438,8 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
       className={`mc-btn mc-btn--primary mc-btn--block${!navUrl ? ' pointer-events-none opacity-50' : ''}`}
       aria-disabled={!navUrl}
     >
-      <MapPinned className="w-4 h-4" />
-      Navigate
+      <MapPinLine className="w-4 h-4" />
+      {t('tracking.provider.navigateBtn')}
     </a>
   );
 
@@ -441,8 +451,8 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
       className={`mc-btn mc-btn--secondary mc-btn--block${!navUrl ? ' pointer-events-none opacity-50' : ''}`}
       aria-disabled={!navUrl}
     >
-      <MapPinned className="w-4 h-4" />
-      Navigate
+      <MapPinLine className="w-4 h-4" />
+      {t('tracking.provider.navigateBtn')}
     </a>
   ) : (
     <button
@@ -451,8 +461,8 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
       disabled={arriving || !canArrive}
       className="mc-btn mc-btn--secondary mc-btn--block"
     >
-      <Home className="w-4 h-4" />
-      Arrived
+      <House className="w-4 h-4" />
+      {t('tracking.provider.arrivedBtn')}
     </button>
   );
 
@@ -460,7 +470,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
     <div className="mc-stack mc-stack--tight">
       <div className="mc-metric-row">
         <MapPin className="w-4 h-4" />
-        <span className="truncate">{destination?.address || 'Visit location not confirmed'}</span>
+        <span className="truncate">{destination?.address || t('tracking.provider.locNotConfirmed')}</span>
       </div>
       <div className="mc-metric-row">
         <Clock className="w-4 h-4" />
@@ -469,12 +479,12 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
         <span>{fixQuality}</span>
       </div>
       <div className="mc-metric-row">
-        <Route className="w-4 h-4" />
-        <span>{formatDistance(distance)} remaining</span>
+        <Path className="w-4 h-4" />
+        <span>{t('tracking.provider.distanceRemaining', { distance: formatDistance(distance) })}</span>
       </div>
       {!isNative() && (
         <p className="mc-muted">
-          Keep this screen open while traveling. Use the MuntiCares app for background tracking.
+          {t('tracking.provider.keepScreenOpen')}
         </p>
       )}
     </div>
@@ -484,20 +494,20 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
     <>
       {error && (
         <div className="mc-note mc-note--problem" role="alert">
-          <AlertTriangle className="w-4 h-4" />
+          <Warning className="w-4 h-4" />
           <span className="flex-1">{error}</span>
           <button type="button" onClick={() => setRetryKey((k) => k + 1)} className="mc-link">
-            Retry GPS
+            {t('tracking.provider.retryGps')}
           </button>
         </div>
       )}
       {!error && (fix?.degraded || !destination) && (
         <div className="mc-note">
-          <AlertTriangle className="w-4 h-4" />
+          <Warning className="w-4 h-4" />
           <span>
             {fix?.degraded
-              ? `GPS accuracy is ${formatAccuracy(fix.rawAccuracy || fix.accuracy) || 'low'}. Automatic arrival is locked — confirm on site below if you are at the patient's home.`
-              : 'The patient has not confirmed a visit destination yet. Navigation and arrival distance are unavailable.'}
+              ? t('tracking.provider.degradedBanner', { accuracy: formatAccuracy(fix.rawAccuracy || fix.accuracy) || t('tracking.provider.lowWord') })
+              : t('tracking.provider.noDestBanner')}
           </span>
         </div>
       )}
@@ -516,8 +526,8 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
             initial={{ opacity: 0, y: isDesktop ? 0 : 16, x: isDesktop ? 16 : 0 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: isDesktop ? 0 : 16, x: isDesktop ? 16 : 0 }}
-            title="Expand Live Route Tracker"
-            aria-label={`${statusMeta.label}. Expand live route tracker.`}
+            title={t('tracking.provider.expandTitle')}
+            aria-label={t('tracking.provider.expandAria', { status: statusMeta.label })}
             aria-expanded="false"
             className={`mc-tracker mc-provider-collapsed ${isDesktop ? 'mc-provider-collapsed--desktop' : 'mc-provider-collapsed--mobile'}`}
           >
@@ -533,7 +543,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
                 {formatDuration(duration)} · {formatDistance(distance)}
               </span>
             </span>
-            <Maximize2 className="w-4 h-4 shrink-0" />
+            <ArrowsOut className="w-4 h-4 shrink-0" />
           </motion.button>
         ) : (
           <motion.section
@@ -542,7 +552,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
             animate={{ opacity: 1, y: 0, x: 0 }}
             exit={{ opacity: 0, y: isDesktop ? 0 : 24, x: isDesktop ? 24 : 0 }}
             className={`mc-tracker mc-provider-dock ${isDesktop ? 'mc-provider-dock--desktop' : 'mc-provider-dock--mobile'}`}
-            aria-label="Live route tracker"
+            aria-label={t('tracking.provider.dockAria')}
           >
             <div className="mc-provider-scroll">
               {patientRow}
@@ -555,22 +565,21 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
                 {secondaryAction}
                 {arrivalReason && (
                   <p className="mc-lock-reason">
-                    <AlertTriangle className="w-3.5 h-3.5" />
+                    <Warning className="w-3.5 h-3.5" />
                     {arrivalReason}
                   </p>
                 )}
                 {withinArrival && !arrivalReason && (
-                  <p className="mc-muted">You are within 50 m of the visit location.</p>
+                  <p className="mc-muted">{t('tracking.provider.within50m')}</p>
                 )}
                 {!canArrive && destination && (
                   overrideOpen ? (
                     <div className="mc-note" role="alert">
-                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <Warning className="w-4 h-4 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="mc-override__title">Confirm you are at the patient&apos;s home</p>
+                        <p className="mc-override__title">{t('tracking.override.title')}</p>
                         <p className="mc-override__copy">
-                          Automatic arrival is locked because {overrideCause}. Your confirmation and
-                          reported position are recorded.
+                          {t('tracking.provider.overrideCopy', { cause: overrideCause })}
                         </p>
                         <div className="mc-override__actions">
                           <button
@@ -580,11 +589,11 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
                             className="mc-btn mc-btn--success mc-btn--block"
                           >
                             {arriving ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
+                              <SpinnerGap className="w-4 h-4 animate-spin" />
                             ) : (
-                              <Home className="w-4 h-4" />
+                              <House className="w-4 h-4" />
                             )}
-                            {arriving ? 'Marking arrived…' : 'Yes, I am on site'}
+                            {arriving ? t('tracking.provider.markingArrived') : t('tracking.override.confirmBtn')}
                           </button>
                           <button
                             type="button"
@@ -592,7 +601,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
                             disabled={arriving}
                             className="mc-btn mc-btn--secondary mc-btn--block"
                           >
-                            Cancel
+                            {t('common.actions.cancel')}
                           </button>
                         </div>
                       </div>
@@ -603,7 +612,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
                       className="mc-link mc-override__link"
                       onClick={() => setOverrideOpen(true)}
                     >
-                      I am at the patient&apos;s home — mark arrived anyway
+                      {t('tracking.provider.overrideLink')}
                     </button>
                   )
                 )}
@@ -611,7 +620,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
   
               {alerts}
   
-            <div className="mc-tabs" role="tablist" aria-label="Tracking panel view" onKeyDown={onTabKeyDown}>
+            <div className="mc-tabs" role="tablist" aria-label={t('tracking.provider.panelViewAria')} onKeyDown={onTabKeyDown}>
               <button
                 ref={mapTabRef}
                 type="button"
@@ -623,7 +632,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
                 className="mc-tab"
                 onClick={() => setView('map')}
               >
-                Map
+                {t('tracking.provider.tabMap')}
               </button>
               <button
                 ref={detailsTabRef}
@@ -636,7 +645,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
                 className="mc-tab"
                 onClick={() => setView('details')}
               >
-                Trip details
+                {t('tracking.provider.tabDetails')}
               </button>
             </div>
 

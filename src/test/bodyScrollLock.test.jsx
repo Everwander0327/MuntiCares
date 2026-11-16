@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import PatientRecordModal from '../features/provider/components/PatientRecordModal';
 import FhirExportModal from '../shared/components/FhirExportModal';
 import Navbar from '../shared/navigation/Navbar';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '../shared/ui/dialog';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '../shared/ui/sheet';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProvider } from '../contexts/ThemeContext';
 
@@ -139,5 +141,61 @@ describe('C7 — the navbar menu uses the same lock as overlays', () => {
     fireEvent.click(screen.getByLabelText('Close menu'));
     await settle();
     expect(locked()).toBe(false);
+  });
+});
+
+describe('Modal & Sheet outside-click light dismiss', () => {
+  it('closes PatientRecordModal when clicking outside the modal card but not inside', async () => {
+    const onClose = vi.fn();
+    renderInApp(
+      <PatientRecordModal
+        isOpen
+        onClose={onClose}
+        patientId="patient-1"
+        patientName="Rizalina Bautista"
+      />,
+    );
+    await settle();
+
+    const dialogWrapper = screen.getByRole('dialog');
+    const innerCard = dialogWrapper.firstElementChild;
+
+    fireEvent.click(innerCard);
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(dialogWrapper);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes shared Dialog and Sheet primitives when clicking their backdrop overlays', () => {
+    const onDialogOpenChange = vi.fn();
+    const { unmount } = render(
+      <Dialog open onOpenChange={onDialogOpenChange}>
+        <DialogContent>
+          <DialogTitle>Test Dialog</DialogTitle>
+          <DialogDescription>Dialog body</DialogDescription>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    expect(screen.queryByRole('button', { name: /^Close$/i })).not.toBeInTheDocument();
+    const dialogOverlay = document.querySelector('[data-state="open"].fixed.inset-0');
+    fireEvent.click(dialogOverlay);
+    expect(onDialogOpenChange).toHaveBeenCalledWith(false);
+    unmount();
+
+    const onSheetOpenChange = vi.fn();
+    render(
+      <Sheet open onOpenChange={onSheetOpenChange}>
+        <SheetContent>
+          <SheetTitle>Test Sheet</SheetTitle>
+          <SheetDescription>Sheet body</SheetDescription>
+        </SheetContent>
+      </Sheet>,
+    );
+
+    const sheetOverlay = document.querySelector('[data-state="open"].fixed.inset-0');
+    fireEvent.click(sheetOverlay);
+    expect(onSheetOpenChange).toHaveBeenCalledWith(false);
   });
 });

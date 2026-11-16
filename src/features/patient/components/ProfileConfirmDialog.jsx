@@ -1,8 +1,9 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, Loader2, X } from 'lucide-react';
+import { Warning, SpinnerGap } from '@phosphor-icons/react';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * In-app confirmation sheet/dialog replacing native window.confirm() for
@@ -12,13 +13,16 @@ export default function ProfileConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   loading = false,
   danger = true,
   onCancel,
   onConfirm,
 }) {
+  const { t } = useLanguage();
+  const resolvedConfirmLabel = confirmLabel || t('patient.common.confirm');
+  const resolvedCancelLabel = cancelLabel || t('patient.common.cancel');
   const prefersReducedMotion = useReducedMotion();
   useBodyScrollLock(open);
   const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
@@ -73,7 +77,7 @@ export default function ProfileConfirmDialog({
                         danger ? 'text-danger dark:text-rose-400' : 'text-warning dark:text-warning-dark'
                       }`}
                     >
-                      <AlertTriangle className="w-5 h-5" />
+                      <Warning className="w-5 h-5" />
                     </div>
                     <div className="min-w-0">
                       <DialogPrimitive.Title className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
@@ -84,13 +88,6 @@ export default function ProfileConfirmDialog({
                       </DialogPrimitive.Description>
                     </div>
                   </div>
-                  <DialogPrimitive.Close
-                    aria-label="Close confirmation dialog"
-                    disabled={loading}
-                    className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-full hidden sm:flex items-center justify-center text-tertiary hover:text-slate-900 dark:hover:text-white shrink-0 cursor-pointer disabled:opacity-50"
-                  >
-                    <X className="w-5 h-5" />
-                  </DialogPrimitive.Close>
                 </div>
 
                 <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2.5 pt-2">
@@ -98,22 +95,22 @@ export default function ProfileConfirmDialog({
                     type="button"
                     disabled={loading}
                     onClick={() => onCancel?.()}
-                    className="neu-btn min-h-[44px] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer disabled:opacity-50"
+                    className="neu-btn min-h-[2.75rem] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer disabled:opacity-50"
                   >
-                    {cancelLabel}
+                    {resolvedCancelLabel}
                   </button>
                   <button
                     type="button"
                     disabled={loading}
                     onClick={() => onConfirm?.()}
-                    className={`min-h-[44px] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all ${
+                    className={`min-h-[2.75rem] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all ${
                       danger
                         ? 'bg-[#BC3030] hover:bg-[#9E2626] text-white shadow-sm'
                         : 'neu-btn-primary'
                     }`}
                   >
-                    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                    <span>{confirmLabel}</span>
+                    {loading && <SpinnerGap className="w-4 h-4 animate-spin" />}
+                    <span>{resolvedConfirmLabel}</span>
                   </button>
                 </div>
               </div>

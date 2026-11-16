@@ -1,5 +1,6 @@
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import useCountUp from '@/hooks/useCountUp';
+import { CaretRight } from '@phosphor-icons/react';
 
 const BentoStatCard = ({
   label,
@@ -9,31 +10,33 @@ const BentoStatCard = ({
   sparkPoints = '',
   sparkColor = 'var(--chart-1)',
   trailing = null,
+  to = '',
   variants,
 }) => {
-  const { count, ref } = useCountUp(parseInt(value, 10) || 0, 1100, false);
+  const numericValue = Number.isFinite(Number(value)) ? parseInt(value, 10) : 0;
 
-  return (
-    <motion.div
-      variants={variants}
-      whileHover={{ y: -2, transition: { duration: 0.18 } }}
-      className="neu-flat rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 flex flex-col justify-between transition-all"
-    >
+  const cardBody = (
+    <>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-bold text-tertiary truncate">{label}</span>
+        <span className="inline-flex items-center gap-1 text-xs font-bold text-tertiary truncate group-hover:text-link transition-colors">
+          <span className="truncate">{label}</span>
+          {to && (
+            <CaretRight
+              className="w-3.5 h-3.5 shrink-0 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all"
+              aria-hidden="true"
+            />
+          )}
+        </span>
         {tag && (
-          <span className={`text-[11px] font-extrabold whitespace-nowrap shrink-0 ${tagClass}`}>
+          <span className={`text-xs font-extrabold whitespace-nowrap shrink-0 ${tagClass}`}>
             {tag}
           </span>
         )}
       </div>
 
       <div className="flex items-end justify-between gap-2 mt-2.5">
-        <span
-          ref={ref}
-          className="tabular-nums font-display font-extrabold text-2xl sm:text-3xl tracking-tight leading-none text-slate-900 dark:text-white"
-        >
-          {count}
+        <span className="tabular-nums font-display font-extrabold text-2xl sm:text-3xl tracking-tight leading-none text-ink dark:text-txt-darkPrimary">
+          {numericValue}
         </span>
 
         {trailing || (sparkPoints ? (
@@ -53,6 +56,28 @@ const BentoStatCard = ({
           </svg>
         ) : null)}
       </div>
+    </>
+  );
+
+  if (to) {
+    return (
+      <motion.div variants={variants}>
+        <Link
+          to={to}
+          className="group neu-flat rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 flex flex-col justify-between transition-transform duration-300 ease-fluid hover:-translate-y-0.5 h-full"
+        >
+          {cardBody}
+        </Link>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      variants={variants}
+      className="neu-flat rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 flex flex-col justify-between transition-transform duration-300 ease-fluid hover:-translate-y-0.5"
+    >
+      {cardBody}
     </motion.div>
   );
 };

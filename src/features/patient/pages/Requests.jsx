@@ -1,13 +1,24 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { 
-  Clock, MapPin, MessageSquare, XCircle, FileUp, 
-  Search, SlidersHorizontal, Check, Calendar,
-  ChevronRight, ChevronLeft, X, ChevronDown,
-  Navigation
-} from 'lucide-react';
+import {
+  Clock,
+  MapPin,
+  ChatText,
+  XCircle,
+  FileArrowUp,
+  MagnifyingGlass,
+  SlidersHorizontal,
+  Check,
+  Calendar,
+  CaretRight,
+  CaretLeft,
+  X,
+  CaretDown,
+  NavigationArrow,
+} from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { presessionMapFor, ratedMapFor } from '@/features/patient/utils/localState';
 import usePatientRequests from '@/hooks/usePatientRequests';
 import { supabase } from '@/lib/supabase';
@@ -27,42 +38,43 @@ const staggerItem = {
   animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.16, 1, 0.3, 1] } },
 };
 
-const getStatusBadge = (status) => {
+const getStatusBadge = (status, translateStatus) => {
+  const translated = translateStatus(status);
   switch (status) {
     case 'Accepted':
       return {
-        label: 'Accepted',
-        className: 'bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-[#8CBDF0] border-sky-200 dark:border-sky-800/40',
+        label: translated,
+        className: 'bg-sky-50 dark:bg-sky-950/50 text-link border-sky-200 dark:border-sky-800/40',
       };
     case 'On The Way':
       return {
-        label: 'On The Way',
+        label: translated,
         className: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40',
       };
     case 'Arrived':
       return {
-        label: 'Arrived',
+        label: translated,
         className: 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/40',
       };
     case 'Completed':
       return {
-        label: 'Completed',
+        label: translated,
         className: 'bg-slate-100 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700',
       };
     case 'Pending':
       return {
-        label: 'Pending',
+        label: translated,
         className: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800/40',
       };
     case 'Cancelled':
       return {
-        label: 'Cancelled',
+        label: translated,
         className: 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/40',
       };
     case 'Rejected':
     default:
       return {
-        label: status || 'Rejected',
+        label: status ? translated : translateStatus('Rejected'),
         className: 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800/40',
       };
   }
@@ -75,13 +87,13 @@ const getProviderInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-const formatVisitDate = (rawDate) => {
-  if (!rawDate) return 'Date pending';
+const formatVisitDate = (rawDate, locale = 'en-US', pendingLabel = 'Date pending') => {
+  if (!rawDate) return pendingLabel;
   try {
     const [y, m, d] = rawDate.split('-');
     if (y && m && d) {
       const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
-      return dateObj.toLocaleDateString('en-US', {
+      return dateObj.toLocaleDateString(locale, {
         weekday: 'short',
         month: 'short',
         day: 'numeric',
@@ -93,10 +105,10 @@ const formatVisitDate = (rawDate) => {
   }
 };
 
-const formatVisitTime = (rawTime) => {
+const formatVisitTime = (rawTime, locale = 'en-US') => {
   if (!rawTime) return '';
   try {
-    return new Date(`2000-01-01T${rawTime.slice(0, 5)}:00`).toLocaleTimeString('en-US', {
+    return new Date(`2000-01-01T${rawTime.slice(0, 5)}:00`).toLocaleTimeString(locale, {
       hour: 'numeric',
       minute: '2-digit',
     });
@@ -110,11 +122,13 @@ const RequestCard = ({
   status, location, originalNotes, durationMinutes, onRateProvider, isRated, 
   onManageRequest, onPreSession, presessionSubmitted, onTrack
 }) => {
+  const { t, isTagalog, translateService, translateStatus } = useLanguage();
+  const locale = isTagalog ? 'tl-PH' : 'en-US';
   const [avatarBroken, setAvatarBroken] = useState(false);
-  const statusBadge = getStatusBadge(status);
+  const statusBadge = getStatusBadge(status, translateStatus);
   const initials = getProviderInitials(provider);
-  const formattedDate = formatVisitDate(date);
-  const formattedTime = formatVisitTime(time);
+  const formattedDate = formatVisitDate(date, locale, t('patient.requests.datePending'));
+  const formattedTime = formatVisitTime(time, locale);
 
   return (
     <motion.div
@@ -129,7 +143,7 @@ const RequestCard = ({
             {providerId ? (
               <Link
                 to={`/patient/providers/${providerId}/profile`}
-                title="View Provider Profile"
+                title={t('patient.requests.viewProviderProfileTitle')}
                 className="relative shrink-0 group"
               >
                 <div className="neu-flat-sm w-12 h-12 sm:w-13 sm:h-13 rounded-2xl flex items-center justify-center text-link font-black text-sm overflow-hidden aspect-square ring-2 ring-transparent group-hover:ring-primary/40 transition-all bg-white dark:bg-slate-900">
@@ -166,7 +180,7 @@ const RequestCard = ({
               {providerId ? (
                 <Link
                   to={`/patient/providers/${providerId}/profile`}
-                  className="font-display font-extrabold text-slate-900 dark:text-white hover:text-link dark:hover:text-[#8CBDF0] transition-colors text-sm sm:text-base truncate block"
+                  className="font-display font-extrabold text-slate-900 dark:text-white hover:text-link dark:hover:text-link transition-colors text-sm sm:text-base truncate block"
                 >
                   {provider}
                 </Link>
@@ -176,11 +190,11 @@ const RequestCard = ({
                 </h3>
               )}
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="px-2 py-0.5 rounded-md bg-[#1E6FBF]/10 text-[#1E6FBF] dark:text-[#8CBDF0] text-[11px] font-extrabold truncate">
-                  {service || 'Home Care'}
+                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-link text-[0.6875rem] font-extrabold truncate">
+                  {service ? translateService(service) : t('patient.common.homeCare')}
                 </span>
                 <span className="text-xs text-tertiary hidden sm:inline">&bull;</span>
-                <span className="text-xs text-tertiary hidden sm:inline truncate">Muntinlupa City</span>
+                <span className="text-xs text-tertiary hidden sm:inline truncate">{t('patient.common.muntinlupaCity')}</span>
               </div>
             </div>
           </div>
@@ -207,7 +221,7 @@ const RequestCard = ({
           )}
           <span className="px-2.5 py-1.5 rounded-lg bg-surface-subtle border border-surface-border font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 truncate max-w-full">
             <MapPin className="w-3.5 h-3.5 text-link shrink-0" />
-            <span className="truncate">{location || 'Muntinlupa City, Philippines'}</span>
+            <span className="truncate">{location || t('patient.requests.locationFallback')}</span>
           </span>
         </div>
       </div>
@@ -222,16 +236,16 @@ const RequestCard = ({
                 to={`/patient/messages?provider=${providerId}`}
                 className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
               >
-                <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Chat</span>
+                <ChatText className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t('patient.requests.chatBtn')}</span>
               </Link>
               <button
                 type="button"
                 onClick={() => onTrack({ id, providerId, patientId, provider, providerAvatarUrl, service })}
                 className="col-span-1 neu-btn-primary justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
               >
-                <Navigation className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Track Live GPS</span>
+                <NavigationArrow className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t('patient.requests.trackLiveGpsBtn')}</span>
               </button>
             </>
           )}
@@ -246,19 +260,19 @@ const RequestCard = ({
                 className={`col-span-1 justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
                   presessionSubmitted
                     ? 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] cursor-default opacity-90'
-                    : 'neu-btn text-link dark:text-[#8CBDF0]'
+                    : 'neu-btn text-link'
                 }`}
               >
-                <FileUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-link dark:text-[#8CBDF0]'}`} />
-                <span className="truncate">{presessionSubmitted ? 'Submitted' : 'Pre-Session'}</span>
+                <FileArrowUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-link'}`} />
+                <span className="truncate">{presessionSubmitted ? t('patient.requests.submittedBadge') : t('patient.requests.preSessionBtn')}</span>
               </button>
 
               <Link 
                 to={`/patient/messages?provider=${providerId}`}
                 className="col-span-1 neu-btn-primary justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-white flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-[0.98] transition-transform"
               >
-                <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Chat Provider</span>
+                <ChatText className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{t('patient.requests.chatProviderBtn')}</span>
               </Link>
 
               <button
@@ -267,7 +281,7 @@ const RequestCard = ({
                 className="col-span-2 sm:col-span-1 neu-btn justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-[#BC3030] dark:text-[#F4918B] flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform"
               >
                 <XCircle className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Manage Visit</span>
+                <span className="truncate">{t('patient.requests.manageVisitBtn')}</span>
               </button>
             </>
           )}
@@ -282,11 +296,11 @@ const RequestCard = ({
                 className={`col-span-1 justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
                   presessionSubmitted
                     ? 'neu-flat-sm text-[#2C7A55] dark:text-[#7DD3A3] cursor-default opacity-90'
-                    : 'neu-btn text-link dark:text-[#8CBDF0]'
+                    : 'neu-btn text-link'
                 }`}
               >
-                <FileUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-link dark:text-[#8CBDF0]'}`} />
-                <span className="truncate">{presessionSubmitted ? 'Submitted' : 'Pre-Session'}</span>
+                <FileArrowUp className={`w-3.5 h-3.5 shrink-0 ${presessionSubmitted ? 'text-[#2C7A55] dark:text-[#7DD3A3]' : 'text-link'}`} />
+                <span className="truncate">{presessionSubmitted ? t('patient.requests.submittedBadge') : t('patient.requests.preSessionBtn')}</span>
               </button>
 
               <button
@@ -295,7 +309,7 @@ const RequestCard = ({
                 className="col-span-1 neu-btn justify-center px-3 sm:px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-[#BC3030] dark:text-[#F4918B] flex items-center gap-1.5 cursor-pointer active:scale-[0.98] transition-transform"
               >
                 <XCircle className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Cancel Request</span>
+                <span className="truncate">{t('patient.requests.cancelRequestBtn')}</span>
               </button>
             </>
           )}
@@ -308,7 +322,7 @@ const RequestCard = ({
                   to={`/patient/providers/${providerId}/profile`}
                   className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="truncate">View Profile</span>
+                  <span className="truncate">{t('patient.requests.viewProfileBtn')}</span>
                 </Link>
               ) : (
                 <div className="hidden sm:block col-span-1" />
@@ -334,7 +348,7 @@ const RequestCard = ({
                     : 'neu-btn-primary shadow-sm'
                 }`}
               >
-                <span>{isRated ? 'Reviewed' : 'Rate & Review'}</span>
+                <span>{isRated ? t('patient.requests.reviewedBtn') : t('patient.requests.rateReviewBtn')}</span>
               </button>
             </>
           )}
@@ -347,7 +361,7 @@ const RequestCard = ({
                   to={`/patient/providers/${providerId}/profile`}
                   className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="truncate">View Doctor</span>
+                  <span className="truncate">{t('patient.requests.viewDoctorBtn')}</span>
                 </Link>
               ) : (
                 <div className="hidden sm:block col-span-1" />
@@ -356,16 +370,16 @@ const RequestCard = ({
               {providerId ? (
                 <Link
                   to={`/patient/providers/${providerId}/profile`}
-                  className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold text-[#1E6FBF] dark:text-[#8CBDF0] border-primary/30 flex items-center gap-1.5 cursor-pointer"
+                  className="col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold text-link border-primary/30 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="truncate">Rebook Visit</span>
+                  <span className="truncate">{t('patient.requests.rebookVisitBtn')}</span>
                 </Link>
               ) : (
                 <Link
                   to="/patient/providers"
-                  className="col-span-2 sm:col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold text-[#1E6FBF] dark:text-[#8CBDF0] flex items-center gap-1.5 cursor-pointer"
+                  className="col-span-2 sm:col-span-1 neu-btn justify-center px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-extrabold text-link flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span className="truncate">Find Another Doctor</span>
+                  <span className="truncate">{t('patient.requests.findAnotherBtn')}</span>
                 </Link>
               )}
             </>
@@ -377,6 +391,7 @@ const RequestCard = ({
 };
 
 const PatientRequests = () => {
+  const { t, translateService, translateStatus } = useLanguage();
   const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' | 'past' | 'all'
   const [filter, setFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -537,13 +552,13 @@ const PatientRequests = () => {
           <div className="rounded-2xl border border-sky-500/20 bg-sky-50/60 dark:bg-sky-950/30 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
             <div className="min-w-0">
               <div className="text-xs text-slate-900 dark:text-white truncate">
-                <strong className="font-bold">{activeLiveReq.provider}</strong> is on the way &bull;{' '}
+                <strong className="font-bold">{activeLiveReq.provider}</strong> {t('patient.requests.liveBannerIsOnWay')} &bull;{' '}
                 <span className="text-slate-600 dark:text-slate-300 font-medium">
-                  {activeLiveReq.service} ({activeLiveReq.status})
+                  {translateService(activeLiveReq.service)} ({translateStatus(activeLiveReq.status)})
                 </span>
               </div>
               <div className="text-2xs text-tertiary mt-0.5">
-                Scheduled for {activeLiveReq.date} &bull; Muntinlupa City
+                {t('patient.requests.liveBannerScheduledFor', { date: activeLiveReq.date })} &bull; {t('patient.common.muntinlupaCity')}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
@@ -551,15 +566,15 @@ const PatientRequests = () => {
                 to={`/patient/messages?provider=${activeLiveReq.providerId}`}
                 className="neu-btn px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
               >
-                Chat
+                {t('patient.requests.chatBtn')}
               </Link>
               <button
                 type="button"
                 onClick={() => setTrackingReq(activeLiveReq)}
                 className="neu-btn-primary px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
-                <Navigation className="w-3.5 h-3.5" />
-                <span>Track Live GPS</span>
+                <NavigationArrow className="w-3.5 h-3.5" />
+                <span>{t('patient.requests.trackLiveGpsBtn')}</span>
               </button>
             </div>
           </div>
@@ -570,10 +585,10 @@ const PatientRequests = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div>
               <h1 className="font-display font-extrabold tracking-tight text-xl sm:text-2xl md:text-3xl text-slate-900 dark:text-white">
-                My Service Requests
+                {t('patient.requests.pageTitle')}
               </h1>
               <p className="text-xs sm:text-sm text-tertiary mt-0.5">
-                Track, reschedule, and manage all your healthcare appointments.
+                {t('patient.requests.pageSubtitle')}
               </p>
             </div>
           </div>
@@ -591,7 +606,7 @@ const PatientRequests = () => {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                Upcoming ({stats.upcoming})
+                {t('patient.requests.tabUpcomingCount', { count: stats.upcoming })}
               </button>
               <button
                 type="button"
@@ -602,7 +617,7 @@ const PatientRequests = () => {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                Past Visits ({stats.past})
+                {t('patient.requests.tabPastCount', { count: stats.past })}
               </button>
               <button
                 type="button"
@@ -613,20 +628,20 @@ const PatientRequests = () => {
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                All ({stats.total})
+                {t('patient.requests.tabAllCount', { count: stats.total })}
               </button>
             </div>
 
             {/* Integrated Search Bar + Side Dropdown Button */}
-            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto sm:min-w-[320px]">
+            <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto sm:min-w-[20rem]">
             {/* Sunken Search Box */}
             <div className="relative flex-1 min-w-0">
-              <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[44px] sm:h-[52px] border border-slate-200/50 dark:border-white/5">
-                <Search className="w-4 h-4 text-link ml-1.5 sm:ml-2 shrink-0" />
+              <div className="neu-inset p-1.5 sm:p-2 rounded-xl sm:rounded-2xl flex items-center gap-2 sm:gap-3 h-[2.75rem] sm:h-[3.25rem] border border-slate-200/50 dark:border-white/5">
+                <MagnifyingGlass className="w-4 h-4 text-link ml-1.5 sm:ml-2 shrink-0" />
                 <input
                   type="text"
-                  aria-label="Search requests by provider or service"
-                  placeholder="Search provider, service..."
+                  aria-label={t('patient.requests.searchAria')}
+                  placeholder={t('patient.requests.searchPlaceholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full bg-transparent border-0 px-1 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
@@ -636,7 +651,7 @@ const PatientRequests = () => {
                     type="button"
                     onClick={() => setSearchTerm('')}
                     className="p-1 text-tertiary hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer mr-1"
-                    title="Clear search"
+                    title={t('patient.requests.clearSearch')}
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -649,16 +664,26 @@ const PatientRequests = () => {
               <button
                 type="button"
                 onClick={() => setShowFilterMenu(prev => !prev)}
-                className={`neu-btn h-[44px] sm:h-[52px] px-3 sm:px-4 rounded-xl sm:rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer relative outline-none select-none ${
+                className={`neu-btn h-[2.75rem] sm:h-[3.25rem] px-3 sm:px-4 rounded-xl sm:rounded-2xl flex items-center gap-1.5 sm:gap-2 transition-all cursor-pointer relative outline-none select-none ${
                   showFilterMenu ? 'text-link' : 'text-slate-600 dark:text-slate-300 hover:text-link'
                 }`}
-                title={`Filter by: ${filter === 'All' ? 'All Requests' : filter}`}
+                title={t('patient.requests.filterByTitle', {
+                  label: filter === 'All'
+                    ? t('patient.requests.allRequestsLabel')
+                    : filter === 'Active'
+                      ? t('patient.common.active')
+                      : translateStatus(filter),
+                })}
               >
                 <SlidersHorizontal className="w-4 h-4" />
                 <span className="text-xs font-bold hidden sm:inline">
-                  {filter === 'All' ? 'All Requests' : filter}
+                  {filter === 'All'
+                    ? t('patient.requests.allRequestsLabel')
+                    : filter === 'Active'
+                      ? t('patient.common.active')
+                      : translateStatus(filter)}
                 </span>
-                <ChevronDown className="w-3.5 h-3.5 text-tertiary" />
+                <CaretDown className="w-3.5 h-3.5 text-tertiary" />
                 {filter !== 'All' && (
                   <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary" />
                 )}
@@ -675,12 +700,23 @@ const PatientRequests = () => {
                     className="absolute right-0 top-full mt-2 w-52 sm:w-56 neu-flat rounded-2xl p-2 z-50 shadow-2xl border border-white/60 dark:border-white/10"
                   >
                     <div className="px-3 py-2 border-b border-slate-200/60 dark:border-white/5 mb-1 flex items-center justify-between">
-                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Filter Status</span>
-                      <span className="text-xs text-link font-bold">{filter}</span>
+                      <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.requests.filterStatusTitle')}</span>
+                      <span className="text-xs text-link font-bold">
+                        {filter === 'All'
+                          ? t('patient.requests.allRequestsLabel')
+                          : filter === 'Active'
+                            ? t('patient.common.active')
+                            : translateStatus(filter)}
+                      </span>
                     </div>
                     <div className="space-y-1">
                       {filters.map((f) => {
                         const active = filter === f;
+                        const label = f === 'All'
+                          ? t('patient.requests.allRequestsLabel')
+                          : f === 'Active'
+                            ? t('patient.common.active')
+                            : translateStatus(f);
                         return (
                           <button
                             key={f}
@@ -695,7 +731,7 @@ const PatientRequests = () => {
                                 : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
                             }`}
                           >
-                            <span>{f === 'All' ? 'All Requests' : f}</span>
+                            <span>{label}</span>
                             {active && <Check className="w-3.5 h-3.5 text-link shrink-0" />}
                           </button>
                         );
@@ -744,9 +780,9 @@ const PatientRequests = () => {
             <div className="neu-flat p-8 sm:p-12 rounded-2xl sm:rounded-[2.25rem] text-center">
               <EmptyState
                 icon="inbox"
-                title={requests.length === 0 ? 'No requests yet' : 'No matching requests'}
-                message={requests.length === 0 ? 'Book a consultation with a certified healthcare provider to get started!' : 'Try selecting another status filter or clear your search query.'}
-                action={requests.length === 0 ? { label: 'Find Providers', onClick: () => navigate('/patient/providers') } : undefined}
+                title={requests.length === 0 ? t('patient.requests.noRequestsTitle') : t('patient.requests.noMatchTitle')}
+                message={requests.length === 0 ? t('patient.requests.noRequestsMsg') : t('patient.requests.noMatchMsg')}
+                action={requests.length === 0 ? { label: t('patient.requests.findProvidersBtn'), onClick: () => navigate('/patient/providers') } : undefined}
               />
             </div>
           )}
@@ -756,7 +792,7 @@ const PatientRequests = () => {
         {filteredRequests.length > itemsPerPage && (
           <div className="neu-flat p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 mt-auto pt-4">
             <span className="text-sm text-tertiary dark:text-tertiary font-medium text-center sm:text-left">
-              Showing <strong className="text-slate-800 dark:text-slate-200">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredRequests.length)}</strong> requests
+              {t('patient.requests.showingLabel')} <strong className="text-slate-800 dark:text-slate-200">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredRequests.length)}</strong> {t('patient.requests.requestsSuffix')}
             </span>
 
             <div className="flex items-center gap-1 sm:gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
@@ -766,8 +802,8 @@ const PatientRequests = () => {
                 disabled={currentPage === 1}
                 className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                <span className="hidden xs:inline">Prev</span>
+                <CaretLeft className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">{t('patient.requests.prevBtn')}</span>
               </button>
 
               <div className="flex items-center gap-1 px-0.5 sm:px-1">
@@ -802,8 +838,8 @@ const PatientRequests = () => {
                 disabled={currentPage === totalPages}
                 className="neu-btn px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
               >
-                <span className="hidden xs:inline">Next</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">{t('patient.requests.nextBtn')}</span>
+                <CaretRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

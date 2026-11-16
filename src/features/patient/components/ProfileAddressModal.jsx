@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Check, MapPin, X } from 'lucide-react';
+import { Check, MapPin } from '@phosphor-icons/react';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import PermanentAddressSection from '@/features/patient/components/PermanentAddressSection';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const createDraftState = (address, coords, draftMeta) => ({
   address: address || '',
@@ -27,6 +28,7 @@ export default function ProfileAddressModal({
   draftMeta = null,
   onApply,
 }) {
+  const { t } = useLanguage();
   const prefersReducedMotion = useReducedMotion();
   const [staged, setStaged] = useState(() => createDraftState(address, coords, draftMeta));
   const [sessionKey, setSessionKey] = useState(0);
@@ -98,19 +100,13 @@ export default function ProfileAddressModal({
                     </div>
                     <div className="min-w-0">
                       <DialogPrimitive.Title className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100 truncate">
-                        Edit Home Visit Pin &amp; Address
+                        {t('patient.address.modalTitle')}
                       </DialogPrimitive.Title>
                       <DialogPrimitive.Description className="text-xs sm:text-sm text-tertiary dark:text-tertiary mt-0.5">
-                        Search your street, center the map pin, and add gate notes.
+                        {t('patient.address.modalDesc')}
                       </DialogPrimitive.Description>
                     </div>
                   </div>
-                  <DialogPrimitive.Close
-                    aria-label="Close address editor"
-                    className="neu-btn w-11 h-11 min-w-[44px] min-h-[44px] rounded-full hidden sm:flex items-center justify-center text-tertiary hover:text-slate-900 dark:hover:text-white shrink-0 cursor-pointer"
-                  >
-                    <X className="w-5 h-5" />
-                  </DialogPrimitive.Close>
                 </div>
               </div>
 
@@ -145,27 +141,30 @@ export default function ProfileAddressModal({
                 <div className="text-xs text-tertiary dark:text-tertiary text-center sm:text-left">
                   {staged.coords ? (
                     <span className="font-semibold text-success dark:text-success-dark">
-                      Pin set ({staged.coords.lat.toFixed(5)}, {staged.coords.lng.toFixed(5)})
+                      {t('patient.address.pinSetBadge', {
+                        lat: staged.coords.lat.toFixed(5),
+                        lng: staged.coords.lng.toFixed(5),
+                      })}
                     </span>
                   ) : (
-                    <span>Drag map or search to set pin coordinates</span>
+                    <span>{t('patient.address.pinMissingBadge')}</span>
                   )}
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={() => onClose?.()}
-                    className="neu-btn min-h-[44px] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-100 cursor-pointer"
+                    className="neu-btn min-h-[2.75rem] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-100 cursor-pointer"
                   >
-                    Cancel
+                    {t('patient.common.cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={handleApply}
-                    className="neu-btn-primary min-h-[44px] px-6 py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer"
+                    className="neu-btn-primary min-h-[2.75rem] px-6 py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Check className="w-4 h-4" />
-                    <span>Apply Home Address</span>
+                    <span>{t('patient.address.applyBtn')}</span>
                   </button>
                 </div>
               </div>

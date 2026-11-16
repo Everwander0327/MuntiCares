@@ -1,14 +1,16 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Phone, PhoneOff, Video } from 'lucide-react';
+import { Phone, PhoneDisconnect, VideoCamera } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCalls } from '@/contexts/CallContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { playRingtone, stopRingtone } from '@/lib/audio';
 
 const IncomingCallOverlay = () => {
   const { incomingCall, acceptCall, rejectCall, callCancelledByPeer, expireIncomingCall } = useCalls();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (incomingCall) {
@@ -80,14 +82,14 @@ const IncomingCallOverlay = () => {
 
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full neu-flat-sm text-2xs font-extrabold text-link uppercase tracking-widest mb-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-              {incomingCall.callType === 'audio' ? 'Incoming Voice Call' : 'Incoming Video Call'}
+              {incomingCall.callType === 'audio' ? t('chat.incoming.voiceCall') : t('chat.incoming.videoCall')}
             </div>
 
             <h2 className="text-lg font-display font-black text-slate-900 dark:text-white truncate">
-              {incomingCall.sender_name || 'Healthcare Provider'}
+              {incomingCall.sender_name || t('chat.incoming.defaultSender')}
             </h2>
             <p className="text-xs text-tertiary dark:text-tertiary mt-0.5">
-              {incomingCall.callType === 'audio' ? 'Voice consultation request' : 'Teleconsultation request'}
+              {incomingCall.callType === 'audio' ? t('chat.incoming.voiceRequest') : t('chat.incoming.videoRequest')}
             </p>
 
             <div className="flex gap-6 mt-7 justify-center items-center">
@@ -97,9 +99,9 @@ const IncomingCallOverlay = () => {
                 className="flex flex-col items-center gap-1.5 group cursor-pointer"
               >
                 <div className="w-14 h-14 neu-btn rounded-2xl flex items-center justify-center text-danger hover:text-danger transition-all active:scale-95 shadow-md">
-                  <PhoneOff className="w-6 h-6 stroke-[2.5]" />
+                  <PhoneDisconnect className="w-6 h-6 stroke-[2.5]" />
                 </div>
-                <span className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">Decline</span>
+                <span className="text-2xs font-black uppercase tracking-wider text-tertiary dark:text-tertiary">{t('chat.incoming.decline')}</span>
               </button>
 
               <button
@@ -111,10 +113,10 @@ const IncomingCallOverlay = () => {
                   {incomingCall.callType === 'audio' ? (
                     <Phone className="w-7 h-7 stroke-[2.5]" />
                   ) : (
-                    <Video className="w-7 h-7 stroke-[2.5]" />
+                    <VideoCamera className="w-7 h-7 stroke-[2.5]" />
                   )}
                 </div>
-                <span className="text-2xs font-black uppercase tracking-wider text-success dark:text-success-dark">Accept</span>
+                <span className="text-2xs font-black uppercase tracking-wider text-success dark:text-success-dark">{t('chat.incoming.accept')}</span>
               </button>
             </div>
           </motion.div>
@@ -137,11 +139,11 @@ const IncomingCallOverlay = () => {
             className="neu-flat bg-surface-shell rounded-[2.25rem] p-7 max-w-xs w-full mx-5 shadow-2xl border border-white/80 dark:border-white/10 text-center select-text"
           >
             <div className="w-16 h-16 mx-auto mb-3.5 rounded-2xl neu-flat flex items-center justify-center text-tertiary">
-              <PhoneOff className="w-7 h-7" />
+              <PhoneDisconnect className="w-7 h-7" />
             </div>
-            <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">Call Cancelled</h2>
+            <h2 className="text-lg font-display font-black text-slate-900 dark:text-white">{t('chat.incoming.cancelledTitle')}</h2>
             <p className="text-xs text-tertiary dark:text-tertiary mt-1 font-medium">
-              The caller ended the call before it was accepted
+              {t('chat.incoming.cancelledSub')}
             </p>
           </motion.div>
         </motion.div>

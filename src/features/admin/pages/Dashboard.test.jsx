@@ -5,14 +5,11 @@ import AdminDashboard from './Dashboard';
 
 const mockState = vi.hoisted(() => ({
   pendingApprovals: 0,
+  shouldFail: false,
 }));
 
 vi.mock('@/layouts/DashboardLayout', () => ({
   default: ({ children }) => <div data-testid="admin-layout">{children}</div>,
-}));
-
-vi.mock('@/hooks/useCountUp', () => ({
-  default: (end) => ({ count: end, ref: { current: null } }),
 }));
 
 vi.mock('recharts', async (importOriginal) => {
@@ -126,6 +123,13 @@ vi.mock('@/lib/supabase', () => ({
           return this;
         },
         then(resolve, reject) {
+          if (mockState.shouldFail) {
+            return Promise.resolve({
+              data: null,
+              count: null,
+              error: { message: 'Database unavailable' },
+            }).then(resolve, reject);
+          }
           let payload;
           if (table === 'users') {
             if (this._selectOpts?.head) {
@@ -167,6 +171,7 @@ const renderDashboard = () =>
 describe('AdminDashboard (Direction 3 Bento)', () => {
   beforeEach(() => {
     mockState.pendingApprovals = 0;
+    mockState.shouldFail = false;
   });
 
   it('renders compact header, 4 Bento KPI tiles with share/momentum, and Clear approvals state', async () => {
@@ -195,6 +200,12 @@ describe('AdminDashboard (Direction 3 Bento)', () => {
     expect(kpis.getByText('Approvals')).toBeInTheDocument();
     expect(kpis.getByText('Verified')).toBeInTheDocument();
     expect(kpis.getByText('Clear')).toBeInTheDocument();
+
+    expect(screen.getByRole('link', { name: /Patients/i })).toHaveAttribute('href', '/admin/patients');
+    expect(screen.getByRole('link', { name: /Providers/i })).toHaveAttribute('href', '/admin/providers');
+    expect(screen.getByRole('link', { name: /Bookings/i })).toHaveAttribute('href', '/admin/requests');
+    expect(screen.getByRole('link', { name: /Approvals/i })).toHaveAttribute('href', '/admin/providers');
+    expect(screen.getAllByRole('link', { name: /View all/i })).toHaveLength(2);
   });
 
   it('renders Review action link when pending provider approvals exist', async () => {
@@ -202,23 +213,33 @@ describe('AdminDashboard (Direction 3 Bento)', () => {
     renderDashboard();
 
     expect(await screen.findByText('Action Req')).toBeInTheDocument();
-    const reviewLink = screen.getByRole('link', { name: 'Review' });
+    const reviewLink = screen.getByRole('link', { name: /Review/i });
     expect(reviewLink).toHaveAttribute('href', '/admin/providers');
   });
 
-  it('switches User Growth window between 6M and 12M and toggles series pills', async () => {
+  it('switches User Growth window between 6 Months and 12 Months and toggles series filters', async () => {
     renderDashboard();
 
     expect(await screen.findByText('User Growth (6 Months)')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Switch to 12M' }));
-    expect(screen.getByText('User Growth (12 Months)')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Switch to 6M' })).toBeInTheDocument();
+    const growthWindowGroup = within(screen.getByRole('group', { name: 'User growth window' }));
+    const sixMonthsBtn = growthWindowGroup.getByRole('button', { name: '6 Months' });
+    const twelveMonthsBtn = growthWindowGroup.getByRole('button', { name: '12 Months' });
+    expect(sixMonthsBtn).toHaveAttribute('aria-pressed', 'true');
+    expect(twelveMonthsBtn).toHaveAttribute('aria-pressed', 'false');
 
-    const prosPill = screen.getByRole('button', { name: 'Pros' });
-    expect(prosPill).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(prosPill);
-    expect(prosPill).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(twelveMonthsBtn);
+    expect(screen.getByText('User Growth (12 Months)')).toBeInTheDocument();
+    expect(sixMonthsBtn).toHaveAttribute('aria-pressed', 'false');
+    expect(twelveMonthsBtn).toHaveAttribute('aria-pressed', 'true');
+
+    fireEvent.click(sixMonthsBtn);
+    expect(screen.getByText('User Growth (6 Months)')).toBeInTheDocument();
+
+    const providersToggle = screen.getByRole('button', { name: 'Providers' });
+    expect(providersToggle).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(providersToggle);
+    expect(providersToggle).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('opens request and provider swipe-down detail sheets without visible mobile X close button', async () => {
@@ -230,16 +251,15 @@ describe('AdminDashboard (Direction 3 Bento)', () => {
     expect(await screen.findByText('Bring sterile dressing kit')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Open in Requests Manager/i })).toHaveAttribute('href', '/admin/requests');
 
-    const closeBtn = screen.getByRole('button', { name: 'Close' });
-    expect(closeBtn.className).toContain('hidden');
-    expect(closeBtn.className).toContain('sm:flex');
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
 
-    fireEvent.click(closeBtn);
+    fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => {
       expect(screen.queryByText('Bring sterile dressing kit')).not.toBeInTheDocument();
     });
 
     const providerBtns = screen.getAllByRole('button', { name: /Bryan pabilar/i });
+    expect(screen.getAllByText('92/100').length).toBeGreaterThan(0);
     fireEvent.click(providerBtns[0]);
     expect(await screen.findByText('Approved Healthcare Provider')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Manage Providers/i })).toHaveAttribute('href', '/admin/providers');
@@ -255,5 +275,18 @@ describe('AdminDashboard (Direction 3 Bento)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Last 30 Days' }));
 
     expect(await screen.findByText('Last 30 Days Overview')).toBeInTheDocument();
+  });
+
+  it('renders an explicit error state with retry action when analytics queries fail', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockState.shouldFail = true;
+    renderDashboard();
+
+    expect(await screen.findByText('Database unavailable')).toBeInTheDocument();
+    mockState.shouldFail = false;
+
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(await screen.findByText('All Time Overview')).toBeInTheDocument();
+    consoleErrorSpy.mockRestore();
   });
 });

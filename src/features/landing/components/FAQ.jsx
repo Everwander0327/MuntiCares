@@ -31,12 +31,12 @@ const FAQItem = ({ faq, isOpen, onClick }) => (
   <div className={`rounded-[2rem] overflow-hidden transition-all duration-700 ease-fluid ring-1 ${isOpen ? 'ring-primary/30 shadow-card bg-white dark:bg-slate-800' : 'ring-black/5 dark:ring-white/10 bg-white/60 dark:bg-slate-800/60'}`}>
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left transition-all duration-700 ease-fluid hover:bg-primary/5 min-h-[68px]"
+      className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left transition-all duration-700 ease-fluid hover:bg-primary/5 min-h-[4.25rem]"
       aria-expanded={isOpen}
     >
       <span className="font-semibold text-slate-900 dark:text-slate-100 text-base md:text-lg">{faq.q}</span>
       <span className={`w-11 h-11 rounded-full bg-black/[0.04] dark:bg-white/[0.06] ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-center shrink-0 transition-transform duration-700 ease-fluid ${isOpen ? 'rotate-180 bg-primary text-white' : 'text-link'}`}>
-        <CaretDown size={16} weight="light" />
+        <CaretDown className="w-4 h-4" weight="light" aria-hidden="true" />
       </span>
     </button>
     <AnimatePresence initial={false}>
@@ -76,7 +76,7 @@ const FAQ = () => {
           transition={{ duration: 0.8, ease: FLUID }}
         >
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-link ring-1 ring-primary/20 mb-2">
-            <Question size={22} weight="light" />
+            <Question className="w-[1.375rem] h-[1.375rem]" weight="light" aria-hidden="true" />
           </div>
           <h2 id="faq-heading" className="font-display text-3xl md:text-5xl font-semibold text-slate-900 dark:text-slate-100 tracking-tight">Frequently asked questions</h2>
           <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto text-sm md:text-base">

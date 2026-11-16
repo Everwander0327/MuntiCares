@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Search, X, Loader2 } from 'lucide-react';
+import { MagnifyingGlass, X, SpinnerGap } from '@phosphor-icons/react';
 import { geocodeAddress } from '../services/geocoding';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const MUNTINLUPA_BARANGAYS = [
   { name: 'Alabang', lat: 14.4258, lng: 121.0422 },
@@ -29,6 +30,7 @@ const POPULAR_LANDMARKS = [
 const DEBOUNCE_MS = 300;
 
 export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
+  const { t } = useLanguage();
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -70,7 +72,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
       lat: l.lat,
       lng: l.lng,
       displayName: `${l.name}, ${l.sub}, Muntinlupa City`,
-      tag: 'Landmark',
+      tag: t('tracking.address.tagLandmark'),
     }));
 
     const matchedBarangays = MUNTINLUPA_BARANGAYS.filter(
@@ -79,7 +81,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
       lat: b.lat,
       lng: b.lng,
       displayName: `Brgy. ${b.name}, Muntinlupa City`,
-      tag: 'Barangay',
+      tag: t('tracking.address.tagBarangay'),
     }));
 
     const local = [...matchedLandmarks, ...matchedBarangays];
@@ -99,7 +101,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
               lat: remoteHit.lat,
               lng: remoteHit.lng,
               displayName: remoteHit.displayName,
-              tag: 'Street',
+              tag: t('tracking.address.tagStreet'),
             },
           ]);
           setActiveIndex((index) => (index === -1 ? 0 : index));
@@ -199,12 +201,12 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
   return (
     <div ref={containerRef} className="relative w-full z-[600] space-y-2">
       <div className="neu-inset px-3 py-1.5 rounded-xl flex items-center gap-2 border border-white/60 dark:border-white/5">
-        <Search className="w-4 h-4 text-link shrink-0 pointer-events-none" />
+        <MagnifyingGlass className="w-4 h-4 text-link shrink-0 pointer-events-none" />
         <input
           ref={inputRef}
           type="text"
           role="combobox"
-          aria-label="Search street, subdivision, or landmark"
+          aria-label={t('tracking.address.ariaCombo')}
           aria-autocomplete="list"
           aria-expanded={showPanel}
           aria-controls={showPanel ? listboxId : undefined}
@@ -224,15 +226,15 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
             }
           }}
           onKeyDown={handleKeyDown}
-          placeholder="Search street, subdivision, or barangay in Muntinlupa…"
+          placeholder={t('tracking.address.placeholder')}
           className="w-full py-1.5 bg-transparent text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder:text-tertiary placeholder:font-normal focus:outline-none min-w-0"
         />
         {loading ? (
-          <Loader2 className="w-4 h-4 text-link animate-spin shrink-0" />
+          <SpinnerGap className="w-4 h-4 text-link animate-spin shrink-0" />
         ) : query ? (
           <button
             type="button"
-            aria-label="Clear address search"
+            aria-label={t('tracking.address.clearAria')}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               requestId.current += 1;
@@ -261,7 +263,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
             showBarangayDrawer ? 'text-link ring-1 ring-primary/30' : 'text-slate-700 dark:text-slate-200 hover:text-link'
           }`}
         >
-          Barangays ▾
+          {t('tracking.address.barangaysBtn')}
         </button>
       </div>
 
@@ -270,14 +272,14 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
         <div className="neu-flat rounded-2xl p-3 border border-white/80 dark:border-white/10 shadow-xl space-y-2 animate-in fade-in duration-150">
           <div className="flex items-center justify-between px-0.5">
             <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-              Quick Jump · Muntinlupa Barangays
+              {t('tracking.address.quickJumpTitle')}
             </span>
             <button
               type="button"
               onClick={() => setShowBarangayDrawer(false)}
               className="text-2xs font-extrabold text-link hover:underline cursor-pointer"
             >
-              Close
+              {t('common.actions.close')}
             </button>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
@@ -308,14 +310,14 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
         <div className="absolute left-0 right-0 top-full mt-1.5 neu-flat border border-white/80 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-[700]">
           {loading && results.length === 0 ? (
             <p className="px-4 py-3 text-xs font-semibold text-tertiary" role="status">
-              Searching Muntinlupa…
+              {t('tracking.address.searching')}
             </p>
           ) : showEmpty ? (
             <p className="px-4 py-3 text-xs font-semibold text-tertiary" role="status">
-              No matches in Muntinlupa. Try selecting a barangay above, or drag the map to place the pin.
+              {t('tracking.address.noMatches')}
             </p>
           ) : (
-            <ul id={listboxId} role="listbox" aria-label="Address suggestions" className="divide-y divide-slate-200/60 dark:divide-white/5">
+            <ul id={listboxId} role="listbox" aria-label={t('tracking.address.suggestionsAria')} className="divide-y divide-slate-200/60 dark:divide-white/5">
               {results.map((item, idx) => (
                 <li
                   key={`${item.lat}-${item.lng}-${idx}`}
@@ -340,7 +342,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
                     </p>
                   </div>
                   <span className="px-2 py-0.5 rounded-md bg-primary/10 text-link text-2xs font-extrabold uppercase tracking-wider shrink-0">
-                    {item.tag || 'Select'}
+                    {item.tag || t('tracking.address.tagSelect')}
                   </span>
                 </li>
               ))}

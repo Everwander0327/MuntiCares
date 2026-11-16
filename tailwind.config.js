@@ -16,41 +16,43 @@ export default {
         tertiary: 'var(--text-tertiary)',
         link: 'var(--text-link)',
         field: 'var(--field-border)',
+        'on-primary': 'rgb(var(--on-primary-rgb) / <alpha-value>)',
+        'neu-fg': 'rgb(var(--neu-dark-primary-fg-rgb) / <alpha-value>)',
         primary: {
-          DEFAULT: "#2F6FB5", // Primary button
-          hover: "#255A94",   // Primary hover
-          soft: "#DDEBF8",    // Primary soft badge / selected
-          sky: "#8DBCE8",     // Soft blue decorative
-          50: "#F4F8FC",      // Page background
-          100: "#E9F1F9",     // Surface alt (sidebar, rows)
-          200: "#DDEBF8",     // Primary soft
-          300: "#D2E0EE",     // Border / divider
-          400: "#8CBDF0",     // Dark mode primary button
-          500: "#4D8FD8",
-          600: "#2F6FB5",     // DEFAULT
-          700: "#255A94",
-          800: "#183049",     // Dark mode primary soft
-          900: "#17283B",     // Text primary
-          950: "#0E1620",     // Dark mode page background
+          DEFAULT: "rgb(var(--primary-rgb) / <alpha-value>)",         // Primary button
+          hover: "rgb(var(--primary-hover-rgb) / <alpha-value>)",     // Primary hover
+          soft: "rgb(var(--primary-soft-rgb) / <alpha-value>)",       // Primary soft badge / selected
+          sky: "rgb(var(--primary-sky-rgb) / <alpha-value>)",         // Soft decorative accent
+          50: "rgb(var(--surface-page) / <alpha-value>)",             // Page background
+          100: "rgb(var(--surface-subtle) / <alpha-value>)",          // Surface alt (sidebar, rows)
+          200: "rgb(var(--primary-soft-rgb) / <alpha-value>)",        // Primary soft
+          300: "rgb(var(--surface-border) / <alpha-value>)",          // Border / divider
+          400: "rgb(var(--primary-light-rgb) / <alpha-value>)",       // Dark mode highlight / badge text
+          500: "rgb(var(--primary-mid-rgb) / <alpha-value>)",
+          600: "rgb(var(--primary-rgb) / <alpha-value>)",             // DEFAULT
+          700: "rgb(var(--primary-hover-rgb) / <alpha-value>)",
+          800: "rgb(var(--primary-deep-rgb) / <alpha-value>)",        // Dark mode primary soft
+          900: "rgb(var(--ink-rgb) / <alpha-value>)",                 // Text primary
+          950: "rgb(var(--surface-dark-page-rgb) / <alpha-value>)",   // Dark mode page background
         },
         accent: {
-          DEFAULT: "#C4623F", // Soft coral
-          soft: "#FCEBE4",
-          dark: "#F2A98E",
-          darkSoft: "#3B2219",
+          DEFAULT: "rgb(var(--accent-rgb) / <alpha-value>)",
+          soft: "rgb(var(--accent-soft-rgb) / <alpha-value>)",
+          dark: "rgb(var(--accent-dark-rgb) / <alpha-value>)",
+          darkSoft: "rgb(var(--accent-dark-soft-rgb) / <alpha-value>)",
         },
         surface: {
-          DEFAULT: "#FFFFFF",
+          DEFAULT: "rgb(var(--surface-card-rgb) / <alpha-value>)",
           // Theme-aware surfaces; values live in index.css so light/dark swap
           // without a paired dark: class at every call site.
           page: "rgb(var(--surface-page) / <alpha-value>)",
           shell: "rgb(var(--surface-shell) / <alpha-value>)",
           subtle: "rgb(var(--surface-subtle) / <alpha-value>)",
           border: "rgb(var(--surface-border) / <alpha-value>)",
-          alt: "#E9F1F9",
-          dark: "#16212E",
-          darkAlt: "#1F2D3E",
-          darkBorder: "#2D3F54",
+          alt: "rgb(var(--surface-subtle) / <alpha-value>)",
+          dark: "rgb(var(--surface-dark-card-rgb) / <alpha-value>)",
+          darkAlt: "rgb(var(--surface-dark-subtle-rgb) / <alpha-value>)",
+          darkBorder: "rgb(var(--surface-dark-border-rgb) / <alpha-value>)",
         },
         chart: {
           1: "var(--chart-1)",
@@ -60,10 +62,10 @@ export default {
           5: "var(--chart-5)",
         },
         txt: {
-          primary: "#17283B",
-          secondary: "#52657A",
-          darkPrimary: "#E6EEF6",
-          darkSecondary: "#A5B6C8",
+          primary: "rgb(var(--ink-rgb) / <alpha-value>)",
+          secondary: "rgb(var(--txt-secondary-rgb) / <alpha-value>)",
+          darkPrimary: "rgb(var(--txt-dark-primary-rgb) / <alpha-value>)",
+          darkSecondary: "rgb(var(--txt-dark-secondary-rgb) / <alpha-value>)",
         },
         success: {
           DEFAULT: "#2C7A55",
@@ -84,11 +86,11 @@ export default {
           darkSoft: "#3C1B1A",
         },
         focusRing: {
-          DEFAULT: "#2F6FB5",
-          dark: "#8CBDF0",
+          DEFAULT: "var(--focus-ring)",
+          dark: "var(--focus-ring)",
         },
-        secondary: "#F4F8FC",
-        ink: "#17283B",
+        secondary: "rgb(var(--surface-page) / <alpha-value>)",
+        ink: "rgb(var(--ink-rgb) / <alpha-value>)",
       },
       fontFamily: {
         sans: ['"Atkinson Hyperlegible Next"', '"Atkinson Hyperlegible"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
@@ -127,9 +129,9 @@ export default {
         toast: 'var(--z-toast)',
       },
       boxShadow: {
-        soft: "0 24px 80px -24px rgba(30, 111, 191, 0.18)",
-        softer: "0 12px 40px -12px rgba(11, 21, 38, 0.12)",
-        card: "0 8px 32px rgba(30, 111, 191, 0.08)",
+        soft: "0 24px 80px -24px rgb(var(--shadow-accent-rgb) / 0.18)",
+        softer: "0 12px 40px -12px rgb(var(--ink-rgb) / 0.12)",
+        card: "0 8px 32px rgb(var(--shadow-accent-rgb) / 0.08)",
       },
       transitionTimingFunction: {
         fluid: "cubic-bezier(0.32, 0.72, 0, 1)",

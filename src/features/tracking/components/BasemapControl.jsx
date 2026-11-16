@@ -1,9 +1,10 @@
-import { Map as MapIcon, Mountain, Satellite } from 'lucide-react';
+import { MapTrifold, Mountains, Planet } from '@phosphor-icons/react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export const BASEMAP_MODES = [
-  { id: 'streets', label: 'Street', fullLabel: 'Street map', Icon: MapIcon },
-  { id: 'satellite', label: 'Satellite', fullLabel: 'Satellite', Icon: Satellite },
-  { id: 'terrain', label: 'Terrain', fullLabel: 'Terrain', Icon: Mountain },
+  { id: 'streets', label: 'Street', fullLabel: 'Street map', labelKey: 'tracking.basemap.streets', fullKey: 'tracking.basemap.streetsFull', Icon: MapTrifold },
+  { id: 'satellite', label: 'Satellite', fullLabel: 'Satellite', labelKey: 'tracking.basemap.satellite', fullKey: 'tracking.basemap.satelliteFull', Icon: Planet },
+  { id: 'terrain', label: 'Terrain', fullLabel: 'Terrain', labelKey: 'tracking.basemap.terrain', fullKey: 'tracking.basemap.terrainFull', Icon: Mountains },
 ];
 
 /**
@@ -13,13 +14,14 @@ export const BASEMAP_MODES = [
  * without opening a hidden popup menu.
  */
 export default function BasemapControl({ value, onChange, className = '' }) {
+  const { t } = useLanguage();
   return (
     <div
       className={`mc-basemap-segmented ${className}`}
       role="group"
-      aria-label="Base map view"
+      aria-label={t('tracking.basemap.aria')}
     >
-      {BASEMAP_MODES.map(({ id, label, fullLabel }) => {
+      {BASEMAP_MODES.map(({ id, labelKey, fullKey }) => {
         const active = value === id;
         return (
           <button
@@ -27,10 +29,10 @@ export default function BasemapControl({ value, onChange, className = '' }) {
             type="button"
             onClick={() => onChange(id)}
             aria-pressed={active}
-            title={fullLabel}
+            title={t(fullKey)}
             className={`mc-basemap-segmented__btn${active ? ' is-active' : ''}`}
           >
-            {label}
+            {t(labelKey)}
           </button>
         );
       })}

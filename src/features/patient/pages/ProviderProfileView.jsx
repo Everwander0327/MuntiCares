@@ -1,28 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { 
-  CheckCircle2, MessageCircle, CalendarDays, ArrowLeft,
-  ChevronDown, ChevronUp
-} from 'lucide-react';
+import {
+  CheckCircle,
+  ChatCircle,
+  CalendarDots,
+  ArrowLeft,
+  CaretDown,
+  CaretUp,
+} from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import toast from 'react-hot-toast';
 
-const getTrustLevel = (score) => {
-  if (score >= 90) return { label: 'Highly Trusted', color: 'text-success dark:text-success-dark', bg: 'bg-emerald-500/10' };
-  if (score >= 70) return { label: 'Trusted', color: 'text-success dark:text-success-dark', bg: 'bg-green-500/10' };
-  if (score >= 40) return { label: 'Developing', color: 'text-warning dark:text-warning-dark', bg: 'bg-amber-500/10' };
-  return { label: 'Needs Improvement', color: 'text-danger dark:text-danger-dark', bg: 'bg-rose-500/10' };
+const getTrustLevel = (score, t) => {
+  if (score >= 90) return { label: t('patient.providerProfile.trustExcellent'), color: 'text-success dark:text-success-dark', bg: 'bg-emerald-500/10' };
+  if (score >= 70) return { label: t('patient.providerProfile.trustStrong'), color: 'text-success dark:text-success-dark', bg: 'bg-green-500/10' };
+  if (score >= 40) return { label: t('patient.providerProfile.trustGood'), color: 'text-warning dark:text-warning-dark', bg: 'bg-amber-500/10' };
+  return { label: t('patient.providerProfile.trustNew'), color: 'text-danger dark:text-danger-dark', bg: 'bg-rose-500/10' };
 };
 
 const ProviderProfileView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t, isTagalog, translateService, translateStatus } = useLanguage();
   const [activeBooking, setActiveBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [provider, setProvider] = useState(null);
@@ -133,13 +139,14 @@ const ProviderProfileView = () => {
 
   if (!provider) return null;
 
-  const trustLevel = getTrustLevel(provider.trust_score || 0);
+  const trustLevel = getTrustLevel(provider.trust_score || 0, t);
   const completionRate = stats.completed_requests + stats.cancelled_requests > 0
     ? Math.round((stats.completed_requests / (stats.completed_requests + stats.cancelled_requests)) * 100)
     : 0;
 
   const servicesList = provider.services || [];
   const displayedServices = showAllServices ? servicesList : servicesList.slice(0, 6);
+  const memberSinceMonthYear = new Date(provider.created_at).toLocaleDateString(isTagalog ? 'tl-PH' : 'en-US', { month: 'short', year: 'numeric' });
 
   return (
     <DashboardLayout role="patient">
@@ -152,7 +159,7 @@ const ProviderProfileView = () => {
             className="neu-btn px-4 py-2.5 rounded-2xl inline-flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-link transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Providers</span>
+            <span>{t('patient.providerProfile.backToProviders')}</span>
           </motion.button>
         </div>
 
@@ -167,9 +174,9 @@ const ProviderProfileView = () => {
             <div className="flex items-start sm:items-center gap-4 min-w-0">
               <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl neu-flat-sm overflow-hidden p-1 shadow-sm relative shrink-0">
                 {provider.avatar_url ? (
-                  <img src={provider.avatar_url} alt={provider.full_name} className="w-full h-full object-cover rounded-[12px]" />
+                  <img src={provider.avatar_url} alt={provider.full_name} className="w-full h-full object-cover rounded-[0.75rem]" />
                 ) : (
-                  <div className="w-full h-full rounded-[12px] bg-primary/10 flex items-center justify-center text-xl sm:text-2xl font-black text-link">
+                  <div className="w-full h-full rounded-[0.75rem] bg-primary/10 flex items-center justify-center text-xl sm:text-2xl font-black text-link">
                     {provider.full_name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'P'}
                   </div>
                 )}
@@ -183,7 +190,7 @@ const ProviderProfileView = () => {
                 </div>
 
                 <p className="text-xs sm:text-sm font-medium text-txt-secondary dark:text-txt-darkSecondary">
-                  {provider.location || 'Muntinlupa City'} &bull; Mon–Sat, 9:00 AM – 5:00 PM &bull; Member since {new Date(provider.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  {provider.location || t('patient.common.muntinlupaCity')} &bull; {t('patient.providerProfile.hoursDefault')} &bull; {t('patient.providerProfile.memberSince', { monthYear: memberSinceMonthYear })}
                 </p>
 
                 <p className="text-xs text-tertiary truncate">
@@ -199,8 +206,8 @@ const ProviderProfileView = () => {
                 onClick={() => navigate(`/patient/messages?provider=${id}&name=${encodeURIComponent(provider.full_name || '')}`)}
                 className="px-4 py-3 rounded-2xl neu-btn font-bold text-xs sm:text-sm text-link flex items-center justify-center gap-2 cursor-pointer"
               >
-                <MessageCircle className="w-4 h-4" />
-                <span>Send Message</span>
+                <ChatCircle className="w-4 h-4" />
+                <span>{t('patient.providerProfile.sendMessage')}</span>
               </motion.button>
 
               {activeBooking ? (
@@ -209,8 +216,8 @@ const ProviderProfileView = () => {
                   onClick={() => navigate('/patient/requests')}
                   className="px-5 py-3 rounded-2xl neu-btn font-bold text-xs sm:text-sm text-success dark:text-success-dark flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
-                  <CheckCircle2 className="w-4 h-4 text-success" />
-                  <span>{activeBooking.status === 'Pending' ? 'Request Pending — View' : 'Ongoing Visit — Track Live'}</span>
+                  <CheckCircle className="w-4 h-4 text-success" />
+                  <span>{activeBooking.status === 'Pending' ? t('patient.providerProfile.viewPendingRequest') : t('patient.providerProfile.trackOngoingVisit')}</span>
                 </motion.button>
               ) : (
                 <motion.button
@@ -218,8 +225,8 @@ const ProviderProfileView = () => {
                   onClick={() => navigate(`/patient/providers?book=${id}`)}
                   className="px-5 py-3 rounded-2xl neu-btn-primary font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer"
                 >
-                  <CalendarDays className="w-4 h-4" />
-                  <span>Book Appointment</span>
+                  <CalendarDots className="w-4 h-4" />
+                  <span>{t('patient.providerProfile.bookAppointment')}</span>
                 </motion.button>
               )}
             </div>
@@ -228,10 +235,10 @@ const ProviderProfileView = () => {
           {/* Bio Row */}
           <div className="mt-5 pt-5 border-t border-slate-200/70 dark:border-white/10">
             <p className="text-2xs font-extrabold uppercase tracking-widest text-tertiary mb-1.5">
-              About Practitioner
+              {t('patient.providerProfile.aboutTitle')}
             </p>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-4xl">
-              {provider.bio || 'Dedicated healthcare practitioner serving families in Muntinlupa City.'}
+              {provider.bio || t('patient.providerProfile.defaultBio')}
             </p>
           </div>
         </motion.section>
@@ -240,7 +247,7 @@ const ProviderProfileView = () => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
           <div className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
             <div className="flex items-center justify-between">
-              <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Trust Score</span>
+              <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providerProfile.trustScoreLabel')}</span>
               <span className={`text-2xs font-extrabold ${trustLevel.color}`}>{trustLevel.label}</span>
             </div>
             <p className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-2">
@@ -257,27 +264,27 @@ const ProviderProfileView = () => {
           </div>
 
           <div className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
-            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Overall Rating</span>
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providerProfile.ratingLabel')}</span>
             <p className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-2">
               {(provider.rating || 0).toFixed(1)} <span className="text-amber-400">★</span>
             </p>
-            <p className="text-xs text-tertiary mt-1">{stats.review_count} verified reviews</p>
+            <p className="text-xs text-tertiary mt-1">{t('patient.providerProfile.verifiedReviewsCount', { count: stats.review_count })}</p>
           </div>
 
           <div className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
-            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Completed Visits</span>
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providerProfile.completedVisitsLabel')}</span>
             <p className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-2">
               {stats.completed_requests}
             </p>
-            <p className="text-xs text-tertiary mt-1">{stats.unique_patients} patients served</p>
+            <p className="text-xs text-tertiary mt-1">{t('patient.providerProfile.patientsServed', { count: stats.unique_patients })}</p>
           </div>
 
           <div className="neu-flat rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col justify-between">
-            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">Success Rate</span>
+            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providerProfile.successRateLabel')}</span>
             <p className="font-display text-xl sm:text-2xl font-black text-slate-900 dark:text-white tabular-nums mt-2">
               {completionRate}%
             </p>
-            <p className="text-xs text-tertiary mt-1">Visit completion rate</p>
+            <p className="text-xs text-tertiary mt-1">{t('patient.providerProfile.visitCompletionRate')}</p>
           </div>
         </div>
 
@@ -293,9 +300,9 @@ const ProviderProfileView = () => {
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h2 className="font-display text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  Offered Services ({servicesList.length})
+                  {t('patient.providerProfile.offeredServicesTitle', { count: servicesList.length })}
                 </h2>
-                <p className="text-xs text-tertiary mt-0.5">Select any service to book directly</p>
+                <p className="text-xs text-tertiary mt-0.5">{t('patient.providerProfile.offeredServicesSub')}</p>
               </div>
               {servicesList.length > 6 && (
                 <button
@@ -304,9 +311,9 @@ const ProviderProfileView = () => {
                   className="neu-btn px-3 py-1.5 rounded-xl text-xs font-extrabold text-link flex items-center gap-1 cursor-pointer"
                 >
                   {showAllServices ? (
-                    <>Less <ChevronUp className="w-3 h-3" /></>
+                    <>{t('patient.providerProfile.showLess')} <CaretUp className="w-3 h-3" /></>
                   ) : (
-                    <>All ({servicesList.length}) <ChevronDown className="w-3 h-3" /></>
+                    <>{t('patient.providerProfile.showAll', { count: servicesList.length })} <CaretDown className="w-3 h-3" /></>
                   )}
                 </button>
               )}
@@ -320,8 +327,8 @@ const ProviderProfileView = () => {
                     if (activeBooking) {
                       toast(
                         activeBooking.status === 'Pending'
-                          ? 'You already have a pending booking request with this provider. View it in My Requests.'
-                          : `You already have an ongoing visit (${activeBooking.status}) with this provider. Track it in My Requests.`,
+                          ? t('patient.providerProfile.alreadyPendingToast')
+                          : t('patient.providerProfile.alreadyOngoingToast', { status: translateStatus(activeBooking.status) }),
                         { icon: 'ℹ️' }
                       );
                       navigate('/patient/requests');
@@ -333,18 +340,18 @@ const ProviderProfileView = () => {
                 >
                   <div className="min-w-0 pr-2">
                     <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 group-hover:text-link transition-colors truncate">
-                      {s}
+                      {translateService(s)}
                     </p>
-                    <p className="text-xs text-tertiary mt-0.5">Available for home visit</p>
+                    <p className="text-xs text-tertiary mt-0.5">{t('patient.providerProfile.availableForHomeVisit')}</p>
                   </div>
                   <span className="text-xs font-extrabold text-link shrink-0 group-hover:translate-x-0.5 transition-transform">
-                    Book &rarr;
+                    {t('patient.providerProfile.bookCta')}
                   </span>
                 </button>
               ))}
               {servicesList.length === 0 && (
                 <p className="text-xs text-tertiary italic py-4 text-center">
-                  General consultation service available.
+                  {t('patient.providerProfile.generalConsultationDesc')}
                 </p>
               )}
             </div>
@@ -360,9 +367,9 @@ const ProviderProfileView = () => {
             <div className="flex items-center justify-between gap-2">
               <div>
                 <h2 className="font-display text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
-                  Patient Reviews ({reviews.length})
+                  {t('patient.providerProfile.reviewsTitle', { count: reviews.length })}
                 </h2>
-                <p className="text-xs text-tertiary mt-0.5">Feedback from verified home visits</p>
+                <p className="text-xs text-tertiary mt-0.5">{t('patient.providerProfile.reviewsSub')}</p>
               </div>
             </div>
 
@@ -375,8 +382,8 @@ const ProviderProfileView = () => {
                 <div className="neu-inset p-6 rounded-2xl text-center border border-slate-200/50 dark:border-white/5">
                   <EmptyState
                     icon="star"
-                    title="No reviews yet"
-                    message="This healthcare provider has not received any patient reviews yet."
+                    title={t('patient.providerProfile.noReviewsTitle')}
+                    message={t('patient.providerProfile.noReviewsMsg')}
                     variant="compact"
                   />
                 </div>

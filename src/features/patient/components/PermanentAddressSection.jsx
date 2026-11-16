@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import ModernLocationPicker from '@/features/tracking/components/ModernLocationPicker';
 import AddressAutocomplete from '@/features/tracking/components/AddressAutocomplete';
 import { formatFullVisitAddress, parseFullVisitAddress } from '@/features/tracking/services/addressFormat';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * PermanentAddressSection
@@ -19,6 +20,7 @@ export default function PermanentAddressSection({
   hideHeader = false,
   onChange,
 }) {
+  const { t } = useLanguage();
   const parsedOnMount = parseFullVisitAddress(initialAddress);
   const hasStructuredInitial = Boolean(
     initialBaseAddress || initialUnit || initialSubdivision || initialInstructions,
@@ -120,10 +122,10 @@ export default function PermanentAddressSection({
       {!hideHeader && (
         <div className="pb-3 border-b border-slate-200/60 dark:border-white/5">
           <label className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 block">
-            Permanent Home & Visit Address
+            {t('patient.address.permanentHeaderTitle')}
           </label>
           <p className="text-sm text-tertiary dark:text-tertiary mt-0.5">
-            Saved to your profile. All future home visits default to this location unless changed at booking.
+            {t('patient.address.permanentHeaderDesc')}
           </p>
         </div>
       )}
@@ -131,7 +133,7 @@ export default function PermanentAddressSection({
       {/* Step 1: Search Street / Landmark */}
       <div className="space-y-1.5">
         <label className="text-2xs font-semibold uppercase tracking-wider text-tertiary ml-1">
-          Search Street, Subdivision, or Barangay
+          {t('patient.address.searchLabel')}
         </label>
         <AddressAutocomplete
           onSelect={handleAutocomplete}
@@ -143,7 +145,7 @@ export default function PermanentAddressSection({
       <div className="space-y-1.5">
         <div className="flex items-center justify-between ml-1">
           <label className="text-2xs font-semibold uppercase tracking-wider text-tertiary">
-            Pin Location on Map
+            {t('patient.address.pinMapLabel')}
           </label>
           {coords && (
             <span className="text-xs font-medium text-tertiary dark:text-tertiary">
@@ -155,11 +157,11 @@ export default function PermanentAddressSection({
           ref={pickerRef}
           initial={coords}
           onPinChange={handlePinChange}
-          className="h-[240px] sm:h-[280px]"
+          className="h-[15rem] sm:h-[17.5rem]"
         />
         {!coords && baseAddress.trim() && (
           <p className="text-2xs font-semibold text-[#B45309] dark:text-[#FCD34D] ml-1">
-            Move the map or search an address to confirm this location before saving.
+            {t('patient.address.pinRequiredHint')}
           </p>
         )}
       </div>
@@ -170,59 +172,59 @@ export default function PermanentAddressSection({
           {/* Base Street / House */}
           <div className="space-y-1 sm:col-span-2">
             <label htmlFor="address-street" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 ml-1">
-              Street & Barangay
+              {t('patient.address.streetLabel')}
             </label>
             <input
               id="address-street"
               type="text"
               value={baseAddress}
               onChange={handleFieldChange(setBaseAddress, 'base')}
-              placeholder="e.g. Sampaguita St., Brgy. Tunasan, Muntinlupa City"
-              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[44px] text-base sm:text-sm font-medium outline-none transition-all"
+              placeholder={t('patient.address.streetPlaceholder')}
+              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[2.75rem] text-base sm:text-sm font-medium outline-none transition-all"
             />
           </div>
 
           {/* Unit / Floor */}
           <div className="space-y-1">
             <label htmlFor="address-unit" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 ml-1">
-              House / Unit / Lot No.
+              {t('patient.address.unitLabel')}
             </label>
             <input
               id="address-unit"
               type="text"
               value={unitFloor}
               onChange={handleFieldChange(setUnitFloor, 'unit')}
-              placeholder="e.g. Block 14 Lot 8"
-              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[44px] text-base sm:text-sm font-medium outline-none transition-all"
+              placeholder={t('patient.address.unitPlaceholder')}
+              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[2.75rem] text-base sm:text-sm font-medium outline-none transition-all"
             />
           </div>
 
           {/* Subdivision / Gate */}
           <div className="space-y-1">
             <label htmlFor="address-subdivision" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 ml-1">
-              Subdivision or Village
+              {t('patient.address.subdivisionLabel')}
             </label>
             <input
               id="address-subdivision"
               type="text"
               value={subdivisionGate}
               onChange={handleFieldChange(setSubdivisionGate, 'sub')}
-              placeholder="e.g. Victoria Homes Phase 2"
-              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[44px] text-base sm:text-sm font-medium outline-none transition-all"
+              placeholder={t('patient.address.subdivisionPlaceholder')}
+              className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl py-2.5 px-3.5 min-h-[2.75rem] text-base sm:text-sm font-medium outline-none transition-all"
             />
           </div>
 
           {/* Gate & Arrival Instructions */}
           <div className="space-y-1 sm:col-span-2">
             <label htmlFor="address-arrival-notes" className="block text-xs font-semibold text-slate-600 dark:text-slate-300 ml-1">
-              Gate / Landmark Notes for Provider
+              {t('patient.address.instructionsLabel')}
             </label>
             <textarea
               id="address-arrival-notes"
               rows={2}
               value={arrivalInstructions}
               onChange={handleFieldChange(setArrivalInstructions, 'instr')}
-              placeholder="e.g. Yellow gate beside bakery, ring buzzer on right pillar"
+              placeholder={t('patient.address.instructionsPlaceholder')}
               className="w-full neu-inset neu-input text-slate-800 dark:text-slate-100 rounded-xl p-3 text-base sm:text-sm font-medium outline-none resize-none transition-all leading-relaxed"
             />
           </div>

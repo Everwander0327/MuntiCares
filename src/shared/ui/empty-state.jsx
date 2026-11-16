@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const illustrations = {
   search: (
@@ -58,6 +59,7 @@ const illustrations = {
 };
 
 const EmptyState = ({ icon = 'search', title, message, action, variant = 'default' }) => {
+  const { t } = useLanguage();
   const isCompact = variant === 'compact';
 
   return (
@@ -70,7 +72,7 @@ const EmptyState = ({ icon = 'search', title, message, action, variant = 'defaul
         {illustrations[icon] || illustrations.search}
       </div>
       <h3 className={`font-bold text-slate-600 dark:text-slate-300 ${isCompact ? 'text-sm' : 'text-lg'}`}>
-        {title || 'Nothing here yet'}
+        {title || t('common.empty.title')}
       </h3>
       {message && (
         <p className={`text-tertiary dark:text-tertiary mt-1 max-w-xs ${isCompact ? 'text-xs' : 'text-sm'}`}>

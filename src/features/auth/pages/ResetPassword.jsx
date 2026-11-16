@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeSlash } from '@phosphor-icons/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,7 +30,7 @@ const PasswordToggle = ({ show, onToggle }) => (
     tabIndex={-1}
     aria-label={show ? 'Hide password' : 'Show password'}
   >
-    {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+    {show ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
   </button>
 );
 

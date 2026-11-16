@@ -1,58 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import { 
-  Clock, 
-  CheckCircle2, 
-  Search, 
-  FileText, 
-  Calendar, 
-  Navigation, 
-  Home, 
-  Stethoscope, 
-  MessageSquare, 
-  MessageCircle, 
-  RefreshCw, 
+import {
+  Clock,
+  CheckCircle,
+  MagnifyingGlass,
+  FileText,
+  Calendar,
+  NavigationArrow,
+  House,
+  Stethoscope,
+  ChatText,
+  ChatCircle,
+  ArrowsClockwise,
   ArrowRight,
-  ChevronRight
-} from 'lucide-react';
+  CaretRight,
+  ArrowUpRight,
+} from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import usePatientRequests from '@/hooks/usePatientRequests';
 import { SkeletonPage } from '@/shared/ui';
 import { LiveVisitTrackerModal } from '@/features/tracking/components';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-
-const muntiHighlights = [
-  {
-    id: 1,
-    tag: 'Barangay Health Caravan',
-    title: 'Free Checkups & Medical Caravan in Muntinlupa',
-    description: 'City health units conducting blood pressure monitoring, consultations, and doctor visits across all 9 barangays.',
-    image: '/images/carousel/caravan.jpg',
-  },
-  {
-    id: 2,
-    tag: 'Mobile Health Clinic',
-    title: 'Libreng Gamot at Serbisyong Pangkalusugan',
-    description: 'The Muntinlupa Community Mobile Clinic visits barangay plazas to distribute maintenance medicine and essential vitamins.',
-    image: '/images/carousel/mobile-clinic.jpg',
-  },
-  {
-    id: 3,
-    tag: 'Home Healthcare',
-    title: 'Compassionate In-Home Senior Care & Therapy',
-    description: 'Certified nurses and caregivers providing gentle physical therapy and vitals monitoring in the comfort of your home.',
-    image: '/images/carousel/home-care.jpg',
-  },
-  {
-    id: 4,
-    tag: 'Citywide Network',
-    title: 'MuntiCares Certified Healthcare Network',
-    description: 'Over 250+ vetted doctors, nurses, and caregivers connected through the city’s unified digital care platform.',
-    image: '/images/landing/hero-wash.jpg',
-  },
-];
+import {
+  useRecentCarouselEvents,
+  isExternalEventLink,
+  formatEventDateLabel,
+} from '@/features/admin/utils/recentEvents';
 
 const PatientDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -69,6 +45,40 @@ const PatientDashboard = () => {
   const isPulling = React.useRef(false);
   const mainRef = React.useRef(null);
   const { user } = useAuth();
+  const { t, isTagalog, translateService, translateStatus } = useLanguage();
+  const locale = isTagalog ? 'tl-PH' : 'en-US';
+  const navigate = useNavigate();
+
+  const muntiHighlights = useMemo(() => [
+    {
+      id: 1,
+      tag: t('patient.dashboard.slide1Tag'),
+      title: t('patient.dashboard.slide1Title'),
+      description: t('patient.dashboard.slide1Desc'),
+      image: '/images/carousel/caravan.jpg',
+    },
+    {
+      id: 2,
+      tag: t('patient.dashboard.slide2Tag'),
+      title: t('patient.dashboard.slide2Title'),
+      description: t('patient.dashboard.slide2Desc'),
+      image: '/images/carousel/mobile-clinic.jpg',
+    },
+    {
+      id: 3,
+      tag: t('patient.dashboard.slide3Tag'),
+      title: t('patient.dashboard.slide3Title'),
+      description: t('patient.dashboard.slide3Desc'),
+      image: '/images/carousel/home-care.jpg',
+    },
+    {
+      id: 4,
+      tag: t('patient.dashboard.slide4Tag'),
+      title: t('patient.dashboard.slide4Title'),
+      description: t('patient.dashboard.slide4Desc'),
+      image: '/images/landing/hero-wash.jpg',
+    },
+  ], [t]);
 
   // Profile-completeness routing lives in DashboardLayout so every patient
   // route is covered by one query instead of one per page.
@@ -77,9 +87,12 @@ const PatientDashboard = () => {
   const isDraggingRef = useRef(false);
   const dragStartXRef = useRef(0);
   const dragScrollLeftRef = useRef(0);
+  const dragDistanceRef = useRef(0);
+  const pointerDownClientXRef = useRef(0);
   const isInteractingRef = useRef(false);
   const [carouselHeld, setCarouselHeld] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const carouselSlides = useRecentCarouselEvents('patient', muntiHighlights);
 
   useEffect(() => {
     const query = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -105,7 +118,7 @@ const PatientDashboard = () => {
       const width = carouselTrackRef.current.clientWidth;
       if (width > 0) {
         const slide = Math.round(carouselTrackRef.current.scrollLeft / width);
-        if (slide !== currentSlide && slide >= 0 && slide < muntiHighlights.length) {
+        if (slide !== currentSlide && slide >= 0 && slide < carouselSlides.length) {
           setCurrentSlide(slide);
         }
       }
@@ -115,6 +128,8 @@ const PatientDashboard = () => {
   const onMouseDownTrack = (e) => {
     isDraggingRef.current = true;
     isInteractingRef.current = true;
+    dragDistanceRef.current = 0;
+    pointerDownClientXRef.current = e.pageX;
     dragStartXRef.current = e.pageX - carouselTrackRef.current.offsetLeft;
     dragScrollLeftRef.current = carouselTrackRef.current.scrollLeft;
   };
@@ -122,9 +137,22 @@ const PatientDashboard = () => {
   const onMouseMoveTrack = (e) => {
     if (!isDraggingRef.current || !carouselTrackRef.current) return;
     e.preventDefault();
+    dragDistanceRef.current = Math.max(
+      dragDistanceRef.current,
+      Math.abs(e.pageX - pointerDownClientXRef.current)
+    );
     const x = e.pageX - carouselTrackRef.current.offsetLeft;
     const walk = (x - dragStartXRef.current) * 1.4;
     carouselTrackRef.current.scrollLeft = dragScrollLeftRef.current - walk;
+  };
+
+  const handleSlideClick = (slide) => {
+    if (!slide?.link || dragDistanceRef.current >= 6) return;
+    if (isExternalEventLink(slide.link)) {
+      window.open(slide.link, '_blank', 'noopener,noreferrer');
+    } else {
+      navigate(slide.link);
+    }
   };
 
   const onMouseUpTrack = () => {
@@ -135,7 +163,7 @@ const PatientDashboard = () => {
     if (carouselTrackRef.current) {
       const width = carouselTrackRef.current.clientWidth;
       const targetSlide = Math.round(carouselTrackRef.current.scrollLeft / width);
-      scrollToSlide(Math.max(0, Math.min(targetSlide, muntiHighlights.length - 1)));
+      scrollToSlide(Math.max(0, Math.min(targetSlide, carouselSlides.length - 1)));
     }
   };
 
@@ -144,12 +172,12 @@ const PatientDashboard = () => {
     if (carouselHeld || reduceMotion) return undefined;
     const timer = setInterval(() => {
       if (carouselTrackRef.current && !isInteractingRef.current && !isDraggingRef.current) {
-        const nextSlide = (currentSlide + 1) % muntiHighlights.length;
+        const nextSlide = (currentSlide + 1) % carouselSlides.length;
         scrollToSlide(nextSlide);
       }
     }, 6000);
     return () => clearInterval(timer);
-  }, [currentSlide, carouselHeld, reduceMotion]);
+  }, [currentSlide, carouselHeld, reduceMotion, carouselSlides.length]);
 
   // Use shared hook for requests + realtime
   const { requests: fetchedRequests, loading: requestsLoading, refetch } = usePatientRequests(user?.id || null);
@@ -160,14 +188,14 @@ const PatientDashboard = () => {
       if (fetchedRequests && fetchedRequests.length > 0) {
       const formattedRequests = (fetchedRequests || []).map(req => {
         let timeStr = '';
-        try { if (req.time) timeStr = new Date(`2000-01-01T${req.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { timeStr = req.time || ''; }
+        try { if (req.time) timeStr = new Date(`2000-01-01T${req.time}`).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' }); } catch { timeStr = req.time || ''; }
         return {
           id: req.id,
           providerId: req.providerId,
-          provider: req.provider || 'Unknown',
+          provider: req.provider || t('patient.dashboard.unknownProvider'),
           providerAvatarUrl: req.providerAvatarUrl || '',
           service: req.service,
-          date: req.date ? new Date(req.date.replace(/-/g, '/')).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
+          date: req.date ? new Date(req.date.replace(/-/g, '/')).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A',
           time: timeStr,
           status: req.status,
         };
@@ -200,15 +228,15 @@ const PatientDashboard = () => {
 
       if (activeReq) {
         let timeLabel = '';
-        try { if (activeReq.time) timeLabel = new Date(`2000-01-01T${activeReq.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { timeLabel = activeReq.time || ''; }
+        try { if (activeReq.time) timeLabel = new Date(`2000-01-01T${activeReq.time}`).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' }); } catch { timeLabel = activeReq.time || ''; }
         setActiveVisit({
           id: activeReq.id,
           patientId: activeReq.patientId || user?.id,
           providerId: activeReq.providerId,
-          provider: activeReq.provider || 'Unknown',
+          provider: activeReq.provider || t('patient.dashboard.unknownProvider'),
           providerAvatarUrl: activeReq.providerAvatarUrl || '',
           service: activeReq.service,
-          date: activeReq.date ? new Date(activeReq.date.replace(/-/g, '/')).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Today',
+          date: activeReq.date ? new Date(activeReq.date.replace(/-/g, '/')).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' }) : t('patient.dashboard.today'),
           time: timeLabel,
           status: activeReq.status,
         });
@@ -225,7 +253,7 @@ const PatientDashboard = () => {
         setLoading(false);
       }
     }
-  }, [fetchedRequests, requestsLoading, user]);
+  }, [fetchedRequests, requestsLoading, user, locale, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -350,7 +378,7 @@ const PatientDashboard = () => {
             animate={{ rotate: pullDistance >= 60 ? 180 : 0 }}
             className="w-9 h-9 neu-flat rounded-full flex items-center justify-center"
           >
-            <RefreshCw className={`w-4 h-4 text-link ${refreshing ? 'animate-spin' : ''}`} />
+            <ArrowsClockwise className={`w-4 h-4 text-link ${refreshing ? 'animate-spin' : ''}`} />
           </motion.div>
         </div>
       )}
@@ -363,11 +391,11 @@ const PatientDashboard = () => {
         style={pullDistance > 0 ? { transform: `translateY(${pullDistance}px)`, transition: 'transform 0.1s ease-out' } : { transition: 'transform 0.3s ease-out' }}
       >
         {/* Top Section: Community Highlights Carousel (Left) and Quick Actions Card (Right) */}
-        <h1 className="sr-only">Dashboard</h1>
+        <h1 className="sr-only">{t('patient.dashboard.srTitle')}</h1>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-stretch">
           {/* Highlights Hero Card (lg:col-span-7) */}
           <section
-            className="lg:col-span-7 neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden relative flex flex-col justify-between min-h-[380px] sm:min-h-[440px] lg:min-h-[480px]"
+            className="lg:col-span-7 neu-flat rounded-2xl sm:rounded-[2.25rem] overflow-hidden relative flex flex-col justify-between min-h-[19rem] sm:min-h-[26rem] lg:min-h-[30rem]"
             onMouseEnter={() => setCarouselHeld(true)}
             onMouseLeave={() => setCarouselHeld(false)}
             onFocusCapture={() => setCarouselHeld(true)}
@@ -394,39 +422,76 @@ const PatientDashboard = () => {
                 className="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar select-none cursor-grab active:cursor-grabbing touch-pan-x overscroll-x-contain"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
               >
-                {muntiHighlights.map((slide) => (
-                  <div
-                    key={slide.id}
-                    className="w-full flex-shrink-0 h-full relative snap-center overflow-hidden"
-                  >
-                    <img
-                      src={slide.image}
-                      alt={slide.title}
-                      draggable={false}
-                      className="w-full h-full object-cover pointer-events-none"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/50 to-slate-950/20 pointer-events-none" />
+                {carouselSlides.map((slide) => {
+                  const hasLink = Boolean(slide.link);
+                  return (
+                    <div
+                      key={slide.id}
+                      onClick={hasLink ? () => handleSlideClick(slide) : undefined}
+                      onKeyDown={
+                        hasLink
+                          ? (e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                dragDistanceRef.current = 0;
+                                handleSlideClick(slide);
+                              }
+                            }
+                          : undefined
+                      }
+                      role={hasLink ? 'link' : undefined}
+                      tabIndex={hasLink ? 0 : undefined}
+                      aria-label={hasLink ? t('patient.dashboard.openLinkAria', { title: slide.title }) : undefined}
+                      className={`group w-full flex-shrink-0 h-full relative snap-center overflow-hidden ${
+                        hasLink ? 'cursor-pointer' : ''
+                      }`}
+                    >
+                      <img
+                        src={slide.image}
+                        alt={slide.title}
+                        draggable={false}
+                        className={`w-full h-full object-cover pointer-events-none ${
+                          hasLink ? 'transition-transform duration-500 group-hover:scale-[1.02]' : ''
+                        }`}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/88 via-50% to-slate-950/10 pointer-events-none" />
 
-                    <div className="absolute inset-0 p-5 sm:p-7 md:p-8 flex flex-col justify-end pointer-events-none pb-28 sm:pb-32 lg:pb-36">
-                      <div className="space-y-1.5 sm:space-y-2 max-w-xl">
-                        <h3 className="text-xl sm:text-2xl md:text-3xl font-display font-black text-white drop-shadow-md line-clamp-2 leading-tight">
-                          {slide.title}
-                        </h3>
-                        <p className="text-sm text-slate-200 line-clamp-2 leading-relaxed drop-shadow-sm font-medium">
-                          {slide.description}
-                        </p>
+                      <div className="absolute inset-0 px-5 sm:px-7 md:px-8 pb-24 sm:pb-28 flex flex-col justify-end pointer-events-none">
+                        <div className="space-y-1.5 max-w-2xl min-w-0">
+                          <h3 className="text-xl sm:text-2xl md:text-[1.75rem] font-display font-black tracking-tight text-white line-clamp-2 leading-[1.18] [overflow-wrap:anywhere]">
+                            {slide.title}
+                          </h3>
+                          <p className="text-xs sm:text-sm text-slate-200/95 line-clamp-2 leading-relaxed font-medium [overflow-wrap:anywhere]">
+                            {slide.description}
+                          </p>
+                          {(slide.eventDate || hasLink) && (
+                            <div className="pt-0.5 flex flex-wrap items-center gap-3 text-xs font-bold">
+                              {slide.eventDate && (
+                                <span className="text-slate-200 tabular-nums">
+                                  {formatEventDateLabel(slide.eventDate)}
+                                </span>
+                              )}
+                              {hasLink && (
+                                <span className="inline-flex items-center gap-1 text-primary-400 group-hover:text-white transition-colors">
+                                  <span>{isExternalEventLink(slide.link) ? t('patient.dashboard.openLink') : t('patient.dashboard.viewPage')}</span>
+                                  <ArrowUpRight className="w-3.5 h-3.5" aria-hidden="true" />
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Bottom Controls: Dots + Action Buttons */}
-            <div className="relative z-10 p-4 sm:p-6 space-y-3 mt-auto">
+            <div className="relative z-10 px-5 sm:px-7 md:px-8 pb-5 sm:pb-7 pt-2 space-y-3 mt-auto">
               <div className="flex items-center justify-center">
                 <div className="flex items-center gap-1.5 py-1">
-                  {muntiHighlights.map((_, idx) => (
+                  {carouselSlides.map((_, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -434,7 +499,7 @@ const PatientDashboard = () => {
                         e.stopPropagation();
                         scrollToSlide(idx);
                       }}
-                      aria-label={`Go to slide ${idx + 1}`}
+                      aria-label={t('patient.dashboard.goToSlideAria', { num: idx + 1 })}
                       className={`h-1 rounded-full transition-all duration-300 cursor-pointer ${
                         currentSlide === idx ? 'w-3.5 bg-white shadow-sm' : 'w-1 bg-white/40 hover:bg-white/80'
                       }`}
@@ -448,15 +513,15 @@ const PatientDashboard = () => {
                   to="/patient/providers"
                   className="neu-btn-primary w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer shadow-lg shadow-blue-950/40 text-white"
                 >
-                  <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-white" />
-                  <span className="truncate">Find a Provider</span>
+                  <MagnifyingGlass className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-white" />
+                  <span className="truncate">{t('patient.dashboard.findProviderCta')}</span>
                 </Link>
                 <Link
                   to="/patient/requests"
                   className="btn-glass-neu-secondary w-full py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-bold inline-flex items-center justify-center gap-1.5 sm:gap-2 active:scale-[0.98] transition-all text-center cursor-pointer text-white"
                 >
                   <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white shrink-0" />
-                  <span className="truncate">My Requests</span>
+                  <span className="truncate">{t('patient.dashboard.myRequestsCta')}</span>
                 </Link>
               </div>
             </div>
@@ -469,13 +534,13 @@ const PatientDashboard = () => {
               <div className="mb-3.5 pb-3.5 border-b border-slate-200/60 dark:border-white/5">
                 <div className="flex items-center justify-between mb-2.5">
                   <h4 className="text-xs font-display font-extrabold uppercase tracking-wider text-tertiary dark:text-tertiary">
-                    Request Status
+                    {t('patient.dashboard.requestStatusCard')}
                   </h4>
                   <Link
                     to="/patient/requests"
                     className="text-xs font-bold text-link hover:text-primary-600 dark:hover:text-primary-300 transition-colors inline-flex items-center gap-0.5"
                   >
-                    View all &rarr;
+                    {t('patient.dashboard.viewAllLink')} &rarr;
                   </Link>
                 </div>
 
@@ -505,24 +570,24 @@ const PatientDashboard = () => {
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
                         <span className="text-2xs font-black text-success dark:text-success-dark uppercase tracking-wider">
-                          {activeVisit.status} Visit
+                          {t('patient.dashboard.activeVisitBannerTitle', { status: translateStatus(activeVisit.status) })}
                         </span>
                       </div>
                       <span className="text-2xs sm:text-xs font-bold text-success dark:text-success-dark neu-flat-sm px-2 py-0.5 rounded-md">
-                        {['On The Way', 'Arrived'].includes(activeVisit.status) ? 'Track live →' : (activeVisit.time || 'Today')}
+                        {['On The Way', 'Arrived'].includes(activeVisit.status) ? t('patient.dashboard.trackLiveArrow') : (activeVisit.time || t('patient.dashboard.today'))}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-bold text-[#17283B] dark:text-[#E6EEF6] truncate group-hover:text-link transition-colors">
+                        <p className="text-xs sm:text-sm font-bold text-txt-primary dark:text-txt-darkPrimary truncate group-hover:text-link transition-colors">
                           {activeVisit.provider}
                         </p>
                         <p className="text-2xs sm:text-xs text-txt-secondary dark:text-txt-darkSecondary truncate">
-                          {activeVisit.service || 'Home Consultation'}
+                          {activeVisit.service ? translateService(activeVisit.service) : t('patient.dashboard.homeConsultation')}
                         </p>
                       </div>
                       <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl neu-flat-sm flex items-center justify-center text-txt-secondary group-hover:text-link group-hover:scale-105 transition-all shrink-0">
-                        <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <CaretRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       </div>
                     </div>
                   </Link>
@@ -531,14 +596,14 @@ const PatientDashboard = () => {
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
                       <p className="text-2xs sm:text-xs font-semibold text-tertiary dark:text-tertiary truncate">
-                        No visits scheduled today
+                        {t('patient.dashboard.noVisitsToday')}
                       </p>
                     </div>
                     <Link
                       to="/patient/providers"
                       className="text-2xs sm:text-xs font-bold text-link hover:underline shrink-0"
                     >
-                      Book a visit
+                      {t('patient.dashboard.bookAVisit')}
                     </Link>
                   </div>
                 )}
@@ -550,7 +615,7 @@ const PatientDashboard = () => {
                       {stats.active}
                     </p>
                     <p className="text-2xs sm:text-xs font-black text-link dark:text-primary-300 uppercase tracking-wider mt-1 sm:mt-1.5">
-                      Active
+                      {t('patient.dashboard.statActive')}
                     </p>
                   </div>
 
@@ -559,7 +624,7 @@ const PatientDashboard = () => {
                       {stats.pending}
                     </p>
                     <p className="text-2xs sm:text-xs font-black text-warning dark:text-warning-dark uppercase tracking-wider mt-1 sm:mt-1.5">
-                      Pending
+                      {t('patient.dashboard.statPending')}
                     </p>
                   </div>
 
@@ -568,7 +633,7 @@ const PatientDashboard = () => {
                       {stats.accepted}
                     </p>
                     <p className="text-2xs sm:text-xs font-black text-success dark:text-success-dark uppercase tracking-wider mt-1 sm:mt-1.5">
-                      Confirmed
+                      {t('patient.dashboard.statConfirmed')}
                     </p>
                   </div>
                 </div>
@@ -577,7 +642,7 @@ const PatientDashboard = () => {
               {/* Quick Actions List with Rounded Icon Badges */}
               <div className="flex items-center justify-between mb-2 sm:mb-2.5">
                 <h3 className="text-sm sm:text-base font-display font-extrabold text-slate-900 dark:text-white">
-                  Quick Actions
+                  {t('patient.dashboard.quickActionsTitle')}
                 </h3>
               </div>
 
@@ -587,11 +652,11 @@ const PatientDashboard = () => {
                   className="group neu-btn p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center gap-2.5 sm:gap-3 transition-all text-slate-800 dark:text-slate-200 active:scale-[0.99]"
                 >
                   <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-link shrink-0 group-hover:scale-105 transition-transform">
-                    <Search className="w-4 h-4" />
+                    <MagnifyingGlass className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="block text-xs sm:text-[13px] font-bold">Find a Provider</span>
-                    <span className="block text-2xs sm:text-xs text-tertiary truncate">Browse verified caregivers</span>
+                    <span className="block text-xs sm:text-[0.8125rem] font-bold">{t('patient.dashboard.qaFindProvider')}</span>
+                    <span className="block text-2xs sm:text-xs text-tertiary truncate">{t('patient.dashboard.qaFindProviderDesc')}</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
@@ -604,10 +669,10 @@ const PatientDashboard = () => {
                     <FileText className="w-4 h-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="block text-xs sm:text-[13px] font-bold">
-                      My Requests {stats.pending > 0 && `(${stats.pending})`}
+                    <span className="block text-xs sm:text-[0.8125rem] font-bold">
+                      {t('patient.dashboard.qaMyRequests')} {stats.pending > 0 && `(${stats.pending})`}
                     </span>
-                    <span className="block text-2xs sm:text-xs text-tertiary truncate">Track appointment status</span>
+                    <span className="block text-2xs sm:text-xs text-tertiary truncate">{t('patient.dashboard.qaMyRequestsDesc')}</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
@@ -617,7 +682,7 @@ const PatientDashboard = () => {
                   className="group neu-btn p-2.5 sm:p-3 rounded-xl sm:rounded-2xl flex items-center gap-2.5 sm:gap-3 transition-all text-slate-800 dark:text-slate-200 active:scale-[0.99]"
                 >
                   <div className="neu-flat-sm w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center text-link shrink-0 group-hover:scale-105 transition-transform relative">
-                    <MessageCircle className="w-4 h-4" />
+                    <ChatCircle className="w-4 h-4" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white rounded-full text-xs font-extrabold flex items-center justify-center">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -625,10 +690,10 @@ const PatientDashboard = () => {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <span className="block text-xs sm:text-[13px] font-bold">
-                      Messages {unreadCount > 0 && `(${unreadCount})`}
+                    <span className="block text-xs sm:text-[0.8125rem] font-bold">
+                      {t('patient.dashboard.qaMessages')} {unreadCount > 0 && `(${unreadCount})`}
                     </span>
-                    <span className="block text-2xs sm:text-xs text-tertiary truncate">Direct chat with providers</span>
+                    <span className="block text-2xs sm:text-xs text-tertiary truncate">{t('patient.dashboard.qaMessagesDesc')}</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-tertiary group-hover:text-link group-hover:translate-x-1 transition-all shrink-0" />
                 </Link>
@@ -647,20 +712,25 @@ const PatientDashboard = () => {
             <div className="w-full neu-flat rounded-2xl sm:rounded-[2.25rem] p-4 sm:p-6 relative overflow-hidden flex flex-col justify-between">
               {(() => {
               const STATUS_STEPS = ['Accepted', 'On The Way', 'Arrived', 'Completed'];
-              const STEP_LABELS = ['Confirmed', 'On Route', 'Arrived', 'Done'];
+              const STEP_LABELS = [
+                t('patient.dashboard.stepConfirmed'),
+                t('patient.dashboard.stepOnRoute'),
+                t('patient.dashboard.stepArrived'),
+                t('patient.dashboard.stepDone'),
+              ];
               const STEP_ICONS = [
-                <CheckCircle2 key="confirmed" className="w-4 h-4" />,
-                <Navigation key="enroute" className="w-4 h-4" />,
-                <Home key="arrived" className="w-4 h-4" />,
+                <CheckCircle key="confirmed" className="w-4 h-4" />,
+                <NavigationArrow key="enroute" className="w-4 h-4" />,
+                <House key="arrived" className="w-4 h-4" />,
                 <Stethoscope key="done" className="w-4 h-4" />,
               ];
               const currentStep = STATUS_STEPS.indexOf(activeVisit.status);
 
               const STATUS_MESSAGES = {
-                Accepted: 'Your provider has confirmed the visit. Please ensure someone is ready at your location.',
-                'On The Way': 'Your provider is traveling towards your address. Keep your phone accessible.',
-                Arrived: 'Your healthcare provider is currently on-site. The session has commenced.',
-                Completed: 'Your home visit is completed. You can view session summary or medical notes anytime.',
+                Accepted: t('patient.dashboard.msgAccepted'),
+                'On The Way': t('patient.dashboard.msgOnTheWay'),
+                Arrived: t('patient.dashboard.msgArrived'),
+                Completed: t('patient.dashboard.msgCompleted'),
               };
 
               const providerInitials = (activeVisit.provider || 'PR')
@@ -676,7 +746,7 @@ const PatientDashboard = () => {
                     <div className="flex items-center gap-3.5 min-w-0">
                       <Link
                         to={activeVisit.providerId ? `/patient/providers/${activeVisit.providerId}/profile` : '#'}
-                        title="View Provider Profile"
+                        title={t('patient.dashboard.viewProviderTitle')}
                         className="neu-flat-sm w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-link font-black text-sm overflow-hidden shrink-0 hover:scale-105 transition-transform"
                       >
                         {activeVisit.providerAvatarUrl ? (
@@ -688,11 +758,11 @@ const PatientDashboard = () => {
                       <div className="min-w-0">
                         <div className="neu-flat-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-nano font-extrabold uppercase tracking-wider text-txt-secondary dark:text-txt-darkSecondary mb-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#2C7A55] dark:bg-[#7DD3A3] animate-ping" />
-                          Active Home Care Visit
+                          {t('patient.dashboard.liveTrackerTitle')}
                         </div>
                         <Link
                           to={activeVisit.providerId ? `/patient/providers/${activeVisit.providerId}/profile` : '#'}
-                          className="text-lg sm:text-xl font-display font-extrabold text-[#17283B] dark:text-[#E6EEF6] hover:text-link dark:hover:text-[#8CBDF0] transition-colors truncate block"
+                          className="text-lg sm:text-xl font-display font-extrabold text-txt-primary dark:text-txt-darkPrimary hover:text-link dark:hover:text-link transition-colors truncate block"
                         >
                           {activeVisit.provider}
                         </Link>
@@ -710,27 +780,27 @@ const PatientDashboard = () => {
                             providerAvatarUrl: activeVisit.providerAvatarUrl,
                             service: activeVisit.service,
                           })}
-                          className="neu-btn min-h-[44px] px-3.5 py-2.5 rounded-2xl text-xs font-bold text-link dark:text-[#8CBDF0] transition-all flex items-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
-                          title="Open Live GPS Tracker"
+                          className="neu-btn min-h-[2.75rem] px-3.5 py-2.5 rounded-2xl text-xs font-bold text-link transition-all flex items-center gap-1.5 hover:-translate-y-0.5 active:translate-y-0.5 cursor-pointer"
+                          title={t('patient.dashboard.openLiveGpsTitle')}
                         >
                           <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                           </span>
-                          <Navigation className="w-4 h-4" />
-                          <span>Track Live</span>
+                          <NavigationArrow className="w-4 h-4" />
+                          <span>{t('patient.dashboard.trackLiveBtn')}</span>
                         </button>
                       )}
                       <Link 
                         to={`/patient/messages?provider=${activeVisit.providerId}`}
                         className="neu-btn w-11 h-11 rounded-2xl text-link transition-all flex items-center justify-center hover:-translate-y-0.5 active:translate-y-0.5"
-                        title="Chat with Provider"
-                        aria-label={`Chat with ${activeVisit.provider}`}
+                        title={t('patient.dashboard.chatProviderTitle')}
+                        aria-label={t('patient.dashboard.chatWithAria', { name: activeVisit.provider })}
                       >
-                        <MessageSquare className="w-4 h-4" />
+                        <ChatText className="w-4 h-4" />
                       </Link>
                       <span className="neu-flat-sm text-xs font-bold text-link px-4 py-2 rounded-2xl">
-                        {activeVisit.service}
+                        {translateService(activeVisit.service)}
                       </span>
                     </div>
                   </div>
@@ -767,7 +837,7 @@ const PatientDashboard = () => {
                                   ? 'neu-btn-primary text-white scale-110 shadow-lg' 
                                   : 'neu-flat-sm text-txt-secondary dark:text-txt-darkSecondary opacity-90'
                             }`}>
-                              {isPassed ? <CheckCircle2 className="w-4 h-4 text-[#2C7A55] dark:text-[#7DD3A3]" /> : STEP_ICONS[i]}
+                              {isPassed ? <CheckCircle className="w-4 h-4 text-[#2C7A55] dark:text-[#7DD3A3]" /> : STEP_ICONS[i]}
                             </div>
                           </div>
                         );
@@ -777,7 +847,7 @@ const PatientDashboard = () => {
                     <div className="flex items-center justify-between px-1">
                       {STEP_LABELS.map((label, i) => (
                         <span key={label} className={`text-nano font-extrabold uppercase tracking-wider text-center transition-colors ${
-                          i <= currentStep ? 'text-link dark:text-[#8CBDF0] font-bold' : 'text-txt-secondary/60 dark:text-[#A5B6C8]/60'
+                          i <= currentStep ? 'text-link font-bold' : 'text-txt-secondary/60 dark:text-txt-darkSecondary/60'
                         }`}>
                           {label}
                         </span>
@@ -786,7 +856,7 @@ const PatientDashboard = () => {
                   </div>
 
                   {/* Status Banner */}
-                  <div className="neu-flat-sm p-4 rounded-2xl flex items-center gap-3.5 text-sm font-medium text-[#17283B] dark:text-[#E6EEF6]">
+                  <div className="neu-flat-sm p-4 rounded-2xl flex items-center gap-3.5 text-sm font-medium text-txt-primary dark:text-txt-darkPrimary">
                     <div className="w-3 h-3 rounded-full bg-primary shrink-0 animate-ping" />
                     <p className="leading-relaxed text-xs sm:text-sm">{STATUS_MESSAGES[activeVisit.status]}</p>
                   </div>
@@ -801,18 +871,18 @@ const PatientDashboard = () => {
         <section className="neu-flat rounded-2xl sm:rounded-[2.25rem] p-3.5 sm:p-6 overflow-hidden">
           <div className="flex items-center justify-between mb-3.5 pb-3 border-b border-surface-border">
             <div>
-              <h2 className="font-display font-extrabold text-base sm:text-lg text-[#17283B] dark:text-[#E6EEF6]">
-                Recent Requests
+              <h2 className="font-display font-extrabold text-base sm:text-lg text-txt-primary dark:text-txt-darkPrimary">
+                {t('patient.dashboard.recentTitle')}
               </h2>
               <p className="text-xs sm:text-xs text-txt-secondary dark:text-txt-darkSecondary mt-0.5">
-                Showing {Math.min(requests.length, 5)} of {requests.length} records
+                {t('patient.dashboard.showingRecords', { shown: Math.min(requests.length, 5), total: requests.length })}
               </p>
             </div>
             <Link
               to="/patient/requests"
               className="neu-btn px-3 py-1.5 rounded-xl text-xs sm:text-xs font-bold text-link inline-flex items-center gap-1 active:scale-95"
             >
-              View All <ArrowRight className="w-3 h-3" />
+              {t('patient.dashboard.viewAll')} <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
@@ -833,11 +903,11 @@ const PatientDashboard = () => {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-xs sm:text-sm text-[#17283B] dark:text-[#E6EEF6] group-hover:text-link transition-colors truncate">
+                      <p className="font-bold text-xs sm:text-sm text-txt-primary dark:text-txt-darkPrimary group-hover:text-link transition-colors truncate">
                         {req.provider}
                       </p>
                       <p className="text-xs sm:text-xs text-txt-secondary dark:text-txt-darkSecondary truncate mt-0.5">
-                        {req.service} &bull; {req.date} {req.time ? `(${req.time})` : ''}
+                        {translateService(req.service)} &bull; {req.date} {req.time ? `(${req.time})` : ''}
                       </p>
                     </div>
                   </div>
@@ -852,7 +922,7 @@ const PatientDashboard = () => {
                         ? 'text-[#BC3030] dark:text-[#F4918B] border border-[#BC3030]/30 dark:border-[#F4918B]/30 bg-[#FCE8E6] dark:bg-[#3C1B1A]'
                         : 'text-txt-secondary dark:text-txt-darkSecondary border border-surface-border bg-surface-subtle'
                     }`}>
-                      {req.status}
+                      {translateStatus(req.status)}
                     </span>
                   </div>
                 </Link>
@@ -863,15 +933,15 @@ const PatientDashboard = () => {
               <div className="neu-flat w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3 text-link">
                 <FileText className="w-5 h-5" />
               </div>
-              <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-sm">No Requests Yet</p>
+              <p className="font-bold text-txt-primary dark:text-txt-darkPrimary text-sm">{t('patient.dashboard.noRequestsTitle')}</p>
               <p className="text-xs text-txt-secondary dark:text-txt-darkSecondary mt-1 max-w-xs mx-auto">
-                Find a certified provider in your area to book your first home healthcare visit.
+                {t('patient.dashboard.noRequestsMsg')}
               </p>
               <Link
                 to="/patient/providers"
                 className="neu-btn-primary mt-4 text-xs font-bold px-5 py-2.5 rounded-xl inline-flex items-center gap-2"
               >
-                <Search className="w-3.5 h-3.5" /> Browse Providers
+                <MagnifyingGlass className="w-3.5 h-3.5" /> {t('patient.dashboard.browseProvidersBtn')}
               </Link>
             </div>
           )}

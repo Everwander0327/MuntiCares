@@ -1,26 +1,31 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { NotificationBell, MobileNavItem } from '@/shared/navigation';
-import { ThemeToggle } from '@/shared/feedback';
+import { NotificationBell, MobileNavItem, ProfilePopover } from '@/shared/navigation';
+import { WeeklyUpdatesModal } from '@/shared/feedback';
+import { useTheme } from '@/contexts/ThemeContext';
+import {
+  SEVEN_DAYS_MS,
+  splitWeeklyUpdatesForRole,
+  hasUnseenWeeklyUpdates,
+  dismissWeeklyUpdates,
+} from '@/features/admin/utils/recentEvents';
 import { supabase } from '@/lib/supabase';
-import { 
-  LayoutDashboard, 
-  Search, 
-  FileText, 
-  Settings, 
-  LogOut, 
-  X,
-  Heart,
+import {
+  SquaresFour,
+  MagnifyingGlass,
+  FileText,
   Users,
   Briefcase,
   Bell,
-  CalendarDays,
-  MessageCircle,
-  Megaphone
-
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+  CalendarDots,
+  ChatCircle,
+  Megaphone,
+  User,
+  Heart,
+} from '@phosphor-icons/react';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { liveUserRowToAction } from './liveUserSync';
 import toast from 'react-hot-toast';
 
@@ -33,21 +38,24 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
     className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-2xl transition-all duration-300 relative overflow-hidden ${
       active 
         ? 'neu-btn-primary font-bold shadow-md' 
-        : 'text-txt-secondary dark:text-txt-darkSecondary hover:neu-flat hover:text-[#17283B] dark:hover:text-[#E6EEF6]'
+        : 'text-txt-secondary dark:text-txt-darkSecondary hover:neu-flat hover:text-txt-primary dark:hover:text-txt-darkPrimary'
     }`}
   >
     <span className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0 ${
       active 
-        ? '!bg-white/20 dark:!bg-[#08182A]/20 shadow-inner border border-white/30 dark:border-white/10 backdrop-blur-sm text-white' 
-        : 'neu-flat-sm text-txt-secondary dark:text-txt-darkSecondary group-hover:text-link dark:group-hover:text-[#8CBDF0] group-hover:scale-105'
+        ? '!bg-white/20 dark:!bg-neu-fg/20 shadow-inner border border-white/30 dark:border-white/10 backdrop-blur-sm text-white' 
+        : 'neu-flat-sm text-txt-secondary dark:text-txt-darkSecondary group-hover:text-link dark:group-hover:text-link group-hover:scale-105'
     }`}>
-      {React.cloneElement(icon, { className: 'w-4 h-4' })}
+      {React.cloneElement(icon, {
+        className: 'w-4 h-4',
+        weight: active ? 'fill' : 'regular',
+      })}
     </span>
     <span className={`font-semibold text-sm flex-1 truncate ${active ? 'font-bold text-white' : ''}`}>{label}</span>
     {badge > 0 && (
-      <span className={`min-w-[20px] h-[20px] rounded-md flex items-center justify-center text-xs font-black px-1.5 shadow-sm ${
+      <span className={`min-w-[1.25rem] h-[1.25rem] rounded-md flex items-center justify-center text-xs font-black px-1.5 shadow-sm ${
         active 
-          ? 'bg-white dark:bg-[#08182A] text-link dark:text-[#8CBDF0]' 
+          ? 'bg-white dark:bg-neu-fg text-link' 
           : 'bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A]'
       }`}>
         {badge > 9 ? '9+' : badge}
@@ -57,6 +65,7 @@ const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
 );
 
 const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
+  const { t, translateService, translateStatus } = useLanguage();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -127,8 +136,8 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
               (r.status && r.status.toLowerCase().includes(q))
             ).map(r => ({
               id: r.id,
-              title: r.patient?.full_name || 'Patient',
-              subtitle: `${r.service || 'Consultation'} • ${r.status}`,
+              title: r.patient?.full_name || t('common.roles.patient'),
+              subtitle: `${translateService(r.service) || t('common.services.generalConsultation')} • ${translateStatus(r.status)}`,
               to: '/provider/patients',
               avatar: r.patient?.avatar_url,
             }));
@@ -147,7 +156,7 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [searchQuery, currentRole, authUser]);
+  }, [searchQuery, currentRole, authUser, t, translateService, translateStatus]);
 
   const handleSelect = (to) => {
     setSearchOpen(false);
@@ -158,14 +167,14 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
   return (
     <div ref={searchContainerRef} className="relative hidden md:flex flex-1 max-w-md mx-4 lg:mx-6 z-30">
       <div 
-        className={`neu-inset dark:bg-[#111A28] w-full h-10 sm:h-11 rounded-2xl px-3.5 flex items-center gap-2.5 text-xs transition-all border ${
+        className={`neu-inset dark:bg-surface-darkAlt w-full h-10 sm:h-11 rounded-2xl px-3.5 flex items-center gap-2.5 text-xs transition-all border ${
           searchOpen 
             ? 'border-primary/40 ring-2 ring-primary/20 shadow-[inset_2px_3px_6px_rgba(23,40,59,0.12),inset_-2px_-2px_5px_rgba(255,255,255,0.9)] dark:shadow-[inset_2px_3px_6px_rgba(0,0,0,0.7),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]' 
             : 'border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 shadow-[inset_1.5px_2px_4px_rgba(23,40,59,0.08),inset_-1.5px_-1.5px_3px_rgba(255,255,255,0.85)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.55),inset_-1px_-1px_3px_rgba(255,255,255,0.03)]'
         }`}
       >
-        <Search className={`w-4 h-4 transition-colors shrink-0 ${
-          searchOpen ? 'text-link dark:text-[#8CBDF0]' : 'text-txt-secondary dark:text-txt-darkSecondary'
+        <MagnifyingGlass className={`w-4 h-4 transition-colors shrink-0 ${
+          searchOpen ? 'text-link' : 'text-txt-secondary dark:text-txt-darkSecondary'
         }`} />
         <input
           ref={inputRef}
@@ -174,13 +183,13 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
           onFocus={() => setSearchOpen(true)}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={
-            currentRole === 'provider' 
-              ? 'Search patient, schedule, or menu...' 
-              : currentRole === 'admin' 
-              ? 'Search users, requests, or menu...' 
-              : 'Search providers, requests, or menu...'
+            currentRole === 'provider'
+              ? t('nav.search.providerPlaceholder')
+              : currentRole === 'admin'
+              ? t('nav.search.adminPlaceholder')
+              : t('nav.search.patientPlaceholder')
           }
-          className="bg-transparent border-none outline-none text-xs text-[#17283B] dark:text-[#E6EEF6] placeholder-txt-secondary/60 dark:placeholder-txt-darkSecondary/60 w-full focus:outline-none"
+          className="bg-transparent border-none outline-none text-xs text-txt-primary dark:text-txt-darkPrimary placeholder-txt-secondary/60 dark:placeholder-txt-darkSecondary/60 w-full focus:outline-none"
         />
       </div>
 
@@ -192,12 +201,12 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 6, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute top-full left-0 right-0 mt-2 neu-flat rounded-2xl shadow-xl overflow-hidden p-2 z-50 max-h-[380px] overflow-y-auto"
+            className="absolute top-full left-0 right-0 mt-2 neu-flat rounded-2xl shadow-xl overflow-hidden p-2 z-50 max-h-[23.75rem] overflow-y-auto"
           >
             {/* Navigation Section */}
             <div>
               <p className="text-2xs font-bold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider px-3 py-1.5">
-                {searchQuery ? 'Matching Pages' : 'Quick Navigation'}
+                {searchQuery ? t('nav.search.matchingPages') : t('nav.search.quickNavigation')}
               </p>
               <div className="space-y-1">
                 {filteredLinks.length > 0 ? (
@@ -206,17 +215,17 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
                       key={item.to}
                       type="button"
                       onClick={() => handleSelect(item.to)}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs font-semibold text-[#17283B] dark:text-[#E6EEF6] hover:bg-primary/10 dark:hover:bg-white/5 hover:text-link dark:hover:text-[#8CBDF0] transition-colors group cursor-pointer"
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs font-semibold text-txt-primary dark:text-txt-darkPrimary hover:bg-primary/10 dark:hover:bg-white/5 hover:text-link dark:hover:text-link transition-colors group cursor-pointer"
                     >
-                      <span className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-txt-secondary dark:text-txt-darkSecondary group-hover:text-link dark:group-hover:text-[#8CBDF0] shrink-0">
+                      <span className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-txt-secondary dark:text-txt-darkSecondary group-hover:text-link dark:group-hover:text-link shrink-0">
                         {React.cloneElement(item.icon, { className: 'w-3.5 h-3.5' })}
                       </span>
                       <span className="flex-1 truncate">{item.label}</span>
-                      <span className="text-2xs text-txt-secondary opacity-0 group-hover:opacity-100 transition-opacity">Jump ↵</span>
+                      <span className="text-2xs text-txt-secondary opacity-0 group-hover:opacity-100 transition-opacity">{t('nav.search.jump')}</span>
                     </button>
                   ))
                 ) : (
-                  <p className="text-xs text-txt-secondary px-3 py-2">No matching pages found</p>
+                  <p className="text-xs text-txt-secondary px-3 py-2">{t('nav.search.noMatches')}</p>
                 )}
               </div>
             </div>
@@ -225,7 +234,7 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
             {searchResults.length > 0 && (
               <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-white/10">
                 <p className="text-2xs font-bold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider px-3 py-1.5">
-                  Patient Records &amp; Requests
+                  {t('nav.search.patientRecords')}
                 </p>
                 <div className="space-y-1">
                   {searchResults.map((res) => (
@@ -233,7 +242,7 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
                       key={res.id}
                       type="button"
                       onClick={() => handleSelect(res.to)}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-[#17283B] dark:text-[#E6EEF6] hover:bg-primary/10 dark:hover:bg-white/5 transition-colors group cursor-pointer"
+                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-txt-primary dark:text-txt-darkPrimary hover:bg-primary/10 dark:hover:bg-white/5 transition-colors group cursor-pointer"
                     >
                       <div className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-link font-bold text-xs shrink-0 overflow-hidden">
                         {res.avatar ? (
@@ -254,7 +263,7 @@ const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
 
             {isSearching && (
               <div className="py-2 text-center text-2xs text-txt-secondary">
-                Searching records...
+                {t('nav.search.searchingRecords')}
               </div>
             )}
           </motion.div>
@@ -291,6 +300,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
   const navigate = useNavigate();
+  const { t, formatDate, translateRole } = useLanguage();
   const { user: authUser, logout, updateUser } = useAuth();
   const [currentUserProfile, setCurrentUserProfile] = useState(() => authUser);
   const mainRef = useRef(null);
@@ -298,8 +308,18 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   const latestAuthUserRef = useRef(authUser);
   latestAuthUserRef.current = authUser;
 
+  const [patientProfileReady, setPatientProfileReady] = useState(role !== 'patient');
+  const [weeklyModalOpen, setWeeklyModalOpen] = useState(false);
+  const [weeklyLoading, setWeeklyLoading] = useState(false);
+  const [weeklyUpdates, setWeeklyUpdates] = useState({ events: [], announcements: [], allItems: [] });
+  const autoCheckedUserRef = useRef(null);
+
   useEffect(() => {
-    if (role !== 'patient' || !authUser?.id) return;
+    if (role !== 'patient') {
+      setPatientProfileReady(true);
+      return;
+    }
+    if (!authUser?.id) return;
     supabase
       .from('patients')
       .select('is_profile_complete')
@@ -308,6 +328,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
       .then(({ data, error }) => {
         if (!error && (!data || !data.is_profile_complete)) {
           navigate('/patient/onboarding', { replace: true });
+        } else {
+          setPatientProfileReady(true);
         }
       });
   }, [role, authUser?.id, navigate]);
@@ -336,7 +358,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
 
       if (!active) return;
       if (error) {
-        toast.error('Could not refresh your profile.');
+        toast.error(t('nav.profileRefreshError'));
         return;
       }
       if (sawRealtimeUpdate) return;
@@ -382,7 +404,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
       active = false;
       supabase.removeChannel(userChannel);
     };
-  }, [authUser?.id, updateUser, logout, navigate]);
+  }, [authUser?.id, updateUser, logout, navigate, t]);
 
   const toggleDesktopCollapse = () => {
     if (!isDesktopCollapsed) {
@@ -405,27 +427,27 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   };
 
   const patientLinks = [
-    { icon: <LayoutDashboard />, label: 'Dashboard', shortLabel: 'Home', to: '/patient/dashboard', group: 'main' },
-    { icon: <Search />, label: 'Find Providers', shortLabel: 'Find', primary: true, to: '/patient/providers', group: 'main' },
-    { icon: <FileText />, label: 'My Requests', shortLabel: 'Requests', to: '/patient/requests', group: 'main' },
-    { icon: <MessageCircle />, label: 'Messages', shortLabel: 'Messages', to: '/patient/messages', group: 'main' },
-    { icon: <Settings />, label: 'Consent Settings', shortLabel: 'Consent', to: '/patient/consent', group: 'account' },
+    { icon: <SquaresFour />, label: t('nav.patient.dashboard'), shortLabel: t('nav.patient.dashboardShort'), primary: true, to: '/patient/dashboard', group: 'main' },
+    { icon: <MagnifyingGlass />, label: t('nav.patient.providers'), shortLabel: t('nav.patient.providersShort'), to: '/patient/providers', group: 'main' },
+    { icon: <FileText />, label: t('nav.patient.requests'), shortLabel: t('nav.patient.requestsShort'), badgeKey: 'requests', to: '/patient/requests', group: 'main' },
+    { icon: <ChatCircle />, label: t('nav.patient.messages'), shortLabel: t('nav.patient.messagesShort'), badgeKey: 'messages', to: '/patient/messages', group: 'main' },
+    { icon: <User />, label: t('nav.patient.profile'), shortLabel: t('nav.patient.profileShort'), to: '/patient/profile', group: 'main' },
   ];
 
   const providerLinks = [
-    { icon: <LayoutDashboard />, label: 'Dashboard', shortLabel: 'Home', to: '/provider/dashboard', group: 'main' },
-    { icon: <Bell />, label: 'Incoming Requests', shortLabel: 'Requests', primary: true, to: '/provider/requests', group: 'main' },
-    { icon: <Users />, label: 'My Patients', shortLabel: 'Patients', to: '/provider/patients', group: 'main' },
-    { icon: <CalendarDays />, label: 'My Schedule', shortLabel: 'Schedule', to: '/provider/schedule', group: 'main' },
-    { icon: <MessageCircle />, label: 'Messages', shortLabel: 'Messages', to: '/provider/messages', group: 'main' },
+    { icon: <SquaresFour />, label: t('nav.provider.dashboard'), shortLabel: t('nav.provider.dashboardShort'), primary: true, to: '/provider/dashboard', group: 'main' },
+    { icon: <Bell />, label: t('nav.provider.requests'), shortLabel: t('nav.provider.requestsShort'), badgeKey: 'requests', to: '/provider/requests', group: 'main' },
+    { icon: <Users />, label: t('nav.provider.patients'), shortLabel: t('nav.provider.patientsShort'), to: '/provider/patients', group: 'main' },
+    { icon: <CalendarDots />, label: t('nav.provider.schedule'), shortLabel: t('nav.provider.scheduleShort'), to: '/provider/schedule', group: 'main' },
+    { icon: <ChatCircle />, label: t('nav.provider.messages'), shortLabel: t('nav.provider.messagesShort'), badgeKey: 'messages', to: '/provider/messages', group: 'main' },
   ];
 
   const adminLinks = [
-    { icon: <LayoutDashboard />, label: 'Overview', shortLabel: 'Home', primary: true, to: '/admin/dashboard', group: 'main' },
-    { icon: <Users />, label: 'Patients', shortLabel: 'Patients', to: '/admin/patients', group: 'main' },
-    { icon: <Briefcase />, label: 'Providers', shortLabel: 'Providers', to: '/admin/providers', group: 'main' },
-    { icon: <FileText />, label: 'Requests', shortLabel: 'Requests', to: '/admin/requests', group: 'main' },
-    { icon: <Megaphone />, label: 'Announcements', shortLabel: 'Alerts', to: '/admin/announcements', group: 'main' },
+    { icon: <SquaresFour />, label: t('nav.admin.dashboard'), shortLabel: t('nav.admin.dashboardShort'), primary: true, to: '/admin/dashboard', group: 'main' },
+    { icon: <Users />, label: t('nav.admin.patients'), shortLabel: t('nav.admin.patientsShort'), to: '/admin/patients', group: 'main' },
+    { icon: <Briefcase />, label: t('nav.admin.providers'), shortLabel: t('nav.admin.providersShort'), to: '/admin/providers', group: 'main' },
+    { icon: <FileText />, label: t('nav.admin.requests'), shortLabel: t('nav.admin.requestsShort'), badgeKey: 'requests', to: '/admin/requests', group: 'main' },
+    { icon: <Megaphone />, label: t('nav.admin.announcements'), shortLabel: t('nav.admin.announcementsShort'), to: '/admin/announcements', group: 'main' },
   ];
 
   // Use the actual logged in user data, fallback to dummy info if not available
@@ -440,13 +462,84 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   };
 
   const userInfo = {
-    patient: { name: 'Juan Dela Cruz', initials: 'JD', badge: 'Patient' },
-    provider: { name: 'Maria Santos', initials: 'MS', badge: 'Provider' },
-    admin: { name: 'Admin User', initials: 'AD', badge: 'Admin' },
+    patient: { name: 'Juan Dela Cruz', initials: 'JD', badge: translateRole('patient') },
+    provider: { name: 'Maria Santos', initials: 'MS', badge: translateRole('provider') },
+    admin: { name: 'Admin User', initials: 'AD', badge: translateRole('admin') },
   };
+
+  const { reducedMotion, uiScale } = useTheme();
+
+  const fetchWeeklyUpdates = useCallback(async ({ autoOpen = false } = {}) => {
+    if (!authUser?.id || currentRole === 'admin') return;
+    setWeeklyLoading(true);
+    try {
+      const cutoffIso = new Date(Date.now() - SEVEN_DAYS_MS).toISOString();
+      const { data, error } = await supabase
+        .from('announcements')
+        .select('*')
+        .gte('created_at', cutoffIso)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (error || !data) {
+        setWeeklyUpdates({ events: [], announcements: [], allItems: [] });
+        return;
+      }
+
+      const split = splitWeeklyUpdatesForRole(data, currentRole);
+      setWeeklyUpdates(split);
+
+      if (autoOpen && hasUnseenWeeklyUpdates(split.allItems, authUser.id)) {
+        setWeeklyModalOpen(true);
+      }
+    } catch {
+      // ignore non-critical weekly digest failure
+    } finally {
+      setWeeklyLoading(false);
+    }
+  }, [authUser?.id, currentRole]);
+
+  useEffect(() => {
+    if (!authUser?.id) {
+      autoCheckedUserRef.current = null;
+      return;
+    }
+    if (currentRole === 'admin' || !patientProfileReady) return;
+    if (autoCheckedUserRef.current !== authUser.id) {
+      autoCheckedUserRef.current = authUser.id;
+      fetchWeeklyUpdates({ autoOpen: true });
+    }
+  }, [authUser?.id, currentRole, patientProfileReady, fetchWeeklyUpdates]);
+
+  useEffect(() => {
+    if (!authUser?.id || currentRole === 'admin') return undefined;
+
+    const handleOpenRequest = () => {
+      setWeeklyModalOpen(true);
+      fetchWeeklyUpdates({ autoOpen: false });
+    };
+    window.addEventListener('munticares-open-weekly-updates', handleOpenRequest);
+
+    const channel = supabase
+      .channel(`weekly-updates-${currentRole}-${authUser.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'announcements' },
+        () => {
+          fetchWeeklyUpdates({ autoOpen: true });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('munticares-open-weekly-updates', handleOpenRequest);
+      supabase.removeChannel(channel);
+    };
+  }, [authUser?.id, currentRole, fetchWeeklyUpdates]);
 
   const user = {
     name: currentUserProfile?.full_name || userInfo[currentRole]?.name,
+    email: currentUserProfile?.email || authUser?.email || '',
     initials: getInitials(currentUserProfile?.full_name) || userInfo[currentRole]?.initials,
     badge: currentUserProfile?.role ? currentUserProfile.role.charAt(0).toUpperCase() + currentUserProfile.role.slice(1) : userInfo[currentRole]?.badge,
     avatar_url: currentUserProfile?.avatar_url || '',
@@ -636,21 +729,14 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   };
 
   const getBadgeForLink = (link) => {
-    if (currentRole === 'patient') {
-      if (link.label === 'My Requests') return pendingCount;
-      if (link.label === 'Messages') return unreadMsgCount;
-    } else if (currentRole === 'provider') {
-      if (link.label === 'Incoming Requests') return pendingCount;
-      if (link.label === 'Messages') return unreadMsgCount;
-    } else if (currentRole === 'admin') {
-      if (link.label === 'Requests') return pendingCount;
-    }
+    if (link.badgeKey === 'requests') return pendingCount;
+    if (link.badgeKey === 'messages') return unreadMsgCount;
     return 0;
   };
 
   return (
-    <>
-      <div className="h-[100dvh] bg-[#F4F8FC] dark:bg-[#0E1620] flex overflow-hidden">
+    <MotionConfig reducedMotion={reducedMotion ? 'always' : 'user'}>
+      <div className="h-[100dvh] bg-[var(--bg)] flex overflow-hidden">
         {/* Mobile Sidebar Overlay */}
         <AnimatePresence>
           {isSidebarOpen && (
@@ -668,15 +754,15 @@ const DashboardShell = ({ children, role = 'patient' }) => {
         <motion.aside
           initial={false}
           animate={{
-            width: isDesktopCollapsed ? 0 : 288,
+            width: isDesktopCollapsed ? 0 : Math.round(288 * uiScale),
             opacity: isDesktopCollapsed ? 0 : 1,
           }}
-          transition={{ duration: 0.38, ease: [0.25, 1, 0.5, 1] }}
+          transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }}
           className={`fixed inset-y-0 left-0 z-50 transition-transform duration-500 ease-fluid transform ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } lg:static lg:h-full lg:translate-x-0 lg:p-0 overflow-hidden shrink-0 select-none`}
         >
-          <div className="h-full w-[288px] flex flex-col p-5 neu-flat rounded-none border-r border-slate-200/80 dark:border-white/10 transform-gpu">
+          <div className="h-full w-[18rem] flex flex-col p-5 neu-flat rounded-none border-r border-slate-200/80 dark:border-white/10 transform-gpu">
             {/* Logo row - Flush & aligned with top bar height */}
             <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/70 dark:border-white/10 shrink-0 px-1 pt-0.5">
               <div className="flex items-center gap-2.5">
@@ -689,10 +775,10 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     transition={{
-                      layout: { duration: 0.42, ease: [0.25, 1, 0.5, 1] },
+                      layout: { duration: 0.42, ease: [0.32, 0.72, 0, 1] },
                     }}
                     className="hidden lg:flex neu-flat-sm w-10 h-10 rounded-xl items-center justify-center text-link cursor-pointer active:scale-95 transition-all shrink-0 shadow-sm group hover:text-primary-600"
-                    title="Collapse sidebar (click to toggle)"
+                    title={t('nav.sidebar.collapse')}
                   >
                     <motion.div
                       animate={{ 
@@ -700,10 +786,10 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                       }}
                       whileHover={{ rotate: 360 }}
                       transition={{ 
-                        rotate: { duration: isRollupCollapsing || isRollupExpanding ? 0.38 : 0.55, ease: [0.25, 1, 0.5, 1] },
+                        rotate: { duration: isRollupCollapsing || isRollupExpanding ? 0.38 : 0.55, ease: [0.32, 0.72, 0, 1] },
                       }}
                     >
-                      <Heart className="w-5 h-5 text-link fill-primary group-hover:scale-110 transition-transform duration-200" />
+                      <Heart weight="fill" className="w-5 h-5 text-link fill-primary group-hover:scale-110 transition-transform duration-200" />
                     </motion.div>
                   </motion.button>
                 ) : (
@@ -713,9 +799,6 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                   <span className="text-xl font-display font-extrabold text-link tracking-tight">MuntiCares</span>
                 </Link>
               </div>
-              <button onClick={() => setIsSidebarOpen(false)} aria-label="Close navigation menu" className="lg:hidden text-tertiary flex h-10 w-10 items-center justify-center neu-btn rounded-xl transition-all">
-                <X className="w-5 h-5" />
-              </button>
             </div>
 
             {/* Nav Body - Roll up when collapsing; Unroll downwards when expanding in reverse */}
@@ -726,17 +809,17 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 scaleY: isRollupCollapsing || isDesktopCollapsed || isRollupExpanding ? 0.05 : 1,
                 originY: 0,
               }}
-              transition={{ duration: 0.36, ease: [0.25, 1, 0.5, 1] }}
+              transition={{ duration: 0.36, ease: [0.32, 0.72, 0, 1] }}
               className="flex-1 flex flex-col min-h-0 px-0.5"
             >
               {/* Grouped Navigation (Option 4) */}
               <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 pr-1.5 -mr-1 space-y-4">
                 <div>
-                  <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2">Main Menu</p>
+                  <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2">{t('nav.sidebar.mainMenu')}</p>
                   <nav className="space-y-1.5">
                     {mainLinks.map((link) => (
                       <SidebarItem 
-                        key={link.label} 
+                        key={link.to} 
                         icon={link.icon}
                         label={link.label}
                         to={link.to}
@@ -750,11 +833,11 @@ const DashboardShell = ({ children, role = 'patient' }) => {
 
                 {accountLinks.length > 0 && (
                   <div>
-                    <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2">Account &amp; Privacy</p>
+                    <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2">{t('nav.sidebar.accountPrivacy')}</p>
                     <nav className="space-y-1.5">
                       {accountLinks.map((link) => (
                         <SidebarItem 
-                          key={link.label} 
+                          key={link.to} 
                           icon={link.icon}
                           label={link.label}
                           to={link.to}
@@ -766,52 +849,6 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                     </nav>
                   </div>
                 )}
-              </div>
-
-              {/* Bottom Account & Logout Section (Option A - Clean, No Extra Card) */}
-              <div className="mt-auto pt-3 space-y-2.5">
-                {/* Divider */}
-                <div className="border-t border-slate-200/70 dark:border-white/10 mx-1" />
-
-                {/* User Info - Clickable Raised Neumorphic Card leading to Profile */}
-                <div className="px-1">
-                  <Link 
-                    to={`/${currentRole}/profile`}
-                    onClick={() => setIsSidebarOpen(false)}
-                    className="group flex items-center gap-3 p-3 neu-flat hover:neu-flat-sm rounded-2xl transition-all cursor-pointer active:scale-95 shadow-sm"
-                    title="View Profile"
-                  >
-                    <div className="w-10 h-10 rounded-xl neu-flat flex items-center justify-center text-link font-bold text-sm overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
-                      {user.avatar_url ? (
-                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        user.initials
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#17283B] dark:text-[#E6EEF6] text-xs truncate group-hover:text-link dark:group-hover:text-[#8CBDF0] transition-colors">{user.name}</p>
-                      <span className="inline-flex items-center px-2 py-0.5 neu-flat-sm text-link dark:text-[#8CBDF0] text-[10px] font-black rounded-md uppercase tracking-wider mt-0.5">
-                        {user.badge}
-                      </span>
-                    </div>
-                  </Link>
-                </div>
-
-                {/* Full-Width Logout Button */}
-                <div className="px-1">
-                  <button 
-                    onClick={async () => {
-                      await logout();
-                      navigate('/login');
-                    }}
-                    className="neu-btn flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-txt-secondary dark:text-txt-darkSecondary hover:text-[#BC3030] dark:hover:text-[#F4918B] hover:neu-flat transition-all w-full group cursor-pointer active:scale-95"
-                  >
-                    <div className="neu-flat-sm w-7 h-7 rounded-lg flex items-center justify-center group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B] transition-colors">
-                      <LogOut className="w-4 h-4 text-txt-secondary dark:text-txt-darkSecondary group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B]" />
-                    </div>
-                    <span className="font-bold text-xs group-hover:text-[#BC3030] dark:group-hover:text-[#F4918B] transition-colors">Logout</span>
-                  </button>
-                </div>
               </div>
             </motion.div>
           </div>
@@ -825,9 +862,9 @@ const DashboardShell = ({ children, role = 'patient' }) => {
               transform: isTopBarVisible ? 'translateY(0)' : 'translateY(-100%)',
               opacity: isTopBarVisible ? 1 : 0,
               pointerEvents: isTopBarVisible ? 'auto' : 'none',
-              transition: 'transform 280ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease-in-out',
+              transition: 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1), opacity 240ms cubic-bezier(0.32, 0.72, 0, 1)',
             }}
-            className="absolute top-0 left-0 right-0 h-[72px] sm:h-[76px] neu-flat rounded-none flex items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-slate-200/80 dark:border-white/10 z-40 shadow-sm will-change-transform"
+            className="absolute top-0 left-0 right-0 h-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:h-[calc(4.75rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] neu-flat rounded-none flex items-center justify-between px-3.5 sm:px-6 lg:px-8 border-b border-slate-200/80 dark:border-white/10 z-40 shadow-sm will-change-transform"
           >
             <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
               {/* When collapsed on desktop: The heart badge physically flies here from the sidebar while spinning! */}
@@ -840,28 +877,30 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   transition={{
-                    layout: { duration: 0.45, ease: [0.25, 1, 0.5, 1] },
+                    layout: { duration: 0.45, ease: [0.32, 0.72, 0, 1] },
                   }}
                   className="hidden lg:flex neu-btn w-10 h-10 rounded-xl items-center justify-center text-link cursor-pointer shrink-0 shadow-md group hover:text-primary-600"
-                  title="Expand sidebar (click to expand)"
+                  title={t('nav.sidebar.expand')}
                 >
                   <motion.div
                     initial={{ rotate: -360 }}
                     animate={{ rotate: 0 }}
                     whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.55, ease: [0.25, 1, 0.5, 1] }}
+                    transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
                   >
-                    <Heart className="w-5 h-5 text-link fill-primary group-hover:scale-110 transition-transform duration-200" />
+                    <Heart weight="fill" className="w-5 h-5 text-link fill-primary group-hover:scale-110 transition-transform duration-200" />
                   </motion.div>
                 </motion.button>
               )}
 
               <div className="min-w-0">
-                <p className="text-sm sm:text-base md:text-lg font-display font-black text-[#17283B] dark:text-[#E6EEF6] truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
-                  Welcome{user.name ? `, ${user.name.split(' ')[0]}!` : '!'}
+                <p className="text-sm sm:text-base md:text-lg font-display font-black text-txt-primary dark:text-txt-darkPrimary truncate max-w-[11rem] xs:max-w-[14rem] sm:max-w-none leading-tight">
+                  {user.name
+                    ? t('nav.header.welcomeNamed', { name: user.name.split(' ')[0] })
+                    : t('nav.header.welcome')}
                 </p>
-                <p className="text-xs text-txt-secondary dark:text-txt-darkSecondary font-medium truncate mt-0.5">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                <p className="text-[0.6875rem] sm:text-xs text-txt-secondary dark:text-txt-darkSecondary font-medium truncate">
+                  {formatDate(new Date(), { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
               </div>
             </div>
@@ -875,27 +914,15 @@ const DashboardShell = ({ children, role = 'patient' }) => {
             />
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <ThemeToggle />
               <NotificationBell />
-              <Link 
-                to={`/${currentRole}/profile`} 
-                className="neu-btn h-10 px-2 sm:px-2.5 rounded-xl sm:rounded-2xl flex items-center gap-2 text-link font-black shadow-sm shrink-0 hover:scale-105 transition-all cursor-pointer group"
-                title="Profile & Settings"
-              >
-                <div className="relative w-7 h-7 sm:w-8 sm:h-8 shrink-0">
-                  <div className="w-full h-full rounded-lg sm:rounded-xl neu-flat-sm flex items-center justify-center text-link font-black overflow-hidden ring-1 ring-white/50 dark:ring-white/10">
-                    {user.avatar_url ? (
-                      <img src={user.avatar_url} alt="" className="w-full h-full object-cover block" />
-                    ) : (
-                      <span className="text-xs font-black">{user.initials}</span>
-                    )}
-                  </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#e8ecf2] dark:border-[#16212E] rounded-[3px] z-10" title="Online" />
-                </div>
-                <span className="hidden xl:inline text-xs font-bold text-[#17283B] dark:text-[#E6EEF6] group-hover:text-link dark:group-hover:text-[#8CBDF0] transition-colors truncate max-w-[100px]">
-                  {user.name ? user.name.split(' ')[0] : 'Profile'}
-                </span>
-              </Link>
+              <ProfilePopover
+                user={user}
+                currentRole={currentRole}
+                onLogout={async () => {
+                  await logout();
+                  navigate('/login');
+                }}
+              />
             </div>
           </header>
 
@@ -907,8 +934,8 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 ref={mainRef}
                 className={`flex-1 w-full max-w-full flex flex-col ${
                   isMessagesPage
-                    ? 'pt-[76px] sm:pt-[82px] px-2 sm:px-3 lg:px-3.5 pb-2 sm:pb-3 lg:pb-3.5 overflow-hidden'
-                    : 'pt-[84px] sm:pt-[92px] px-4 sm:px-6 lg:px-8 pb-24 sm:pb-28 lg:pb-10 overflow-y-auto overflow-x-hidden'
+                    ? 'pt-[calc(3.75rem+env(safe-area-inset-top,0px))] sm:pt-[calc(5rem+env(safe-area-inset-top,0px))] px-2 sm:px-3 lg:px-3.5 pb-2 sm:pb-3 lg:pb-3.5 overflow-hidden'
+                    : 'pt-[calc(4.25rem+env(safe-area-inset-top,0px))] sm:pt-[calc(5.5rem+env(safe-area-inset-top,0px))] px-3.5 sm:px-6 lg:px-8 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] sm:pb-24 lg:pb-10 overflow-y-auto overflow-x-hidden'
                 }`}
               >
                 <div className="w-full max-w-full flex-1 flex flex-col h-full min-h-0">
@@ -926,32 +953,45 @@ const DashboardShell = ({ children, role = 'patient' }) => {
         style={{
           transform: isMobileNavVisible ? 'translateY(0)' : 'translateY(120%)',
           opacity: isMobileNavVisible ? 1 : 0,
-          pointerEvents: isMobileNavVisible ? 'auto' : 'none',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-          transition: 'transform 280ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease-in-out',
+          transition: 'transform 280ms cubic-bezier(0.32, 0.72, 0, 1), opacity 240ms cubic-bezier(0.32, 0.72, 0, 1)',
         }}
-        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden will-change-transform"
+        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden will-change-transform px-0 pb-0 pt-4 pointer-events-none"
       >
-        <div className="mx-3 mb-3 rounded-2xl neu-flat">
-          <div className="flex items-center justify-around px-1 py-1">
-            {(() => {
-              const mobileLinks = buildMobileLinks(links);
-              return mobileLinks.map((link, i) => (
-                <MobileNavItem 
-                  key={link.label}
-                  icon={link.icon}
-                  label={link.shortLabel || link.label}
-                  to={link.to}
-                  active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
-                  badge={getBadgeForLink(link)}
-                  prominent={i === 2}
-                />
-              ));
-            })()}
-          </div>
-        </div>
+        <nav
+          className="mc-bottom-nav"
+          style={{ pointerEvents: isMobileNavVisible ? 'auto' : 'none' }}
+          aria-label={t('nav.mobile.ariaMain')}
+        >
+          {(() => {
+            const mobileLinks = buildMobileLinks(links);
+            return mobileLinks.map((link, i) => (
+              <MobileNavItem 
+                key={link.to}
+                icon={link.icon}
+                label={link.shortLabel || link.label}
+                to={link.to}
+                active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
+                badge={getBadgeForLink(link)}
+                prominent={i === 2}
+              />
+            ));
+          })()}
+        </nav>
       </div>
-    </>
+      {currentRole !== 'admin' && (
+        <WeeklyUpdatesModal
+          open={weeklyModalOpen}
+          onOpenChange={setWeeklyModalOpen}
+          events={weeklyUpdates.events}
+          announcements={weeklyUpdates.announcements}
+          loading={weeklyLoading}
+          onNavigate={(path) => navigate(path)}
+          onDontShowAgain={() => {
+            dismissWeeklyUpdates(weeklyUpdates.allItems, authUser?.id);
+          }}
+        />
+      )}
+    </MotionConfig>
   );
 };
 

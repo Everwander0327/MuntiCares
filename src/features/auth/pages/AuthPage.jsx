@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { IMAGES } from '@/lib/images';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeSlash } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -56,7 +56,7 @@ const PasswordToggle = ({ show, onToggle }) => (
     tabIndex={-1}
     aria-label={show ? 'Hide password' : 'Show password'}
   >
-    {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+    {show ? <EyeSlash className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
   </button>
 );
 
@@ -361,7 +361,7 @@ const AuthPage = () => {
                   onClick={() => setRole(r.value)}
                   className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                     role === r.value
-                      ? 'bg-[#2F6FB5] text-white shadow-sm'
+                      ? 'bg-primary text-white shadow-sm'
                       : 'border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
                   }`}
                 >
@@ -496,12 +496,12 @@ const AuthPage = () => {
 
           {/* Hero Section Content (Vertically Centered) */}
           <div className="relative z-10 space-y-4 max-w-xl">
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-primary dark:text-[#8CBDF0]">
+            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-link">
               MuntiCares
             </span>
             <p className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white tracking-tight leading-[1.12]">
               Quality home care <br />right at your{' '}
-              <span className="text-primary dark:text-[#8CBDF0]">
+              <span className="text-link">
                 doorstep
               </span>
             </p>
@@ -512,7 +512,7 @@ const AuthPage = () => {
         </div>
 
         {/* Right Column: Clean Authentication Form */}
-        <div className="col-span-1 lg:col-span-6 bg-secondary dark:bg-slate-950 flex items-center justify-center p-4 py-8 sm:p-8 lg:p-12">
+        <div className="col-span-1 lg:col-span-6 bg-secondary dark:bg-slate-950 flex items-center justify-center p-4 py-6 sm:p-8 lg:p-12">
           <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-5">
             
             {/* Top Switcher: Clean Segment Control */}
@@ -545,7 +545,7 @@ const AuthPage = () => {
 
             {/* Form Container Card */}
             <motion.div
-              className={`rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-5 sm:p-7 shadow-xl ${
+              className={`rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-4 sm:p-7 shadow-xl ${
                 shake ? 'animate-shake' : ''
               }`}
               initial={{ opacity: 0, y: 16 }}

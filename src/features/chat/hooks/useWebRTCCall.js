@@ -135,7 +135,7 @@ function getSignalingChannel(topic) {
   }
 
   console.log('[webrtc] creating new channel for', topic);
-  const channel = supabase.channel(topic);
+  const channel = supabase.channel(topic, { config: { private: true } });
   const entry = { channel, listeners: new Set(), ready: false, queue: [], retryTimer: null };
 
   channel.on('broadcast', { event: 'signal' }, (data) => {

@@ -1,36 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Star } from 'lucide-react';
+import { Star } from '@phosphor-icons/react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import { markRequestRated } from '@/features/patient/utils/localState';
 
-const RATING_LABELS = {
-  1: 'Needs Improvement',
-  2: 'Fair Experience',
-  3: 'Good Experience',
-  4: 'Very Good Care',
-  5: 'Exceptional Care',
+const RATING_LABEL_KEYS = {
+  1: 'patient.review.rating1',
+  2: 'patient.review.rating2',
+  3: 'patient.review.rating3',
+  4: 'patient.review.rating4',
+  5: 'patient.review.rating5',
 };
 
-const POSITIVE_TAGS = [
-  'Attentive & Caring',
-  'Arrived On Time',
-  'Clear Explanations',
-  'Gentle Care',
-  'Highly Recommended',
+const POSITIVE_TAG_DEFS = [
+  { value: 'Attentive & Caring', key: 'patient.review.posTag1' },
+  { value: 'Arrived On Time', key: 'patient.review.posTag2' },
+  { value: 'Clear Explanations', key: 'patient.review.posTag3' },
+  { value: 'Gentle Care', key: 'patient.review.posTag4' },
+  { value: 'Highly Recommended', key: 'patient.review.posTag5' },
 ];
 
-const CONSTRUCTIVE_TAGS = [
-  'Arrived Late',
-  'Felt Rushed',
-  'Unclear Explanations',
-  'Communication Issue',
-  'Needs Follow-up',
+const CONSTRUCTIVE_TAG_DEFS = [
+  { value: 'Arrived Late', key: 'patient.review.conTag1' },
+  { value: 'Felt Rushed', key: 'patient.review.conTag2' },
+  { value: 'Unclear Explanations', key: 'patient.review.conTag3' },
+  { value: 'Communication Issue', key: 'patient.review.conTag4' },
+  { value: 'Needs Follow-up', key: 'patient.review.conTag5' },
 ];
 
 const getInitials = (name) =>
@@ -44,6 +45,7 @@ const getInitials = (name) =>
 
 const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
   const { user } = useAuth();
+  const { t, translateService } = useLanguage();
   const shouldReduceMotion = useReducedMotion();
   const [rating, setRating] = useState(0);
   const [hovered, setHovered] = useState(0);
@@ -75,7 +77,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
   const activeRating = hovered || rating;
   const isLowMood = activeRating > 0 && activeRating <= 2;
   const moodKey = isLowMood ? 'constructive' : 'positive';
-  const tags = isLowMood ? CONSTRUCTIVE_TAGS : POSITIVE_TAGS;
+  const tags = isLowMood ? CONSTRUCTIVE_TAG_DEFS : POSITIVE_TAG_DEFS;
 
   const handleSelectStar = (star) => {
     const wasLow = rating > 0 && rating <= 2;
@@ -96,7 +98,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (rating === 0) {
-      toast.error('Please select a star rating.');
+      toast.error(t('patient.review.selectRatingError'));
       return;
     }
 
@@ -158,14 +160,14 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
 
       markRequestRated(user?.id, request.id);
       handleClose();
-      toast.success('Thank you! Your review has been submitted.');
+      toast.success(t('patient.review.submitSuccess'));
       if (!shouldReduceMotion) {
         confetti({ particleCount: 80, spread: 60, origin: { y: 0.6 } });
       }
       if (submittedCb) submittedCb(request.id);
     } catch (err) {
       console.error('Error submitting review:', err);
-      toast.error('Your review could not be sent. Please try again.');
+      toast.error(t('patient.review.submitError'));
     } finally {
       setSubmitting(false);
     }
@@ -173,8 +175,8 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
 
   if (!request) return null;
 
-  const providerName = request?.providerName || 'your healthcare provider';
-  const serviceLabel = request?.service || 'Care Session';
+  const providerName = request?.providerName || t('patient.review.providerFallbackLower');
+  const serviceLabel = request?.service ? translateService(request.service) : t('patient.review.serviceFallback');
 
   const sentimentColorClass =
     activeRating === 0
@@ -255,7 +257,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                   id="review-modal-title"
                   className="text-lg font-display font-extrabold text-ink dark:text-white tracking-tight truncate"
                 >
-                  Rate Your Care Session
+                  {t('patient.review.title')}
                 </h2>
                 <p className="text-sm font-medium text-tertiary truncate mt-0.5">
                   {providerName} — {serviceLabel}
@@ -283,8 +285,8 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                           onMouseEnter={() => setHovered(star)}
                           onMouseLeave={() => setHovered(0)}
                           whileTap={shouldReduceMotion ? undefined : { scale: 0.88 }}
-                          className="relative min-w-[44px] min-h-[44px] p-1.5 rounded-2xl flex items-center justify-center cursor-pointer focus:outline-none text-surface-border"
-                          aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                          className="relative min-w-[2.75rem] min-h-[2.75rem] p-1.5 rounded-2xl flex items-center justify-center cursor-pointer focus:outline-none text-surface-border"
+                          aria-label={t(star > 1 ? 'patient.review.starAriaPlural' : 'patient.review.starAriaSingle', { star })}
                         >
                           <motion.span
                             key={
@@ -313,10 +315,11 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                             className="inline-flex items-center justify-center"
                           >
                             <Star
+                              weight={active ? 'fill' : 'regular'}
                               className={`w-8 h-8 sm:w-9 sm:h-9 transition-colors duration-150 ${
                                 active
-                                  ? 'fill-amber-400 text-amber-500 drop-shadow-sm'
-                                  : 'fill-none text-tertiary/60 stroke-[1.8]'
+                                  ? 'text-amber-500 drop-shadow-sm'
+                                  : 'text-tertiary/60'
                               }`}
                             />
                           </motion.span>
@@ -337,7 +340,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                   </div>
 
                   {/* Animated Sentiment Slot Transition */}
-                  <div className="min-h-[24px] flex items-center justify-center overflow-hidden">
+                  <div className="min-h-[1.5rem] flex items-center justify-center overflow-hidden">
                     <AnimatePresence mode="wait">
                       <motion.p
                         key={activeRating}
@@ -348,8 +351,11 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                         className={`text-sm font-extrabold ${sentimentColorClass}`}
                       >
                         {activeRating > 0
-                          ? `${activeRating} of 5 — ${RATING_LABELS[activeRating]}`
-                          : 'Tap a star to rate'}
+                          ? t('patient.review.ratingOfFive', {
+                              rating: activeRating,
+                              label: t(RATING_LABEL_KEYS[activeRating]),
+                            })
+                          : t('patient.review.tapStarHint')}
                       </motion.p>
                     </AnimatePresence>
                   </div>
@@ -359,21 +365,23 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2 px-0.5">
                     <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-                      {isLowMood ? 'What could have gone better?' : 'What went well?'}
+                      {isLowMood ? t('patient.review.whatWentBetter') : t('patient.review.whatWentWell')}
                     </span>
                     <span className="text-xs font-semibold text-tertiary tabular-nums">
-                      {selectedTags.length > 0 ? `${selectedTags.length} selected` : 'Optional'}
+                      {selectedTags.length > 0
+                        ? t('patient.review.selectedCount', { count: selectedTags.length })
+                        : t('patient.review.optional')}
                     </span>
                   </div>
 
                   <motion.div key={moodKey} className="flex flex-wrap gap-2">
                     {tags.map((tag, idx) => {
-                      const isSelected = selectedTags.includes(tag);
+                      const isSelected = selectedTags.includes(tag.value);
                       return (
                         <motion.button
-                          key={tag}
+                          key={tag.value}
                           type="button"
-                          onClick={() => handleTagToggle(tag)}
+                          onClick={() => handleTagToggle(tag.value)}
                           initial={
                             shouldReduceMotion
                               ? false
@@ -386,13 +394,13 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                             delay: shouldReduceMotion ? 0 : idx * 0.035,
                             ease: [0.34, 1.56, 0.64, 1],
                           }}
-                          className={`min-h-[40px] px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+                          className={`min-h-[2.5rem] px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                             isSelected
                               ? 'neu-btn-primary shadow-sm'
                               : 'neu-btn text-ink dark:text-slate-200 hover:text-link'
                           }`}
                         >
-                          {tag}
+                          {t(tag.key)}
                         </motion.button>
                       );
                     })}
@@ -405,14 +413,14 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                     htmlFor="review-comment-input"
                     className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block px-0.5"
                   >
-                    Additional note
+                    {t('patient.review.additionalNote')}
                   </label>
                   <div className="neu-inset rounded-2xl p-3 transition-all">
                     <textarea
                       id="review-comment-input"
                       value={comment}
                       onChange={(e) => setComment(e.target.value)}
-                      placeholder="Share details about your consultation, care received, or provider bedside manner..."
+                      placeholder={t('patient.review.notePlaceholder')}
                       rows={3}
                       className="w-full bg-transparent outline-none border-none text-sm text-ink dark:text-slate-100 placeholder:text-tertiary resize-none font-medium leading-relaxed"
                     />
@@ -425,7 +433,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                 <button
                   type="submit"
                   disabled={submitting || rating === 0}
-                  className={`relative overflow-hidden w-full min-h-[46px] px-4 py-3 rounded-2xl text-sm font-extrabold flex items-center justify-center transition-all active:scale-[0.98] ${
+                  className={`relative overflow-hidden w-full min-h-[2.875rem] px-4 py-3 rounded-2xl text-sm font-extrabold flex items-center justify-center transition-all active:scale-[0.98] ${
                     rating === 0
                       ? 'neu-flat-sm text-tertiary opacity-60 cursor-not-allowed'
                       : 'neu-btn-primary shadow-md cursor-pointer'
@@ -446,7 +454,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                     />
                   )}
                   <span className="relative z-10">
-                    {submitting ? 'Submitting...' : 'Submit Review'}
+                    {submitting ? t('patient.review.submitting') : t('patient.review.submitBtn')}
                   </span>
                 </button>
 
@@ -454,9 +462,9 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                   type="button"
                   onClick={handleClose}
                   disabled={submitting}
-                  className="w-full min-h-[38px] py-1.5 rounded-xl text-xs font-bold text-tertiary hover:text-ink dark:hover:text-white transition-colors cursor-pointer"
+                  className="w-full min-h-[2.375rem] py-1.5 rounded-xl text-xs font-bold text-tertiary hover:text-ink dark:hover:text-white transition-colors cursor-pointer"
                 >
-                  Cancel
+                  {t('patient.common.cancel')}
                 </button>
               </div>
             </form>

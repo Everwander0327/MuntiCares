@@ -1,12 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { initialsAvatar } from '@/lib/avatar';
-import { MessageSquareWarning, Search, PhoneOff, Loader2 } from 'lucide-react';
+import {
+  ChatCenteredDots,
+  MagnifyingGlass,
+  PhoneDisconnect,
+  SpinnerGap,
+} from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import { usePresence } from '@/contexts/PresenceContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { formatLocalizedDate, translate } from '@/i18n';
 import { fetchRecentCalls, onCallsChanged } from '../lib/callRecords';
 
-const formatRelativeTime = (dateStr) => {
+const formatRelativeTime = (dateStr, language = 'en') => {
   if (!dateStr) return '';
   const now = Date.now();
   const date = new Date(dateStr).getTime();
@@ -15,39 +22,50 @@ const formatRelativeTime = (dateStr) => {
   const diffHrs = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return 'Now';
+  if (diffMins < 1) return translate(language, 'chat.list.now');
   if (diffMins < 60) return `${diffMins}m`;
   if (diffHrs < 24) return `${diffHrs}h`;
   if (diffDays < 7) return `${diffDays}d`;
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return formatLocalizedDate(dateStr, language, { month: 'short', day: 'numeric' });
 };
 
 const stripLeadingCallMarker = (str) =>
   String(str || '').replace(/^(\u{1F4F9}|\u{1F4DE})\s*/u, '');
 
-const getLastMessagePreview = (msg, userId, callRecord) => {
+const getLastMessagePreview = (msg, userId, callRecord, language = 'en') => {
   if (!msg) return { text: '', isYou: false };
   const isYou = msg.sender_id === userId;
   if (msg.message_type === 'call') {
-    return { text: `${callRecord?.call_type === 'audio' ? 'Voice' : 'Video'} consultation`, isYou };
+    return {
+      text: callRecord?.call_type === 'audio'
+        ? translate(language, 'chat.list.voiceConsult')
+        : translate(language, 'chat.list.videoConsult'),
+      isYou,
+    };
   }
   const isImage = msg.message_type === 'image' || (msg.content && /\.(jpg|jpeg|png|webp|gif|heic)(\?.*)?$/i.test(msg.content.split('\n')[0]));
   if (isImage) {
     const lines = (msg.content || '').split('\n');
     const caption = lines.slice(1).join('\n').trim();
-    return { text: caption ? `Photo: ${caption}` : 'Photo shared', isYou };
+    return {
+      text: caption ? translate(language, 'chat.list.photoPrefix', { caption }) : translate(language, 'chat.list.photoShared'),
+      isYou,
+    };
   }
   const isVideo = msg.message_type === 'video' || (msg.content && /\.(mp4|webm|mov|ogg|3gp)(\?.*)?$/i.test(msg.content.split('\n')[0]));
   if (isVideo) {
     const lines = (msg.content || '').split('\n');
     const caption = lines.slice(1).join('\n').trim();
-    return { text: caption ? `Video: ${caption}` : 'Video shared', isYou };
+    return {
+      text: caption ? translate(language, 'chat.list.videoPrefix', { caption }) : translate(language, 'chat.list.videoShared'),
+      isYou,
+    };
   }
   if (msg.message_type === 'file') {
-    return { text: 'File attachment', isYou };
+    return { text: translate(language, 'chat.list.fileAttachment'), isYou };
   }
   if (/^(\u{1F4F9}|\u{1F4DE})/u.test(msg.content || '')) {
-    return { text: 'Consultation call', isYou };
+    return { text: translate(language, 'chat.list.consultCall'), isYou };
   }
   let text = stripLeadingCallMarker(msg.content || '');
   if (text.length > 50) text = text.slice(0, 50) + '…';
@@ -56,6 +74,7 @@ const getLastMessagePreview = (msg, userId, callRecord) => {
 
 const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }) => {
   const { isUserOnline } = usePresence();
+  const { language, t, translateService } = useLanguage();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [callById, setCallById] = useState({});
@@ -251,7 +270,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
     return (
       <div className="flex-1 flex items-center justify-center p-12">
         <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center">
-          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <SpinnerGap className="w-6 h-6 text-primary animate-spin" />
         </div>
       </div>
     );
@@ -261,13 +280,13 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-tertiary dark:text-tertiary py-16 px-4">
         <div className="neu-flat w-14 h-14 rounded-2xl flex items-center justify-center mb-3 text-link">
-          <MessageSquareWarning className="w-7 h-7" />
+          <ChatCenteredDots className="w-7 h-7" />
         </div>
-        <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">No conversations yet</h3>
+        <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100">{t('chat.list.emptyTitle')}</h3>
         <p className="text-xs text-tertiary dark:text-tertiary mt-1 max-w-xs text-center">
           {user?.role === 'patient'
-            ? 'Chat with providers once a request is accepted.'
-            : 'Chat with patients once you accept their request.'}
+            ? t('chat.list.emptyPatient')
+            : t('chat.list.emptyProvider')}
         </p>
       </div>
     );
@@ -286,7 +305,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
               : 'text-tertiary hover:text-slate-800 dark:hover:text-white'
           }`}
         >
-          All ({conversations.length})
+          {t('chat.list.filterAll', { count: conversations.length })}
         </button>
         <button
           type="button"
@@ -297,7 +316,7 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
               : 'text-tertiary hover:text-slate-800 dark:hover:text-white'
           }`}
         >
-          Unread ({unreadConversationsCount})
+          {t('chat.list.filterUnread', { count: unreadConversationsCount })}
         </button>
         <button
           type="button"
@@ -308,30 +327,30 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
               : 'text-tertiary hover:text-slate-800 dark:hover:text-white'
           }`}
         >
-          Online ({onlineConversationsCount})
+          {t('chat.list.filterOnline', { count: onlineConversationsCount })}
         </button>
       </div>
 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-tertiary dark:text-tertiary py-12 px-4">
           <div className="neu-flat-sm w-12 h-12 rounded-2xl flex items-center justify-center mb-2.5 text-tertiary">
-            <Search className="w-5 h-5" />
+            <MagnifyingGlass className="w-5 h-5" />
           </div>
           <h3 className="text-xs font-extrabold text-slate-800 dark:text-slate-100">
-            {searchTerm ? 'No matching conversations' : `No ${activeFilter} contacts`}
+            {searchTerm ? t('chat.list.noMatching') : t('chat.list.noFilter', { filter: activeFilter })}
           </h3>
           <p className="text-2xs text-tertiary dark:text-tertiary mt-1 text-center">
             {searchTerm
-              ? `No conversations match \u201C${searchTerm}\u201D`
+              ? t('chat.list.noMatchSub', { query: searchTerm })
               : activeFilter === 'unread'
-              ? 'You have read all incoming messages.'
-              : 'No contacts are currently online.'}
+              ? t('chat.list.allReadSub')
+              : t('chat.list.noOnlineSub')}
           </p>
         </div>
       ) : (
         <div className="space-y-1.5">
           {filtered.map((conv, i) => {
-            const preview = getLastMessagePreview(conv.lastMessage, user.id, callById[conv.lastMessage?.call_id]);
+            const preview = getLastMessagePreview(conv.lastMessage, user.id, callById[conv.lastMessage?.call_id], language);
             const missed = missedByPartner[conv.id];
             const hasUnread = conv.unreadCount > 0;
             const online = isUserOnline(conv.id);
@@ -370,17 +389,17 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
                           {conv.name}
                         </p>
                         <span
-                          className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 border ${
+                          className={`px-1.5 py-0.5 rounded-md text-[0.5625rem] font-black uppercase tracking-wider shrink-0 border ${
                             online
                               ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
                               : 'bg-slate-200/70 dark:bg-slate-800/90 border-slate-300/80 dark:border-white/10 text-tertiary'
                           }`}
                         >
-                          {online ? 'Online' : 'Offline'}
+                          {online ? t('chat.list.online') : t('chat.list.offline')}
                         </span>
                       </div>
                       <span className="text-2xs text-tertiary dark:text-tertiary shrink-0 font-bold tabular-nums">
-                        {formatRelativeTime(conv.lastMessage?.created_at)}
+                        {formatRelativeTime(conv.lastMessage?.created_at, language)}
                       </span>
                     </div>
 
@@ -391,27 +410,32 @@ const ConversationList = ({ user, onSelect, searchTerm = '', selectedId = null }
                             ? 'text-slate-800 dark:text-slate-100 font-bold'
                             : 'text-tertiary dark:text-tertiary font-medium'
                         }`}>
-                          {preview.isYou && <span className="text-tertiary font-normal">You: </span>}
+                          {preview.isYou && <span className="text-tertiary font-normal">{t('chat.list.youPrefix')} </span>}
                           {preview.text}
                         </p>
                       ) : (
                         <p className="text-2xs text-tertiary truncate font-medium">
-                          No messages yet {conv.serviceType ? `\u2022 ${conv.serviceType}` : ''}
+                          {t('chat.list.noMessagesYet')} {conv.serviceType ? `\u2022 ${translateService(conv.serviceType)}` : ''}
                         </p>
                       )}
 
                       {hasUnread && (
-                        <span className="px-1.5 py-0.5 bg-primary rounded-md flex items-center justify-center text-[9px] font-black text-white uppercase tracking-wider shrink-0">
-                          {conv.unreadCount > 9 ? '9+ NEW' : `${conv.unreadCount} NEW`}
+                        <span className="px-1.5 py-0.5 bg-primary rounded-md flex items-center justify-center text-[0.5625rem] font-black text-white uppercase tracking-wider shrink-0">
+                          {conv.unreadCount > 9
+                            ? t('chat.list.newNinePlus')
+                            : t('chat.list.newCount', { count: conv.unreadCount })}
                         </span>
                       )}
                     </div>
 
                     {missed && (
                       <div className="flex items-center gap-1.5 mt-1">
-                        <PhoneOff className="w-3 h-3 text-danger shrink-0" />
+                        <PhoneDisconnect className="w-3 h-3 text-danger shrink-0" />
                         <span className="text-3xs font-extrabold uppercase tracking-wider text-danger truncate">
-                          Missed {missed.call_type === 'audio' ? 'voice' : 'video'} call &bull; {formatRelativeTime(missed.ringing_at)}
+                          {t('chat.list.missedCall', {
+                            kind: missed.call_type === 'audio' ? t('chat.list.voiceKind') : t('chat.list.videoKind'),
+                            time: formatRelativeTime(missed.ringing_at, language),
+                          })}
                         </span>
                       </div>
                     )}

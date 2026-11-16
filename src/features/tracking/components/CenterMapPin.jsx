@@ -1,4 +1,5 @@
-import { Loader2 } from 'lucide-react';
+import { SpinnerGap } from '@phosphor-icons/react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * CenterMapPin — "Care Home Beacon"
@@ -8,6 +9,7 @@ import { Loader2 } from 'lucide-react';
  * - Pulsing ground radar ring centered via wrapper so `animate-ping` scales from true center
  */
 export default function CenterMapPin({ isPanning, loading, hideLabel = false }) {
+  const { t } = useLanguage();
   return (
     <div
       className="pointer-events-none absolute inset-0 z-[500] select-none"
@@ -18,7 +20,7 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
         {/* Pulsing Ground Radar Ring */}
         {!isPanning && (
           <span
-            className="absolute w-8 h-8 rounded-lg border border-[#2F6FB5]/55 dark:border-[#8CBDF0]/55 bg-[#2F6FB5]/15 animate-ping"
+            className="absolute w-8 h-8 rounded-lg border border-primary/55 dark:border-primary-400/55 bg-primary/15 animate-ping"
             style={{ animationDuration: '2.2s' }}
           />
         )}
@@ -27,8 +29,8 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
         <span
           className={`rounded-lg border transition-all duration-200 ${
             isPanning
-              ? 'w-5 h-5 border-[#2F6FB5]/70 dark:border-[#8CBDF0]/80 bg-[#2F6FB5]/10 scale-90'
-              : 'w-7 h-7 border-[#2F6FB5]/35 dark:border-[#8CBDF0]/40 bg-[#2F6FB5]/10 scale-100'
+              ? 'w-5 h-5 border-primary/70 dark:border-primary-400/80 bg-primary/10 scale-90'
+              : 'w-7 h-7 border-primary/35 dark:border-primary-400/40 bg-primary/10 scale-100'
           }`}
         />
       </div>
@@ -45,15 +47,15 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
         {/* Compact Squircle Status Badge ONLY while panning or loading (Never repeats the full address over the map) */}
         {!hideLabel && (isPanning || loading) && (
           <div
-            className="mb-2 max-w-[240px] px-2.5 py-1 rounded-lg text-xs font-bold shadow-md backdrop-blur-md transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-white border border-white/15"
+            className="mb-2 max-w-[15rem] px-2.5 py-1 rounded-lg text-xs font-bold shadow-md backdrop-blur-md transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-white border border-white/15"
           >
             {loading ? (
               <>
-                <Loader2 className="w-3 h-3 animate-spin text-[#8CBDF0] shrink-0" />
-                <span className="truncate">Locating address…</span>
+                <SpinnerGap className="w-3 h-3 animate-spin text-primary-400 shrink-0" />
+                <span className="truncate">{t('tracking.pin.locating')}</span>
               </>
             ) : (
-              <span className="truncate">Release map to lock pin</span>
+              <span className="truncate">{t('tracking.pin.release')}</span>
             )}
           </div>
         )}
@@ -77,7 +79,7 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
             className="block"
           >
             <defs>
-              {/* Clinical Trust Blue Squircle Gradient */}
+              {/* Theme Primary Squircle Gradient */}
               <linearGradient
                 id="mcBeaconBg"
                 x1="6"
@@ -86,9 +88,9 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
                 y2="38"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop stopColor="#3B82F6" />
-                <stop offset="0.55" stopColor="#2F6FB5" />
-                <stop offset="1" stopColor="#1E4273" />
+                <stop stopColor="rgb(var(--primary-mid-rgb))" />
+                <stop offset="0.55" stopColor="rgb(var(--primary-rgb))" />
+                <stop offset="1" stopColor="rgb(var(--primary-hover-rgb))" />
               </linearGradient>
 
               {/* Top Specular Gloss */}
@@ -113,8 +115,8 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
                 y2="55"
                 gradientUnits="userSpaceOnUse"
               >
-                <stop stopColor="#1E4273" />
-                <stop offset="1" stopColor="#2F6FB5" />
+                <stop stopColor="rgb(var(--primary-hover-rgb))" />
+                <stop offset="1" stopColor="rgb(var(--primary-rgb))" />
               </linearGradient>
             </defs>
 
@@ -143,7 +145,7 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
               fill="white"
             />
 
-            {/* Main Clinical Blue Squircle Body */}
+            {/* Main Theme Primary Squircle Body */}
             <rect
               x="6"
               y="4"
@@ -180,7 +182,7 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
             {/* Subtle Medical Cross Cutout inside Heart */}
             <path
               d="M22 19.6V24.4M19.6 22H24.4"
-              stroke="#2F6FB5"
+              stroke="rgb(var(--primary-rgb))"
               strokeWidth="1.75"
               strokeLinecap="round"
             />
@@ -189,7 +191,7 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
       </div>
 
       {/* Exact Center Reticle Dot */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-sm bg-[#2F6FB5] dark:bg-[#8CBDF0] ring-2 ring-white dark:ring-slate-900 shadow-sm" />
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-sm bg-primary dark:bg-primary-400 ring-2 ring-white dark:ring-slate-900 shadow-sm" />
     </div>
   );
 }
