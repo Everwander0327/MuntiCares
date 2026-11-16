@@ -15,6 +15,13 @@ CREATE TABLE public.requests (
   dest_lat double precision, dest_lng double precision, dest_address text,
   dest_source text, dest_version integer, dest_updated_at timestamptz
 );
+CREATE TABLE public.providers (
+  user_id uuid PRIMARY KEY,
+  services text[] NOT NULL DEFAULT '{}',
+  is_approved boolean NOT NULL DEFAULT false
+);
+INSERT INTO public.providers(user_id, services, is_approved)
+VALUES ('33333333-3333-4333-8333-333333333333', ARRAY['Nursing'], true);
 CREATE TABLE public.consent_access (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   patient_id uuid NOT NULL, provider_id uuid NOT NULL,
@@ -24,3 +31,4 @@ CREATE TABLE public.consent_access (
 ALTER TABLE public.requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.consent_access ENABLE ROW LEVEL SECURITY;
 GRANT SELECT, INSERT, UPDATE ON public.requests, public.consent_access TO authenticated;
+GRANT SELECT ON public.providers TO authenticated;
