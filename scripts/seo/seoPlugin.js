@@ -24,7 +24,11 @@ export function seoPlugin() {
     generateBundle() {
       const lastmod = new Date().toISOString().slice(0, 10);
       this.emitFile({ type: 'asset', fileName: 'robots.txt', source: buildRobotsTxt(siteUrl) });
-      this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: buildSitemapXml(siteUrl, PUBLIC_PAGES, lastmod) });
+      this.emitFile({
+        type: 'asset',
+        fileName: 'sitemap.xml',
+        source: buildSitemapXml(siteUrl, PUBLIC_PAGES, lastmod),
+      });
     },
   };
 }

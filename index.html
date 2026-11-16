@@ -2,23 +2,73 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQsIDQpIj4KICAgIDxwYXRoIGQ9Ik0xOSAxNGMxLjQ5LTEuNDYgMy0zLjIxIDMtNS41QTUuNSA1LjUgMCAwIDAgMTYuNSAzYy0xLjc2IDAtMyAuNS00LjUgMi0xLjUtMS41LTIuNzQtMi00LjUtMkE1LjUgNS41IDAgMCAwIDIgOC41YzAgMi4zIDEuNSA0LjA1IDMgNS41bDcgN1oiIGZpbGw9IiNmZmYiLz4KICA8L2c+Cjwvc3ZnPgo=" />
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+CiAgPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNyIgZmlsbD0iIzI1NjNlYiIvPgogIDxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDQsIDQpIj4KICAgIDxwYXRoIGQ9Ik0xOSAxNGMxLjQ5LTEuNDYgMy0zLjIxIDMtNS41QTUuNSA1LjUgMCAwIDAgMTYuNSAzYy0xLjc2IDAtMyAuNS00LjUgMi0xLjUtMS41LTIuNzQtMi00LjUtMkE1LjUgNS41IDAgMCAwIDIgOC41YzAgMi4zIDEuNSA0LjA1IDMgNS41bDcgN1oiIGZpbGw9IiNmZmYiLz4KICA8L2c+Cjwvc3ZnPgo=" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232F6FB5'/%3E%3Cg transform='translate(4,4)'%3E%3Cpath d='M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E" />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232F6FB5'/%3E%3Cg transform='translate(4,4)'%3E%3Cpath d='M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Lexend:wght@500;600;700;800&display=swap" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#F4F8FC" />
     <meta name="description" content="MuntiCares — Connecting Muntinlupa City residents with trusted, verified home care providers. Fast, secure, and patient-first." />
     <meta name="keywords" content="home care Muntinlupa, caregiver, elderly care, home health, MuntiCares, verified providers, Muntinlupa City healthcare" />
 
     <!-- Prevent FOUC -->
     <script>
       (function() {
-        var theme = localStorage.getItem('mc_theme');
-        if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-          document.documentElement.classList.add('dark');
-        }
+        var root = document.documentElement;
+        var isDark = false;
+        try {
+          var theme = localStorage.getItem('mc_theme');
+          if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            root.classList.add('dark');
+            isDark = true;
+          }
+        } catch (e) {}
+        try {
+          var colorMap = {
+            'trust-blue': { light: '#F4F8FC', dark: '#0E1620', primary: '#2F6FB5' },
+            'botanical-sage': { light: '#F3F8F6', dark: '#0D1917', primary: '#1E6B60' },
+            'warm-hearth': { light: '#FAF6F1', dark: '#1A1412', primary: '#9E472A' },
+            'harbor-dusk': { light: '#F5F6FB', dark: '#101322', primary: '#4C56A1' },
+            'laguna-coastal': { light: '#F2F8FA', dark: '#0B171D', primary: '#0E6884' },
+            'sampaguita-moss': { light: '#F6F8F2', dark: '#12170E', primary: '#456728' },
+            'narra-amber': { light: '#FBF8F3', dark: '#19140E', primary: '#8A5316' },
+            'alabang-rosewood': { light: '#FAF5F7', dark: '#1A1115', primary: '#943B57' },
+            'monochrome-ink': { light: '#F6F7F9', dark: '#111317', primary: '#2C3646' }
+          };
+          var storedColor = localStorage.getItem('mc_color_theme');
+          var colorTheme = (storedColor && colorMap[storedColor]) ? storedColor : 'trust-blue';
+          root.setAttribute('data-color-theme', colorTheme);
+          var metaThemeColor = document.querySelector('meta[name="theme-color"]');
+          if (metaThemeColor && colorMap[colorTheme]) {
+            metaThemeColor.setAttribute('content', isDark ? colorMap[colorTheme].dark : colorMap[colorTheme].light);
+          }
+          var iconEl = document.querySelector('link[rel="icon"]');
+          if (iconEl && colorMap[colorTheme]) {
+            iconEl.setAttribute(
+              'href',
+              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='" +
+                encodeURIComponent(colorMap[colorTheme].primary) +
+                "'/%3E%3Cg transform='translate(4,4)'%3E%3Cpath d='M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z' fill='%23fff'/%3E%3C/g%3E%3C/svg%3E"
+            );
+          }
+        } catch (e) {}
+        try {
+          var scaleMap = {
+            'extra-compact': 0.8,
+            'compact': 0.9,
+            'standard': 1,
+            'large': 1.15
+          };
+          var storedScale = localStorage.getItem('mc_ui_scale');
+          var isMobile = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+          var resolvedPreset = (storedScale && scaleMap[storedScale]) ? storedScale : (isMobile ? 'compact' : 'standard');
+          var scaleValue = scaleMap[resolvedPreset] || 1;
+          root.style.setProperty('--ui-scale', String(scaleValue));
+          root.setAttribute('data-ui-scale', resolvedPreset);
+          root.setAttribute('data-ui-scale-mode', (storedScale && scaleMap[storedScale]) ? 'custom' : 'auto');
+        } catch (e) {}
       })();
     </script>
 

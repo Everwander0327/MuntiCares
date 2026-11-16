@@ -13,15 +13,15 @@ export function buildRobotsTxt(siteUrl) {
   ].join('\n');
 }
 
-/** sitemap.xml for the given public pages. `lastmod` is YYYY-MM-DD. */
-export function buildSitemapXml(siteUrl, pages, lastmod) {
+/** sitemap.xml for the given public pages and optional extra URLs. `lastmod` is YYYY-MM-DD. */
+export function buildSitemapXml(siteUrl, pages, lastmod, extraUrls = []) {
   const base = normalizeSiteUrl(siteUrl);
-  const urls = pages
-    .map(
-      (page) =>
-        `  <url>\n    <loc>${base}${page.path}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`,
-    )
-    .join('\n');
+  const pageUrls = pages.map(
+    (page) =>
+      `  <url>\n    <loc>${base}${page.path}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`,
+  );
+  const extraEntries = extraUrls.map((loc) => `  <url>\n    <loc>${loc}</loc>\n  </url>`);
+  const urls = [...pageUrls, ...extraEntries].join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 

@@ -19,7 +19,7 @@ const canonicalLink = (doc) => {
   return el;
 };
 
-/** Writes title, description, robots, canonical and OG url/title/description into <head>, updating existing tags in place. */
+/** Writes title, description, robots, canonical, and OG url/title/description into <head>, updating existing tags in place. */
 export function applyPageMeta({ title, description, canonical, robots }, doc = document) {
   doc.title = title;
   upsert(doc, 'meta[name="description"]', meta('name', 'description'), 'content', description);

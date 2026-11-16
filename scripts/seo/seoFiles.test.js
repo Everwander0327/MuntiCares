@@ -34,6 +34,17 @@ describe('buildSitemapXml', () => {
     const xml = buildSitemapXml('https://x.app/', PUBLIC_PAGES, '2026-11-08');
     expect(xml).not.toContain('x.app//');
   });
+
+  it('appends optional extra URLs', () => {
+    const xml = buildSitemapXml(U, PUBLIC_PAGES, '2026-11-08', [`${U}/extra`]);
+    const locs = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map((m) => m[1]);
+    expect(locs).toEqual([
+      'https://x.app/',
+      'https://x.app/privacy',
+      'https://x.app/terms',
+      'https://x.app/extra',
+    ]);
+  });
 });
 
 describe('renderIndexHtml', () => {
