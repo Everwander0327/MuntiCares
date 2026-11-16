@@ -1,27 +1,34 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getAuditedDocumentUrl } from './documentAccess';
-const { sign, rpc } = vi.hoisted(() => ({ sign: vi.fn(), rpc: vi.fn() }));
-vi.mock('@/lib/supabase', () => ({ supabase: {
-  storage: { from: () => ({ createSignedUrl: sign }) }, rpc,
-} }));
-beforeEach(() => { vi.clearAllMocks(); });
+
+const { invoke } = vi.hoisted(() => ({ invoke: vi.fn() }));
+vi.mock('@/lib/supabase', () => ({ supabase: { functions: { invoke } } }));
+
+beforeEach(() => invoke.mockReset());
+
 describe('audited provider document links', () => {
-  it('records every successful link request and sends no caller-controlled actor or timestamp', async () => {
-    sign.mockResolvedValue({ data: { signedUrl: 'https://example.test/file' } });
-    rpc.mockResolvedValue({ data: 'event-id' });
-    await expect(getAuditedDocumentUrl('patient','path')).resolves.toBe('https://example.test/file');
-    expect(rpc).toHaveBeenCalledWith('record_document_access', { p_patient_id: 'patient', p_file_path: 'path' });
-    await getAuditedDocumentUrl('patient','path');
-    expect(rpc).toHaveBeenCalledTimes(2);
+  it('requests a fresh server-audited link without supplying actor or timestamp', async () => {
+    invoke.mockResolvedValue({ data: { signedUrl: 'https://example.test/file' } });
+
+    await expect(getAuditedDocumentUrl('patient', 'path')).resolves.toBe('https://example.test/file');
+    await getAuditedDocumentUrl('patient', 'path');
+
+    expect(invoke).toHaveBeenCalledWith('medical-document-link', {
+      body: { patientId: 'patient', filePath: 'path' },
+    });
+    expect(invoke).toHaveBeenCalledTimes(2);
   });
-  it('does not log a failed link request', async () => {
-    sign.mockResolvedValue({ error: new Error('denied') });
-    await expect(getAuditedDocumentUrl('patient','path')).rejects.toThrow('denied');
-    expect(rpc).not.toHaveBeenCalled();
+
+  it('propagates endpoint failures and rejects missing links', async () => {
+    invoke.mockResolvedValueOnce({ error: new Error('audit unavailable') });
+    await expect(getAuditedDocumentUrl('patient', 'path')).rejects.toThrow('audit unavailable');
+
+    invoke.mockResolvedValueOnce({ data: {} });
+    await expect(getAuditedDocumentUrl('patient', 'path')).rejects.toThrow('Document link unavailable');
   });
-  it('does not release a link when logging fails', async () => {
-    sign.mockResolvedValue({ data: { signedUrl: 'https://example.test/file' } });
-    rpc.mockResolvedValue({ error: new Error('audit unavailable') });
-    await expect(getAuditedDocumentUrl('patient','path')).rejects.toThrow('audit unavailable');
+
+  it('rejects missing inputs before requesting a link', async () => {
+    await expect(getAuditedDocumentUrl('', 'path')).rejects.toThrow('Missing document details');
+    expect(invoke).not.toHaveBeenCalled();
   });
 });
