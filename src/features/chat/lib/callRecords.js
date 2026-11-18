@@ -99,20 +99,8 @@ export const markCallFailed = (id, reason) => patchCall(
 // between a callee who ignored the call and one who was never woken at all.
 export async function sendCallInvite(callId, userId) {
   if (!callId) return;
-  const { data, error } = await supabase.functions.invoke('call-invite', {
-    body: { callId },
-    timeout: 8000,
-  });
-  if (error) {
-    console.warn('[calls] push fan-out failed:', error.message);
-    logCallEvent(callId, userId, 'push_fanout_failed', { message: error.message });
-    return;
-  }
-  logCallEvent(callId, userId, 'push_fanout', {
-    delivered: data?.delivered ?? null,
-    attempted: data?.attempted ?? null,
-    reason: data?.reason ?? data?.error ?? null,
-  });
+  // Database insert triggers server delivery; no client-side fan-out is needed.
+  logCallEvent(callId, userId, 'push_queued', { transport: 'web_push' });
 }
 
 /*

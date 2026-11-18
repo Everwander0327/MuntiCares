@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { BrandLogo } from '@/shared/ui';
 
 const Footer = () => (
   <footer id="footer" className="bg-slate-900 dark:bg-ink text-white pt-16 md:pt-20 pb-10 border-t border-white/5">
@@ -7,8 +8,9 @@ const Footer = () => (
         {/* Brand Column */}
         <div className="sm:col-span-2 lg:col-span-5 space-y-4">
           <div className="h-1 w-10 rounded-full bg-primary-400" />
-          <Link to="/" className="inline-block font-display text-2xl font-bold tracking-tight text-white">
-            MuntiCares
+          <Link to="/" className="inline-flex items-center gap-2.5 font-display text-2xl font-bold tracking-tight text-white">
+            <BrandLogo className="w-8 h-8 shrink-0" decorative />
+            <span>MuntiCares</span>
           </Link>
           <p className="text-slate-300 max-w-sm leading-relaxed text-sm">
             Empowering Muntinlupa City residents through safe, reliable, and compassionate home care connections.

@@ -32,6 +32,8 @@ import { supabase } from '@/lib/supabase';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
+import ProviderVerificationBanner from '../components/ProviderVerificationBanner';
+import { useProviderVerification } from '../lib/useProviderVerification';
 
 const staggerContainer = {
   animate: { transition: { staggerChildren: 0.05 } },
@@ -92,7 +94,7 @@ const getStatusBadge = (status, translateStatus) => {
 };
 
 const ProviderRequests = () => {
-  const [filter, setFilter] = useState('All'); // 'All' | 'Pending' | 'Active' | 'Completed' | 'History'
+  const [filter, setFilter] = useState('All'); // 'All' | 'Pending' | 'Active' | 'Completed'
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -106,13 +108,14 @@ const ProviderRequests = () => {
   const itemsPerPage = 6;
   const { user } = useAuth();
   const { t, language, formatDate, translateService, translateStatus } = useLanguage();
+  const verification = useProviderVerification();
+  const isVerifiedProvider = verification.isApproved;
   const STATUS_FLOW = useMemo(() => getStatusFlow(t), [t]);
   const filterLabels = useMemo(() => ({
     All: t('provider.requests.tabAll'),
     Pending: t('provider.requests.tabPending'),
     Active: t('provider.requests.tabActive'),
     Completed: t('provider.requests.tabCompleted'),
-    History: t('provider.requests.tabHistory'),
   }), [t]);
 
   const fetchAll = async () => {
@@ -195,6 +198,10 @@ const ProviderRequests = () => {
 
   // Quick Action: Accept or Reject incoming request
   const handleAction = async (id, action, patientName) => {
+    if (!isVerifiedProvider) {
+      toast.error(t('provider.verification.actionLockedToast'));
+      return;
+    }
     setActionStates(prev => ({ ...prev, [id]: action }));
     const newStatus = action === 'accepted' ? 'Accepted' : 'Rejected';
 
@@ -268,6 +275,10 @@ const ProviderRequests = () => {
 
   // Progression: Accepted -> On The Way -> Arrived -> Completed
   const handleAdvanceVisit = async (visitId, nextStatus, fromStatus) => {
+    if (!isVerifiedProvider) {
+      toast.error(t('provider.verification.actionLockedToast'));
+      return;
+    }
     setUpdatingVisitId(visitId);
     try {
       if (nextStatus === 'Arrived') {
@@ -321,6 +332,10 @@ const ProviderRequests = () => {
 
   // Provider can extend the duration of an active visit by 30 minutes via RPC
   const handleExtendDuration = async (id) => {
+    if (!isVerifiedProvider) {
+      toast.error(t('provider.verification.actionLockedToast'));
+      return;
+    }
     setExtendingVisitId(id);
     try {
       const { data, error } = await supabase.rpc('provider_extend_request_duration', {
@@ -377,9 +392,15 @@ const ProviderRequests = () => {
     const pending = requests.filter(r => r.status === 'Pending').length;
     const active = requests.filter(isReqActive).length;
     const completed = requests.filter(r => r.status === 'Completed').length;
-    const history = requests.filter(r => ['Rejected', 'Cancelled'].includes(r.status)).length;
-    return { pending, active, completed, history, total: requests.length };
+    return { pending, active, completed, total: requests.length };
   }, [requests, isReqActive]);
+
+  const filterOptions = useMemo(() => [
+    { value: 'All', label: filterLabels.All, count: stats.total },
+    { value: 'Pending', label: filterLabels.Pending, count: stats.pending },
+    { value: 'Active', label: filterLabels.Active, count: stats.active },
+    { value: 'Completed', label: filterLabels.Completed, count: stats.completed },
+  ], [filterLabels, stats]);
 
   // Filter & Search Logic
   const filteredRequests = useMemo(() => {
@@ -388,7 +409,6 @@ const ProviderRequests = () => {
       if (filter === 'Pending') matchesFilter = r.status === 'Pending';
       else if (filter === 'Active') matchesFilter = isReqActive(r);
       else if (filter === 'Completed') matchesFilter = r.status === 'Completed';
-      else if (filter === 'History') matchesFilter = ['Rejected', 'Cancelled', 'Completed'].includes(r.status);
 
       const term = searchTerm.toLowerCase().trim();
       const matchesSearch = !term ||
@@ -445,6 +465,12 @@ const ProviderRequests = () => {
   return (
     <DashboardLayout role="provider">
       <div className="flex-1 flex flex-col space-y-4 sm:space-y-5 relative w-full max-w-full pb-10">
+        <ProviderVerificationBanner
+          loading={verification.loading}
+          isApproved={verification.isApproved}
+          isProfileComplete={verification.isProfileComplete}
+          professionalIdStatus={verification.professionalIdStatus}
+        />
 
         {/* HEADER SECTION: Option 1 (Healthie Clinical Queue) with Integrated Toolbar */}
         <section className="neu-flat p-4 sm:p-6 md:p-7 rounded-2xl sm:rounded-[2.25rem] space-y-3.5 sm:space-y-4">
@@ -530,13 +556,7 @@ const ProviderRequests = () => {
                       </div>
 
                       <div className="space-y-1" role="listbox">
-                        {[
-                          { value: 'All', label: filterLabels.All, count: stats.total },
-                          { value: 'Pending', label: filterLabels.Pending, count: stats.pending },
-                          { value: 'Active', label: filterLabels.Active, count: stats.active },
-                          { value: 'Completed', label: filterLabels.Completed, count: stats.completed },
-                          { value: 'History', label: filterLabels.History, count: stats.history },
-                        ].map((opt) => {
+                        {filterOptions.map((opt) => {
                           const isSelected = filter === opt.value;
                           return (
                             <button
@@ -548,8 +568,8 @@ const ProviderRequests = () => {
                               }}
                               className={`w-full text-left px-2.5 py-2 rounded-xl text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
                                 isSelected
-                                  ? 'neu-inset text-link font-black bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20'
-                                  : 'text-slate-700 dark:text-slate-200 hover:text-link hover:bg-slate-200/50 dark:hover:bg-slate-800/50'
+                                  ? 'neu-inset text-link font-black bg-primary/10 dark:bg-primary/15 border border-primary/20'
+                                  : 'text-txt-secondary dark:text-txt-darkSecondary hover:text-link hover:bg-surface-subtle/60 dark:hover:bg-surface-darkAlt/60'
                               }`}
                               role="option"
                               aria-selected={isSelected}
@@ -557,10 +577,10 @@ const ProviderRequests = () => {
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="truncate">{opt.label}</span>
                                 <span
-                                  className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
+                                  className={`px-1.5 py-0.2 rounded text-2xs font-extrabold tabular-nums ${
                                     isSelected
-                                      ? 'bg-blue-500/20 text-link'
-                                      : 'bg-slate-200/70 dark:bg-slate-800 text-tertiary'
+                                      ? 'bg-primary/15 text-link'
+                                      : 'bg-surface-subtle dark:bg-surface-darkAlt text-tertiary'
                                   }`}
                                 >
                                   {opt.count}
@@ -581,91 +601,33 @@ const ProviderRequests = () => {
 
             {/* DESKTOP / TABLET (hidden md:flex): Segmented Tabs on Left, Searchbox on Right */}
             <div className="hidden md:flex items-center justify-between gap-3">
-              <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/70 dark:bg-surface-dark border border-slate-200/80 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setFilter('All')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                    filter === 'All'
-                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
-                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>{filterLabels.All}</span>
-                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
-                    filter === 'All' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
-                  }`}>
-                    {stats.total}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFilter('Pending')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                    filter === 'Pending'
-                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
-                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>{filterLabels.Pending}</span>
-                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
-                    filter === 'Pending' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
-                  }`}>
-                    {stats.pending}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFilter('Active')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                    filter === 'Active'
-                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
-                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>{filterLabels.Active}</span>
-                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
-                    filter === 'Active' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
-                  }`}>
-                    {stats.active}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFilter('Completed')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                    filter === 'Completed'
-                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
-                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>{filterLabels.Completed}</span>
-                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
-                    filter === 'Completed' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
-                  }`}>
-                    {stats.completed}
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFilter('History')}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
-                    filter === 'History'
-                      ? 'neu-pressed bg-white dark:bg-blue-600 text-link dark:text-white shadow-sm'
-                      : 'text-tertiary hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <span>{filterLabels.History}</span>
-                  <span className={`px-1.5 py-0.2 rounded text-2xs font-extrabold ${
-                    filter === 'History' ? 'bg-blue-100 dark:bg-blue-800 text-link dark:text-white' : 'bg-slate-200/60 dark:bg-slate-800 text-tertiary'
-                  }`}>
-                    {stats.history}
-                  </span>
-                </button>
+              <div className="flex items-center gap-1 p-1 rounded-xl bg-surface-subtle/75 dark:bg-surface-dark border border-surface-border/80 dark:border-white/10">
+                {filterOptions.map((opt) => {
+                  const isActive = filter === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFilter(opt.value)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                        isActive
+                          ? 'bg-surface dark:bg-surface-darkAlt text-link shadow-soft'
+                          : 'text-tertiary hover:text-txt-primary dark:hover:text-txt-darkPrimary'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-2xs font-extrabold tabular-nums ${
+                          isActive
+                            ? 'bg-primary/10 dark:bg-primary/20 text-link'
+                            : 'bg-surface-subtle dark:bg-surface-darkAlt/80 text-tertiary'
+                        }`}
+                      >
+                        {opt.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Compact Integrated Search Box for Desktop */}
@@ -819,18 +781,28 @@ const ProviderRequests = () => {
                           <div className="flex items-center gap-1.5">
                             <button
                               type="button"
-                              disabled={!!actionStates[req.id]}
+                              disabled={!!actionStates[req.id] || !isVerifiedProvider}
+                              title={!isVerifiedProvider ? t('provider.verification.lockedActionLabel') : undefined}
                               onClick={() => handleAction(req.id, 'accepted', patientDisplayName)}
-                              className="neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                              className={`neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-success transition-all flex items-center gap-1 ${
+                                !isVerifiedProvider
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : 'hover:bg-emerald-500 hover:text-white cursor-pointer'
+                              }`}
                             >
                               <Check className="w-3.5 h-3.5" />
                               <span>{t('provider.requests.acceptBtn')}</span>
                             </button>
                             <button
                               type="button"
-                              disabled={!!actionStates[req.id]}
+                              disabled={!!actionStates[req.id] || !isVerifiedProvider}
+                              title={!isVerifiedProvider ? t('provider.verification.lockedActionLabel') : undefined}
                               onClick={() => handleAction(req.id, 'rejected', patientDisplayName)}
-                              className="neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-danger hover:bg-rose-500 hover:text-white transition-all cursor-pointer flex items-center gap-1"
+                              className={`neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-danger transition-all flex items-center gap-1 ${
+                                !isVerifiedProvider
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : 'hover:bg-rose-500 hover:text-white cursor-pointer'
+                              }`}
                             >
                               <X className="w-3.5 h-3.5" />
                               <span>{t('provider.requests.declineBtn')}</span>
@@ -842,10 +814,18 @@ const ProviderRequests = () => {
                         {['Accepted', 'On The Way', 'Arrived'].includes(req.status) && (
                           <button
                             type="button"
-                            disabled={extendingVisitId === req.id || updatingVisitId === req.id}
+                            disabled={extendingVisitId === req.id || updatingVisitId === req.id || !isVerifiedProvider}
                             onClick={() => handleExtendDuration(req.id)}
-                            className="neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-link hover:text-primary transition-all cursor-pointer flex items-center gap-1 active:scale-95"
-                            title={t('provider.requests.extendTooltip')}
+                            className={`neu-btn px-2.5 py-1.5 rounded-lg text-xs font-bold text-link transition-all flex items-center gap-1 ${
+                              !isVerifiedProvider
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:text-primary cursor-pointer active:scale-95'
+                            }`}
+                            title={
+                              !isVerifiedProvider
+                                ? t('provider.verification.lockedActionLabel')
+                                : t('provider.requests.extendTooltip')
+                            }
                           >
                             {extendingVisitId === req.id ? (
                               <><SpinnerGap className="w-3.5 h-3.5 animate-spin" /> {t('provider.requests.extending')}</>
@@ -859,9 +839,12 @@ const ProviderRequests = () => {
                         {STATUS_FLOW[req.status] && (
                           <button
                             type="button"
-                            disabled={updatingVisitId === req.id}
+                            disabled={updatingVisitId === req.id || !isVerifiedProvider}
+                            title={!isVerifiedProvider ? t('provider.verification.lockedActionLabel') : undefined}
                             onClick={() => handleAdvanceVisit(req.id, STATUS_FLOW[req.status].next, req.status)}
-                            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 ${
+                            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
+                              !isVerifiedProvider ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'
+                            } ${
                               STATUS_FLOW[req.status].color
                             }`}
                           >

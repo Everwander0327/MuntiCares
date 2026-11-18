@@ -203,11 +203,19 @@ export default function VisitDestinationModal({
               {step === 'pin' ? (
                 /* STAGE 1: MAP PIN SELECTION */
                 <div className="space-y-3.5">
-                  {/* Working Search Input + Barangay Quick-Jump Drawer */}
-                  <AddressAutocomplete
-                    onSelect={handleAutocompleteSelect}
-                    initialQuery=""
-                  />
+                  <div className="space-y-1.5">
+                    <label
+                      htmlFor="visit-dest-search"
+                      className="block text-[max(0.75rem,12px)] font-semibold text-slate-700 dark:text-slate-300"
+                    >
+                      {t('tracking.address.searchLabel')}
+                    </label>
+                    <AddressAutocomplete
+                      id="visit-dest-search"
+                      onSelect={handleAutocompleteSelect}
+                      initialQuery=""
+                    />
+                  </div>
 
                   {/* Unobstructed MapLibre Vector Map with Center Pin */}
                   <ModernLocationPicker
@@ -215,7 +223,8 @@ export default function VisitDestinationModal({
                     initial={currentPin}
                     initialCenter={initialCenter}
                     onPinChange={handlePinUpdate}
-                    className="h-[15rem] sm:h-[18.125rem]"
+                    basemapVariant="toggle"
+                    className="h-[16.5rem] sm:h-[19rem]"
                   />
 
                   {/* Single Authoritative Pinned Location Well + Tactile Quick Save Button */}
@@ -229,13 +238,13 @@ export default function VisitDestinationModal({
                         }`}>
                           {currentPin ? t('tracking.dest.pinPlaced') : t('tracking.dest.pinRequired')}
                         </span>
-                        <span className="text-xs font-semibold text-tertiary tabular-nums">
+                        <span className="text-[max(0.75rem,12px)] font-semibold text-tertiary tabular-nums">
                           {currentPin
                             ? `${currentPin.lat.toFixed(5)}, ${currentPin.lng.toFixed(5)}`
                             : t('tracking.dest.dragOrSearch')}
                         </span>
                       </div>
-                      <p className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate mt-1">
+                      <p className="text-sm font-bold text-slate-900 dark:text-white break-words leading-snug mt-1">
                         {baseAddress || (currentPin ? t('tracking.dest.pinnedLocation') : t('tracking.dest.moveMapPrompt'))}
                       </p>
                     </div>
@@ -244,7 +253,7 @@ export default function VisitDestinationModal({
                       type="button"
                       onClick={() => handleFinalSave(true)}
                       disabled={!currentPin || saving}
-                      className="neu-btn px-3 py-2 rounded-xl text-xs font-extrabold text-link shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="neu-btn min-h-[44px] px-3.5 py-2 rounded-xl text-[max(0.75rem,12px)] font-extrabold text-link shrink-0 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                       {t('tracking.dest.quickSave')}
                     </button>
@@ -255,7 +264,7 @@ export default function VisitDestinationModal({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="w-full neu-btn py-2.5 sm:py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"
+                      className="w-full min-h-[48px] neu-btn py-2.5 sm:py-3 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer"
                     >
                       {t('common.actions.cancel')}
                     </button>
@@ -263,7 +272,7 @@ export default function VisitDestinationModal({
                       type="button"
                       onClick={handleAdvanceToDetails}
                       disabled={!currentPin}
-                      className="w-full neu-btn-primary py-2.5 sm:py-3 rounded-xl text-xs font-extrabold shadow-md flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                      className="w-full min-h-[48px] neu-btn-primary py-2.5 sm:py-3 rounded-xl text-sm font-bold shadow-md flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {t('tracking.dest.addGateDetails')}
                     </button>

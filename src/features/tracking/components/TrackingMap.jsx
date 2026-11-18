@@ -7,7 +7,6 @@ import {
   ArrowsOut,
   Crosshair,
   CrosshairSimple,
-  SpinnerGap,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -558,7 +557,7 @@ const TrackingMap = forwardRef(function TrackingMap({
 
   return (
     <div
-      className={`relative w-full h-full mc-map-wrap ${isFilteredBasemap ? (dark ? 'mc-canvas-tiles--dark' : 'mc-canvas-tiles--muted') : ''} ${className}`}
+      className={`relative isolate w-full h-full mc-map-wrap focus-within:ring-2 focus-within:ring-[var(--focus-ring)] ${isFilteredBasemap ? (dark ? 'mc-canvas-tiles--dark' : 'mc-canvas-tiles--muted') : ''} ${className}`}
       role="region"
       aria-label={t('tracking.map.ariaLive')}
     >
@@ -585,7 +584,7 @@ const TrackingMap = forwardRef(function TrackingMap({
         </div>
       )}
 
-      {/* Option 1 Global Map HUD: 1-Tap Segmented Basemap Bar + Split GPS & Zoom/Route Dock */}
+      {/* Unified Map HUD: Compact Satellite Toggle + GPS + Zoom/Route Pod */}
       <div
         className={`mc-basemap-dock ${
           compact
@@ -595,8 +594,24 @@ const TrackingMap = forwardRef(function TrackingMap({
               : 'mc-basemap-dock--top-right-hud'
         }`}
       >
-        <BasemapControl value={basemap} onChange={setBasemap} />
+        <BasemapControl value={basemap} onChange={setBasemap} variant="toggle" />
       </div>
+
+      {compact && (
+        <div className="mc-gps-dock--bottom-left">
+          <button
+            type="button"
+            onClick={handleLocateMe}
+            disabled={locatingGps}
+            className="mc-gps-pill-btn disabled:opacity-70 disabled:cursor-not-allowed"
+            title={t('tracking.map.useGpsTitle')}
+            aria-label={t('tracking.map.useGpsTitle')}
+          >
+            <CrosshairSimple className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>{locatingGps ? t('tracking.map.locating') : t('tracking.map.myGps')}</span>
+          </button>
+        </div>
+      )}
 
       <div
         className={`mc-split-controls ${
@@ -607,21 +622,19 @@ const TrackingMap = forwardRef(function TrackingMap({
               : 'mc-split-controls--center'
         }`}
       >
-        <button
-          type="button"
-          onClick={handleLocateMe}
-          disabled={locatingGps}
-          className="mc-gps-pill-btn disabled:opacity-50 disabled:cursor-not-allowed"
-          title={t('tracking.map.useGpsTitle')}
-          aria-label={t('tracking.map.useGpsTitle')}
-        >
-          {locatingGps ? (
-            <SpinnerGap className="w-4 h-4 animate-spin shrink-0" />
-          ) : (
-            <CrosshairSimple className="w-4 h-4 shrink-0" />
-          )}
-          <span>{t('tracking.map.myGps')}</span>
-        </button>
+        {!compact && (
+          <button
+            type="button"
+            onClick={handleLocateMe}
+            disabled={locatingGps}
+            className="mc-gps-pill-btn disabled:opacity-70 disabled:cursor-not-allowed"
+            title={t('tracking.map.useGpsTitle')}
+            aria-label={t('tracking.map.useGpsTitle')}
+          >
+            <CrosshairSimple className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>{locatingGps ? t('tracking.map.locating') : t('tracking.map.myGps')}</span>
+          </button>
+        )}
 
         <div className="mc-zoom-pod" role="group" aria-label={t('tracking.map.navControlsAria')}>
           <button

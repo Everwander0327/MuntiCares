@@ -15,6 +15,7 @@ module.exports = {
         'postcss.config.js',
         'tailwind.config.js',
         'playwright.config.js',
+        'middleware.js',
         'tests/**',
         'scripts/**',
       ],

@@ -198,8 +198,15 @@ export const AuthProvider = ({ children }) => {
     // survive on a shared device after sign-out.
     try {
       Object.keys(window.localStorage)
-        .filter((key) => key.startsWith('mc_onboarding_draft'))
+        .filter(
+          (key) =>
+            key.startsWith('mc_onboarding_draft') ||
+            key.startsWith('mc_provider_onboarding_draft')
+        )
         .forEach((key) => window.localStorage.removeItem(key));
+      Object.keys(window.sessionStorage)
+        .filter((key) => key.startsWith('mc_provider_onboarding_deferred'))
+        .forEach((key) => window.sessionStorage.removeItem(key));
     } catch (err) {
       console.warn('[auth] Could not clear onboarding drafts:', err);
     }

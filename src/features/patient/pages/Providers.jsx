@@ -27,7 +27,7 @@ import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { SkeletonPage, EmptyState, Sheet, SheetContent, SheetTitle, SheetDescription } from '@/shared/ui';
+import { SkeletonPage, EmptyState, Sheet, SheetContent, SheetTitle, SheetDescription, BrandSuccess } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
@@ -2178,26 +2178,21 @@ const PatientProviders = () => {
                         ref={bookingScrollRef}
                         className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 sm:px-7 py-6 flex flex-col items-center text-center"
                       >
-                        <div className="relative w-16 h-16 flex items-center justify-center mt-1">
+                        <div className="relative w-20 h-20 flex items-center justify-center mt-1">
                           {!prefersReducedMotion && (
                             <motion.div
                               aria-hidden="true"
-                              initial={{ opacity: 0.55, scale: 0.88 }}
-                              animate={{ opacity: 0, scale: 1.65 }}
-                              transition={{ duration: 1.05, delay: 0.14, ease: [0.22, 1, 0.36, 1] }}
-                              className="absolute inset-0 rounded-full bg-emerald-400/35"
+                              initial={{ opacity: 0.45, scale: 0.85 }}
+                              animate={{ opacity: 0, scale: 1.55 }}
+                              transition={{ duration: 1.05, delay: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                              className="absolute inset-0 rounded-full bg-success/25 dark:bg-success-dark/25"
                             />
                           )}
-                          <div className="w-16 h-16 rounded-full bg-emerald-500 dark:bg-emerald-400 text-white dark:text-emerald-950 flex items-center justify-center shadow-lg shadow-emerald-500/30 relative z-10">
-                            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round">
-                              <motion.path
-                                d="M5 13l4 4L19 7"
-                                initial={{ pathLength: prefersReducedMotion ? 1 : 0 }}
-                                animate={{ pathLength: 1 }}
-                                transition={{ duration: prefersReducedMotion ? 0 : 0.42, delay: prefersReducedMotion ? 0 : 0.14, ease: [0.22, 1, 0.36, 1] }}
-                              />
-                            </svg>
-                          </div>
+                          <BrandSuccess
+                            size={80}
+                            className="relative z-10"
+                            label={t('patient.providers.requestedTitle')}
+                          />
                         </div>
 
                         <h3 className="text-lg sm:text-xl font-display font-extrabold text-slate-900 dark:text-white mt-4">

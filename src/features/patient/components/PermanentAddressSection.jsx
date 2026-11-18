@@ -132,23 +132,26 @@ export default function PermanentAddressSection({
 
       {/* Step 1: Search Street / Landmark */}
       <div className="space-y-1.5">
-        <label className="text-2xs font-semibold uppercase tracking-wider text-tertiary ml-1">
+        <label
+          htmlFor="permanent-address-search"
+          className="block text-[max(0.75rem,12px)] font-semibold text-slate-700 dark:text-slate-300 ml-1"
+        >
           {t('patient.address.searchLabel')}
         </label>
         <AddressAutocomplete
+          id="permanent-address-search"
           onSelect={handleAutocomplete}
-          initialQuery={baseAddress}
         />
       </div>
 
       {/* Step 2: 3D Vector Map with Center-Fixed Pin */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between ml-1">
-          <label className="text-2xs font-semibold uppercase tracking-wider text-tertiary">
+          <span className="text-[max(0.75rem,12px)] font-semibold text-tertiary">
             {t('patient.address.pinMapLabel')}
-          </label>
+          </span>
           {coords && (
-            <span className="text-xs font-medium text-tertiary dark:text-tertiary">
+            <span className="text-[max(0.75rem,12px)] font-medium text-tertiary tabular-nums">
               {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
             </span>
           )}
@@ -157,10 +160,11 @@ export default function PermanentAddressSection({
           ref={pickerRef}
           initial={coords}
           onPinChange={handlePinChange}
-          className="h-[15rem] sm:h-[17.5rem]"
+          basemapVariant="toggle"
+          className="h-[16.5rem] sm:h-[19rem]"
         />
         {!coords && baseAddress.trim() && (
-          <p className="text-2xs font-semibold text-[#B45309] dark:text-[#FCD34D] ml-1">
+          <p className="text-[max(0.75rem,12px)] font-semibold text-warning dark:text-warning-dark ml-1">
             {t('patient.address.pinRequiredHint')}
           </p>
         )}

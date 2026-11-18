@@ -1,69 +1,84 @@
-import { SpinnerGap } from '@phosphor-icons/react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 /**
  * CenterMapPin — "Care Home Beacon"
  * Custom MuntiCares stationary center-screen pin:
- * - Floating clinical-blue squircle badge with a Home Roof + Heart emblem
+ * - Floating primary squircle badge with a Home Roof + Heart emblem
  * - Tapered precision stem whose tip is anchored at the exact map center (50%, 50%)
- * - Pulsing ground radar ring centered via wrapper so `animate-ping` scales from true center
+ * - Two-state visual: subdued before placement (`confirmed=false`), active with
+ *   pulsing radar ring once placed (`confirmed=true`)
  */
-export default function CenterMapPin({ isPanning, loading, hideLabel = false }) {
+export default function CenterMapPin({
+  isPanning,
+  loading,
+  confirmed = true,
+  hideLabel = false,
+  centerOffsetY = 0,
+}) {
   const { t } = useLanguage();
+  const centerTop = centerOffsetY ? `calc(50% + ${centerOffsetY}px)` : '50%';
   return (
     <div
-      className="pointer-events-none absolute inset-0 z-[500] select-none"
+      className="pointer-events-none absolute inset-0 z-10 select-none"
       aria-hidden="true"
     >
       {/* Ground Radar Anchor Wrapper — keeps translate(-50%, -50%) isolated from animate-ping scale() */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
-        {/* Pulsing Ground Radar Ring */}
-        {!isPanning && (
+      <div
+        className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+        style={{ top: centerTop }}
+      >
+        {/* Pulsing Ground Radar Ring only when pin is confirmed */}
+        {confirmed && !isPanning && (
           <span
-            className="absolute w-8 h-8 rounded-lg border border-primary/55 dark:border-primary-400/55 bg-primary/15 animate-ping"
+            className="absolute w-7 h-7 rounded-full border border-primary/50 dark:border-primary-400/50 bg-primary/15 animate-ping"
             style={{ animationDuration: '2.2s' }}
           />
         )}
 
-        {/* Secondary Target Halo */}
+        {/* Secondary Target Halo (circular so it reads as the stem's anchor ring) */}
         <span
-          className={`rounded-lg border transition-all duration-200 ${
+          className={`rounded-full border transition-all duration-200 ${
             isPanning
-              ? 'w-5 h-5 border-primary/70 dark:border-primary-400/80 bg-primary/10 scale-90'
-              : 'w-7 h-7 border-primary/35 dark:border-primary-400/40 bg-primary/10 scale-100'
+              ? 'w-4 h-4 border-primary/70 dark:border-primary-400/80 bg-primary/10 scale-90'
+              : confirmed
+                ? 'w-6 h-6 border-primary/35 dark:border-primary-400/40 bg-primary/10 scale-100'
+                : 'w-6 h-6 border-dashed border-slate-400/70 dark:border-slate-500/70 bg-slate-400/10 scale-100'
           }`}
         />
       </div>
 
       {/* Dynamic Ground Shadow — centered on the true map center */}
       <div
-        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-2 rounded-md bg-slate-950/45 blur-[2px] transition-all duration-200 ${
-          isPanning ? 'w-3 opacity-30 scale-75' : 'w-6 opacity-80 scale-100'
+        className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 h-1.5 rounded-full bg-slate-950/40 blur-[2px] transition-all duration-200 ${
+          isPanning ? 'w-3 opacity-30 scale-75' : 'w-5 opacity-75 scale-100'
         }`}
+        style={{ top: centerTop }}
       />
 
       {/* Caption + Care Home Beacon stack; bottom edge (stem tip) sits on exact map center */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full flex w-full flex-col items-center px-3">
-        {/* Compact Squircle Status Badge ONLY while panning or loading (Never repeats the full address over the map) */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 -translate-y-full flex w-full flex-col items-center px-3"
+        style={{ top: centerTop }}
+      >
+        {/* Compact Squircle Status Badge ONLY while panning or loading */}
         {!hideLabel && (isPanning || loading) && (
           <div
-            className="mb-2 max-w-[15rem] px-2.5 py-1 rounded-lg text-xs font-bold shadow-md backdrop-blur-md transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-white border border-white/15"
+            className="mb-2 max-w-[15rem] px-2.5 py-1 rounded-xl text-xs font-bold shadow-md backdrop-blur-md transition-all duration-150 flex items-center gap-1.5 whitespace-nowrap bg-slate-900/90 text-white border border-white/15"
           >
-            {loading ? (
-              <>
-                <SpinnerGap className="w-3 h-3 animate-spin text-primary-400 shrink-0" />
-                <span className="truncate">{t('tracking.pin.locating')}</span>
-              </>
-            ) : (
-              <span className="truncate">{t('tracking.pin.release')}</span>
-            )}
+            <span className="truncate">
+              {loading ? t('tracking.pin.locating') : t('tracking.pin.release')}
+            </span>
           </div>
         )}
 
         {/* Care Home Beacon SVG (Squircle Badge + Roof/Heart + Precision Stem) */}
         <div
           className={`relative transition-all duration-200 ease-out ${
-            isPanning ? '-translate-y-3.5 scale-105' : 'translate-y-0 scale-100'
+            isPanning
+              ? '-translate-y-3.5 scale-105 opacity-100'
+              : confirmed
+                ? 'translate-y-0 scale-100 opacity-100'
+                : 'translate-y-0 scale-95 opacity-80 saturate-75'
           }`}
           style={{
             filter: 'drop-shadow(0 8px 14px rgba(15, 23, 42, 0.32))',
@@ -191,7 +206,12 @@ export default function CenterMapPin({ isPanning, loading, hideLabel = false }) 
       </div>
 
       {/* Exact Center Reticle Dot */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-sm bg-primary dark:bg-primary-400 ring-2 ring-white dark:ring-slate-900 shadow-sm" />
+      <div
+        className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ring-2 ring-white dark:ring-slate-900 shadow-sm ${
+          confirmed ? 'bg-primary dark:bg-primary-400' : 'bg-slate-500 dark:bg-slate-400'
+        }`}
+        style={{ top: centerTop }}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from 'react';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { NotificationBell, MobileNavItem, ProfilePopover } from '@/shared/navigation';
+import { BrandLogo } from '@/shared/ui';
 import { WeeklyUpdatesModal } from '@/shared/feedback';
 import { useTheme } from '@/contexts/ThemeContext';
 import {
@@ -21,7 +22,6 @@ import {
   ChatCircle,
   Megaphone,
   User,
-  Heart,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -308,26 +308,54 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   const latestAuthUserRef = useRef(authUser);
   latestAuthUserRef.current = authUser;
 
-  const [patientProfileReady, setPatientProfileReady] = useState(role !== 'patient');
+  const [patientProfileReady, setPatientProfileReady] = useState(
+    role !== 'patient' && role !== 'provider'
+  );
   const [weeklyModalOpen, setWeeklyModalOpen] = useState(false);
   const [weeklyLoading, setWeeklyLoading] = useState(false);
   const [weeklyUpdates, setWeeklyUpdates] = useState({ events: [], announcements: [], allItems: [] });
   const autoCheckedUserRef = useRef(null);
 
   useEffect(() => {
-    if (role !== 'patient') {
+    if (role !== 'patient' && role !== 'provider') {
       setPatientProfileReady(true);
       return;
     }
     if (!authUser?.id) return;
+
+    if (role === 'patient') {
+      supabase
+        .from('patients')
+        .select('is_profile_complete')
+        .eq('user_id', authUser.id)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (!error && (!data || !data.is_profile_complete)) {
+            navigate('/patient/onboarding', { replace: true });
+          } else {
+            setPatientProfileReady(true);
+          }
+        });
+      return;
+    }
+
+    let deferred = false;
+    try {
+      deferred = Boolean(
+        window.sessionStorage.getItem(`mc_provider_onboarding_deferred:${authUser.id}`)
+      );
+    } catch {
+      deferred = false;
+    }
+
     supabase
-      .from('patients')
+      .from('providers')
       .select('is_profile_complete')
       .eq('user_id', authUser.id)
       .maybeSingle()
       .then(({ data, error }) => {
-        if (!error && (!data || !data.is_profile_complete)) {
-          navigate('/patient/onboarding', { replace: true });
+        if (!error && (!data || !data.is_profile_complete) && !deferred) {
+          navigate('/provider/onboarding', { replace: true });
         } else {
           setPatientProfileReady(true);
         }
@@ -784,12 +812,11 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                       animate={{ 
                         rotate: isRollupCollapsing ? 720 : isRollupExpanding ? -720 : 0,
                       }}
-                      whileHover={{ rotate: 360 }}
                       transition={{ 
                         rotate: { duration: isRollupCollapsing || isRollupExpanding ? 0.38 : 0.55, ease: [0.32, 0.72, 0, 1] },
                       }}
                     >
-                      <Heart weight="fill" className="w-5 h-5 text-link fill-primary group-hover:scale-110 transition-transform duration-200" />
+                      <BrandLogo variant="glyph" className="w-6 h-6 text-link group-hover:scale-110 transition-transform duration-200" decorative />
                     </motion.div>
                   </motion.button>
                 ) : (
@@ -883,12 +910,11 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                   title={t('nav.sidebar.expand')}
                 >
                   <motion.div
-                    initial={{ rotate: -360 }}
-                    animate={{ rotate: 0 }}
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
+                    initial={{ scale: 0.92 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
                   >
-                    <Heart weight="fill" className="w-5 h-5 text-link fill-primary group-hover:scale-110 transition-transform duration-200" />
+                    <BrandLogo variant="glyph" className="w-6 h-6 text-link group-hover:scale-110 transition-transform duration-200" decorative />
                   </motion.div>
                 </motion.button>
               )}

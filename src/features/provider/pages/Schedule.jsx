@@ -15,6 +15,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { SkeletonPage } from '@/shared/ui';
 import PatientRecordModal from '../components/PatientRecordModal';
+import ProviderVerificationBanner from '../components/ProviderVerificationBanner';
+import { useProviderVerification } from '../lib/useProviderVerification';
 import ArrivalOverrideDialog from '@/features/tracking/components/ArrivalOverrideDialog';
 import {
   markVisitArrived,
@@ -78,6 +80,8 @@ const formatHourLabel = (h, compact = false) => {
 const ProviderSchedule = () => {
   const { user } = useAuth();
   const { t, language, formatDate, formatTime, translateService, translateStatus } = useLanguage();
+  const verification = useProviderVerification();
+  const isVerifiedProvider = verification.isApproved;
   const STATUS_FLOW = useMemo(() => getStatusFlow(t), [t]);
   const STATUS_STEPS = useMemo(() => getStatusSteps(t), [t]);
   const [loading, setLoading] = useState(true);
@@ -352,6 +356,10 @@ const ProviderSchedule = () => {
 
   // Status update
   const handleStatusUpdate = async (appointmentId, newStatus) => {
+    if (!isVerifiedProvider) {
+      toast.error(t('provider.verification.actionLockedToast'));
+      return;
+    }
     setUpdatingId(appointmentId);
     try {
       const appt = appointments.find(a => a.id === appointmentId);
@@ -450,6 +458,13 @@ const ProviderSchedule = () => {
   return (
     <DashboardLayout role="provider">
       <div className="w-full max-w-full space-y-4 sm:space-y-6 pb-12 px-0 sm:px-2">
+        <ProviderVerificationBanner
+          loading={verification.loading}
+          isApproved={verification.isApproved}
+          isProfileComplete={verification.isProfileComplete}
+          professionalIdStatus={verification.professionalIdStatus}
+        />
+
         {/* Top Header Bar */}
         <motion.div
           className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
@@ -879,9 +894,12 @@ const ProviderSchedule = () => {
                                       {statusAction && (
                                         <motion.button
                                           whileTap={{ scale: 0.96 }}
-                                          disabled={isUpdating}
+                                          disabled={isUpdating || !isVerifiedProvider}
+                                          title={!isVerifiedProvider ? t('provider.verification.lockedActionLabel') : undefined}
                                           onClick={() => handleStatusUpdate(appt.id, statusAction.next)}
-                                          className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md text-white ${statusAction.color}`}
+                                          className={`px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md text-white ${statusAction.color} ${
+                                            !isVerifiedProvider ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+                                          }`}
                                         >
                                           {isUpdating && (
                                             <SpinnerGap className="w-4 h-4 animate-spin" />

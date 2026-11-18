@@ -57,6 +57,10 @@ const ProviderProfileView = () => {
           .eq('user_id', id)
           .single();
         if (provError) throw provError;
+        if (!provData?.is_approved) {
+          navigate('/patient/providers', { replace: true });
+          return;
+        }
 
         setProvider({ ...userData, ...provData });
 

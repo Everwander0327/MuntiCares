@@ -1,3 +1,4 @@
+export * from './brand-mark';
 export * from './button';
 export { default as CustomSelect } from './custom-select';
 export { default as DateRangePicker } from './date-range-picker';

@@ -22,7 +22,7 @@ import { isMissingColumnError } from '@/features/patient/utils/patientProfile';
 
 import { SkeletonPage } from '@/shared/ui';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ProfilePhotoUpload } from '@/shared/components';
 
 const calculateTrustScore = (data) => {
@@ -279,37 +279,61 @@ const ProviderProfile = () => {
         {/* Status Alerts (Neumorphic Flat/Inset) */}
         {!profile.is_profile_complete && (
           <motion.div 
-            className="neu-flat p-3.5 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-amber-500/30 bg-amber-500/5 flex items-start gap-3"
+            className="neu-flat p-3.5 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-amber-500/30 bg-amber-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-warning shrink-0">
-              <Medal className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="flex items-start gap-3">
+              <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-warning shrink-0">
+                <Medal className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div>
+                <h3 className="text-amber-800 dark:text-warning-dark font-extrabold text-xs sm:text-base">{t('provider.profile.incompleteTitle')}</h3>
+                <p className="text-warning dark:text-warning-dark text-xs sm:text-xs mt-0.5 leading-relaxed">
+                  {t('provider.profile.incompleteMsg')}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-amber-800 dark:text-warning-dark font-extrabold text-xs sm:text-base">{t('provider.profile.incompleteTitle')}</h3>
-              <p className="text-warning dark:text-warning-dark text-xs sm:text-xs mt-0.5 leading-relaxed">
-                {t('provider.profile.incompleteMsg')}
-              </p>
-            </div>
+            <Link
+              to="/provider/onboarding"
+              className="neu-btn min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-extrabold text-link inline-flex items-center justify-center shrink-0 self-start sm:self-center"
+            >
+              {t('provider.verification.completeOnboardingBtn')}
+            </Link>
           </motion.div>
         )}
 
         {profile.is_profile_complete && !profile.is_approved && (
           <motion.div 
-            className="neu-flat p-3.5 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-blue-500/30 bg-blue-500/5 flex items-start gap-3"
+            className="neu-flat p-3.5 sm:p-5 rounded-2xl sm:rounded-[2rem] border border-blue-500/30 bg-blue-500/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-link shrink-0">
-              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="flex items-start gap-3">
+              <div className="neu-flat-sm w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-link shrink-0">
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+              </div>
+              <div>
+                <h3 className="text-blue-800 dark:text-primary-300 font-extrabold text-xs sm:text-base">
+                  {profile.professional_id_status === 'rejected'
+                    ? t('provider.verification.rejectedTitle')
+                    : t('provider.profile.underReviewTitle')}
+                </h3>
+                <p className="text-blue-700/80 dark:text-blue-200/70 text-xs sm:text-xs mt-0.5 leading-relaxed">
+                  {profile.professional_id_status === 'rejected'
+                    ? t('provider.verification.rejectedBody')
+                    : t('provider.verification.pendingBody')}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-blue-800 dark:text-primary-300 font-extrabold text-xs sm:text-base">{t('provider.profile.underReviewTitle')}</h3>
-              <p className="text-blue-700/80 dark:text-blue-200/70 text-xs sm:text-xs mt-0.5 leading-relaxed">
-                {t('provider.profile.underReviewMsg')}
-              </p>
-            </div>
+            {profile.professional_id_status !== 'verified' && (
+              <Link
+                to="/provider/onboarding?step=4"
+                className="neu-btn min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-extrabold text-link inline-flex items-center justify-center shrink-0 self-start sm:self-center"
+              >
+                {t('provider.verification.reuploadIdBtn')}
+              </Link>
+            )}
           </motion.div>
         )}
 

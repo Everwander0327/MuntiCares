@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { MagnifyingGlass, X, SpinnerGap } from '@phosphor-icons/react';
+import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { geocodeAddress } from '../services/geocoding';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -29,13 +29,12 @@ const POPULAR_LANDMARKS = [
 
 const DEBOUNCE_MS = 300;
 
-export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
+export default function AddressAutocomplete({ id, onSelect, initialQuery = '', inputWrapperClassName = '' }) {
   const { t } = useLanguage();
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [showBarangayDrawer, setShowBarangayDrawer] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const containerRef = useRef(null);
@@ -43,18 +42,13 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
   const debounceTimer = useRef(null);
   const requestId = useRef(0);
   const listboxId = useId();
-
-  useEffect(() => {
-    if (initialQuery) {
-      setQuery((prev) => (initialQuery !== prev ? initialQuery : prev));
-    }
-  }, [initialQuery]);
+  const fallbackInputId = useId();
+  const inputId = id || fallbackInputId;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
         setIsOpen(false);
-        setShowBarangayDrawer(false);
         setActiveIndex(-1);
       }
     };
@@ -64,7 +58,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
 
   useEffect(() => () => clearTimeout(debounceTimer.current), []);
 
-  const search = (text, id) => {
+  const search = (text, reqId) => {
     const qLower = text.toLowerCase();
     const matchedLandmarks = POPULAR_LANDMARKS.filter(
       (l) => l.name.toLowerCase().includes(qLower) || l.sub.toLowerCase().includes(qLower)
@@ -93,7 +87,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
 
     geocodeAddress(text)
       .then((remoteHit) => {
-        if (id !== requestId.current) return;
+        if (reqId !== requestId.current) return;
         if (remoteHit && !local.some((c) => Math.abs(c.lat - remoteHit.lat) < 0.001)) {
           setResults((prev) => [
             ...prev,
@@ -111,7 +105,7 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
         /* offline or rate limited; local matches still apply */
       })
       .finally(() => {
-        if (id === requestId.current) setLoading(false);
+        if (reqId === requestId.current) setLoading(false);
       });
   };
 
@@ -119,7 +113,6 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
     const text = e.target.value;
     setQuery(text);
     setActiveIndex(-1);
-    setShowBarangayDrawer(false);
     clearTimeout(debounceTimer.current);
 
     if (!text.trim()) {
@@ -128,7 +121,6 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
       setLoading(false);
       setIsOpen(false);
       setHasSearched(false);
-      setShowBarangayDrawer(true);
       return;
     }
 
@@ -136,16 +128,15 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
     setHasSearched(false);
     setIsOpen(true);
     debounceTimer.current = setTimeout(() => {
-      const id = requestId.current + 1;
-      requestId.current = id;
-      search(text, id);
+      const reqId = requestId.current + 1;
+      requestId.current = reqId;
+      search(text, reqId);
     }, DEBOUNCE_MS);
   };
 
   const selectResult = (item) => {
     setQuery(item.displayName);
     setIsOpen(false);
-    setShowBarangayDrawer(false);
     setActiveIndex(-1);
     onSelect?.({
       lat: item.lat,
@@ -154,26 +145,12 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
     });
   };
 
-  const selectBarangay = (b) => {
-    const displayName = `Brgy. ${b.name}, Muntinlupa City`;
-    setQuery(displayName);
-    setShowBarangayDrawer(false);
-    setIsOpen(false);
-    setActiveIndex(-1);
-    onSelect?.({
-      lat: b.lat,
-      lng: b.lng,
-      displayName,
-    });
-  };
-
   const handleKeyDown = (e) => {
     if (e.key === 'Escape') {
-      if (isOpen || showBarangayDrawer) {
+      if (isOpen) {
         e.preventDefault();
         e.stopPropagation();
         setIsOpen(false);
-        setShowBarangayDrawer(false);
         setActiveIndex(-1);
       }
       return;
@@ -199,10 +176,11 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
   const showEmpty = showPanel && !loading && hasSearched && results.length === 0;
 
   return (
-    <div ref={containerRef} className="relative w-full z-[600] space-y-2">
-      <div className="neu-inset px-3 py-1.5 rounded-xl flex items-center gap-2 border border-white/60 dark:border-white/5">
-        <MagnifyingGlass className="w-4 h-4 text-link shrink-0 pointer-events-none" />
+    <div ref={containerRef} className="relative w-full z-30">
+      <div className={`neu-inset min-h-[48px] pl-3.5 pr-1 py-1 rounded-xl flex items-center gap-2 border border-field focus-within:ring-2 focus-within:ring-[var(--focus-ring)] ${inputWrapperClassName}`}>
+        <MagnifyingGlass className="w-4 h-4 text-link shrink-0 pointer-events-none" aria-hidden="true" />
         <input
+          id={inputId}
           ref={inputRef}
           type="text"
           role="combobox"
@@ -219,19 +197,15 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
           value={query}
           onChange={handleChange}
           onFocus={() => {
-            if (results.length || loading) {
+            if (query.trim() && (results.length || loading)) {
               setIsOpen(true);
-            } else if (!query.trim()) {
-              setShowBarangayDrawer(true);
             }
           }}
           onKeyDown={handleKeyDown}
           placeholder={t('tracking.address.placeholder')}
-          className="w-full py-1.5 bg-transparent text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder:text-tertiary placeholder:font-normal focus:outline-none min-w-0"
+          className="w-full py-2 bg-transparent text-base sm:text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary placeholder:font-normal focus:outline-none min-w-0"
         />
-        {loading ? (
-          <SpinnerGap className="w-4 h-4 text-link animate-spin shrink-0" />
-        ) : query ? (
+        {query ? (
           <button
             type="button"
             aria-label={t('tracking.address.clearAria')}
@@ -244,76 +218,24 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
               setLoading(false);
               setIsOpen(false);
               setHasSearched(false);
-              setShowBarangayDrawer(true);
               inputRef.current?.focus();
             }}
-            className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-tertiary hover:text-danger shrink-0 cursor-pointer"
+            className="inline-flex min-w-[44px] min-h-[44px] w-11 h-11 items-center justify-center bg-transparent border-0 shadow-none text-tertiary hover:text-ink dark:hover:text-white shrink-0 cursor-pointer rounded-lg"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" weight="bold" aria-hidden="true" />
           </button>
         ) : null}
-
-        <button
-          type="button"
-          onClick={() => {
-            setShowBarangayDrawer((prev) => !prev);
-            setIsOpen(false);
-          }}
-          className={`neu-btn px-2.5 py-1.5 rounded-lg text-2xs font-extrabold shrink-0 cursor-pointer transition-colors ${
-            showBarangayDrawer ? 'text-link ring-1 ring-primary/30' : 'text-slate-700 dark:text-slate-200 hover:text-link'
-          }`}
-        >
-          {t('tracking.address.barangaysBtn')}
-        </button>
       </div>
-
-      {/* Quick Jump: Muntinlupa Barangays 3-Col Grid Drawer */}
-      {showBarangayDrawer && (
-        <div className="neu-flat rounded-2xl p-3 border border-white/80 dark:border-white/10 shadow-xl space-y-2 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between px-0.5">
-            <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
-              {t('tracking.address.quickJumpTitle')}
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowBarangayDrawer(false)}
-              className="text-2xs font-extrabold text-link hover:underline cursor-pointer"
-            >
-              {t('common.actions.close')}
-            </button>
-          </div>
-          <div className="grid grid-cols-3 gap-1.5">
-            {MUNTINLUPA_BARANGAYS.map((b) => {
-              const isCurrent = query.toLowerCase().includes(b.name.toLowerCase());
-              return (
-                <button
-                  key={b.name}
-                  type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => selectBarangay(b)}
-                  className={`py-2 px-2 rounded-xl text-xs font-bold text-center transition-all cursor-pointer truncate ${
-                    isCurrent
-                      ? 'bg-primary text-white font-extrabold'
-                      : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-link'
-                  }`}
-                >
-                  {b.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Search Suggestions Dropdown */}
       {showPanel && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 neu-flat border border-white/80 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-[700]">
+        <div className="absolute left-0 right-0 top-full mt-1.5 neu-flat border border-surface-border rounded-2xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto z-30">
           {loading && results.length === 0 ? (
-            <p className="px-4 py-3 text-xs font-semibold text-tertiary" role="status">
+            <p className="px-4 py-3 text-[max(0.75rem,12px)] font-semibold text-tertiary" role="status">
               {t('tracking.address.searching')}
             </p>
           ) : showEmpty ? (
-            <p className="px-4 py-3 text-xs font-semibold text-tertiary" role="status">
+            <p className="px-4 py-3 text-[max(0.75rem,12px)] font-semibold text-tertiary" role="status">
               {t('tracking.address.noMatches')}
             </p>
           ) : (
@@ -327,17 +249,17 @@ export default function AddressAutocomplete({ onSelect, initialQuery = '' }) {
                   onMouseDown={(e) => e.preventDefault()}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => selectResult(item)}
-                  className={`w-full px-3.5 py-2.5 flex items-center justify-between gap-3 text-left cursor-pointer transition-colors ${
+                  className={`w-full min-h-[44px] px-3.5 py-2.5 flex items-center justify-between gap-3 text-left cursor-pointer transition-colors ${
                     idx === activeIndex
                       ? 'bg-primary/10 dark:bg-primary/20'
                       : 'hover:bg-slate-200/40 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-extrabold text-slate-900 dark:text-slate-100 truncate">
+                    <p className="text-[max(0.75rem,12px)] font-extrabold text-slate-900 dark:text-slate-100 truncate">
                       {item.displayName.split(',')[0]}
                     </p>
-                    <p className="text-xs text-tertiary font-medium truncate">
+                    <p className="text-[max(0.75rem,12px)] text-tertiary font-medium truncate">
                       {item.displayName}
                     </p>
                   </div>

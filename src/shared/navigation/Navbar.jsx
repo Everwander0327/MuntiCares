@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Heart, ArrowUpRight } from '@phosphor-icons/react';
+import { ArrowUpRight } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
+import { BrandLogo } from '@/shared/ui';
 
 const Navbar = () => {
   const location = useLocation();
@@ -36,14 +37,14 @@ const Navbar = () => {
       <header className="fixed top-0 left-0 right-0 z-chrome w-full border-b border-slate-200/80 dark:border-slate-800/80 bg-white/85 dark:bg-slate-950/85 backdrop-blur-md transition-colors duration-200 pt-[env(safe-area-inset-top,0px)]">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-14 sm:h-[4.5rem] flex items-center justify-between">
           
-          {/* Brand Logo with Preserved Heart Icon */}
+          {/* MuntiCares Brand Mark */}
           <Link to="/" className="flex items-center gap-2.5 group shrink-0" aria-label="MuntiCares home">
             <motion.div
-              className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/20 text-link"
-              whileHover={{ scale: 1.05, rotate: 6 }}
+              className="flex items-center justify-center w-9 h-9"
+              whileHover={{ scale: 1.05 }}
               transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             >
-              <Heart weight="fill" className="w-5 h-5 text-link fill-primary" />
+              <BrandLogo className="w-9 h-9 drop-shadow-sm" decorative />
             </motion.div>
             <span className="font-display text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight group-hover:text-link dark:group-hover:text-primary-400 transition-colors">
               MuntiCares

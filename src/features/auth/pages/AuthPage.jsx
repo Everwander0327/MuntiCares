@@ -1,8 +1,10 @@
+import GoogleSignIn from '../components/GoogleSignIn';
+import { googleCallbackError } from '@/lib/googleAuth';
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { IMAGES } from '@/lib/images';
 import { Eye, EyeSlash } from '@phosphor-icons/react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -12,11 +14,22 @@ import { z } from 'zod';
 import confetti from 'canvas-confetti';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { FormInput, FormCheckbox } from '@/shared/ui';
+import { FormInput, FormCheckbox, BrandLogo, BrandLoader } from '@/shared/ui';
 
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const FLUID = [0.32, 0.72, 0, 1];
+const POST_LOGIN_LOADER_MS = 3600;
+
+function resolveAuthDestination(userRole, redirectTarget) {
+  if (redirectTarget && (userRole === 'patient' || !redirectTarget.startsWith('/patient') || userRole === 'admin')) {
+    return redirectTarget;
+  }
+  if (userRole === 'patient') return '/patient/dashboard';
+  if (userRole === 'provider') return '/provider/dashboard';
+  if (userRole === 'admin') return '/admin/dashboard';
+  return '/';
+}
 
 const loginSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -73,9 +86,12 @@ const AuthPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState(roleParam === 'provider' ? 'provider' : 'patient');
   const [shake, setShake] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => googleCallbackError(window.location.search, window.location.hash));
   const [loading, setLoading] = useState(false);
+  const [postLoginDest, setPostLoginDest] = useState(null);
   const [pendingSetPassword, setPendingSetPassword] = useState(null);
+  const prefersReducedMotion = useReducedMotion();
+  const isSubmittingLoginRef = useRef(false);
   const pageRef = useRef(null);
   const bgRef = useRef(null);
 
@@ -105,17 +121,22 @@ const AuthPage = () => {
   }, [location.pathname, location.search]);
 
   useEffect(() => {
-    if (user) {
-      if (redirectTarget && (user.role === 'patient' || !redirectTarget.startsWith('/patient') || user.role === 'admin')) {
-        navigate(redirectTarget, { replace: true });
-        return;
-      }
-      if (user.role === 'patient') navigate('/patient/dashboard');
-      else if (user.role === 'provider') navigate('/provider/dashboard');
-      else if (user.role === 'admin') navigate('/admin/dashboard');
-      else navigate('/');
+    if (user?.role && !isSubmittingLoginRef.current && !postLoginDest) {
+      navigate(resolveAuthDestination(user.role, redirectTarget), {
+        replace: Boolean(redirectTarget),
+      });
     }
-  }, [user, navigate, redirectTarget]);
+  }, [user, navigate, redirectTarget, postLoginDest]);
+
+  useEffect(() => {
+    if (!postLoginDest) return;
+    const delayMs = prefersReducedMotion ? 250 : POST_LOGIN_LOADER_MS;
+    const timer = setTimeout(() => {
+      isSubmittingLoginRef.current = false;
+      navigate(postLoginDest, { replace: true });
+    }, delayMs);
+    return () => clearTimeout(timer);
+  }, [postLoginDest, navigate, prefersReducedMotion]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -153,24 +174,20 @@ const AuthPage = () => {
   const handleLogin = async (data) => {
     setError('');
     setLoading(true);
+    isSubmittingLoginRef.current = true;
     try {
       const res = await login({ email: data.email, password: data.password });
       if (res?.requiresPasswordSet) {
+        isSubmittingLoginRef.current = false;
         setPendingSetPassword(res.email);
         toast('First-time login: please set your password.');
         return;
       }
       toast.success('Signed in successfully!');
-      if (redirectTarget) {
-        navigate(redirectTarget, { replace: true });
-      } else {
-        const destRole = res?.user?.role || role;
-        if (destRole === 'patient') navigate('/patient/dashboard');
-        else if (destRole === 'provider') navigate('/provider/dashboard');
-        else if (destRole === 'admin') navigate('/admin/dashboard');
-        else navigate('/');
-      }
+      const destRole = res?.role || res?.user?.role || role;
+      setPostLoginDest(resolveAuthDestination(destRole, redirectTarget));
     } catch (err) {
+      isSubmittingLoginRef.current = false;
       const message = err.message || 'Login failed';
       setError(message);
       toast.error(message);
@@ -473,6 +490,29 @@ const AuthPage = () => {
     );
   };
 
+  if (postLoginDest) {
+    return (
+      <div className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full bg-surface-page flex flex-col items-center justify-center p-6 text-center">
+        <motion.div
+          initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: prefersReducedMotion ? 0 : 0.25, ease: FLUID }}
+          className="flex flex-col items-center gap-4 max-w-sm"
+        >
+          <BrandLoader size={84} loop={false} label="Opening your MuntiCares portal" />
+          <div className="space-y-1">
+            <h1 className="font-display text-xl sm:text-2xl font-extrabold text-ink dark:text-txt-darkPrimary tracking-tight">
+              Opening your portal
+            </h1>
+            <p className="text-sm text-tertiary">
+              Signed in &mdash; preparing your home care dashboard.
+            </p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div ref={pageRef} className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full flex flex-col justify-center">
       {/* 50/50 Desktop Split-Screen Architecture */}
@@ -496,9 +536,12 @@ const AuthPage = () => {
 
           {/* Hero Section Content (Vertically Centered) */}
           <div className="relative z-10 space-y-4 max-w-xl">
-            <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-link">
-              MuntiCares
-            </span>
+            <div className="inline-flex items-center gap-2.5">
+              <BrandLogo className="w-8 h-8 shrink-0 drop-shadow-sm" decorative />
+              <span className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-link">
+                MuntiCares
+              </span>
+            </div>
             <p className="font-display font-black text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white tracking-tight leading-[1.12]">
               Quality home care <br />right at your{' '}
               <span className="text-link">
@@ -566,6 +609,7 @@ const AuthPage = () => {
               <AnimatePresence mode="wait">
                 {formContent(mode === 'login')}
               </AnimatePresence>
+              {!pendingSetPassword && (mode === 'login' || role === 'patient') && <GoogleSignIn disabled={loading} privacyAccepted={mode === 'register' ? registerForm.watch('privacyAccepted') : undefined} />}
 
               {!pendingSetPassword && mode === 'login' && (
                 <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800/80 text-center">

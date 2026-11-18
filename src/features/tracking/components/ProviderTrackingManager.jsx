@@ -27,7 +27,6 @@ import {
   formatArrivalFailure,
   ARRIVAL_OVERRIDE_REASON,
 } from '../services/trackingService';
-import { isNative } from '../services/locationSource';
 import useRouteEta from '../hooks/useRouteEta';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import { formatDistance, formatDuration } from '../services/geo';
@@ -482,7 +481,7 @@ function ActiveRoute({ visit, providerName, providerAvatar, onArrived }) {
         <Path className="w-4 h-4" />
         <span>{t('tracking.provider.distanceRemaining', { distance: formatDistance(distance) })}</span>
       </div>
-      {!isNative() && (
+      {(
         <p className="mc-muted">
           {t('tracking.provider.keepScreenOpen')}
         </p>

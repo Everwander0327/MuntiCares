@@ -100,7 +100,7 @@ export const settings = {
     'settings.notifications.soundOffToast': 'Notification and call sounds muted',
 
     'settings.notifications.permTitle': 'Device Notification Permission',
-    'settings.notifications.permDesc': 'Android app users receive background call alerts via FCM; web users receive alerts while a tab is open.',
+    'settings.notifications.permDesc': 'Enable browser push from the notification bell for calls, messages and booking updates.',
     'settings.notifications.statusPrefix': 'Status:',
     'settings.notifications.perm.granted': 'Granted',
     'settings.notifications.perm.denied': 'Denied',
@@ -226,7 +226,7 @@ export const settings = {
     'settings.notifications.soundOffToast': 'Na-mute ang tunog ng abiso at tawag',
 
     'settings.notifications.permTitle': 'Pahintulot sa Abiso ng Device',
-    'settings.notifications.permDesc': 'Tumatanggap ng background call alerts sa FCM ang Android app; sa web naman ay habang bukas ang tab.',
+    'settings.notifications.permDesc': 'I-enable ang browser push sa notification bell para sa tawag, mensahe at booking updates.',
     'settings.notifications.statusPrefix': 'Katayuan:',
     'settings.notifications.perm.granted': 'Pinayagan',
     'settings.notifications.perm.denied': 'Tinanggihan',

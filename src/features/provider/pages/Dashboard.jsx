@@ -30,6 +30,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import useCountUp from '@/hooks/useCountUp';
 import { SkeletonPage } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
+import ProviderVerificationBanner from '../components/ProviderVerificationBanner';
+import { useProviderVerification } from '../lib/useProviderVerification';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
@@ -203,6 +205,8 @@ const ProviderDashboard = () => {
   const { user } = useAuth();
   const { t, language, formatDate, translateService, translateStatus } = useLanguage();
   const navigate = useNavigate();
+  const verification = useProviderVerification();
+  const isVerifiedProvider = verification.isApproved;
   const providerHighlights = useMemo(() => getProviderHighlights(t), [t]);
   const carouselSlides = useRecentCarouselEvents('provider', providerHighlights);
 
@@ -469,6 +473,10 @@ const ProviderDashboard = () => {
 
   // Quick Action on Request (Accept / Reject)
   const handleQuickAction = async (id, action) => {
+    if (!isVerifiedProvider) {
+      toast.error(t('provider.verification.actionLockedToast'));
+      return;
+    }
     setActionStates(prev => ({ ...prev, [id]: action }));
     try {
       const newStatus = action === 'accepted' ? 'Accepted' : 'Rejected';
@@ -562,6 +570,12 @@ const ProviderDashboard = () => {
   return (
     <DashboardLayout role="provider">
       <div className="space-y-4 sm:space-y-6 md:space-y-7 pb-10">
+        <ProviderVerificationBanner
+          loading={verification.loading}
+          isApproved={verification.isApproved}
+          isProfileComplete={verification.isProfileComplete}
+          professionalIdStatus={verification.professionalIdStatus}
+        />
 
         {/* HERO ROW: CAROUSEL (7 cols) + QUICK ACTIONS (5 cols) */}
         <h1 className="sr-only">{t('provider.dashboard.pageTitle')}</h1>
@@ -1145,16 +1159,26 @@ const ProviderDashboard = () => {
                           <button
                             type="button"
                             onClick={() => handleQuickAction(req.id, 'accepted')}
-                            disabled={!!actionStates[req.id]}
-                            className="flex-1 neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all cursor-pointer text-center"
+                            disabled={!!actionStates[req.id] || !isVerifiedProvider}
+                            title={!isVerifiedProvider ? t('provider.verification.lockedActionLabel') : undefined}
+                            className={`flex-1 neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-success transition-all text-center ${
+                              !isVerifiedProvider
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-emerald-500 hover:text-white cursor-pointer'
+                            }`}
                           >
                             {t('provider.dashboard.acceptBtn')}
                           </button>
                           <button
                             type="button"
                             onClick={() => handleQuickAction(req.id, 'rejected')}
-                            disabled={!!actionStates[req.id]}
-                            className="flex-1 neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-danger hover:bg-danger hover:text-white transition-all cursor-pointer text-center"
+                            disabled={!!actionStates[req.id] || !isVerifiedProvider}
+                            title={!isVerifiedProvider ? t('provider.verification.lockedActionLabel') : undefined}
+                            className={`flex-1 neu-btn px-3 py-1.5 rounded-lg text-xs font-bold text-danger transition-all text-center ${
+                              !isVerifiedProvider
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-danger hover:text-white cursor-pointer'
+                            }`}
                           >
                             {t('provider.dashboard.declineBtn')}
                           </button>
@@ -1223,16 +1247,26 @@ const ProviderDashboard = () => {
                             <button
                               type="button"
                               onClick={() => handleQuickAction(req.id, 'accepted')}
-                              disabled={!!actionStates[req.id]}
-                              className="neu-btn px-2.5 py-1 rounded-lg text-xs font-bold text-success hover:bg-emerald-500 hover:text-white transition-all cursor-pointer"
+                              disabled={!!actionStates[req.id] || !isVerifiedProvider}
+                              title={!isVerifiedProvider ? t('provider.verification.lockedActionLabel') : undefined}
+                              className={`neu-btn px-2.5 py-1 rounded-lg text-xs font-bold text-success transition-all ${
+                                !isVerifiedProvider
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : 'hover:bg-emerald-500 hover:text-white cursor-pointer'
+                              }`}
                             >
                               {t('provider.dashboard.acceptBtn')}
                             </button>
                             <button
                               type="button"
                               onClick={() => handleQuickAction(req.id, 'rejected')}
-                              disabled={!!actionStates[req.id]}
-                              className="neu-btn px-2.5 py-1 rounded-lg text-xs font-bold text-danger hover:bg-danger hover:text-white transition-all cursor-pointer"
+                              disabled={!!actionStates[req.id] || !isVerifiedProvider}
+                              title={!isVerifiedProvider ? t('provider.verification.lockedActionLabel') : undefined}
+                              className={`neu-btn px-2.5 py-1 rounded-lg text-xs font-bold text-danger transition-all ${
+                                !isVerifiedProvider
+                                  ? 'opacity-50 cursor-not-allowed'
+                                  : 'hover:bg-danger hover:text-white cursor-pointer'
+                              }`}
                             >
                               {t('provider.dashboard.declineBtn')}
                             </button>

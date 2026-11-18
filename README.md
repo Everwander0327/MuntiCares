@@ -9,18 +9,16 @@ MuntiCares is a barangay home-care platform for Muntinlupa City. Patients book v
 - **Service requests** — full lifecycle (Pending → Accepted → On The Way → Arrived → Completed) with rescheduling/cancellation, schedule slot exclusivity, and status-transition guards.
 - **Live visit tracking** — provider GPS sessions with heartbeat, server-side expiry, geofenced arrival, and a patient-facing live map (MapLibre) with OSRM routing/ETA.
 - **Chat & media** — realtime messaging with typing/presence, photo/video attachments in a private storage bucket served via signed URLs, and 24-hour message retention enforced by a scheduled job.
-- **WebRTC teleconsultation** — native peer connections with per-call TURN credentials, FCM push ring on Android, and append-only call telemetry (`call_events`).
+- **WebRTC teleconsultation** — native peer connections with per-call TURN credentials, browser push notifications, and append-only call telemetry (`call_events`).
 - **Consent management** — deny-by-default access with mandatory expiry; providers only see patient data the patient has granted.
 - **Admin oversight** — patient/provider directories, provider trust-score approval, request monitoring, announcements.
 - **FHIR export** — patient records exportable in FHIR format.
-- **Android app** — the same app bundled via Capacitor 8 with push notifications, background geolocation, and local notifications.
 
 ## Tech stack
 
 - **Frontend**: React 18, Vite 5, react-router-dom 7, Tailwind CSS 3, framer-motion, react-hook-form + zod, Radix UI, recharts
 - **Maps**: MapLibre GL, Leaflet, OSRM routing
 - **Backend**: Supabase — Auth, Postgres + RLS, Storage (private buckets), Realtime, Edge Functions (`call-invite`, `ice-servers`), pg_cron
-- **Mobile**: Capacitor 8 (Android, FCM push)
 - **Hosting**: Vercel (SPA), GitHub Actions CI
 - **Testing**: Vitest + Testing Library (unit), Playwright (E2E)
 
@@ -106,14 +104,12 @@ Four older migration files have no recorded history in the remote migration log 
 - **Web**: Vercel with the SPA rewrite in `vercel.json`. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in the Vercel project.
 - **SEO & domain**: The official domain defaults to `https://munti-cares.vercel.app` (configured in `src/lib/seo/seoConfig.js` and overridden via `VITE_SITE_URL`). `robots.txt` and `sitemap.xml` are generated into `dist/` at build time. To verify in Google Search Console, choose the HTML tag method, set the token as `VITE_GOOGLE_SITE_VERIFICATION` in Vercel, redeploy, and submit `https://munti-cares.vercel.app/sitemap.xml`. To switch to a custom domain later, attach the domain in Vercel, update `VITE_SITE_URL` (plus Supabase Auth `site_url` / redirect URLs), and redeploy.
 - **CI**: GitHub Actions runs `lint` → `test` → `build` on push to `main`/`develop` and PRs to `main`, using repository variables for the Supabase env vars.
-- **Android**: `npm run build` then `npx cap sync android`, open `android/` in Android Studio. FCM push requires `google-services.json` (gitignored) — without it push notifications are silently disabled.
 
 ## Known limitations
 
 - E2E suites need live credentials and are not part of CI.
 - No static type checking — this is a JavaScript project (`jsconfig.json` has `checkJs: false`).
 - WebRTC falls back to STUN-only when the `ice-servers` edge function is not deployed, which can fail across restrictive NATs.
-- Web push is not implemented: call ring notifications reach Android devices via FCM, and web users only while a subscribed tab is open.
 - There is no seed file for local database bootstrap; local dev relies on the production schema via migrations.
 
 ## Documentation
@@ -121,3 +117,5 @@ Four older migration files have no recorded history in the remote migration log 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Design system](DESIGN.md)
 - Design-QA process: `.design-qa/`
+
+MuntiCares is web-only. Browser push uses Supabase Edge Functions and Web Push/VAPID. See docs/backend/web-push.md.

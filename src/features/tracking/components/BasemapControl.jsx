@@ -8,13 +8,35 @@ export const BASEMAP_MODES = [
 ];
 
 /**
- * Option 1 Global Basemap Switcher (Yandex / Grab 1-Tap Segmented Squircle Bar).
- * Renders a crisp top-right (or custom-positioned) 1-tap squircle segmented bar
- * so users can switch between Street, Satellite, and Terrain views immediately
- * without opening a hidden popup menu.
+ * Basemap switcher:
+ * - `segmented` (default): 3-tab Street / Satellite / Terrain bar for live tracking
+ * - `toggle`: single compact Satellite toggle button for doorstep pinning
  */
-export default function BasemapControl({ value, onChange, className = '' }) {
+export default function BasemapControl({ value, onChange, variant = 'segmented', className = '' }) {
   const { t } = useLanguage();
+
+  if (variant === 'toggle') {
+    const isSatellite = value === 'satellite';
+    const nextMode = isSatellite ? 'streets' : 'satellite';
+    const ariaLabel = isSatellite
+      ? t('tracking.basemap.switchToStreet')
+      : t('tracking.basemap.switchToSatellite');
+
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(nextMode)}
+        aria-pressed={isSatellite}
+        aria-label={t('tracking.basemap.satelliteFull')}
+        title={ariaLabel}
+        className={`mc-basemap-toggle-btn${isSatellite ? ' is-active' : ''} ${className}`}
+      >
+        <Planet className="w-4 h-4 shrink-0" aria-hidden="true" />
+        <span>{t('tracking.basemap.satellite')}</span>
+      </button>
+    );
+  }
+
   return (
     <div
       className={`mc-basemap-segmented ${className}`}

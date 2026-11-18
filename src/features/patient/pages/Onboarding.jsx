@@ -1,11 +1,9 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
-  Heart,
   ArrowLeft,
   ArrowRight,
-  CheckCircle,
   SpinnerGap,
   MapPin,
   ArrowCounterClockwise,
@@ -14,9 +12,14 @@ import { toLocalDateKey } from '@/lib/localDate';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getIntlLocale } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 import { IMAGES } from '@/lib/images';
+import { Button } from '@/shared/ui/button';
+import { SkeletonText } from '@/shared/ui/skeleton';
+import { BrandLogo, BrandSuccess } from '@/shared/ui';
 import AddressAutocomplete from '@/features/tracking/components/AddressAutocomplete';
+import BasemapControl from '@/features/tracking/components/BasemapControl';
 import {
   formatFullVisitAddress,
   isCoordinateAddress,
@@ -36,12 +39,63 @@ import {
 import { buildOnboardingDraft } from '@/features/patient/utils/onboardingDraft';
 import { resolveOnboardingMedicalFields } from '@/features/patient/utils/onboardingHydrate';
 
-// The map chunk pulls in MapLibre; it is only needed from step 2 onward.
+// The map chunk pulls in MapLibre; it is only needed on step 2.
 const ModernLocationPicker = lazy(() => import('@/features/tracking/components/ModernLocationPicker'));
 
-const FLUID = [0.22, 1, 0.36, 1];
+const FLUID = [0.32, 0.72, 0, 1];
 const TOTAL_STEPS = 5;
 const DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+const MOBILITY_ACCESS_VALUES = new Set(['stairs', 'wheelchair', 'bedbound', 'lift']);
+const CARE_ACCESS_VALUES = new Set(['oxygen', 'hearing', 'vision']);
+
+const ALLERGY_CHIPS = [
+  { value: 'No known allergies', labelKey: 'patient.profile.chipNoneAllergies', exclusive: true },
+  { value: 'Penicillin', labelKey: 'patient.profile.chipPenicillin' },
+  { value: 'Sulfa', labelKey: 'patient.profile.chipSulfa' },
+  { value: 'Iodine', labelKey: 'patient.profile.chipIodine' },
+  { value: 'Latex', labelKey: 'patient.profile.chipLatex' },
+  { value: 'Peanuts', labelKey: 'patient.profile.chipPeanuts' },
+];
+
+const CONDITION_CHIPS = [
+  { value: 'Diabetes', labelKey: 'patient.profile.chipDiabetes' },
+  { value: 'High Blood Pressure', labelKey: 'patient.profile.chipHbp' },
+  { value: 'Asthma', labelKey: 'patient.profile.chipAsthma' },
+  { value: 'Heart Disease', labelKey: 'patient.profile.chipHeart' },
+  { value: 'Arthritis', labelKey: 'patient.profile.chipArthritis' },
+  { value: 'None', labelKey: 'patient.profile.chipNone', exclusive: true },
+];
+
+const parseStepParam = (raw) => {
+  const num = Number.parseInt(raw || '', 10);
+  if (Number.isNaN(num) || num < 1 || num > TOTAL_STEPS) return 1;
+  return num;
+};
+
+const hasCommaItem = (text, value) => {
+  const target = value.toLowerCase();
+  return String(text || '')
+    .split(',')
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean)
+    .includes(target);
+};
+
+const toggleCommaChip = (text, value, { exclusive = false, exclusiveValues = [] } = {}) => {
+  const parts = String(text || '')
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const targetLower = value.toLowerCase();
+  if (parts.some((part) => part.toLowerCase() === targetLower)) {
+    return parts.filter((part) => part.toLowerCase() !== targetLower).join(', ');
+  }
+  if (exclusive) return value;
+  const exclusiveSet = new Set(exclusiveValues.map((item) => item.toLowerCase()));
+  const filtered = parts.filter((part) => !exclusiveSet.has(part.toLowerCase()));
+  return [...filtered, value].join(', ');
+};
 
 const getFieldErrors = (t) => ({
   phone: t('patient.phone.invalid'),
@@ -65,12 +119,12 @@ const FIELD_IDS = {
 };
 
 const inputClass =
-  'w-full neu-inset neu-input rounded-xl border border-field px-4 py-3 text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all';
+  'w-full min-h-[48px] neu-inset neu-input rounded-xl border border-field px-4 py-3 text-base sm:text-sm font-medium text-slate-900 dark:text-slate-100 placeholder:text-tertiary outline-none transition-all';
 const textareaClass = `${inputClass} resize-none`;
-const labelClass = 'block text-xs font-semibold text-slate-700 dark:text-slate-300';
+const labelClass = 'block text-[max(0.75rem,12px)] font-semibold text-slate-700 dark:text-slate-300';
 const errorClass = 'text-sm font-medium text-danger dark:text-danger-dark';
 const smallActionClass =
-  'inline-flex min-h-11 items-center px-2 text-sm font-semibold text-link hover:underline cursor-pointer';
+  'inline-flex min-h-[44px] items-center px-2.5 text-[max(0.875rem,14px)] font-semibold text-link hover:underline cursor-pointer';
 
 const stepVariants = {
   enter: (dir) => ({
@@ -127,7 +181,7 @@ const clearDraft = (key) => {
   }
 };
 
-const formatReviewDate = (value, locale = 'en-PH') => {
+const formatReviewDate = (value, locale = 'en-US') => {
   if (!value) return '';
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
@@ -139,7 +193,7 @@ function ReviewRow({ label, value, onEdit, error, children }) {
   return (
     <div className="px-4 py-3 flex items-start justify-between gap-3">
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-tertiary">{label}</p>
+        <p className="text-[max(0.75rem,12px)] font-semibold text-tertiary">{label}</p>
         {value && (
           <p className="mt-1 text-sm font-medium text-slate-800 dark:text-slate-100 break-words">{value}</p>
         )}
@@ -162,11 +216,14 @@ function ReviewRow({ label, value, onEdit, error, children }) {
 
 export default function Onboarding({ isPreview = false }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { t, isTagalog } = useLanguage();
-  const locale = isTagalog ? 'tl-PH' : 'en-PH';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { user, logout } = useAuth();
+  const { t, language } = useLanguage();
+  const locale = getIntlLocale(language);
   const pickerRef = useRef(null);
   const mainRef = useRef(null);
+  const [step2TopEl, setStep2TopEl] = useState(null);
+  const [step2BottomEl, setStep2BottomEl] = useState(null);
   const reduceMotion = useReducedMotion();
   const stepMotion = reduceMotion ? reducedStepVariants : stepVariants;
   const draftKey = `mc_onboarding_draft_${isPreview ? 'preview' : user?.id || 'guest'}`;
@@ -177,17 +234,19 @@ export default function Onboarding({ isPreview = false }) {
   if (draftRef.current === undefined) draftRef.current = readDraft(draftKey);
   const draft = draftRef.current;
 
-  const [step, setStep] = useState(1);
+  const urlStep = parseStepParam(searchParams.get('step'));
+  const [step, setStep] = useState(urlStep);
   const [direction, setDirection] = useState(1);
   const [loading, setLoading] = useState(!isPreview && !!user?.id);
   const [loadError, setLoadError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [reloadToken, setReloadToken] = useState(0);
   const [saving, setSaving] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [errors, setErrors] = useState({});
   const [errorAnnouncement, setErrorAnnouncement] = useState('');
 
-  // Step 1: Contact
+  // Step 1: Identity, Contact & Care Circle
   const [fullName, setFullName] = useState(draft?.fullName ?? user?.full_name ?? '');
   const [phone, setPhone] = useState(draft?.phone ?? '');
   const [emergencyContactName, setEmergencyContactName] = useState(draft?.emergencyContactName ?? '');
@@ -212,7 +271,54 @@ export default function Onboarding({ isPreview = false }) {
   const [privacyConsent, setPrivacyConsent] = useState(Boolean(draft?.privacyConsent));
   const [alreadyComplete, setAlreadyComplete] = useState(false);
   const [returnToReview, setReturnToReview] = useState(false);
+  const [pinEditedFromStep3, setPinEditedFromStep3] = useState(false);
   const [omitMedical, setOmitMedical] = useState(false);
+  const [confirmSkipHealth, setConfirmSkipHealth] = useState(false);
+  const [step2Basemap, setStep2Basemap] = useState('streets');
+  const [step2HudInsets, setStep2HudInsets] = useState({ top: 68, bottom: 212 });
+
+  // Measure Step 2 floating top/bottom cards so map HUD controls and pin centering
+  // always land in the clear visible map window across viewports.
+  useEffect(() => {
+    if (step !== 2 || typeof ResizeObserver === 'undefined') return undefined;
+    const update = () => {
+      const topH = Math.round(step2TopEl?.getBoundingClientRect().height || 0);
+      const bottomH = Math.round(step2BottomEl?.getBoundingClientRect().height || 0);
+      if (!topH && !bottomH) return;
+      setStep2HudInsets((prev) =>
+        prev.top === topH && prev.bottom === bottomH ? prev : { top: topH, bottom: bottomH }
+      );
+    };
+    const ro = new ResizeObserver(update);
+    const observeBorderBox = (el) => {
+      if (!el) return;
+      try {
+        ro.observe(el, { box: 'border-box' });
+      } catch {
+        ro.observe(el);
+      }
+    };
+    observeBorderBox(step2TopEl);
+    observeBorderBox(step2BottomEl);
+    update();
+    return () => ro.disconnect();
+  }, [step, step2TopEl, step2BottomEl, loadError, errors.coords, baseAddress, pinStatus]);
+
+  // Sync URL ?step=N (browser / Android hardware Back) back into state.
+  useEffect(() => {
+    const paramRaw = searchParams.get('step');
+    if (!paramRaw) return;
+    const nextFromUrl = parseStepParam(paramRaw);
+    if (nextFromUrl !== step) {
+      setDirection(nextFromUrl > step ? 1 : -1);
+      setStep(nextFromUrl);
+      setErrors({});
+      setErrorAnnouncement('');
+      setSaveError('');
+      setConfirmSkipHealth(false);
+      if (nextFromUrl === 4) setOmitMedical(false);
+    }
+  }, [searchParams, step]);
 
   useEffect(() => {
     if (draft) toast(t('patient.onboarding.restoredDraftToast'));
@@ -322,7 +428,7 @@ export default function Onboarding({ isPreview = false }) {
   // Medical answers stay out of the draft until the patient consents.
   useEffect(() => {
     if (completed || loading) return undefined;
-    const draft = buildOnboardingDraft({
+    const nextDraft = buildOnboardingDraft({
       fullName,
       phone,
       emergencyContactName,
@@ -341,8 +447,8 @@ export default function Onboarding({ isPreview = false }) {
       bloodType,
       medicalHistory,
     });
-    if (!draft) return undefined;
-    const timer = setTimeout(() => writeDraft(draftKey, draft), 600);
+    if (!nextDraft) return undefined;
+    const timer = setTimeout(() => writeDraft(draftKey, nextDraft), 600);
     return () => clearTimeout(timer);
   }, [
     completed,
@@ -373,13 +479,15 @@ export default function Onboarding({ isPreview = false }) {
     mainRef.current?.focus({ preventScroll: true });
   };
 
-  const goToStep = (nextStep) => {
+  const goToStep = (nextStep, { replace = false } = {}) => {
     setDirection(nextStep > step ? 1 : -1);
     setStep(nextStep);
     setErrors({});
     setErrorAnnouncement('');
-    // Re-entering health basics means the patient wants to add details again.
+    setSaveError('');
+    setConfirmSkipHealth(false);
     if (nextStep === 4) setOmitMedical(false);
+    setSearchParams({ step: String(nextStep) }, { replace });
     window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   };
 
@@ -387,10 +495,12 @@ export default function Onboarding({ isPreview = false }) {
   // straight to the review instead of walking through the remaining steps.
   const editFromReview = (targetStep) => {
     setReturnToReview(true);
+    setPinEditedFromStep3(false);
     goToStep(targetStep);
   };
 
   const clearError = (field) => {
+    setSaveError('');
     setErrors((prev) => {
       if (!prev[field]) return prev;
       const next = { ...prev };
@@ -422,11 +532,23 @@ export default function Onboarding({ isPreview = false }) {
     if (pin.address && step === 2) setBaseAddress(pin.address);
   };
 
+  const hasEnteredMedical = Boolean(
+    dateOfBirth ||
+      allergies.trim() ||
+      chronicConditions.trim() ||
+      medications.trim() ||
+      bloodType ||
+      medicalHistory.trim()
+  );
+
   const validateCurrentStep = () => {
     const fieldErrors = getFieldErrors(t);
     const nextErrors = {};
 
     if (step === 1) {
+      if (!isPreview && !fullName.trim()) {
+        nextErrors.fullName = fieldErrors.fullName;
+      }
       const trimmedPhone = phone.trim();
       const trimmedEmergencyPhone = emergencyContactPhone.trim();
       if (!trimmedPhone) {
@@ -461,33 +583,29 @@ export default function Onboarding({ isPreview = false }) {
       }
     }
 
-    if (step === 4) {
-      const hasMedicalDetails = Boolean(
-        dateOfBirth ||
-          allergies.trim() ||
-          chronicConditions.trim() ||
-          medications.trim() ||
-          bloodType ||
-          medicalHistory.trim()
-      );
-      if (hasMedicalDetails && !privacyConsent) {
-        nextErrors.consent = fieldErrors.consent;
-      }
+    if (step === 4 && hasEnteredMedical && !privacyConsent) {
+      nextErrors.consent = fieldErrors.consent;
     }
 
     if (step === 5) {
       if (!isPreview && !fullName.trim()) {
         nextErrors.fullName = fieldErrors.fullName;
       }
-      // Re-run the same contact rules on the review screen: the name and numbers
-      // shown there are what providers will use.
       if (!isValidPhPhone(phone.trim())) {
         nextErrors.phone = fieldErrors.phone;
       }
       if (!isValidPhPhone(emergencyContactPhone.trim())) {
         nextErrors.emergencyContactPhone = fieldErrors.emergencyContactPhone;
       }
-      if (!privacyConsent && !omitMedical && (dateOfBirth || allergies.trim() || chronicConditions.trim() || medications.trim() || bloodType || medicalHistory.trim())) {
+      if (!coords || coords.lat == null || coords.lng == null) {
+        nextErrors.coords = fieldErrors.coords;
+      }
+      if (!baseAddress.trim()) {
+        nextErrors.street = fieldErrors.street;
+      } else if (isCoordinateAddress(baseAddress)) {
+        nextErrors.street = fieldErrors.streetCoordinates;
+      }
+      if (!privacyConsent && !omitMedical && hasEnteredMedical) {
         nextErrors.consent = fieldErrors.consent;
       }
     }
@@ -497,7 +615,7 @@ export default function Onboarding({ isPreview = false }) {
     if (firstField) {
       setErrorAnnouncement(nextErrors[firstField]);
       const fieldId = FIELD_IDS[firstField];
-      if (fieldId) {
+      if (fieldId && document.getElementById(fieldId)) {
         requestAnimationFrame(() => document.getElementById(fieldId)?.focus());
       } else {
         mainRef.current?.focus({ preventScroll: true });
@@ -511,6 +629,11 @@ export default function Onboarding({ isPreview = false }) {
 
   const handleContinue = () => {
     if (!validateCurrentStep()) return;
+    if (step === 2 && pinEditedFromStep3) {
+      setPinEditedFromStep3(false);
+      goToStep(3);
+      return;
+    }
     if (returnToReview && step < TOTAL_STEPS) {
       setReturnToReview(false);
       goToStep(TOTAL_STEPS);
@@ -584,8 +707,6 @@ export default function Onboarding({ isPreview = false }) {
 
     const upsertPatient = (body) => supabase.from('patients').upsert(body, { onConflict: 'user_id' });
 
-    // The review step is the only place the account name is verified, so a
-    // correction there has to reach the account record before completion flips.
     const trimmedName = fullName.trim();
     if (!isPreview && trimmedName && trimmedName !== (user?.full_name || '').trim()) {
       const { error: nameError } = await supabase
@@ -656,10 +777,11 @@ export default function Onboarding({ isPreview = false }) {
       return;
     }
     if (!user?.id) {
-      toast.error(t('patient.onboarding.errSignInRequired'));
+      setSaveError(t('patient.onboarding.errSignInRequired'));
       return;
     }
 
+    setSaveError('');
     setSaving(true);
     try {
       await saveProfile({ skipMedical });
@@ -667,10 +789,16 @@ export default function Onboarding({ isPreview = false }) {
       setCompleted(true);
       toast.success(t('patient.onboarding.saveSuccessToast'));
     } catch (err) {
-      toast.error(err?.message || t('patient.onboarding.saveFallbackError'));
+      console.error('[onboarding] saveProfile failed:', err);
+      setSaveError(t('patient.onboarding.saveFallbackError'));
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSignOut = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   const restartPreview = () => {
@@ -696,25 +824,43 @@ export default function Onboarding({ isPreview = false }) {
     setPrivacyConsent(false);
     setErrors({});
     setErrorAnnouncement('');
+    setSaveError('');
     setDirection(-1);
     setStep(1);
     setCompleted(false);
     setReturnToReview(false);
+    setPinEditedFromStep3(false);
     setOmitMedical(false);
+    setConfirmSkipHealth(false);
+    setSearchParams({ step: '1' }, { replace: true });
+  };
+
+  const handleSkipHealthClick = () => {
+    if (hasEnteredMedical && !confirmSkipHealth) {
+      setConfirmSkipHealth(true);
+      return;
+    }
+    setOmitMedical(true);
+    setConfirmSkipHealth(false);
+    goToStep(TOTAL_STEPS);
   };
 
   if (loading) {
     return (
       <div className="min-h-[100dvh] bg-surface-page px-6 py-10">
-        <div className="mx-auto w-full max-w-xl space-y-6" aria-busy="true" aria-label={t('patient.onboarding.loadingSavedAria')}>
-          <div className="h-4 w-24 rounded-full bg-surface-subtle animate-pulse" />
-          <div className="h-9 w-3/4 rounded-xl bg-surface-subtle animate-pulse" />
-          <div className="h-4 w-full rounded-lg bg-surface-subtle animate-pulse" />
+        <div
+          className="mx-auto w-full max-w-xl space-y-6"
+          aria-busy="true"
+          aria-label={t('patient.onboarding.loadingSavedAria')}
+        >
+          <SkeletonText width="w-24" className="h-4 rounded-full" />
+          <SkeletonText width="w-3/4" className="h-9 rounded-xl" />
+          <SkeletonText width="w-full" className="h-4 rounded-lg" />
           <div className="space-y-4 pt-6">
             {[0, 1, 2].map((row) => (
               <div key={row} className="space-y-2">
-                <div className="h-3 w-28 rounded bg-surface-subtle animate-pulse" />
-                <div className="h-12 w-full rounded-xl bg-surface-subtle animate-pulse" />
+                <SkeletonText width="w-28" className="h-3.5" />
+                <SkeletonText width="w-full" className="h-12 rounded-xl" />
               </div>
             ))}
           </div>
@@ -725,44 +871,61 @@ export default function Onboarding({ isPreview = false }) {
 
   if (completed) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-[var(--bg-main)] px-6 text-slate-900 dark:text-slate-100">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-surface-page px-6 text-slate-900 dark:text-slate-100">
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={reduceMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: FLUID }}
+          transition={{ duration: reduceMotion ? 0 : 0.35, ease: FLUID }}
           className="w-full max-w-md text-center space-y-5"
         >
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
-            <CheckCircle className="w-7 h-7 text-link" />
+          <div className="mx-auto flex items-center justify-center">
+            <BrandSuccess size={76} label={isPreview ? t('patient.onboarding.donePreviewHeading') : t('patient.onboarding.doneRealHeading')} />
           </div>
           <div className="space-y-1.5">
-            <h1 className="font-display text-2xl font-bold tracking-tight">
+            <h1 className="font-display text-2xl font-bold tracking-tight text-balance">
               {isPreview ? t('patient.onboarding.donePreviewHeading') : t('patient.onboarding.doneRealHeading')}
             </h1>
-            <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
+            <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed text-pretty">
               {isPreview
                 ? t('patient.onboarding.donePreviewBody')
                 : t('patient.onboarding.doneRealBody')}
             </p>
           </div>
           {isPreview ? (
-            <button
-              type="button"
-              onClick={restartPreview}
-              className="neu-btn-primary w-full py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-            >
-              <ArrowCounterClockwise className="w-4 h-4" />
-              <span>{t('patient.onboarding.startOverBtn')}</span>
-            </button>
+            <div className="space-y-2.5 pt-1">
+              <Button asChild size="lg" className="neu-btn-primary min-h-[48px] w-full font-bold shadow-sm">
+                <Link to="/register">
+                  <span>{t('patient.onboarding.createAccountBtn')}</span>
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={restartPreview}
+                className="min-h-[48px] w-full font-bold gap-2"
+              >
+                <ArrowCounterClockwise className="w-4 h-4" />
+                <span>{t('patient.onboarding.startOverBtn')}</span>
+              </Button>
+              <Link
+                to="/"
+                className="inline-flex min-h-[44px] items-center justify-center px-3 text-sm font-semibold text-link hover:underline"
+              >
+                {t('patient.onboarding.exitPreviewBtn')}
+              </Link>
+            </div>
           ) : (
-            <button
+            <Button
               type="button"
+              size="lg"
               onClick={() => navigate('/patient/dashboard', { replace: true })}
-              className="neu-btn-primary w-full py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+              className="neu-btn-primary min-h-[48px] w-full font-bold gap-2 shadow-sm"
             >
               <span>{t('patient.onboarding.goToDashboardBtn')}</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </Button>
           )}
         </motion.div>
       </div>
@@ -771,6 +934,7 @@ export default function Onboarding({ isPreview = false }) {
 
   const progressPercent = (step / TOTAL_STEPS) * 100;
   const isContinueDisabled = saving;
+  const isMapStep = step === 2;
 
   const emergencySummary = emergencyContactName.trim()
     ? `${emergencyContactName.trim()} · ${emergencyContactPhone || t('patient.onboarding.noNumber')}`
@@ -788,6 +952,9 @@ export default function Onboarding({ isPreview = false }) {
   const accessSummary = accessNeeds.length
     ? accessNeeds.map((val) => t(`patient.accessNeeds.${val}`)).join(', ')
     : t('patient.onboarding.noneSelected');
+
+  const mobilityAccessOptions = ACCESS_NEEDS.filter((option) => MOBILITY_ACCESS_VALUES.has(option.value));
+  const careAccessOptions = ACCESS_NEEDS.filter((option) => CARE_ACCESS_VALUES.has(option.value));
 
   const healthItems = omitMedical
     ? []
@@ -815,35 +982,57 @@ export default function Onboarding({ isPreview = false }) {
         >
           {/* Minimal Top Header + Thin Progress Line */}
           <div>
-            <header className="h-16 px-6 sm:px-10 flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-3">
+            <header className="min-h-16 px-4 sm:px-10 py-2 flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 {step > 1 || returnToReview ? (
                   <button
                     type="button"
                     onClick={() => {
                       if (returnToReview) {
+                        if (step === 2 && pinEditedFromStep3) {
+                          setPinEditedFromStep3(false);
+                          goToStep(3);
+                          return;
+                        }
                         setReturnToReview(false);
                         goToStep(TOTAL_STEPS);
                         return;
                       }
                       goToStep(step - 1);
                     }}
-                    className="inline-flex min-h-11 items-center gap-2 -ml-2 px-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                    className="inline-flex min-h-[44px] items-center gap-2 -ml-2 px-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4 shrink-0" />
                     <span>{t('patient.onboarding.backBtn')}</span>
                   </button>
                 ) : alreadyComplete ? (
                   <Link
                     to="/patient/dashboard"
-                    className="inline-flex min-h-11 items-center gap-2 -ml-2 px-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+                    className="inline-flex min-h-[44px] items-center gap-2 -ml-2 px-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-4 h-4 shrink-0" />
                     <span>{t('patient.onboarding.backToDashboard')}</span>
                   </Link>
-                ) : null}
+                ) : isPreview ? (
+                  <Link
+                    to="/"
+                    className="inline-flex min-h-[44px] items-center gap-2 -ml-2 px-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4 shrink-0" />
+                    <span>{t('patient.onboarding.exitPreviewBtn')}</span>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="inline-flex min-h-[44px] items-center -ml-2 px-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+                  >
+                    {t('patient.onboarding.signOutBtn')}
+                  </button>
+                )}
               </div>
-              <span className="shrink-0 text-xs font-semibold text-tertiary tabular-nums">
+
+              <span className="shrink-0 text-[max(0.75rem,12px)] font-semibold text-tertiary tabular-nums">
                 {t('patient.onboarding.stepCounter', { step, total: TOTAL_STEPS })}
               </span>
             </header>
@@ -859,9 +1048,9 @@ export default function Onboarding({ isPreview = false }) {
             >
               <motion.div
                 className="h-full bg-primary"
-                initial={{ width: `${100 / TOTAL_STEPS}%` }}
+                initial={reduceMotion ? false : { width: `${100 / TOTAL_STEPS}%` }}
                 animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.4, ease: FLUID }}
+                transition={{ duration: reduceMotion ? 0 : 0.4, ease: FLUID }}
               />
             </div>
           </div>
@@ -871,9 +1060,13 @@ export default function Onboarding({ isPreview = false }) {
             ref={mainRef}
             tabIndex={-1}
             aria-labelledby={`onboard-step-${step}-heading`}
-            className="mc-step-region flex-1 flex flex-col justify-start px-6 sm:px-12 lg:px-14 xl:px-20 pt-8 sm:pt-10 pb-6 max-w-xl mx-auto w-full outline-none"
+            className={
+              isMapStep
+                ? 'mc-step-region relative flex-1 min-h-0 flex flex-col w-full overflow-hidden outline-none'
+                : 'mc-step-region flex-1 flex flex-col justify-start px-6 sm:px-12 lg:px-14 xl:px-20 pt-8 sm:pt-10 pb-6 max-w-xl mx-auto w-full outline-none'
+            }
           >
-            {loadError && (
+            {loadError && !isMapStep && (
               <div
                 role="alert"
                 className="mb-5 flex flex-col gap-2 rounded-xl border border-warning/30 bg-warning-soft px-4 py-3 dark:border-warning-dark/30 dark:bg-warning-darkSoft"
@@ -892,7 +1085,7 @@ export default function Onboarding({ isPreview = false }) {
             )}
 
             <AnimatePresence mode="wait" custom={direction}>
-              {/* STEP 1: CONTACT & CARE CIRCLE */}
+              {/* STEP 1: IDENTITY, CONTACT & CARE CIRCLE */}
               {step === 1 && (
                 <motion.div
                   key="step-1"
@@ -907,16 +1100,46 @@ export default function Onboarding({ isPreview = false }) {
                   <div className="space-y-1.5">
                     <h1
                       id="onboard-step-1-heading"
-                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-balance text-slate-900 dark:text-white"
                     >
                       {t('patient.onboarding.step1Title')}
                     </h1>
-                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
+                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed text-pretty">
                       {t('patient.onboarding.step1Subtitle')}
                     </p>
                   </div>
 
                   <div className="space-y-4 pt-2">
+                    <div className="space-y-1.5">
+                      <label htmlFor="onboard-name" className={labelClass}>
+                        {t('patient.onboarding.preferredNameLabel')}
+                      </label>
+                      <input
+                        id="onboard-name"
+                        type="text"
+                        autoComplete="name"
+                        required={!isPreview}
+                        aria-required={!isPreview}
+                        aria-invalid={Boolean(errors.fullName)}
+                        aria-describedby={errors.fullName ? 'onboard-name-help onboard-name-error' : 'onboard-name-help'}
+                        value={fullName}
+                        onChange={(e) => {
+                          setFullName(e.target.value);
+                          clearError('fullName');
+                        }}
+                        placeholder={t('patient.onboarding.preferredNamePlaceholder')}
+                        className={inputClass}
+                      />
+                      <p id="onboard-name-help" className="text-sm text-tertiary dark:text-tertiary text-pretty">
+                        {t('patient.onboarding.preferredNameHelp')}
+                      </p>
+                      {errors.fullName && (
+                        <p id="onboard-name-error" className={errorClass}>
+                          {errors.fullName}
+                        </p>
+                      )}
+                    </div>
+
                     <div className="space-y-1.5">
                       <label htmlFor="onboard-phone" className={labelClass}>
                         {t('patient.onboarding.mobileLabel')}
@@ -943,7 +1166,7 @@ export default function Onboarding({ isPreview = false }) {
                         placeholder={t('patient.onboarding.mobilePlaceholder')}
                         className={inputClass}
                       />
-                      <p id="onboard-phone-help" className="text-sm text-tertiary dark:text-tertiary">
+                      <p id="onboard-phone-help" className="text-sm text-tertiary dark:text-tertiary text-pretty">
                         {t('patient.onboarding.mobileHelp')}
                       </p>
                       {errors.phone && (
@@ -956,9 +1179,12 @@ export default function Onboarding({ isPreview = false }) {
                     <div className="border-t border-surface-border" />
 
                     <fieldset className="space-y-4">
-                      <legend className="text-xs font-semibold uppercase tracking-wider text-tertiary">
+                      <legend className="text-[max(0.75rem,12px)] font-semibold uppercase tracking-wider text-tertiary">
                         {t('patient.onboarding.emergencyLegend')}
                       </legend>
+                      <p className="text-sm text-tertiary dark:text-tertiary text-pretty">
+                        {t('patient.onboarding.emergencyHelp')}
+                      </p>
 
                       <div className="space-y-1.5">
                         <label htmlFor="onboard-emergency-name" className={labelClass}>
@@ -967,7 +1193,7 @@ export default function Onboarding({ isPreview = false }) {
                         <input
                           id="onboard-emergency-name"
                           type="text"
-                          autoComplete="name"
+                          autoComplete="off"
                           required
                           aria-required="true"
                           aria-invalid={Boolean(errors.emergencyContactName)}
@@ -1025,11 +1251,10 @@ export default function Onboarding({ isPreview = false }) {
                       </div>
                     </fieldset>
                   </div>
-
                 </motion.div>
               )}
 
-              {/* STEP 2: PIN LOCATION ON MAP */}
+              {/* STEP 2: FULL-BLEED MAP BACKGROUND WITH FLOATING SEARCH & CONFIRMATION */}
               {step === 2 && (
                 <motion.div
                   key="step-2"
@@ -1039,61 +1264,126 @@ export default function Onboarding({ isPreview = false }) {
                   animate="center"
                   exit="exit"
                   onAnimationComplete={focusStepRegion}
-                  className="space-y-4"
+                  className="relative flex-1 flex flex-col justify-between min-h-0 w-full h-full"
                 >
-                  <div className="space-y-1.5">
-                    <h1
-                      id="onboard-step-2-heading"
-                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
-                    >
-                      {t('patient.onboarding.step2Title')}
-                    </h1>
-                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
-                      {t('patient.onboarding.step2Subtitle')}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3 pt-1">
-                    <AddressAutocomplete
-                      onSelect={handleAutocompleteSelect}
-                      initialQuery={baseAddress}
+                  <Suspense
+                    fallback={
+                      <div className="absolute inset-0 h-full w-full animate-pulse bg-surface-subtle" />
+                    }
+                  >
+                    <ModernLocationPicker
+                      ref={pickerRef}
+                      initial={coords}
+                      onPinChange={handlePinChange}
+                      basemap={step2Basemap}
+                      onBasemapChange={setStep2Basemap}
+                      hideBasemapControl
+                      fullBleed
+                      hudInsets={step2HudInsets}
+                      className="absolute inset-0 h-full w-full"
                     />
+                  </Suspense>
 
-                    <Suspense
-                      fallback={
-                        <div className="h-[16.25rem] sm:h-[18.75rem] w-full animate-pulse rounded-2xl bg-surface-subtle" />
-                      }
-                    >
-                      <ModernLocationPicker
-                        ref={pickerRef}
-                        initial={coords}
-                        onPinChange={handlePinChange}
-                        className="h-[16.25rem] sm:h-[18.75rem]"
-                      />
-                    </Suspense>
-
-                    <div className="flex items-start gap-2.5 pt-1">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-link" aria-hidden="true" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                          {baseAddress ||
-                            (coords ? t('patient.onboarding.pinPlaced') : t('patient.onboarding.moveMapPrompt'))}
-                        </p>
-                        {coords && pinStatus !== 'resolved' && (
-                          <p className="mt-0.5 text-xs text-tertiary">
-                            {pinStatus === 'pending'
-                              ? t('patient.onboarding.pinLookupPending')
-                              : t('patient.onboarding.pinLookupUnavailable')}
+                  {/* Top Floating Search + Satellite Row */}
+                  <div
+                    ref={setStep2TopEl}
+                    className="relative z-20 px-4 pt-3 sm:px-6 sm:pt-4 pointer-events-none"
+                  >
+                    <div className="mx-auto w-full max-w-xl pointer-events-auto space-y-2">
+                      {loadError && (
+                        <div
+                          role="alert"
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-warning/30 bg-warning-soft/95 backdrop-blur-md px-4 py-2.5 shadow-softer dark:border-warning-dark/30 dark:bg-warning-darkSoft/95"
+                        >
+                          <p className="text-sm font-medium text-warning dark:text-warning-dark">
+                            {t('patient.onboarding.loadErrorBanner')}
                           </p>
-                        )}
+                          <button
+                            type="button"
+                            onClick={() => setReloadToken((token) => token + 1)}
+                            className={`${smallActionClass} shrink-0 text-warning dark:text-warning-dark`}
+                          >
+                            {t('patient.common.tryAgain')}
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                          <label htmlFor="onboard-address-search" className="sr-only">
+                            {t('tracking.address.searchLabel')}
+                          </label>
+                          <AddressAutocomplete
+                            id="onboard-address-search"
+                            onSelect={handleAutocompleteSelect}
+                            inputWrapperClassName="bg-surface-shell/95 backdrop-blur-md shadow-softer border-surface-border"
+                          />
+                        </div>
+                        <BasemapControl
+                          value={step2Basemap}
+                          onChange={setStep2Basemap}
+                          variant="toggle"
+                          className="min-h-[48px] shadow-softer shrink-0"
+                        />
                       </div>
                     </div>
+                  </div>
 
-                    {errors.coords && (
-                      <p id="onboard-location-error" className={errorClass}>
-                        {errors.coords}
-                      </p>
-                    )}
+                  {/* Bottom Flush-Anchored Sheet: Title, Pinned Address & Primary CTA */}
+                  <div
+                    ref={setStep2BottomEl}
+                    className="onboarding-map-bottom-dock mt-auto relative z-20 w-full border-t border-surface-border bg-surface-shell/95 backdrop-blur-md shadow-softer px-4 pt-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-8 sm:pt-4 sm:pb-5"
+                  >
+                    <div className="mx-auto w-full max-w-xl space-y-3">
+                      <div className="space-y-0.5">
+                        <h1
+                          id="onboard-step-2-heading"
+                          className="font-display text-lg sm:text-xl font-bold tracking-tight text-balance text-slate-900 dark:text-white"
+                        >
+                          {t('patient.onboarding.step2Title')}
+                        </h1>
+                        <p className="text-[max(0.75rem,12px)] sm:text-sm text-tertiary dark:text-tertiary leading-snug text-pretty">
+                          {t('patient.onboarding.step2Subtitle')}
+                        </p>
+                      </div>
+
+                      <div className="border-t border-surface-border/75 pt-2.5 flex items-start gap-2.5">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-link" aria-hidden="true" />
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 break-words leading-snug">
+                            {baseAddress ||
+                              (coords ? t('patient.onboarding.pinPlaced') : t('patient.onboarding.moveMapPrompt'))}
+                          </p>
+                          {coords && pinStatus !== 'resolved' ? (
+                            <p className="text-[max(0.75rem,12px)] text-tertiary">
+                              {pinStatus === 'pending'
+                                ? t('patient.onboarding.pinLookupPending')
+                                : t('patient.onboarding.pinLookupUnavailable')}
+                            </p>
+                          ) : (
+                            <p className="text-[max(0.75rem,12px)] text-tertiary text-pretty">
+                              {t('patient.onboarding.mapKeyboardHint')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {errors.coords && (
+                        <p id="onboard-location-error" className={errorClass}>
+                          {errors.coords}
+                        </p>
+                      )}
+
+                      <Button
+                        type="submit"
+                        size="lg"
+                        disabled={isContinueDisabled}
+                        className="neu-btn-primary min-h-[48px] w-full font-bold gap-2 shadow-sm cursor-pointer"
+                      >
+                        <span>{t('patient.onboarding.continueBtn')}</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -1113,11 +1403,11 @@ export default function Onboarding({ isPreview = false }) {
                   <div className="space-y-1.5">
                     <h1
                       id="onboard-step-3-heading"
-                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-balance text-slate-900 dark:text-white"
                     >
                       {t('patient.onboarding.step3Title')}
                     </h1>
-                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
+                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed text-pretty">
                       {t('patient.onboarding.step3Subtitle')}
                     </p>
                   </div>
@@ -1125,14 +1415,19 @@ export default function Onboarding({ isPreview = false }) {
                   <div className="space-y-4 pt-1">
                     <div className="flex items-center justify-between gap-3 border-b border-surface-border pb-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-tertiary">{t('patient.onboarding.pinnedLocationLabel')}</p>
+                        <p className="text-[max(0.75rem,12px)] font-semibold text-tertiary">
+                          {t('patient.onboarding.pinnedLocationLabel')}
+                        </p>
                         <p className="mt-0.5 truncate text-sm font-medium text-slate-800 dark:text-slate-200">
                           {baseAddress || t('patient.onboarding.locationPinnedDefault')}
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => goToStep(2)}
+                        onClick={() => {
+                          if (returnToReview) setPinEditedFromStep3(true);
+                          goToStep(2);
+                        }}
                         className={`${smallActionClass} -mr-2 shrink-0`}
                       >
                         {t('patient.onboarding.adjustPinBtn')}
@@ -1211,32 +1506,66 @@ export default function Onboarding({ isPreview = false }) {
 
                     <div className="border-t border-surface-border" />
 
-                    <fieldset className="space-y-2">
-                      <legend className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    <fieldset className="space-y-3">
+                      <legend className="text-[max(0.75rem,12px)] font-semibold text-slate-700 dark:text-slate-300">
                         {t('patient.onboarding.accessNeedsLegend')}
                         <span className="ml-1.5 font-normal text-tertiary">
                           {t('patient.onboarding.accessNeedsOptional')}
                         </span>
                       </legend>
-                      <div className="flex flex-wrap gap-2">
-                        {ACCESS_NEEDS.map((option) => {
-                          const selected = accessNeeds.includes(option.value);
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              aria-pressed={selected}
-                              onClick={() => setAccessNeeds((current) => toggleAccessNeed(current, option.value))}
-                              className={`inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold transition-colors cursor-pointer ${
-                                selected
-                                  ? 'bg-primary text-white shadow-sm'
-                                  : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
-                              }`}
-                            >
-                              {t(`patient.accessNeeds.${option.value}`)}
-                            </button>
-                          );
-                        })}
+
+                      <div className="space-y-3">
+                        <div className="space-y-1.5">
+                          <p className="text-[max(0.75rem,12px)] font-medium text-tertiary">
+                            {t('patient.onboarding.accessGroupMobility')}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {mobilityAccessOptions.map((option) => {
+                              const selected = accessNeeds.includes(option.value);
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  onClick={() => setAccessNeeds((current) => toggleAccessNeed(current, option.value))}
+                                  className={`inline-flex min-h-[44px] items-center rounded-full px-4 text-sm font-semibold transition-colors cursor-pointer ${
+                                    selected
+                                      ? 'bg-primary text-on-primary dark:bg-primary-400 dark:text-neu-fg shadow-sm'
+                                      : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
+                                  }`}
+                                >
+                                  {t(`patient.accessNeeds.${option.value}`)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <p className="text-[max(0.75rem,12px)] font-medium text-tertiary">
+                            {t('patient.onboarding.accessGroupCommunication')}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {careAccessOptions.map((option) => {
+                              const selected = accessNeeds.includes(option.value);
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  aria-pressed={selected}
+                                  onClick={() => setAccessNeeds((current) => toggleAccessNeed(current, option.value))}
+                                  className={`inline-flex min-h-[44px] items-center rounded-full px-4 text-sm font-semibold transition-colors cursor-pointer ${
+                                    selected
+                                      ? 'bg-primary text-on-primary dark:bg-primary-400 dark:text-neu-fg shadow-sm'
+                                      : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
+                                  }`}
+                                >
+                                  {t(`patient.accessNeeds.${option.value}`)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
                     </fieldset>
                   </div>
@@ -1256,21 +1585,21 @@ export default function Onboarding({ isPreview = false }) {
                   className="space-y-6"
                 >
                   <div className="space-y-1.5">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-link">
-                      {t('patient.onboarding.step4OptionalTag')}
-                    </p>
                     <h1
                       id="onboard-step-4-heading"
-                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-balance text-slate-900 dark:text-white"
                     >
-                      {t('patient.onboarding.step4Title')}
+                      {t('patient.onboarding.step4Title')}{' '}
+                      <span className="text-lg sm:text-xl font-medium text-tertiary">
+                        ({t('patient.onboarding.step4OptionalTag')})
+                      </span>
                     </h1>
-                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
+                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed text-pretty">
                       {t('patient.onboarding.step4Subtitle')}
                     </p>
                   </div>
 
-                  <div className="space-y-4 pt-2">
+                  <div className="space-y-5 pt-2">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       <div className="space-y-1.5">
                         <label htmlFor="onboard-dob" className={labelClass}>
@@ -1313,7 +1642,7 @@ export default function Onboarding({ isPreview = false }) {
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <label htmlFor="onboard-allergies" className={labelClass}>
                         {t('patient.onboarding.allergiesLabel')}
                       </label>
@@ -1328,9 +1657,42 @@ export default function Onboarding({ isPreview = false }) {
                         placeholder={t('patient.onboarding.allergiesPlaceholder')}
                         className={inputClass}
                       />
+                      <div className="space-y-1.5">
+                        <p className="text-[max(0.75rem,12px)] text-tertiary">
+                          {t('patient.onboarding.quickAllergiesHint')}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {ALLERGY_CHIPS.map((chip) => {
+                            const selected = hasCommaItem(allergies, chip.value);
+                            return (
+                              <button
+                                key={chip.value}
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() => {
+                                  setAllergies((prev) =>
+                                    toggleCommaChip(prev, chip.value, {
+                                      exclusive: chip.exclusive,
+                                      exclusiveValues: ['No known allergies'],
+                                    })
+                                  );
+                                  clearError('consent');
+                                }}
+                                className={`inline-flex min-h-[44px] items-center rounded-full px-3.5 text-[max(0.75rem,12px)] font-semibold transition-colors cursor-pointer ${
+                                  selected
+                                    ? 'bg-primary text-on-primary dark:bg-primary-400 dark:text-neu-fg shadow-sm'
+                                    : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
+                                }`}
+                              >
+                                {t(chip.labelKey)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <label htmlFor="onboard-conditions" className={labelClass}>
                         {t('patient.onboarding.conditionsLabel')}
                       </label>
@@ -1345,6 +1707,39 @@ export default function Onboarding({ isPreview = false }) {
                         placeholder={t('patient.onboarding.conditionsPlaceholder')}
                         className={inputClass}
                       />
+                      <div className="space-y-1.5">
+                        <p className="text-[max(0.75rem,12px)] text-tertiary">
+                          {t('patient.onboarding.quickConditionsHint')}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {CONDITION_CHIPS.map((chip) => {
+                            const selected = hasCommaItem(chronicConditions, chip.value);
+                            return (
+                              <button
+                                key={chip.value}
+                                type="button"
+                                aria-pressed={selected}
+                                onClick={() => {
+                                  setChronicConditions((prev) =>
+                                    toggleCommaChip(prev, chip.value, {
+                                      exclusive: chip.exclusive,
+                                      exclusiveValues: ['None'],
+                                    })
+                                  );
+                                  clearError('consent');
+                                }}
+                                className={`inline-flex min-h-[44px] items-center rounded-full px-3.5 text-[max(0.75rem,12px)] font-semibold transition-colors cursor-pointer ${
+                                  selected
+                                    ? 'bg-primary text-on-primary dark:bg-primary-400 dark:text-neu-fg shadow-sm'
+                                    : 'neu-flat-sm text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white'
+                                }`}
+                              >
+                                {t(chip.labelKey)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
@@ -1381,8 +1776,8 @@ export default function Onboarding({ isPreview = false }) {
                       />
                     </div>
 
-                    <div className="space-y-2.5 rounded-xl border border-surface-border bg-surface-subtle p-3.5">
-                      <label htmlFor="onboard-consent" className="flex items-start gap-3 cursor-pointer">
+                    <div className="space-y-2.5 rounded-xl border border-surface-border bg-surface-subtle p-4">
+                      <label htmlFor="onboard-consent" className="flex min-h-[44px] items-start gap-3 cursor-pointer">
                         <input
                           id="onboard-consent"
                           type="checkbox"
@@ -1392,13 +1787,24 @@ export default function Onboarding({ isPreview = false }) {
                             clearError('consent');
                           }}
                           aria-invalid={Boolean(errors.consent)}
-                          aria-describedby={errors.consent ? 'onboard-consent-error' : undefined}
-                          className="mt-0.5 h-5 w-5 shrink-0 rounded border-field accent-[var(--primary)]"
+                          aria-describedby={errors.consent ? 'onboard-consent-note onboard-consent-error' : 'onboard-consent-note'}
+                          className="mt-1 h-5 w-5 shrink-0 rounded border-field accent-[var(--primary)]"
                         />
                         <span className="text-sm font-medium leading-relaxed text-slate-700 dark:text-slate-300">
                           {t('patient.onboarding.consentCheckbox')}
                         </span>
                       </label>
+                      <p id="onboard-consent-note" className="pl-8 text-[max(0.75rem,12px)] text-tertiary leading-relaxed">
+                        {t('patient.onboarding.consentExpiringNote')}{' '}
+                        <Link
+                          to="/privacy"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-[44px] items-center font-semibold text-link hover:underline"
+                        >
+                          {t('patient.onboarding.consentPrivacyLink')}
+                        </Link>
+                      </p>
                       {errors.consent && (
                         <p id="onboard-consent-error" className={errorClass}>
                           {errors.consent}
@@ -1424,47 +1830,24 @@ export default function Onboarding({ isPreview = false }) {
                   <div className="space-y-1.5">
                     <h1
                       id="onboard-step-5-heading"
-                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white"
+                      className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-balance text-slate-900 dark:text-white"
                     >
                       {t('patient.onboarding.step5Title')}
                     </h1>
-                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed">
+                    <p className="text-sm text-tertiary dark:text-tertiary leading-relaxed text-pretty">
                       {t('patient.onboarding.step5Subtitle')}
                     </p>
                   </div>
 
-                  <div className="space-y-3 pt-1">
-                    <div className="space-y-1.5">
-                      <label htmlFor="onboard-name" className={labelClass}>
-                        {t('patient.onboarding.preferredNameLabel')}
-                      </label>
-                      <input
-                        id="onboard-name"
-                        type="text"
-                        autoComplete="name"
-                        required={!isPreview}
-                        aria-required={!isPreview}
-                        aria-invalid={Boolean(errors.fullName)}
-                        aria-describedby={errors.fullName ? 'onboard-name-error' : 'onboard-name-help'}
-                        value={fullName}
-                        onChange={(e) => {
-                          setFullName(e.target.value);
-                          clearError('fullName');
-                        }}
-                        placeholder={t('patient.onboarding.preferredNamePlaceholder')}
-                        className={inputClass}
-                      />
-                      <p id="onboard-name-help" className="text-sm text-tertiary dark:text-tertiary">
-                        {t('patient.onboarding.preferredNameHelp')}
-                      </p>
-                      {errors.fullName && (
-                        <p id="onboard-name-error" className={errorClass}>
-                          {errors.fullName}
-                        </p>
-                      )}
-                    </div>
-
+                  <div className="space-y-4 pt-1">
                     <div className="overflow-hidden rounded-2xl border border-surface-border divide-y divide-surface-border">
+                      <ReviewRow
+                        label={t('patient.onboarding.preferredNameLabel')}
+                        value={fullName.trim() || t('patient.onboarding.notAdded')}
+                        onEdit={() => editFromReview(1)}
+                        error={errors.fullName}
+                      />
+
                       <ReviewRow
                         label={t('patient.onboarding.reviewPhoneLabel')}
                         value={phone || t('patient.onboarding.notAdded')}
@@ -1486,15 +1869,15 @@ export default function Onboarding({ isPreview = false }) {
                         error={errors.street || errors.coords}
                       >
                         {coords && (
-                          <div className="mt-2 overflow-hidden rounded-xl border border-surface-border">
-                            <Suspense fallback={<div className="h-[10rem] w-full bg-surface-subtle" />}>
-                              <ModernLocationPicker
-                                readOnly
-                                initial={coords}
-                                className="h-[10rem]"
-                              />
-                            </Suspense>
-                          </div>
+                          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[max(0.75rem,12px)] font-medium text-tertiary tabular-nums">
+                            <MapPin className="w-3.5 h-3.5 text-link shrink-0" aria-hidden="true" />
+                            <span>
+                              {t('patient.onboarding.reviewPinCoords', {
+                                lat: coords.lat.toFixed(5),
+                                lng: coords.lng.toFixed(5),
+                              })}
+                            </span>
+                          </p>
                         )}
                       </ReviewRow>
 
@@ -1512,7 +1895,9 @@ export default function Onboarding({ isPreview = false }) {
 
                       <div className="px-4 py-3">
                         <div className="flex items-start justify-between gap-3">
-                          <p className="text-xs font-semibold text-tertiary">{t('patient.onboarding.reviewHealthLabel')}</p>
+                          <p className="text-[max(0.75rem,12px)] font-semibold text-tertiary">
+                            {t('patient.onboarding.reviewHealthLabel')}
+                          </p>
                           <button
                             type="button"
                             onClick={() => editFromReview(4)}
@@ -1567,6 +1952,25 @@ export default function Onboarding({ isPreview = false }) {
                       {errors.consent && <p className={`mt-1.5 ${errorClass}`}>{errors.consent}</p>}
                     </div>
 
+                    {saveError && (
+                      <div
+                        role="alert"
+                        className="rounded-xl border border-danger/30 bg-danger-soft px-4 py-3 dark:border-danger-dark/30 dark:bg-danger-darkSoft space-y-2"
+                      >
+                        <p className="text-sm font-semibold text-danger dark:text-danger-dark">
+                          {saveError}
+                        </p>
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => handleFinish(omitMedical)}
+                          className={`${smallActionClass} -ml-2.5 text-danger dark:text-danger-dark`}
+                        >
+                          {t('patient.onboarding.retrySaveBtn')}
+                        </button>
+                      </div>
+                    )}
+
                     {isPreview && (
                       <p className="text-sm text-tertiary dark:text-tertiary">
                         {t('patient.onboarding.previewNotice')}
@@ -1578,14 +1982,46 @@ export default function Onboarding({ isPreview = false }) {
             </AnimatePresence>
           </main>
 
-          {/* Pinned Bottom Action Bar */}
-          <footer className="onboarding-footer sticky bottom-0 z-20 w-full border-t border-surface-border bg-surface-page px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 sm:px-12 lg:px-14 xl:px-20">
+          {/* Pinned Bottom Action Bar (Steps 1, 3, 4, 5 — Step 2 has its CTA docked over the map) */}
+          {!isMapStep && (
+            <footer className="onboarding-footer sticky bottom-0 z-20 w-full border-t border-surface-border bg-surface-page px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-3 sm:px-12 lg:px-14 xl:px-20">
             <div className="mx-auto flex w-full max-w-xl flex-col gap-2">
-              <motion.button
+              {step === 4 && confirmSkipHealth && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-warning/30 bg-warning-soft px-3.5 py-2.5 dark:border-warning-dark/30 dark:bg-warning-darkSoft flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                >
+                  <p className="text-sm font-medium text-warning dark:text-warning-dark">
+                    {t('patient.onboarding.skipHealthConfirmNote')}
+                  </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setConfirmSkipHealth(false)}
+                      className="inline-flex min-h-[44px] items-center px-3 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 hover:underline cursor-pointer"
+                    >
+                      {t('patient.onboarding.keepHealthEditingBtn')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOmitMedical(true);
+                        setConfirmSkipHealth(false);
+                        goToStep(TOTAL_STEPS);
+                      }}
+                      className="inline-flex min-h-[44px] items-center px-3 rounded-xl text-sm font-bold text-warning dark:text-warning-dark hover:underline cursor-pointer"
+                    >
+                      {t('patient.onboarding.skipHealthConfirmBtn')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <Button
                 type="submit"
+                size="lg"
                 disabled={isContinueDisabled}
-                whileTap={!isContinueDisabled && !reduceMotion ? { scale: 0.99 } : {}}
-                className="neu-btn-primary flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-bold shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                className="neu-btn-primary min-h-[48px] w-full font-bold gap-2 shadow-sm cursor-pointer"
               >
                 {saving ? (
                   <>
@@ -1600,30 +2036,28 @@ export default function Onboarding({ isPreview = false }) {
                 ) : (
                   <span>{t('patient.onboarding.completeSetupBtn')}</span>
                 )}
-              </motion.button>
+              </Button>
 
-              {step === 4 && !returnToReview && (
+              {step === 4 && !returnToReview && !confirmSkipHealth && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setOmitMedical(true);
-                    goToStep(TOTAL_STEPS);
-                  }}
+                  onClick={handleSkipHealthClick}
                   disabled={saving}
-                  className="inline-flex min-h-11 w-full items-center justify-center text-sm font-semibold text-tertiary transition-colors hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center text-sm font-semibold text-tertiary transition-colors hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
                 >
                   {t('patient.onboarding.skipHealthBtn')}
                 </button>
               )}
             </div>
-          </footer>
+            </footer>
+          )}
         </form>
       </div>
 
       {/* HERO PANEL: MuntiCares Hero Section (left on desktop) */}
       <aside
         className="hidden lg:flex lg:order-1 relative overflow-hidden flex-col justify-between p-12 xl:p-16 border-r border-slate-200/60 dark:border-white/5 select-none"
-        aria-label="MuntiCares overview"
+        aria-label={t('patient.onboarding.heroOverviewAria')}
       >
         {/* Cinematic full-bleed backdrop with theme-aware wash matching Hero.jsx */}
         <div className="absolute inset-0 -z-20">
@@ -1641,8 +2075,8 @@ export default function Onboarding({ isPreview = false }) {
 
         {/* Top Brand Wordmark */}
         <div className="relative z-10 flex items-center gap-2.5">
-          <div className="neu-flat-sm p-2 rounded-xl">
-            <Heart weight="fill" className="w-5 h-5 text-link fill-primary" aria-hidden="true" />
+          <div className="neu-flat-sm p-1.5 rounded-xl">
+            <BrandLogo variant="glyph" className="w-6 h-6 text-link" decorative />
           </div>
           <span className="font-display text-xl font-black text-link tracking-tight">
             MuntiCares
@@ -1651,20 +2085,20 @@ export default function Onboarding({ isPreview = false }) {
 
         {/* Center Hero Typography */}
         <div className="relative z-10 my-auto max-w-lg space-y-6">
-          <h2 className="font-display text-4xl xl:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight leading-[1.12]">
+          <h2 className="font-display text-4xl xl:text-5xl font-semibold text-slate-900 dark:text-white tracking-tight leading-[1.12] text-balance">
             {t('patient.onboarding.heroHeadline1')}{' '}
             <br />
             {t('patient.onboarding.heroHeadline2')}{' '}
             <span className="text-primary dark:text-primary-400">{t('patient.onboarding.heroHeadlineAccent')}</span>
           </h2>
 
-          <p className="text-base xl:text-lg font-medium text-slate-700 dark:text-slate-200 leading-relaxed dark:drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)]">
+          <p className="text-base xl:text-lg font-medium text-slate-700 dark:text-slate-200 leading-relaxed text-pretty dark:drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)]">
             {t('patient.onboarding.heroSubtext')}
           </p>
         </div>
 
         {/* Bottom Subtle Caption */}
-        <div className="relative z-10 text-xs font-medium text-tertiary dark:text-tertiary">
+        <div className="relative z-10 text-[max(0.75rem,12px)] font-medium text-tertiary dark:text-tertiary">
           <span>{t('patient.onboarding.heroFooter')}</span>
         </div>
       </aside>

@@ -137,6 +137,7 @@ a,
   --txt-dark-secondary-rgb: 165 182 200; /* #A5B6C8 */
   --text-tertiary: #5A6B7F;
   --text-link: #2F6FB5;
+  --status-success: #2C7A55;
   --focus-ring: #2F6FB5;
   --field-border: #6F879E;
 
@@ -190,6 +191,7 @@ html.dark,
 html.dark[data-color-theme] {
   --text-tertiary: #A5B6C8;
   --text-link: rgb(var(--primary-light-rgb));
+  --status-success: #7DD3A3;
   --focus-ring: rgb(var(--primary-light-rgb));
   --field-border: #5B7189;
   --surface-page: var(--surface-dark-page-rgb);
@@ -646,6 +648,10 @@ html.dark[data-color-theme='monochrome-ink'] {
 /* Reserve space for the fixed cookie banner so the onboarding CTA stays reachable */
 html[data-cookie-banner='visible'] .onboarding-footer {
   padding-bottom: calc(var(--cookie-banner-height, 96px) + 2rem);
+}
+
+html[data-cookie-banner='visible'] .onboarding-map-bottom-dock {
+  padding-bottom: calc(var(--cookie-banner-height, 96px) + 0.75rem);
 }
 
 
@@ -1991,7 +1997,7 @@ select:focus {
 /* ---------- Option 1 Global Map HUD (Yandex / Grab Split Dock) ---------- */
 .mc-basemap-dock {
   position: absolute;
-  z-index: 1000;
+  z-index: 20;
   pointer-events: auto;
 }
 
@@ -2010,6 +2016,56 @@ select:focus {
 .mc-basemap-dock--below-hud {
   top: calc(max(0.75rem, env(safe-area-inset-top)) + 3rem);
   right: 0.75rem;
+}
+
+.mc-basemap-toggle-btn {
+  min-height: 44px;
+  padding: 0 0.875rem;
+  border-radius: 0.75rem;
+  background: rgb(var(--surface-shell) / 0.95);
+  color: rgb(var(--ink-rgb));
+  border: 1px solid rgb(var(--surface-border));
+  box-shadow: 0 4px 12px rgb(var(--ink-rgb) / 0.14), 0 1px 3px rgb(var(--ink-rgb) / 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  font-size: max(0.75rem, 12px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.mc-basemap-toggle-btn:hover {
+  background: rgb(var(--surface-card-rgb));
+  color: var(--text-link);
+}
+
+.mc-basemap-toggle-btn:active {
+  transform: scale(0.96);
+}
+
+.dark .mc-basemap-toggle-btn {
+  background: rgb(var(--surface-dark-card-rgb) / 0.92);
+  color: rgb(var(--txt-dark-primary-rgb));
+  border-color: rgb(var(--surface-border));
+  box-shadow: 0 4px 12px rgba(2, 6, 23, 0.5);
+}
+
+.mc-basemap-toggle-btn.is-active {
+  background: rgb(var(--primary-rgb));
+  color: rgb(var(--on-primary-rgb));
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 4px 12px rgb(var(--ink-rgb) / 0.2), 0 1px 3px rgb(var(--ink-rgb) / 0.12);
+}
+
+.dark .mc-basemap-toggle-btn.is-active {
+  background: rgb(var(--primary-light-rgb));
+  color: rgb(var(--neu-dark-primary-fg-rgb));
 }
 
 .mc-basemap-segmented {
@@ -2032,13 +2088,14 @@ select:focus {
 }
 
 .mc-basemap-segmented__btn {
-  padding: 0.3125rem 0.625rem;
+  min-height: 44px;
+  padding: 0 0.75rem;
   border: 0;
   border-radius: 0.5625rem;
   background: transparent;
   color: rgb(var(--txt-secondary-rgb));
-  font-size: 0.6875rem;
-  line-height: 0.875rem;
+  font-size: max(0.75rem, 12px);
+  line-height: 1rem;
   font-weight: 800;
   letter-spacing: -0.01em;
   cursor: pointer;
@@ -2062,7 +2119,7 @@ select:focus {
 .mc-basemap-segmented__btn.is-active {
   background: rgb(var(--primary-rgb));
   color: rgb(var(--on-primary-rgb));
-  box-shadow: 0 2px 8px rgb(var(--primary-rgb) / 0.38);
+  box-shadow: 0 2px 6px rgb(var(--ink-rgb) / 0.18);
 }
 
 .dark .mc-basemap-segmented__btn.is-active {
@@ -2070,11 +2127,19 @@ select:focus {
   color: rgb(var(--neu-dark-primary-fg-rgb));
 }
 
-/* Split Right Dock: Standalone Primary GPS Action + Tactile Zoom Pod */
+/* Split Right Dock & Bottom-Left GPS Dock */
+.mc-gps-dock--bottom-left {
+  position: absolute;
+  left: 0.625rem;
+  bottom: 2.5rem;
+  z-index: 20;
+  pointer-events: auto;
+}
+
 .mc-split-controls {
   position: absolute;
   right: 0.625rem;
-  z-index: 1000;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -2093,23 +2158,24 @@ select:focus {
 }
 
 .mc-split-controls--top {
-  top: calc(max(0.75rem, env(safe-area-inset-top)) + 5.5rem);
+  top: calc(max(0.75rem, env(safe-area-inset-top)) + 6.25rem);
   right: 0.75rem;
 }
 
 .mc-gps-pill-btn {
-  height: 2.375rem;
-  padding: 0 0.75rem;
+  min-height: 44px;
+  height: max(2.75rem, 44px);
+  padding: 0 0.875rem;
   border-radius: 0.75rem;
   background: rgb(var(--primary-rgb));
   color: rgb(var(--on-primary-rgb));
-  border: 1px solid rgba(255, 255, 255, 0.32);
-  box-shadow: 0 6px 16px rgb(var(--primary-rgb) / 0.42), 0 2px 4px rgb(var(--ink-rgb) / 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 4px 12px rgb(var(--ink-rgb) / 0.22), 0 1px 3px rgb(var(--ink-rgb) / 0.14);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  font-size: 0.75rem;
+  font-size: max(0.75rem, 12px);
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -2156,8 +2222,8 @@ select:focus {
 }
 
 .mc-zoom-pod__btn {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: max(2.75rem, 44px);
+  height: max(2.75rem, 44px);
   border: 0;
   border-radius: 0.5rem;
   background: rgb(var(--surface-card-rgb) / 0.88);
@@ -2893,6 +2959,22 @@ select:focus {
   height: 100%;
 }
 
+/* Full-bleed map stage: push MapLibre HUD controls and attribution into the clear window */
+.mc-map-fullbleed .mc-basemap-dock--top-right {
+  top: calc(var(--mc-hud-top, 0px) + 0.75rem);
+  right: 0.75rem;
+}
+
+.mc-map-fullbleed .mc-split-controls--bottom {
+  bottom: calc(var(--mc-hud-bottom, 0px) + 0.75rem);
+  right: 0.75rem;
+}
+
+.mc-map-fullbleed .maplibregl-ctrl-bottom-left {
+  bottom: calc(var(--mc-hud-bottom, 0px) + 0.5rem);
+  left: 0.5rem;
+}
+
 /* Muted basemap so the route, destination and provider marker dominate. */
 .mc-map-tiles.mc-muted-tiles {
   filter: var(--mc-tiles-muted-filter);
@@ -3248,4 +3330,24 @@ html.dark .mc-bottom-nav {
   line-height: 1.1;
   font-weight: 800;
   color: var(--active);
+}
+
+@keyframes mc-brand-success-stroke {
+  0%, 28% { stroke: var(--text-link); }
+  72%, 100% { stroke: var(--status-success); }
+}
+
+@keyframes mc-brand-success-stroke-loop {
+  0%, 22%, 92%, 100% { stroke: var(--text-link); }
+  34%, 80% { stroke: var(--status-success); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mc-brand-success-stroke {
+    animation: mc-brand-success-stroke 0.85s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  .mc-brand-success-stroke-loop {
+    animation: mc-brand-success-stroke-loop 4.4s linear infinite;
+  }
 }

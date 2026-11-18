@@ -32,42 +32,33 @@ Priority screens: `Find a Provider` grid, Provider Details sheet, Provider Profi
 
 ## 2. Color
 
-### 2.1 Core palette (shipped values)
+### 2.1 Core palette & 9-theme system (`mc_color_theme` + `mc_theme`)
 
-| Role | Token | Light | Dark | Use |
+Tokens live as RGB triplets (`--primary-rgb`, `--primary-light-rgb`, `--on-primary-rgb`, `--neu-dark-primary-fg-rgb`, `--surface-*`, `--ink-rgb`, `--accent-rgb`) in `src/index.css` scoped by `html[data-color-theme="<id>"]` + `html.dark`, and are consumed via `tailwind.config.js`. Users can select any of **9 global palettes** in Settings (persisted to `mc_color_theme` and restored before first paint in `index.html`):
+
+| Theme ID | Light Primary / Link | Dark Primary Highlight / Ink | Page Canvas (Light / Dark) | Discovery Accent |
 |---|---|---|---|---|
-| Primary | `primary` | `#2F6FB5` | `#8CBDF0` (`primary-400`) | Primary actions, active states, links |
-| Primary hover | `primary-700` | `#255A94` | — | Hover for filled primary |
-| Primary wash | `primary-soft` | `#DDEBF8` | `primary-800 #183049` | Selected rows, soft badges |
-| Discovery accent | `accent` | `#C4623F` | `#F2A98E` | At most one element per view |
-| Ink | `ink` | `#17283B` | — | Covers, dark text alternative |
-| Page canvas | `surface-page` | `#F4F8FC` | `#0E1620` | App body |
-| Shell | `surface-shell` | `#EBF1F8` | `#172236` | Sheets, dropdowns, chat overlays |
-| Subtle fill | `surface-subtle` | `#E9F1F9` | `#1F2D3E` | Insets, secondary chips |
-| Border | `surface-border` | `#D2E0EE` | `#2D3F54` | 1px structural lines |
-| Card | `surface` | `#FFFFFF` | `#16212E` (`neu-flat`) | Raised cards |
-| Text primary | `txt-primary` / `ink` | `#17283B` | `#E6EEF6` | Headings, body |
-| Text secondary | `txt-secondary` | `#52657A` | `#A5B6C8` | Descriptions |
-| Text tertiary | `tertiary` | `#5A6B7F` | `#A5B6C8` | Timestamps, field labels, table heads |
-| Success | `success` | `#2C7A55` | `#7DD3A3` | Approved, completed, active |
-| Warning | `warning` | `#9C5A06` | `#F1BD6B` | Pending, developing |
-| Danger | `danger` | `#BC3030` | `#F4918B` | Errors, rejected, destructive |
-| Chart series | `chart-1..5` | see `index.css` | same | Data viz only |
+| `trust-blue` *(Default)* | `#2F6FB5` | `#8CBDF0` / `#08182A` | `#F4F8FC` / `#0E1620` | `#C4623F` / `#F2A98E` |
+| `botanical-sage` | `#1E6B60` | `#72CFC0` / `#07221E` | `#F3F8F6` / `#0D1917` | `#B85D3B` / `#F0A388` |
+| `warm-hearth` | `#9E472A` | `#F0A184` / `#26110A` | `#FAF6F1` / `#1A1412` | `#236B78` / `#79C9D6` |
+| `harbor-dusk` | `#4C56A1` | `#A9B2F5` / `#101329` | `#F5F6FB` / `#101322` | `#B95D48` / `#F1A491` |
+| `laguna-coastal` | `#0E6884` | `#6ED0EB` / `#071F26` | `#F2F8FA` / `#0B171D` | `#B0621B` / `#F2B872` |
+| `sampaguita-moss` | `#456728` | `#A3CF7B` / `#111E07` | `#F6F8F2` / `#12170E` | `#B65C3A` / `#F0A388` |
+| `narra-amber` | `#8A5316` | `#EEB86D` / `#241607` | `#FBF8F3` / `#19140E` | `#236E63` / `#75D0C1` |
+| `alabang-rosewood` | `#943B57` | `#ED9BB3` / `#280F18` | `#FAF5F7` / `#1A1115` | `#2F6FB5` / `#8CBDF0` |
+| `monochrome-ink` | `#2C3646` | `#CBD5E1` / `#0F172A` | `#F6F7F9` / `#111317` | `#B85A34` / `#F0A184` |
 
-Dark-mode surfaces are theme-aware CSS variables: use `bg-surface-page`, `bg-surface-shell`,
-`bg-surface-subtle`, `border-surface-border`, `text-tertiary`. Do not pair a light hex with a
-`dark:` hex for these roles.
+Semantic role tokens (`surface-page`, `surface-shell`, `surface-subtle`, `surface-border`, `text-link`, `text-tertiary`, `primary`, `on-primary`, `neu-fg`) resolve automatically from active theme variables. Clinical status colors remain globally fixed for patient safety (`success` `#2C7A55`/`#7DD3A3`, `warning` `#9C5A06`/`#F1BD6B`, `danger` `#BC3030`/`#F4918B`), and chart series use `var(--chart-1..5)`.
+
+Do not hardcode brand or dark-surface hexes in JSX (`#1E6FBF`, `#2F6FB5`, `#8CBDF0`, `#08182A`, `#17283B`, `#0E1724`) or pair a light surface class with an inline `dark:` hex override; always use semantic tokens.
 
 ### 2.2 Accent rules
 
-- Trust Blue is the only primary action color.
-- Coral (`accent`) may appear on **at most one element per view** and never as a second
-  equal-weight CTA beside a blue primary. It is a discovery affordance, not a status color.
+- The active theme's `primary` is the sole primary action color in any given theme.
+- Each theme's `accent` may appear on **at most one element per view** and never as a second equal-weight CTA beside `primary`. It is a discovery affordance, not a status color.
 - Semantic status uses `success` / `warning` / `danger` only.
-- Purple/violet/indigo and any third accent are banned. Chart series are the only sanctioned
-  multi-hue set.
-- Never pure black `#000000`. Use `ink` (`#17283B`). `floodColor` in SVG filters uses `ink` or
-  a `chart-*` token.
+- Unlisted arbitrary accents are banned; data visualizations use `chart-1..5`.
+- Never pure black `#000000`. Use theme `ink` (`rgb(var(--ink-rgb))`). `floodColor` in SVG filters uses `ink` or a `chart-*` token.
 
 ### 2.3 Contrast
 

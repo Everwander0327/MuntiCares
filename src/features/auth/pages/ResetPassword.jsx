@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { buildAuthRedirect } from '@/lib/authRedirect';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { FormInput } from '@/shared/ui';
+import { FormInput, BrandLoader, BrandSuccess } from '@/shared/ui';
 
 const requestSchema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -89,7 +89,11 @@ const ResetPassword = () => {
   };
 
   if (!authInitialized) {
-    return <div className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full" />;
+    return (
+      <div className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full bg-secondary dark:bg-slate-950 flex items-center justify-center p-6">
+        <BrandLoader size={56} label="Preparing password reset" />
+      </div>
+    );
   }
 
   return (
@@ -139,6 +143,7 @@ const ResetPassword = () => {
 
         {!user && sent && (
           <div className="space-y-4 text-center">
+            <BrandSuccess size={64} className="mx-auto" label="Reset link sent" />
             <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               If an account exists for that address, a reset link is on its way. Check your inbox (and spam folder).
             </p>

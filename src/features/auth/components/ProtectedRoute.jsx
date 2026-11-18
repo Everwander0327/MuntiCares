@@ -1,16 +1,15 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { BrandLoader } from '@/shared/ui';
 
 const ProtectedRoute = ({ allowedRole }) => {
   const { user, authInitialized } = useAuth();
   const location = useLocation();
 
   const spinner = (
-    <div className="min-h-[100dvh] flex items-center justify-center">
-      <div className="flex items-center gap-3">
-        <div className="w-6 h-6 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-        <div className="text-slate-600">Loading...</div>
-      </div>
+    <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 bg-surface-page px-4">
+      <BrandLoader size={64} label="Loading your MuntiCares portal" />
+      <p className="text-sm font-medium text-tertiary">Loading...</p>
     </div>
   );
 

@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster, useToasterStore, toast } from 'react-hot-toast';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
 import { NeumorphicToast, ErrorBoundary, CookieConsent } from '@/shared/feedback';
 import { unlockAudio } from '@/lib/audio';
 
@@ -38,6 +38,7 @@ const PatientMessages = lazy(() => import('@/features/patient/pages/Messages'));
 const ProviderProfileView = lazy(() => import('@/features/patient/pages/ProviderProfileView'));
 
 const ProviderDashboard = lazy(() => import('@/features/provider/pages/Dashboard'));
+const ProviderOnboarding = lazy(() => import('@/features/provider/pages/Onboarding'));
 const ProviderRequests = lazy(() => import('@/features/provider/pages/Requests'));
 const ProviderPatients = lazy(() => import('@/features/provider/pages/Patients'));
 const ProviderSchedule = lazy(() => import('@/features/provider/pages/Schedule'));
@@ -89,13 +90,15 @@ function AppContent() {
   }, [toasts]);
 
   return (
-    <CallProvider>
+    <MotionConfig reducedMotion="user">
+      <CallProvider>
       <IncomingCallOverlay />
       <SeoManager />
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname.split('/')[1] || 'public'}>
           {/* Standalone Onboarding Route (No Landing Navbar/Footer) */}
           <Route path="/onboarding" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><PatientOnboarding isPreview={true} /></Suspense></ErrorBoundary>} />
+          <Route path="/onboarding/provider" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderOnboarding isPreview={true} /></Suspense></ErrorBoundary>} />
 
           {/* Public Routes */}
           <Route path="/" element={<MainLayout />}>
@@ -124,6 +127,7 @@ function AppContent() {
           </Route>
 
           <Route path="/provider" element={<ProtectedRoute allowedRole="provider" />}>
+            <Route path="onboarding" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderOnboarding /></Suspense></ErrorBoundary>} />
             <Route element={<DashboardLayout role="provider" />}>
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<ErrorBoundary><Suspense fallback={<SkeletonPage />}><ProviderDashboard /></Suspense></ErrorBoundary>} />
@@ -170,7 +174,8 @@ function AppContent() {
       >
         {(t) => <NeumorphicToast t={t} />}
       </Toaster>
-    </CallProvider>
+      </CallProvider>
+    </MotionConfig>
   );
 }
 

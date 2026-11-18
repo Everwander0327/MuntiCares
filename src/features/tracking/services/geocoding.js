@@ -38,7 +38,7 @@ export async function geocodeAddress(address) {
         countrycodes: 'ph',
         viewbox: VIEWBOX,
         bounded: bounded ? '1' : '0',
-        email: 'support@municares.app',
+        email: 'support@munticares.app',
       });
       const res = await fetch(`${NOMINATIM}/search?${params}`, {
         headers: { 'Accept-Language': 'en' },
@@ -69,7 +69,7 @@ export async function geocodeAddress(address) {
 export async function reverseGeocode(lat, lng) {
   try {
     await throttle();
-    const params = new URLSearchParams({ lat, lon: lng, format: 'jsonv2', email: 'support@municares.app' });
+    const params = new URLSearchParams({ lat, lon: lng, format: 'jsonv2', email: 'support@munticares.app' });
     const res = await fetch(`${NOMINATIM}/reverse?${params}`, { signal: timeoutSignal() });
     if (!res.ok) return null;
     const data = await res.json();
