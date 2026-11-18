@@ -221,19 +221,19 @@ enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "60s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+otp_expiry = 600
 
 [auth.email.template.confirmation]
-subject = "Confirm your MuntiCares account"
+subject = "Your MuntiCares verification code"
 content_path = "./supabase/templates/confirmation.html"
 
-[auth.email.template.recovery]
-subject = "Reset your MuntiCares password"
-content_path = "./supabase/templates/recovery.html"
+[auth.email.template.magic_link]
+subject = "Your MuntiCares verification code"
+content_path = "./supabase/templates/magic_link.html"
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]
@@ -417,3 +417,6 @@ enabled = true
 
 [functions.web-push]
 verify_jwt = false # Function validates user JWTs and a separate dispatch credential itself.
+
+[functions.account-setup]
+verify_jwt = false # Handler validates the user JWT with Supabase Auth.

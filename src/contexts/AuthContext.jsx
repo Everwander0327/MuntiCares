@@ -55,7 +55,8 @@ export const AuthProvider = ({ children }) => {
       // Role comes from the database only. auth.users.user_metadata is writable by
       // the account owner through supabase.auth.updateUser(), so trusting it lets
       // anyone grant themselves provider or admin UI.
-      return buildAuthUser(authUser, profile);
+      const { data: setupReady, error: setupError } = await supabase.rpc('account_setup_ready');
+      return { ...buildAuthUser(authUser, profile), setup_pending: Boolean(setupError) || setupReady !== true };
     } catch (e) {
       console.warn('[auth] Exception fetching profile:', e);
       return buildAuthUser(authUser, null, true);
@@ -217,6 +218,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    const { data: { user: current }, error } = await supabase.auth.getUser();
+    if (error || !current) throw new Error('Please sign in again.');
+    const profile = await fetchUserProfile(current);
+    if (sessionRef.current?.user?.id === current.id) setUser(profile);
+    return profile;
+  }, [fetchUserProfile]);
+
   const updateUser = useCallback((updates) => {
     setUser(prev => {
       if (!prev) return prev;
@@ -229,7 +238,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, setPassword, logout, updateUser, authInitialized }}>
+    <AuthContext.Provider value={{ user, login, register, setPassword, logout, updateUser, refreshUser, authInitialized }}>
       {children}
     </AuthContext.Provider>
   );

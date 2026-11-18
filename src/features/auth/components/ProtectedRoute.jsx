@@ -34,6 +34,8 @@ const ProtectedRoute = ({ allowedRole }) => {
     return <Navigate to="/login" state={{ error: 'Your account has been suspended. Please contact support.' }} replace />;
   }
 
+  if (user.setup_pending) return <Navigate to="/login" replace />;
+
   // Support allowedRole as string or array
   const allowed = Array.isArray(allowedRole) ? allowedRole : [allowedRole];
   if (allowed[0] && !allowed.includes(user.role)) {

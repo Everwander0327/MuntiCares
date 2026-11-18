@@ -1,3 +1,4 @@
+import AccountSetup from '../components/AccountSetup';
 import GoogleSignIn from '../components/GoogleSignIn';
 import { googleCallbackError } from '@/lib/googleAuth';
 import { useState, useEffect, useRef } from 'react';
@@ -81,6 +82,7 @@ const AuthPage = () => {
   const roleParam = searchParams.get('role');
 
   const { user, login, register, setPassword } = useAuth();
+  const [signupEmail, setSignupEmail] = useState(null);
   const [mode, setMode] = useState(location.pathname === '/register' ? 'register' : 'login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -121,7 +123,7 @@ const AuthPage = () => {
   }, [location.pathname, location.search]);
 
   useEffect(() => {
-    if (user?.role && !isSubmittingLoginRef.current && !postLoginDest) {
+    if (user?.role && !user.setup_pending && !isSubmittingLoginRef.current && !postLoginDest) {
       navigate(resolveAuthDestination(user.role, redirectTarget), {
         replace: Boolean(redirectTarget),
       });
@@ -183,12 +185,14 @@ const AuthPage = () => {
         toast('First-time login: please set your password.');
         return;
       }
+      if (res?.setup_pending) { isSubmittingLoginRef.current = false; return; }
       toast.success('Signed in successfully!');
       const destRole = res?.role || res?.user?.role || role;
       setPostLoginDest(resolveAuthDestination(destRole, redirectTarget));
     } catch (err) {
       isSubmittingLoginRef.current = false;
       const message = err.message || 'Login failed';
+      if (message.includes('Verify your email first')) setSignupEmail(data.email.trim().toLowerCase());
       setError(message);
       toast.error(message);
       setShake(true);
@@ -226,7 +230,8 @@ const AuthPage = () => {
       });
       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
       if (result?.needsConfirmation) {
-        toast.success('Account created. Check your email to confirm it, then sign in.');
+        setSignupEmail(data.email.trim().toLowerCase());
+        toast.success('Check your email for the verification code.');
       } else {
         toast.success('Account created! You can now sign in.');
       }
@@ -489,6 +494,10 @@ const AuthPage = () => {
       </motion.div>
     );
   };
+
+  if (user?.setup_pending || signupEmail) {
+    return <AccountSetup key={user?.setup_pending ? user.id : signupEmail} signupEmail={user?.setup_pending ? undefined : signupEmail} onVerified={() => setSignupEmail(null)} onBack={() => setSignupEmail(null)} />;
+  }
 
   if (postLoginDest) {
     return (
