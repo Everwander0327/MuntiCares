@@ -1,3 +1,4 @@
+import { createUuid } from '@/lib/uniqueId';
 import { supabase } from '@/lib/supabase';
 import { logCallEvent } from './callEvents';
 
@@ -13,8 +14,7 @@ import { logCallEvent } from './callEvents';
 
 const CALLS_CHANGED = 'munticares:calls-changed';
 
-export const newCallId = () =>
-  globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+export const newCallId = () => createUuid();
 
 const notify = () => {
   window.dispatchEvent(new Event(CALLS_CHANGED));

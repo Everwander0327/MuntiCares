@@ -3,13 +3,12 @@
 const DEFAULT_OSRM = 'https://router.project-osrm.org';
 const configuredUrl = import.meta.env.VITE_OSRM_URL;
 
-if (import.meta.env.PROD && !configuredUrl) {
-  console.warn(
-    '[routing] CRITICAL WARNING: VITE_OSRM_URL is not configured in production. ' +
-    'Falling back to the public demo OSRM server (https://router.project-osrm.org), ' +
-    'which has strict rate limits and is not intended for production healthcare operations. ' +
-    'Please set VITE_OSRM_URL to a dedicated or self-hosted OSRM instance.'
-  );
+let configurationNoticeShown = false;
+function warnDemoRouting() {
+  if (import.meta.env.PROD && !configuredUrl && !configurationNoticeShown) {
+    configurationNoticeShown = true;
+    console.warn('[routing] Using the public OSRM demo service. Configure VITE_OSRM_URL for a dedicated routing service.');
+  }
 }
 
 export const OSRM_URL = configuredUrl || DEFAULT_OSRM;
@@ -51,6 +50,7 @@ export async function getRoute(from, to, { signal } = {}) {
     return null;
   }
 
+  warnDemoRouting();
   const url = `${OSRM_URL}/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
   const ctrl = new AbortController();
   const timeout = setTimeout(() => ctrl.abort(), 6000);

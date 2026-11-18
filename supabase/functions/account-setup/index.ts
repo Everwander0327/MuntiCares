@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.106.0';
-const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization,apikey,content-type,x-client-info', 'Content-Type': 'application/json' };
+const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'authorization,apikey,content-type,x-client-info', 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 const reply = (body: unknown, status=200) => new Response(JSON.stringify(body),{headers,status});
 Deno.serve(async(req)=>{
  if(req.method==='OPTIONS') return new Response('ok',{headers});
@@ -16,7 +16,10 @@ Deno.serve(async(req)=>{
   if(typeof body.password!=='string'||body.password.length<8||body.password.length>128) return reply({error:'Use a password between 8 and 128 characters.'},400);
   const {error}=await admin.auth.admin.updateUserById(user.id,{password:body.password});
   if(error) return reply({error:'Unable to set that password. Please try another password.'},400);
-  return reply({ok:true});
+  // Admin password updates revoke existing sessions. Establish a new one now.
+  const {data:login,error:loginError}=await anon.auth.signInWithPassword({email:user.email,password:body.password});
+  if(loginError||!login.session||login.user?.id!==user.id) return reply({error:'Password saved. Sign in again to continue setup.'},401);
+  return reply({ok:true,session:{access_token:login.session.access_token,refresh_token:login.session.refresh_token}});
  }
  if(body.action==='send') {
   const {error}=await anon.auth.signInWithOtp({email:user.email,options:{shouldCreateUser:false}});
@@ -27,11 +30,9 @@ Deno.serve(async(req)=>{
   if(typeof body.code!=='string'||!/^\d{6,10}$/.test(body.code)) return reply({error:'Enter the code from your email.'},400);
   const {data,error}=await anon.auth.verifyOtp({email:user.email,token:body.code,type:'email'});
   if(error||data.user?.id!==user.id) return reply({error:'Invalid or expired code. Please retry or request a new code.'},400);
-  // Revoke only the temporary OTP session; the caller retains their original session.
-  if(data.session) await admin.auth.admin.signOut(data.session.access_token,'local');
   const {error:completeError}=await admin.rpc('complete_google_account_setup',{target_user:user.id});
-  if(completeError) return reply({error:'Create your password before verifying your email.'},400);
-  return reply({ok:true});
+  if(completeError) { if(data.session) await admin.auth.admin.signOut(data.session.access_token,'local'); return reply({error:'Create your password before verifying your email.'},400); }
+  return reply({ok:true,session:data.session ? {access_token:data.session.access_token,refresh_token:data.session.refresh_token}:undefined});
  }
  return reply({error:'Invalid action'},400);
  }catch{return reply({error:'Setup unavailable. Please retry.'},503);}

@@ -1,3 +1,4 @@
+import { saveMedicalHistory } from '@/lib/saveMedicalHistory';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
@@ -748,12 +749,7 @@ export default function Onboarding({ isPreview = false }) {
       );
 
       if (existingHistory?.length || hasHistoryContent) {
-        const writeHistory = (body) =>
-          existingHistory?.length
-            ? supabase.from('medical_histories').update(body).eq('patient_id', user.id)
-            : supabase
-                .from('medical_histories')
-                .insert({ patient_id: user.id, past_surgeries: '', ...body });
+        const writeHistory = (body) => saveMedicalHistory(supabase, user.id, body, Boolean(existingHistory?.length));
 
         let { error: historyError } = await writeHistory(historyPayload);
         if (historyError && isMissingColumnError(historyError)) {

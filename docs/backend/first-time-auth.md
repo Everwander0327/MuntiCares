@@ -14,3 +14,6 @@ AuthContext fetches setup status from an authenticated RPC. ProtectedRoute and A
 
 ## Pending API enforcement
 Automatic approval review rejected the proposed broad restrictive RLS gate across application tables, Storage and Realtime because it could disrupt existing access. Those policies were not deployed. Current portal gating is at the UI/router; server owns completion but existing direct data API access rules remain unchanged. A separate, explicitly approved policy rollout and regression tests are needed to make setup completion an additional condition on all data access.
+
+## Session handoff fix
+Admin password updates revoke old sessions. The setup endpoint now authenticates the same account with the newly saved password and returns a replacement session over a no-store response. The client persists that session before sending a code. On OTP completion, it adopts the verified OTP session instead of revoking it. A 401 or missing browser session produces an explicit Sign in again recovery screen. A read-only authenticated RPC reports whether the current account has a password, allowing code-step resume without storing passwords in the browser.

@@ -56,7 +56,8 @@ export const AuthProvider = ({ children }) => {
       // the account owner through supabase.auth.updateUser(), so trusting it lets
       // anyone grant themselves provider or admin UI.
       const { data: setupReady, error: setupError } = await supabase.rpc('account_setup_ready');
-      return { ...buildAuthUser(authUser, profile), setup_pending: Boolean(setupError) || setupReady !== true };
+      const { data: passwordSet } = await supabase.rpc('account_setup_password_set');
+      return { ...buildAuthUser(authUser, profile), setup_pending: Boolean(setupError) || setupReady !== true, setup_password_set: passwordSet === true };
     } catch (e) {
       console.warn('[auth] Exception fetching profile:', e);
       return buildAuthUser(authUser, null, true);

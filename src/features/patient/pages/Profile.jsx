@@ -1,3 +1,4 @@
+import { saveMedicalHistory } from '@/lib/saveMedicalHistory';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import {
@@ -264,10 +265,11 @@ const PatientProfile = () => {
 
       initialAddressRef.current = profile.address || '';
 
-      const { data: existingMH } = await supabase
+      const { data: existingMH, error: historyLookupError } = await supabase
         .from('medical_histories')
         .select('id')
         .eq('patient_id', user.id);
+      if (historyLookupError) throw historyLookupError;
       const hasExisting = existingMH && existingMH.length > 0;
 
       if (shouldSkipMedicalHistoryWrite(historyLoaded, hasExisting)) {
@@ -280,18 +282,8 @@ const PatientProfile = () => {
           past_surgeries: profile.past_surgeries,
         };
 
-        if (hasExisting) {
-          const { error: mhError } = await supabase
-            .from('medical_histories')
-            .update(mhPayload)
-            .eq('patient_id', user.id);
-          if (mhError) throw mhError;
-        } else {
-          const { error: mhError } = await supabase
-            .from('medical_histories')
-            .insert(mhPayload);
-          if (mhError) throw mhError;
-        }
+        const { error: mhError } = await saveMedicalHistory(supabase, user.id, mhPayload, hasExisting);
+        if (mhError) throw mhError;
       }
 
       const nextSavedProfile = {
