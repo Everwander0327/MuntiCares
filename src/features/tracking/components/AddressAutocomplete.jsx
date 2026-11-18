@@ -114,6 +114,7 @@ export default function AddressAutocomplete({ id, onSelect, initialQuery = '', i
     setQuery(text);
     setActiveIndex(-1);
     clearTimeout(debounceTimer.current);
+    const reqId = ++requestId.current;
 
     if (!text.trim()) {
       requestId.current += 1;
@@ -128,13 +129,14 @@ export default function AddressAutocomplete({ id, onSelect, initialQuery = '', i
     setHasSearched(false);
     setIsOpen(true);
     debounceTimer.current = setTimeout(() => {
-      const reqId = requestId.current + 1;
-      requestId.current = reqId;
       search(text, reqId);
     }, DEBOUNCE_MS);
   };
 
   const selectResult = (item) => {
+    clearTimeout(debounceTimer.current);
+    requestId.current += 1;
+    setLoading(false);
     setQuery(item.displayName);
     setIsOpen(false);
     setActiveIndex(-1);

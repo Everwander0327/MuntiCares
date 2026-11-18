@@ -225,7 +225,7 @@ const AuthPage = () => {
         email: data.email,
         password: data.password,
         fullName: data.fullName,
-        role,
+        role: 'patient',
         privacyAcceptedAt: new Date().toISOString(),
       });
       confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
@@ -369,30 +369,6 @@ const AuthPage = () => {
         transition={{ duration: 0.35, ease: FLUID }}
       >
         <form className="space-y-3.5" onSubmit={registerForm.handleSubmit(handleRegister)}>
-          {/* Role Pills (Icon-Free) */}
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-800 dark:text-slate-200 ml-1 block">I am registering as:</label>
-            <div className="flex gap-2">
-              {[
-                { value: 'patient', label: 'Patient' },
-                { value: 'provider', label: 'Provider' },
-              ].map((r) => (
-                <button
-                  key={r.value}
-                  type="button"
-                  onClick={() => setRole(r.value)}
-                  className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
-                    role === r.value
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900'
-                  }`}
-                >
-                  {r.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Form Fields (Icon-Free) */}
           <div className="space-y-2.5">
             <FormInput
@@ -495,13 +471,10 @@ const AuthPage = () => {
     );
   };
 
-  if (user?.setup_pending || signupEmail) {
-    return <AccountSetup key={user?.setup_pending ? user.id : signupEmail} signupEmail={user?.setup_pending ? undefined : signupEmail} onVerified={() => setSignupEmail(null)} onBack={() => setSignupEmail(null)} />;
-  }
+  const showSetup = Boolean(signupEmail || user?.setup_pending);
 
-  if (postLoginDest) {
-    return (
-      <div className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full bg-surface-page flex flex-col items-center justify-center p-6 text-center">
+  const postLoginContent = postLoginDest ? (
+      <div className="w-full flex flex-col items-center justify-center py-12 text-center">
         <motion.div
           initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.96 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -519,8 +492,8 @@ const AuthPage = () => {
           </div>
         </motion.div>
       </div>
-    );
-  }
+  ) : null;
+
 
   return (
     <div ref={pageRef} className="min-h-[calc(100dvh-4rem)] sm:min-h-[calc(100dvh-4.5rem)] w-full flex flex-col justify-center">
@@ -567,6 +540,7 @@ const AuthPage = () => {
         <div className="col-span-1 lg:col-span-6 bg-secondary dark:bg-slate-950 flex items-center justify-center p-4 py-6 sm:p-8 lg:p-12">
           <div className="w-full max-w-md mx-auto space-y-4 sm:space-y-5">
             
+            {showSetup ? <AccountSetup embedded key={signupEmail || user?.id} signupEmail={signupEmail || undefined} onVerified={() => setSignupEmail(null)} onBack={() => setSignupEmail(null)} /> : postLoginDest ? postLoginContent : <>
             {/* Top Switcher: Clean Segment Control */}
             {!pendingSetPassword && (
               <div className="flex p-1 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-300/70 dark:border-slate-800">
@@ -618,7 +592,7 @@ const AuthPage = () => {
               <AnimatePresence mode="wait">
                 {formContent(mode === 'login')}
               </AnimatePresence>
-              {!pendingSetPassword && (mode === 'login' || role === 'patient') && <GoogleSignIn disabled={loading} privacyAccepted={mode === 'register' ? registerForm.watch('privacyAccepted') : undefined} />}
+              {!pendingSetPassword && <GoogleSignIn disabled={loading} privacyAccepted={mode === 'register' ? registerForm.watch('privacyAccepted') : undefined} />}
 
               {!pendingSetPassword && mode === 'login' && (
                 <div className="pt-4 mt-2 border-t border-slate-100 dark:border-slate-800/80 text-center">
@@ -644,7 +618,7 @@ const AuthPage = () => {
                 </div>
               )}
             </motion.div>
-
+            </>}
           </div>
         </div>
 

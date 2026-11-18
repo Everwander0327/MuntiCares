@@ -152,9 +152,8 @@ export const overlayPaintColor = (hex, treatment) => {
 
 export const LOCATE_ZOOM = 17.5;
 
-// flyTo arcs out to frame the origin and target together, so locating a distant
-// point visibly zooms out first; a long eased pan instead flies over unloaded
-// tiles. Nearby targets keep the fly-in, distant ones cut over and zoom in.
+// Eased camera movement never introduces the zoom-out arc of flyTo.
+// Distant targets jump across unloaded tiles before zooming in.
 export const focusOnLocation = (map, lngLat) => {
   if (!map) return;
   const zoom = Math.max(map.getZoom(), LOCATE_ZOOM);
@@ -164,7 +163,7 @@ export const focusOnLocation = (map, lngLat) => {
   const travel = Math.hypot(to.x - from.x, to.y - from.y);
 
   if (travel <= Math.min(clientWidth, clientHeight) * 0.8) {
-    map.flyTo({ center: lngLat, zoom, pitch: 0, essential: true });
+    map.easeTo({ center: lngLat, zoom, pitch: 0, duration: 650, essential: true });
     return;
   }
 

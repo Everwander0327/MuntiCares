@@ -10,6 +10,8 @@ import BasemapControl from './BasemapControl';
 import { reverseGeocode } from '../services/geocoding';
 import { BASEMAP_STYLES, STYLE_STREETS, focusOnLocation } from '../mapStyles';
 
+const samePosition = (a, b) => Boolean(a && b && Math.abs(a.lat - b.lat) < 1e-7 && Math.abs(a.lng - b.lng) < 1e-7);
+
 const PAN_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 
 const ModernLocationPicker = forwardRef(function ModernLocationPicker(
@@ -49,6 +51,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
   const setBasemapRef = useRef(setBasemap);
   setBasemapRef.current = setBasemap;
   const debounceTimer = useRef(null);
+  const lookupVersionRef = useRef(0);
   const pendingBasemapRef = useRef(null);
   const appliedStyleRef = useRef(null);
   const userMovedRef = useRef(hasInitialPin);
@@ -143,6 +146,17 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       toast.error(tRef.current('tracking.map.basemapFailed'));
     });
 
+    let lastCameraPosition = { lat: startCenter[1], lng: startCenter[0] };
+    let lastEmittedPosition = initCoords ? { lat: initCoords.lat, lng: initCoords.lng } : null;
+    const onMove = () => {
+      const center = map.getCenter();
+      const position = { lat: center.lat, lng: center.lng };
+      if (samePosition(position, lastCameraPosition)) return;
+      lastCameraPosition = position;
+      lastEmittedPosition = null;
+      lookupVersionRef.current += 1;
+      clearTimeout(debounceTimer.current);
+    };
     const onMoveStart = () => setIsPanning(true);
     const onDragStart = () => {
       userMovedRef.current = true;
@@ -166,6 +180,10 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       if (isMountedRef.current) setHasConfirmedPin(true);
       const center = map.getCenter();
       const pos = { lat: center.lat, lng: center.lng };
+      // Resize, padding and zoom-only events must not restart address resolution.
+      if (samePosition(pos, lastEmittedPosition)) return;
+      lastEmittedPosition = pos;
+      const lookupVersion = ++lookupVersionRef.current;
 
       // The pin itself is valid immediately; only the address label depends on
       // the lookup, so the parent never waits on Nominatim to accept the pin.
@@ -175,8 +193,9 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       clearTimeout(debounceTimer.current);
       setLoadingAddress(true);
       debounceTimer.current = setTimeout(async () => {
-        const resolved = await reverseGeocode(pos.lat, pos.lng);
-        if (!isMountedRef.current) return;
+        let resolved = null;
+        try { resolved = await reverseGeocode(pos.lat, pos.lng); } catch { /* Keep the pin usable offline. */ }
+        if (!isMountedRef.current || mapRef.current !== map || lookupVersion !== lookupVersionRef.current) return;
         setLoadingAddress(false);
         onPinChangeRef.current?.({
           ...pos,
@@ -187,6 +206,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       }, 350);
     };
 
+    map.on('move', onMove);
     map.on('movestart', onMoveStart);
     map.on('dragstart', onDragStart);
     map.on('moveend', onMoveEnd);
@@ -199,9 +219,11 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
 
     return () => {
       isMountedRef.current = false;
+      lookupVersionRef.current += 1;
       clearTimeout(debounceTimer.current);
       ro.disconnect();
       canvasContainer?.removeEventListener('keydown', onCanvasKeyDown);
+      map.off('move', onMove);
       map.off('movestart', onMoveStart);
       map.off('dragstart', onDragStart);
       map.off('moveend', onMoveEnd);
@@ -247,8 +269,10 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
       return;
     }
     setLocatingGps(true);
+    const requestingMap = mapRef.current;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        if (!isMountedRef.current || mapRef.current !== requestingMap) return;
         setLocatingGps(false);
         const { latitude, longitude } = pos.coords;
         userMovedRef.current = true;
@@ -257,6 +281,7 @@ const ModernLocationPicker = forwardRef(function ModernLocationPicker(
         toast.success(t('tracking.map.centeredGps'));
       },
       (err) => {
+        if (!isMountedRef.current || mapRef.current !== requestingMap) return;
         setLocatingGps(false);
         if (err.code === 1) {
           toast.error(t('tracking.map.permissionDenied'));

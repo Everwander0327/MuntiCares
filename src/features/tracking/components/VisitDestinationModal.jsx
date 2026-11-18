@@ -37,6 +37,7 @@ export default function VisitDestinationModal({
 
   const pickerRef = useRef(null);
   const dialogRef = useRef(null);
+  const wasOpenRef = useRef(false);
 
   useBodyScrollLock(isOpen);
   const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
@@ -45,7 +46,9 @@ export default function VisitDestinationModal({
   });
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) { wasOpenRef.current = false; return; }
+    if (wasOpenRef.current) return;
+    wasOpenRef.current = true;
     setStep('pin');
     setCurrentPin(initial || null);
     setBaseAddress(initial?.address || initialCenter?.address || homeAddress || '');

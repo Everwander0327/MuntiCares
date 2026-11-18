@@ -57,7 +57,8 @@ export const AuthProvider = ({ children }) => {
       // anyone grant themselves provider or admin UI.
       const { data: setupReady, error: setupError } = await supabase.rpc('account_setup_ready');
       const { data: passwordSet } = await supabase.rpc('account_setup_password_set');
-      return { ...buildAuthUser(authUser, profile), setup_pending: Boolean(setupError) || setupReady !== true, setup_password_set: passwordSet === true };
+      const { data: roleSelected } = await supabase.rpc('account_role_selected');
+      return { ...buildAuthUser(authUser, profile), setup_pending: Boolean(setupError) || setupReady !== true, setup_password_set: passwordSet === true, setup_role_selected: roleSelected === true };
     } catch (e) {
       console.warn('[auth] Exception fetching profile:', e);
       return buildAuthUser(authUser, null, true);

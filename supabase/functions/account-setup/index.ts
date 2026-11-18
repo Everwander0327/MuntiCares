@@ -12,6 +12,12 @@ Deno.serve(async(req)=>{
  if(!profile||profile.is_banned) return reply({error:'Account unavailable.'},403);
  try {
  const body=await req.json();
+ if(body.action==='role') {
+  if(!['patient','provider'].includes(body.role)) return reply({error:'Choose Patient or Provider.'},400);
+  const {error}=await admin.rpc('choose_first_account_role',{target_user:user.id,chosen_role:body.role});
+  if(error) return reply({error:'Your role could not be selected. Existing account roles cannot be changed here.'},400);
+  return reply({ok:true});
+ }
  if(body.action==='password') {
   if(typeof body.password!=='string'||body.password.length<8||body.password.length>128) return reply({error:'Use a password between 8 and 128 characters.'},400);
   const {error}=await admin.auth.admin.updateUserById(user.id,{password:body.password});

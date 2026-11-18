@@ -351,24 +351,20 @@ export default function ProviderOnboarding({ isPreview = false }) {
     });
   };
 
-  const handlePinChange = ({ lat, lng, address, status }) => {
+  const handlePinChange = ({ lat, lng, address, pending, resolved }) => {
+    if (lat == null || lng == null) return;
     setCoords({ lat, lng });
-    if (status) setPinStatus(status);
-    if (address) {
-      setBaseAddress(address);
-      clearError('coords');
-    } else if (status === 'idle') {
-      setPinStatus('resolved');
-      clearError('coords');
-    }
+    setPinStatus(pending ? 'pending' : resolved ? 'resolved' : 'unavailable');
+    clearError('coords');
+    if (address) setBaseAddress(address);
   };
 
-  const handleAutocompleteSelect = ({ lat, lng, label }) => {
+  const handleAutocompleteSelect = ({ lat, lng, displayName }) => {
     setCoords({ lat, lng });
     setPinStatus('resolved');
-    setBaseAddress(label);
+    setBaseAddress(displayName || '');
     clearError('coords');
-    pickerRef.current?.flyTo?.(lat, lng);
+    pickerRef.current?.flyToLocation({ lat, lng });
   };
 
   const handleIdFileChange = (event) => {

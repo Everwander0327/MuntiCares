@@ -1,0 +1,6 @@
+# Auth panel and one-time role selection
+Approved in chat: all signup, role, password and code screens stay inside the right half of the existing auth layout; the photo/headline on the left remain visible on desktop. Mobile retains a single responsive panel. Remove registration-form role pills. New email and Google accounts choose Patient or Provider in a dedicated setup step. Google users then create a password and verify a code; email users already created their password and continue to their code. Existing accounts retain their roles and do not repeat selection. Providers still require professional verification. Both password fields have accessible independent show/hide controls.
+
+Server-owned role choices are one-time and service-managed. Existing roles are seeded unchanged. The service endpoint derives the target account from JWT, accepts only patient/provider, locks the profile and refuses changing an already selected role or an account with clinical/booking data. Role-specific profile creation and role update occur in one transaction. No admin self-selection and no broad access-policy change.
+
+Review adjustment: preserve all existing profile rows, including unused default patient placeholders. Role choice creates the selected role profile and never deletes either role profile. Broad RLS policies are not changed.
