@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext } from 'react';
+import React, { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate, Outlet } from 'react-router-dom';
-import { NotificationBell, MobileNavItem, ProfilePopover } from '@/shared/navigation';
+import { NotificationBell, MobileNavItem, ProfilePopover, GlobalSearch, clearSearchCache } from '@/shared/navigation';
 import { BrandLogo } from '@/shared/ui';
 import { WeeklyUpdatesModal } from '@/shared/feedback';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -31,246 +32,95 @@ import toast from 'react-hot-toast';
 
 const DashboardLayoutContext = createContext(false);
 
-const SidebarItem = ({ icon, label, to, active, onClick, badge }) => (
+const SidebarItem = ({ icon, label, to, active, onClick, badge, collapsed }) => {
+  const [tooltip, setTooltip] = useState(null);
+  const showTooltip = (event) => {
+    if (!collapsed || !window.matchMedia('(min-width: 1024px)').matches) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltip({ left: rect.right + 8, top: rect.top + rect.height / 2 });
+  };
+  return (<>
   <Link
     to={to}
-    onClick={onClick}
-    className={`group flex items-center gap-3 px-3.5 py-2.5 rounded-2xl transition-all duration-300 relative overflow-hidden ${
-      active 
-        ? 'neu-btn-primary font-bold shadow-md' 
-        : 'text-txt-secondary dark:text-txt-darkSecondary hover:neu-flat hover:text-txt-primary dark:hover:text-txt-darkPrimary'
+    onClick={(event) => { setTooltip(null); onClick?.(event); }}
+    aria-label={label}
+    aria-current={active ? 'page' : undefined}
+    onMouseEnter={showTooltip}
+    onMouseLeave={() => setTooltip(null)}
+    onFocus={showTooltip}
+    onBlur={() => setTooltip(null)}
+    onKeyDown={(event) => { if (event.key === 'Escape') setTooltip(null); }}
+    className={`group flex items-center gap-3 min-h-[2.75rem] relative transition-colors duration-200 ${
+      collapsed
+        ? 'lg:w-full lg:h-11 lg:px-0 lg:justify-center px-3.5 py-2.5 rounded-2xl lg:rounded-none'
+        : 'px-3.5 py-2.5 rounded-2xl'
+    } ${
+      active
+        ? 'text-link font-bold'
+        : `text-txt-secondary dark:text-txt-darkSecondary hover:text-link dark:hover:text-link ${
+            collapsed ? 'hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.06] lg:hover:bg-transparent' : 'hover:bg-slate-900/[0.04] dark:hover:bg-white/[0.06]'
+          }`
     }`}
   >
-    <span className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0 ${
-      active 
-        ? '!bg-white/20 dark:!bg-neu-fg/20 shadow-inner border border-white/30 dark:border-white/10 backdrop-blur-sm text-white' 
-        : 'neu-flat-sm text-txt-secondary dark:text-txt-darkSecondary group-hover:text-link dark:group-hover:text-link group-hover:scale-105'
-    }`}>
+    {active && (
+      <>
+        <motion.span
+          layoutId="sidebar-active-tint"
+          transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+          aria-hidden="true"
+          className={`absolute inset-0 rounded-2xl bg-primary/10 dark:bg-primary-400/15 pointer-events-none ${collapsed ? 'lg:hidden' : ''}`}
+        />
+        <motion.span
+          layoutId="sidebar-active-indicator"
+          transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+          aria-hidden="true"
+          className={`absolute pointer-events-none bg-primary dark:bg-primary-400 w-1 rounded-full ${
+            collapsed
+              ? 'left-1.5 top-2.5 bottom-2.5 lg:left-2 lg:top-2 lg:bottom-2'
+              : 'left-1.5 top-2.5 bottom-2.5'
+          }`}
+        />
+      </>
+    )}
+    <span className="relative z-10 flex items-center justify-center shrink-0">
       {React.cloneElement(icon, {
-        className: 'w-4 h-4',
+        className: 'w-5 h-5 shrink-0 transition-transform duration-200 ease-fluid group-hover:scale-105 group-active:scale-95',
         weight: active ? 'fill' : 'regular',
+        'aria-hidden': true,
       })}
+      {badge > 0 && collapsed && (
+        <span className="hidden lg:flex absolute -top-1.5 -right-2 min-w-[1.125rem] h-[1.125rem] rounded-full items-center justify-center text-xs font-black px-1 shadow-sm tabular-nums bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A] scale-90">
+          {badge > 9 ? '9+' : badge}
+        </span>
+      )}
     </span>
-    <span className={`font-semibold text-sm flex-1 truncate ${active ? 'font-bold text-white' : ''}`}>{label}</span>
+    <span className={`relative z-10 text-sm flex-1 truncate ${collapsed ? 'lg:sr-only' : ''} ${active ? 'font-bold' : 'font-semibold'}`}>{label}</span>
     {badge > 0 && (
-      <span className={`min-w-[1.25rem] h-[1.25rem] rounded-md flex items-center justify-center text-xs font-black px-1.5 shadow-sm ${
-        active 
-          ? 'bg-white dark:bg-neu-fg text-link' 
-          : 'bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A]'
-      }`}>
+      <span className={`relative z-10 ${collapsed ? 'lg:hidden' : ''} min-w-[1.25rem] h-[1.25rem] rounded-full flex items-center justify-center text-xs font-black px-1.5 shadow-sm tabular-nums bg-[#BC3030] dark:bg-[#F4918B] text-white dark:text-[#3C1B1A]`}>
         {badge > 9 ? '9+' : badge}
       </span>
     )}
   </Link>
-);
-
-const GlobalSearch = ({ currentRole, links, authUser, onNavigate }) => {
-  const { t, translateService, translateStatus } = useLanguage();
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const searchContainerRef = useRef(null);
-  const inputRef = useRef(null);
-
-  // Keyboard shortcut (Cmd+K / Ctrl+K & Escape)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setSearchOpen(true);
-        setTimeout(() => inputRef.current?.focus(), 50);
-      } else if (e.key === 'Escape') {
-        setSearchOpen(false);
-        inputRef.current?.blur();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Click outside to close
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
-        setSearchOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Filter navigation links
-  const filteredLinks = useMemo(() => {
-    if (!searchQuery.trim()) return links;
-    const q = searchQuery.toLowerCase();
-    return links.filter(l => 
-      l.label.toLowerCase().includes(q) || 
-      (l.shortLabel && l.shortLabel.toLowerCase().includes(q))
-    );
-  }, [links, searchQuery]);
-
-  // Query patient / request data if query length >= 2 and user is provider
-  useEffect(() => {
-    if (!searchQuery.trim() || searchQuery.length < 2 || !authUser?.id) {
-      setSearchResults([]);
-      return;
-    }
-
-    let isMounted = true;
-    const fetchMatches = async () => {
-      setIsSearching(true);
-      try {
-        if (currentRole === 'provider') {
-          const { data } = await supabase
-            .from('requests')
-            .select('id, service, status, patient:patient_id(full_name, avatar_url)')
-            .eq('provider_id', authUser.id)
-            .limit(5);
-
-          if (isMounted && data) {
-            const q = searchQuery.toLowerCase();
-            const matches = data.filter(r => 
-              (r.patient?.full_name && r.patient.full_name.toLowerCase().includes(q)) ||
-              (r.service && r.service.toLowerCase().includes(q)) ||
-              (r.status && r.status.toLowerCase().includes(q))
-            ).map(r => ({
-              id: r.id,
-              title: r.patient?.full_name || t('common.roles.patient'),
-              subtitle: `${translateService(r.service) || t('common.services.generalConsultation')} • ${translateStatus(r.status)}`,
-              to: '/provider/patients',
-              avatar: r.patient?.avatar_url,
-            }));
-            setSearchResults(matches);
-          }
-        }
-      } catch {
-        // gracefully ignore
-      } finally {
-        if (isMounted) setIsSearching(false);
-      }
-    };
-
-    const timer = setTimeout(fetchMatches, 200);
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-    };
-  }, [searchQuery, currentRole, authUser, t, translateService, translateStatus]);
-
-  const handleSelect = (to) => {
-    setSearchOpen(false);
-    setSearchQuery('');
-    if (onNavigate) onNavigate(to);
-  };
-
-  return (
-    <div ref={searchContainerRef} className="relative hidden md:flex flex-1 max-w-md mx-4 lg:mx-6 z-30">
-      <div 
-        className={`neu-inset dark:bg-surface-darkAlt w-full h-10 sm:h-11 rounded-2xl px-3.5 flex items-center gap-2.5 text-xs transition-all border ${
-          searchOpen 
-            ? 'border-primary/40 ring-2 ring-primary/20 shadow-[inset_2px_3px_6px_rgba(23,40,59,0.12),inset_-2px_-2px_5px_rgba(255,255,255,0.9)] dark:shadow-[inset_2px_3px_6px_rgba(0,0,0,0.7),inset_-2px_-2px_5px_rgba(255,255,255,0.04)]' 
-            : 'border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 shadow-[inset_1.5px_2px_4px_rgba(23,40,59,0.08),inset_-1.5px_-1.5px_3px_rgba(255,255,255,0.85)] dark:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.55),inset_-1px_-1px_3px_rgba(255,255,255,0.03)]'
-        }`}
-      >
-        <MagnifyingGlass className={`w-4 h-4 transition-colors shrink-0 ${
-          searchOpen ? 'text-link' : 'text-txt-secondary dark:text-txt-darkSecondary'
-        }`} />
-        <input
-          ref={inputRef}
-          type="text"
-          value={searchQuery}
-          onFocus={() => setSearchOpen(true)}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={
-            currentRole === 'provider'
-              ? t('nav.search.providerPlaceholder')
-              : currentRole === 'admin'
-              ? t('nav.search.adminPlaceholder')
-              : t('nav.search.patientPlaceholder')
-          }
-          className="bg-transparent border-none outline-none text-xs text-txt-primary dark:text-txt-darkPrimary placeholder-txt-secondary/60 dark:placeholder-txt-darkSecondary/60 w-full focus:outline-none"
-        />
-      </div>
-
-      {/* Dropdown Results */}
-      <AnimatePresence>
-        {searchOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute top-full left-0 right-0 mt-2 neu-flat rounded-2xl shadow-xl overflow-hidden p-2 z-50 max-h-[23.75rem] overflow-y-auto"
+  {collapsed && createPortal(
+    <AnimatePresence>
+      {tooltip && (
+        <span style={tooltip} className="fixed z-popover -translate-y-1/2 pointer-events-none">
+          <motion.span
+            role="tooltip"
+            initial={{ opacity: 0, x: -6, scale: 0.96 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -4, scale: 0.96 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            className="block whitespace-nowrap rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-lg dark:bg-slate-100 dark:text-slate-900"
           >
-            {/* Navigation Section */}
-            <div>
-              <p className="text-2xs font-bold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider px-3 py-1.5">
-                {searchQuery ? t('nav.search.matchingPages') : t('nav.search.quickNavigation')}
-              </p>
-              <div className="space-y-1">
-                {filteredLinks.length > 0 ? (
-                  filteredLinks.map((item) => (
-                    <button
-                      key={item.to}
-                      type="button"
-                      onClick={() => handleSelect(item.to)}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs font-semibold text-txt-primary dark:text-txt-darkPrimary hover:bg-primary/10 dark:hover:bg-white/5 hover:text-link dark:hover:text-link transition-colors group cursor-pointer"
-                    >
-                      <span className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-txt-secondary dark:text-txt-darkSecondary group-hover:text-link dark:group-hover:text-link shrink-0">
-                        {React.cloneElement(item.icon, { className: 'w-3.5 h-3.5' })}
-                      </span>
-                      <span className="flex-1 truncate">{item.label}</span>
-                      <span className="text-2xs text-txt-secondary opacity-0 group-hover:opacity-100 transition-opacity">{t('nav.search.jump')}</span>
-                    </button>
-                  ))
-                ) : (
-                  <p className="text-xs text-txt-secondary px-3 py-2">{t('nav.search.noMatches')}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Patients / Data Section if searching */}
-            {searchResults.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-slate-200/70 dark:border-white/10">
-                <p className="text-2xs font-bold text-txt-secondary dark:text-txt-darkSecondary uppercase tracking-wider px-3 py-1.5">
-                  {t('nav.search.patientRecords')}
-                </p>
-                <div className="space-y-1">
-                  {searchResults.map((res) => (
-                    <button
-                      key={res.id}
-                      type="button"
-                      onClick={() => handleSelect(res.to)}
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-xs text-txt-primary dark:text-txt-darkPrimary hover:bg-primary/10 dark:hover:bg-white/5 transition-colors group cursor-pointer"
-                    >
-                      <div className="w-7 h-7 rounded-lg neu-flat-sm flex items-center justify-center text-link font-bold text-xs shrink-0 overflow-hidden">
-                        {res.avatar ? (
-                          <img src={res.avatar} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Users className="w-3.5 h-3.5" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold truncate text-xs">{res.title}</p>
-                        <p className="text-2xs text-txt-secondary truncate">{res.subtitle}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {isSearching && (
-              <div className="py-2 text-center text-2xs text-txt-secondary">
-                {t('nav.search.searchingRecords')}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
+            {label}
+          </motion.span>
+        </span>
+      )}
+    </AnimatePresence>,
+    document.body
+  )}
+  </>);
 };
 
 const DashboardLayout = ({ children, role = 'patient' }) => {
@@ -294,8 +144,6 @@ const DashboardLayout = ({ children, role = 'patient' }) => {
 const DashboardShell = ({ children, role = 'patient' }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
-  const [isRollupCollapsing, setIsRollupCollapsing] = useState(false);
-  const [isRollupExpanding, setIsRollupExpanding] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadMsgCount, setUnreadMsgCount] = useState(0);
   const location = useLocation();
@@ -394,6 +242,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
       if (data) {
         const action = liveUserRowToAction(data);
         if (action.signOut) {
+          clearSearchCache();
           await logout();
           navigate('/login', { replace: true });
           return;
@@ -415,6 +264,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
           sawRealtimeUpdate = true;
           const action = liveUserRowToAction(payload.new);
           if (action.signOut) {
+            clearSearchCache();
             logout();
             navigate('/login', { replace: true });
             return;
@@ -435,23 +285,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
   }, [authUser?.id, updateUser, logout, navigate, t]);
 
   const toggleDesktopCollapse = () => {
-    if (!isDesktopCollapsed) {
-      // CLOSE: Stage 1 - Tupi pataas mula bottom habang umiikot ang heart
-      setIsRollupCollapsing(true);
-      setTimeout(() => {
-        // CLOSE: Stage 2 - Lilipad na ang heart papuntang top panel
-        setIsDesktopCollapsed(true);
-        setIsRollupCollapsing(false);
-      }, 340);
-    } else {
-      // OPEN (REVERSE): Stage 1 - Lilipad pabalik ang heart sa sidebar habang umiikot in place
-      setIsDesktopCollapsed(false);
-      setIsRollupExpanding(true);
-      setTimeout(() => {
-        // OPEN (REVERSE): Stage 2 - Pagka-land ng heart, bubuka at mag-uunroll ang panel pababa
-        setIsRollupExpanding(false);
-      }, 380);
-    }
+    setIsDesktopCollapsed((collapsed) => !collapsed);
   };
 
   const patientLinks = [
@@ -778,71 +612,45 @@ const DashboardShell = ({ children, role = 'patient' }) => {
           )}
         </AnimatePresence>
 
-        {/* Sidebar - Seamless Full-Height Edge Shell (Option 1) + Grouped Menu & Support Card (Option 4) */}
+        {/* Desktop sidebar retains an icon rail when collapsed. */}
         <motion.aside
-          initial={false}
-          animate={{
-            width: isDesktopCollapsed ? 0 : Math.round(288 * uiScale),
-            opacity: isDesktopCollapsed ? 0 : 1,
-          }}
-          transition={{ duration: 0.38, ease: [0.32, 0.72, 0, 1] }}
-          className={`fixed inset-y-0 left-0 z-50 transition-transform duration-500 ease-fluid transform ${
+          style={{ '--sidebar-width': `${Math.round((isDesktopCollapsed ? 80 : 288) * uiScale)}px` }}
+          className={`fixed inset-y-0 left-0 z-50 w-[18rem] lg:w-[var(--sidebar-width)] transition-[width,transform] duration-300 motion-reduce:transition-none transform ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           } lg:static lg:h-full lg:translate-x-0 lg:p-0 overflow-hidden shrink-0 select-none`}
         >
-          <div className="h-full w-[18rem] flex flex-col p-5 neu-flat rounded-none border-r border-slate-200/80 dark:border-white/10 transform-gpu">
+          <div className={`h-full w-full flex flex-col p-5 ${isDesktopCollapsed ? 'lg:px-0 lg:py-3' : ''} neu-flat rounded-none border-r border-slate-200/80 dark:border-white/10 transform-gpu`}>
             {/* Logo row - Flush & aligned with top bar height */}
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/70 dark:border-white/10 shrink-0 px-1 pt-0.5">
+            <div className={`flex items-center justify-between pb-4 mb-4 border-b border-slate-200/70 dark:border-white/10 shrink-0 px-1 pt-0.5 ${isDesktopCollapsed ? 'lg:justify-center lg:px-0 lg:mx-3' : ''}`}>
               <div className="flex items-center gap-2.5">
-                {!isDesktopCollapsed ? (
-                  <motion.button
-                    layoutId="munti-heart-badge"
-                    layout="position"
-                    type="button"
-                    onClick={toggleDesktopCollapse}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    transition={{
-                      layout: { duration: 0.42, ease: [0.32, 0.72, 0, 1] },
-                    }}
-                    className="hidden lg:flex neu-flat-sm w-10 h-10 rounded-xl items-center justify-center text-link cursor-pointer active:scale-95 transition-all shrink-0 shadow-sm group hover:text-primary-600"
-                    title={t('nav.sidebar.collapse')}
-                  >
-                    <motion.div
-                      animate={{ 
-                        rotate: isRollupCollapsing ? 720 : isRollupExpanding ? -720 : 0,
-                      }}
-                      transition={{ 
-                        rotate: { duration: isRollupCollapsing || isRollupExpanding ? 0.38 : 0.55, ease: [0.32, 0.72, 0, 1] },
-                      }}
-                    >
-                      <BrandLogo variant="glyph" className="w-6 h-6 text-link group-hover:scale-110 transition-transform duration-200" decorative />
-                    </motion.div>
-                  </motion.button>
-                ) : (
-                  <div className="w-10 h-10" />
-                )}
-                <Link to="/" className="flex items-center">
+                <motion.button
+                  layoutId="munti-heart-badge"
+                  layout="position"
+                  type="button"
+                  onClick={toggleDesktopCollapse}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{
+                    layout: { duration: 0.42, ease: [0.32, 0.72, 0, 1] },
+                  }}
+                  className="hidden lg:flex neu-flat-sm w-11 h-11 rounded-2xl items-center justify-center text-link cursor-pointer active:scale-95 transition-all shrink-0 shadow-sm group hover:text-primary-600"
+                  title={t(isDesktopCollapsed ? 'nav.sidebar.expand' : 'nav.sidebar.collapse')}
+                  aria-label={t(isDesktopCollapsed ? 'nav.sidebar.expand' : 'nav.sidebar.collapse')}
+                  aria-expanded={!isDesktopCollapsed}
+                >
+                  <BrandLogo variant="glyph" className="w-6 h-6 text-link group-hover:scale-110 transition-transform duration-200" decorative />
+                </motion.button>
+                <Link to="/" className={`flex items-center ${isDesktopCollapsed ? 'lg:hidden' : ''}`}>
                   <span className="text-xl font-display font-extrabold text-link tracking-tight">MuntiCares</span>
                 </Link>
               </div>
             </div>
 
-            {/* Nav Body - Roll up when collapsing; Unroll downwards when expanding in reverse */}
-            <motion.div 
-              animate={{
-                opacity: isRollupCollapsing || isDesktopCollapsed || isRollupExpanding ? 0 : 1,
-                y: isRollupCollapsing || isDesktopCollapsed || isRollupExpanding ? -16 : 0,
-                scaleY: isRollupCollapsing || isDesktopCollapsed || isRollupExpanding ? 0.05 : 1,
-                originY: 0,
-              }}
-              transition={{ duration: 0.36, ease: [0.32, 0.72, 0, 1] }}
-              className="flex-1 flex flex-col min-h-0 px-0.5"
-            >
+            <div className={`flex-1 flex flex-col min-h-0 ${isDesktopCollapsed ? 'lg:px-0' : 'px-0.5'}`}>
               {/* Grouped Navigation (Option 4) */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 pr-1.5 -mr-1 space-y-4">
+              <div className={`flex-1 overflow-y-auto overflow-x-hidden space-y-4 ${isDesktopCollapsed ? 'lg:py-1' : 'p-1 pr-1.5 -mr-1'}`}>
                 <div>
-                  <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2">{t('nav.sidebar.mainMenu')}</p>
+                  <p className={`text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2 ${isDesktopCollapsed ? 'lg:sr-only' : ''}`}>{t('nav.sidebar.mainMenu')}</p>
                   <nav className="space-y-1.5">
                     {mainLinks.map((link) => (
                       <SidebarItem 
@@ -853,14 +661,18 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                         active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
                         onClick={() => setIsSidebarOpen(false)}
                         badge={getBadgeForLink(link)}
+                        collapsed={isDesktopCollapsed}
                       />
                     ))}
                   </nav>
                 </div>
 
                 {accountLinks.length > 0 && (
-                  <div>
-                    <p className="text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2">{t('nav.sidebar.accountPrivacy')}</p>
+                  <div className={isDesktopCollapsed ? 'lg:pt-1' : ''}>
+                    {isDesktopCollapsed && (
+                      <div className="hidden lg:block mx-3 mb-3 border-t border-slate-200/70 dark:border-white/10" aria-hidden="true" />
+                    )}
+                    <p className={`text-2xs font-extrabold text-tertiary uppercase tracking-widest px-3 mb-2 ${isDesktopCollapsed ? 'lg:sr-only' : ''}`}>{t('nav.sidebar.accountPrivacy')}</p>
                     <nav className="space-y-1.5">
                       {accountLinks.map((link) => (
                         <SidebarItem 
@@ -871,13 +683,14 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                           active={location.pathname === link.to || location.pathname.startsWith(link.to + '/')}
                           onClick={() => setIsSidebarOpen(false)}
                           badge={getBadgeForLink(link)}
+                          collapsed={isDesktopCollapsed}
                         />
                       ))}
                     </nav>
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           </div>
         </motion.aside>
 
@@ -894,31 +707,6 @@ const DashboardShell = ({ children, role = 'patient' }) => {
             className="absolute top-0 left-0 right-0 h-[calc(3.5rem+env(safe-area-inset-top,0px))] sm:h-[calc(4.75rem+env(safe-area-inset-top,0px))] pt-[env(safe-area-inset-top,0px)] neu-flat rounded-none flex items-center justify-between px-3.5 sm:px-6 lg:px-8 border-b border-slate-200/80 dark:border-white/10 z-40 shadow-sm will-change-transform"
           >
             <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-              {/* When collapsed on desktop: The heart badge physically flies here from the sidebar while spinning! */}
-              {isDesktopCollapsed && (
-                <motion.button
-                  layoutId="munti-heart-badge"
-                  layout="position"
-                  type="button"
-                  onClick={toggleDesktopCollapse}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={{
-                    layout: { duration: 0.45, ease: [0.32, 0.72, 0, 1] },
-                  }}
-                  className="hidden lg:flex neu-btn w-10 h-10 rounded-xl items-center justify-center text-link cursor-pointer shrink-0 shadow-md group hover:text-primary-600"
-                  title={t('nav.sidebar.expand')}
-                >
-                  <motion.div
-                    initial={{ scale: 0.92 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-                  >
-                    <BrandLogo variant="glyph" className="w-6 h-6 text-link group-hover:scale-110 transition-transform duration-200" decorative />
-                  </motion.div>
-                </motion.button>
-              )}
-
               <div className="min-w-0">
                 <p className="text-sm sm:text-base md:text-lg font-display font-black text-txt-primary dark:text-txt-darkPrimary truncate max-w-[11rem] xs:max-w-[14rem] sm:max-w-none leading-tight">
                   {user.name
@@ -932,11 +720,16 @@ const DashboardShell = ({ children, role = 'patient' }) => {
             </div>
 
             {/* Center Working Search / Command Bar */}
-            <GlobalSearch 
-              currentRole={currentRole} 
-              links={links} 
-              authUser={authUser} 
-              onNavigate={(to) => navigate(to)} 
+            <GlobalSearch
+              currentRole={currentRole}
+              links={links}
+              authUser={authUser}
+              onNavigate={(to) => navigate(to)}
+              onLogout={async () => {
+                clearSearchCache();
+                await logout();
+                navigate('/login');
+              }}
             />
 
             <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -945,6 +738,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
                 user={user}
                 currentRole={currentRole}
                 onLogout={async () => {
+                  clearSearchCache();
                   await logout();
                   navigate('/login');
                 }}
@@ -952,7 +746,7 @@ const DashboardShell = ({ children, role = 'patient' }) => {
             </div>
           </header>
 
-          {/* Open Canvas Main Area - Expands full width when sidebar collapses */}
+          {/* Main content gains space when the sidebar collapses to its icon rail. */}
           {(() => {
             const isMessagesPage = location.pathname.includes('/messages');
             return (

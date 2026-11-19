@@ -241,6 +241,7 @@ vi.mock('@/shared/components', () => ({
     <div data-testid={compact ? 'avatar-compact' : 'avatar-full'}>{fullName}</div>
   ),
   FhirExportModal: ({ open }) => (open ? <div data-testid="fhir-modal">FHIR Modal</div> : null),
+  FhirImportModal: ({ open }) => (open ? <div data-testid="fhir-import-modal">FHIR Import Modal</div> : null),
 }));
 
 vi.mock('jspdf', () => ({

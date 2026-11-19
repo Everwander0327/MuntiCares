@@ -67,6 +67,7 @@ describe('C9 — overlays and tracker layers draw from the ramp', () => {
     ['src/shared/ui/sheet.jsx'],
     ['src/features/tracking/components/VisitDestinationModal.jsx'],
     ['src/shared/components/FhirExportModal.jsx'],
+    ['src/shared/components/FhirImportModal.jsx'],
   ])('%s stacks on z-overlay', (rel) => {
     const source = read(rel);
     expect(source).toContain('z-overlay');

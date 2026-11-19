@@ -1099,7 +1099,9 @@ const PatientConsent = ({ embedded = false }) => {
                                 {c.provider_name}
                               </h5>
                               <p className="text-sm text-tertiary truncate mt-0.5">
-                                {t('patient.consent.requestedDoc', { title: c.document_title })}
+                                {c.category === 'fhir_export'
+                                  ? t('patient.consent.exportedFhirLog', { title: c.document_title })
+                                  : t('patient.consent.requestedDoc', { title: c.document_title })}
                               </p>
                             </div>
                             <span className="text-xs font-semibold text-tertiary shrink-0 tabular-nums">

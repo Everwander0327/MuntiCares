@@ -7,7 +7,7 @@ import { initialsAvatar } from '@/lib/avatar';
 import { ChatCircle, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -15,6 +15,7 @@ const PatientMessages = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [view, setView] = useState('list');
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -127,9 +128,9 @@ const PatientMessages = () => {
         setAutoStartCall({ active: true, type: 'video', ts: tsParam || Date.now(), callId: callIdParam || null });
         setAutoStartVideo(true);
       }
-      window.history.replaceState({}, '', location.pathname);
+      navigate(location.pathname, { replace: true });
     }
-  }, [location.search, currentUserData, location.pathname, t]);
+  }, [location.search, currentUserData, location.pathname, navigate, t]);
 
   useBodyScrollLock(view === 'chat' && !isDesktop);
 

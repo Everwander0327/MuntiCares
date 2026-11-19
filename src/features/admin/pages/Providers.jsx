@@ -18,6 +18,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import toast from 'react-hot-toast';
 import { exportToCSV, formatDataForExport } from '@/lib/exportUtils';
 import { parseLocalDate } from '@/lib/localDate';
+import useSearchQueryParam from '@/hooks/useSearchQueryParam';
 import { canApproveProvider } from '@/features/admin/utils/providerEligibility';
 import ProviderVerificationModal from '@/features/admin/components/ProviderVerificationModal';
 import ProviderFilterDrawer from '@/features/admin/components/ProviderFilterDrawer';
@@ -118,6 +119,14 @@ const AdminProviders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('All');
   const [showPendingOnly, setShowPendingOnly] = useState(false);
+
+  useSearchQueryParam(['q'], ({ q }) => {
+    if (q) {
+      setSearchTerm(q);
+      setFilter('All');
+      setShowPendingOnly(false);
+    }
+  });
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProvider, setSelectedProvider] = useState(null);

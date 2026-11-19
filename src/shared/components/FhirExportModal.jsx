@@ -1,36 +1,46 @@
-import { useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   Copy,
   Check,
+  CheckCircle,
   DownloadSimple,
-  FileCode,
   User,
   Pulse,
   Heartbeat,
   FileText,
   ShieldCheck,
+  WarningCircle,
+  CaretDown,
+  CaretUp,
+  Pill,
+  Stethoscope,
+  ClipboardText,
+  Prohibit,
+  FirstAidKit,
 } from '@phosphor-icons/react';
 import toast from 'react-hot-toast';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { validateFhirBundle } from '@/lib/fhirValidator';
 
-const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
+const FhirExportModal = ({ open, onClose, bundle, patientName, loading = false }) => {
   const { t } = useLanguage();
+  const prefersReducedMotion = useReducedMotion();
   const [copied, setCopied] = useState(false);
-  const [viewMode, setViewMode] = useState('json'); // 'json' | 'resources'
+  const [validationExpanded, setValidationExpanded] = useState(false);
 
   const json = useMemo(() => {
     if (!open || !bundle) return '';
     return JSON.stringify(bundle, null, 2);
   }, [open, bundle]);
 
-  const jsonLines = useMemo(() => {
-    if (!json) return [];
-    return json.split('\n');
-  }, [json]);
+  const validation = useMemo(() => {
+    if (!open || !bundle) return null;
+    return validateFhirBundle(bundle);
+  }, [open, bundle]);
 
   const fileName = useMemo(() => {
     const cleanName = patientName?.trim()?.replace(/\s+/g, '_') || 'patient';
@@ -44,77 +54,96 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     return `${(bytes / 1024).toFixed(1)} KB`;
   }, [json]);
 
-  const resourceStats = useMemo(() => {
+  const resources = useMemo(() => {
     const entries = Array.isArray(bundle?.entry) ? bundle.entry : [];
-    let patients = 0;
-    let observations = 0;
-    let clinical = 0;
-    let documents = 0;
 
-    const list = entries.map((item, idx) => {
+    return entries.map((item, idx) => {
       const res = item?.resource || {};
       const type = res.resourceType || 'Resource';
-      if (type === 'Patient') patients += 1;
-      else if (type === 'Observation') observations += 1;
-      else if (type === 'Condition' || type === 'AllergyIntolerance') clinical += 1;
-      else if (type === 'DocumentReference') documents += 1;
 
-      let summary = res.id || `entry-${idx + 1}`;
-      if (type === 'Patient') {
+      let summary = t('common.fhir.typeDefault');
+      let subtitle = t('common.fhir.typeDefault');
+
+      if (type === 'Composition') {
+        summary = (res.title || 'Patient Summary').replace(/\s*\(IPS\)\s*/gi, '').trim();
+        subtitle = t('common.fhir.typeComposition');
+      } else if (type === 'Organization') {
+        summary = res.name || 'Organization';
+        subtitle = t('common.fhir.typeOrganization');
+      } else if (type === 'Patient') {
         summary = res.name?.[0]?.text || patientName || t('common.fhir.patientDemographics');
+        subtitle = t('common.fhir.typePatient');
       } else if (type === 'Observation') {
         const label = res.code?.text || res.code?.coding?.[0]?.display || t('common.fhir.vitalSign');
         if (res.valueQuantity) {
           summary = `${label}: ${res.valueQuantity.value} ${res.valueQuantity.unit || ''}`.trim();
+        } else if (res.valueCodeableConcept?.text) {
+          summary = `${label}: ${res.valueCodeableConcept.text}`;
         } else if (Array.isArray(res.component) && res.component.length > 0) {
-          const vals = res.component.map((c) => c.valueQuantity?.value).filter((v) => v != null).join('/');
+          const vals = res.component
+            .map((c) => c.valueQuantity?.value)
+            .filter((v) => v != null)
+            .join('/');
           summary = `${label}${vals ? `: ${vals} mmHg` : ''}`;
         } else {
           summary = label;
         }
-      } else if (type === 'Condition' || type === 'AllergyIntolerance') {
-        summary = res.code?.text || type;
+        const isLab = res.category?.some((c) =>
+          c.coding?.some((coding) => coding.code === 'laboratory')
+        );
+        subtitle = isLab ? t('common.fhir.typeLabObservation') : t('common.fhir.typeObservation');
+      } else if (type === 'Condition') {
+        summary = res.code?.text || res.code?.coding?.[0]?.display || t('common.fhir.typeCondition');
+        subtitle = t('common.fhir.typeCondition');
+      } else if (type === 'AllergyIntolerance') {
+        summary = res.code?.text || res.code?.coding?.[0]?.display || t('common.fhir.typeAllergy');
+        subtitle = t('common.fhir.typeAllergy');
+      } else if (type === 'Procedure') {
+        summary = res.code?.text || res.code?.coding?.[0]?.display || t('common.fhir.typeProcedure');
+        subtitle = t('common.fhir.typeProcedure');
+      } else if (type === 'MedicationStatement') {
+        summary =
+          res.medicationCodeableConcept?.text ||
+          res.medicationCodeableConcept?.coding?.[0]?.display ||
+          t('common.fhir.typeMedication');
+        subtitle = t('common.fhir.typeMedication');
+      } else if (type === 'Encounter') {
+        summary = res.type?.[0]?.text || t('common.fhir.typeEncounter');
+        subtitle = t('common.fhir.typeEncounter');
       } else if (type === 'DocumentReference') {
         summary = res.content?.[0]?.attachment?.title || t('common.fhir.medicalDocument');
+        const isClinicalNote = res.category?.some((c) =>
+          c.coding?.some((coding) => coding.code === 'clinical-note')
+        );
+        subtitle = isClinicalNote ? t('common.fhir.typeClinicalNote') : t('common.fhir.typeDocument');
+      } else if (type === 'Consent') {
+        summary = res.category?.[0]?.text || t('common.fhir.typeConsent');
+        subtitle = t('common.fhir.typeConsent');
       }
 
       return {
         id: res.id || `res-${idx}`,
         type,
         summary,
-        fullUrl: item?.fullUrl || '',
+        subtitle,
       };
     });
-
-    return {
-      total: entries.length,
-      patients,
-      observations,
-      clinical,
-      documents,
-      list,
-    };
   }, [bundle, patientName, t]);
 
-  // Handle Escape key when open
   useBodyScrollLock(open);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && open) {
-        onClose();
-        setCopied(false);
-      }
-    };
-    if (open) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [open, onClose]);
+  const handleClose = () => {
+    onClose?.();
+    setCopied(false);
+    setValidationExpanded(false);
+  };
+
+  const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
+    onClose: handleClose,
+  });
 
   const handleCopy = async () => {
+    if (loading || !json) return;
     try {
       await navigator.clipboard.writeText(json);
       setCopied(true);
@@ -126,6 +155,7 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
   };
 
   const handleDownload = () => {
+    if (loading || !json) return;
     const blob = new Blob([json], { type: 'application/fhir+json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -136,274 +166,303 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
     toast.success(t('common.fhir.downloadedToast'));
   };
 
-  const handleClose = () => {
-    onClose();
-    setCopied(false);
+  const getResourceIcon = (type) => {
+    switch (type) {
+      case 'Patient':
+        return User;
+      case 'Observation':
+        return Pulse;
+      case 'MedicationStatement':
+        return Pill;
+      case 'Encounter':
+        return Stethoscope;
+      case 'DocumentReference':
+      case 'Composition':
+        return FileText;
+      case 'Consent':
+        return ShieldCheck;
+      case 'Procedure':
+        return ClipboardText;
+      case 'AllergyIntolerance':
+        return Prohibit;
+      case 'Organization':
+        return FirstAidKit;
+      default:
+        return Heartbeat;
+    }
   };
 
-  const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
-    onClose: handleClose,
-  });
+  const isIpsValid = validation?.valid && validation?.profile === 'IPS-R4';
+  const isR4Valid = validation?.valid && validation?.profile === 'FHIR-R4';
+  const hasValidationDetails =
+    (validation?.errors?.length || 0) > 0 || (validation?.warnings?.length || 0) > 0;
 
-  if (typeof document === 'undefined') return null;
-
-  return createPortal(
-    <AnimatePresence>
+  return (
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) handleClose();
+      }}
+    >
       {open && (
-        <div
-          className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
-          onClick={handleClose}
-        >
-          {/* Backdrop */}
-          <motion.div
-            className="fixed inset-0 bg-slate-950/70 backdrop-blur-[2px] z-0"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.16 }}
-            onClick={handleClose}
-          />
-
-          {/* Neumorphic Modal Dialog — Option 1: Clinical Bundle Summary + Segmented Inspector */}
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="fhir-modal-title"
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 28 }}
-            transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
-            onClick={(e) => e.stopPropagation()}
-            {...drawerMotionProps}
-            className="relative z-10 w-full sm:max-w-2xl max-h-[92dvh] sm:max-h-[86dvh] neu-flat bg-surface-shell rounded-t-[2rem] sm:rounded-[2rem] flex flex-col overflow-hidden border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-          >
-            <div
-              className="shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
-              {...dragHandleProps}
+        <DialogPrimitive.Portal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-overlay bg-slate-950/70 backdrop-blur-[2px]" />
+          <DialogPrimitive.Content asChild aria-modal="true">
+            <motion.div
+              className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
+              onClick={handleClose}
             >
-              {/* Mobile Drag Indicator Pill */}
-              <div className="mx-auto mt-3 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0" aria-hidden="true" />
-
-              {/* Header */}
-              <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/70 dark:border-white/10">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 dark:bg-primary/20 border border-primary/20 flex items-center justify-center text-primary dark:text-primary-300 shrink-0">
-                    <FileCode className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 id="fhir-modal-title" className="font-display font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate">
-                        {t('common.fhir.title')}
-                      </h2>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-[0.625rem] font-extrabold text-success dark:text-emerald-300 uppercase tracking-wider">
-                        {t('common.fhir.transactionBadge')}
-                      </span>
-                    </div>
-                    <p className="text-xs text-tertiary dark:text-slate-400 mt-0.5 truncate font-semibold">
-                      {patientName ? (
-                        <>
-                          {t('common.fhir.patientPrefix')} <span className="text-slate-700 dark:text-slate-200 font-bold">{patientName}</span> •{' '}
-                        </>
-                      ) : null}
-                      <span className="font-mono text-[0.6875rem]">{fileName}</span> ({fileSizeLabel})
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div className="flex-1 min-h-0 p-3.5 sm:p-5 overflow-hidden flex flex-col gap-3.5">
-              {/* 4-Tile Clinical Resource Summary Strip */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 shrink-0">
-                <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center gap-2.5">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300 flex items-center justify-center font-extrabold text-xs shrink-0">
-                    {resourceStats.patients}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary truncate">{t('common.fhir.tilePatient')}</p>
-                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">{t('common.fhir.tileDemographics')}</p>
-                  </div>
-                </div>
-
-                <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center gap-2.5">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-500/10 text-success dark:text-emerald-300 flex items-center justify-center font-extrabold text-xs shrink-0">
-                    {resourceStats.observations}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary truncate">{t('common.fhir.tileObservations')}</p>
-                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">{t('common.fhir.tileVitalSigns')}</p>
-                  </div>
-                </div>
-
-                <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center gap-2.5">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-amber-500/10 text-warning dark:text-amber-300 flex items-center justify-center font-extrabold text-xs shrink-0">
-                    {resourceStats.clinical}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary truncate">{t('common.fhir.tileClinical')}</p>
-                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">{t('common.fhir.tileConditions')}</p>
-                  </div>
-                </div>
-
-                <div className="neu-flat-sm p-2.5 sm:p-3 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center gap-2.5">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-300 flex items-center justify-center font-extrabold text-xs shrink-0">
-                    {resourceStats.documents}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary truncate">{t('common.fhir.tileAttachments')}</p>
-                    <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">{t('common.fhir.tileDocuments')}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Segmented Inspector Switcher + Quick Copy Button */}
-              <div className="flex items-center justify-between gap-2 shrink-0">
-                <div className="neu-inset p-1 rounded-xl inline-flex items-center gap-1 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('json')}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      viewMode === 'json'
-                        ? 'neu-pressed text-link font-extrabold shadow-inner'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {t('common.fhir.rawJson')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode('resources')}
-                    className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      viewMode === 'resources'
-                        ? 'neu-pressed text-link font-extrabold shadow-inner'
-                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {t('common.fhir.includedResources', { count: resourceStats.total })}
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="hidden sm:inline-flex neu-btn px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-link transition-all items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-success stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5 text-primary dark:text-primary-400" />}
-                  <span>{copied ? t('common.actions.copied') : t('common.fhir.copyJson')}</span>
-                </button>
-              </div>
-
-              {/* Inspector Content Area */}
-              {viewMode === 'json' ? (
-                <div className="neu-inset rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 flex-1 min-h-[11.25rem] flex flex-col">
-                  {/* Code Header Toolbar */}
-                  <div className="px-3.5 py-2 bg-slate-200/60 dark:bg-slate-800/70 border-b border-slate-300/60 dark:border-white/10 flex items-center justify-between text-[0.6875rem] font-mono text-slate-600 dark:text-slate-400 shrink-0">
-                    <span>application/fhir+json • UTF-8</span>
-                    <span>{t('common.fhir.linesCount', { count: jsonLines.length })}</span>
-                  </div>
-
-                  {/* Scrollable Code View */}
-                  <div
-                    tabIndex={0}
-                    className="p-3 sm:p-4 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain select-text font-mono text-xs leading-relaxed outline-none focus:outline-none"
-                    style={{
-                      WebkitOverflowScrolling: 'touch',
-                      contain: 'content',
-                    }}
-                  >
-                    <pre className="text-slate-800 dark:text-slate-200 font-mono whitespace-pre-wrap break-words [word-break:break-word] text-xs leading-relaxed">
-                      {json || t('common.fhir.noData')}
-                    </pre>
-                  </div>
-                </div>
-              ) : (
+              <motion.div
+                initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: [0.32, 0.72, 0, 1] }}
+                onClick={(e) => e.stopPropagation()}
+                {...drawerMotionProps}
+                className="relative z-10 w-full sm:max-w-2xl max-h-[92dvh] sm:max-h-[86dvh] neu-flat bg-surface-shell rounded-t-[2rem] sm:rounded-[2rem] flex flex-col overflow-hidden border-t sm:border border-surface-border shadow-2xl pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+              >
+                {/* Header */}
                 <div
-                  className="neu-inset rounded-2xl p-3 sm:p-4 flex-1 min-h-[11.25rem] overflow-y-auto overscroll-contain space-y-2 border border-slate-200/80 dark:border-white/10"
-                  style={{ WebkitOverflowScrolling: 'touch' }}
+                  className="shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
+                  {...dragHandleProps}
                 >
-                  {resourceStats.list.length === 0 ? (
-                    <div className="text-center py-8 text-xs font-semibold text-tertiary">
-                      {t('common.fhir.noResources')}
+                  <div
+                    className="mx-auto mt-3 h-1.5 w-11 rounded-full bg-surface-border sm:hidden shrink-0"
+                    aria-hidden="true"
+                  />
+                  <div className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-surface-border">
+                    <div className="min-w-0">
+                      <DialogPrimitive.Title asChild>
+                        <h2 className="font-display font-extrabold text-base sm:text-lg text-ink dark:text-slate-100 truncate">
+                          {t('common.fhir.title')}
+                        </h2>
+                      </DialogPrimitive.Title>
+                      <DialogPrimitive.Description asChild>
+                        <p className="text-xs text-tertiary mt-0.5 truncate font-semibold">
+                          {loading ? (
+                            t('common.fhir.loadingSummary')
+                          ) : (
+                            <>
+                              {patientName ? (
+                                <>
+                                  {t('common.fhir.patientPrefix')}{' '}
+                                  <span className="text-ink dark:text-slate-200 font-bold">{patientName}</span> •{' '}
+                                </>
+                              ) : null}
+                              <span className="font-mono text-xs">{fileName}</span>{' '}
+                              <span className="tabular-nums">({fileSizeLabel})</span>
+                            </>
+                          )}
+                        </p>
+                      </DialogPrimitive.Description>
                     </div>
-                  ) : (
-                    resourceStats.list.map((item) => {
-                      const IconComponent =
-                        item.type === 'Patient'
-                          ? User
-                          : item.type === 'Observation'
-                            ? Pulse
-                            : item.type === 'DocumentReference'
-                              ? FileText
-                              : Heartbeat;
+                  </div>
+                </div>
 
-                      return (
-                        <div
-                          key={item.id}
-                          className="neu-flat-sm p-3 rounded-xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between gap-3"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-8 h-8 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-300 flex items-center justify-center shrink-0">
-                              <IconComponent className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate">
-                                {item.summary}
-                              </p>
-                              <p className="text-[0.6875rem] font-mono text-tertiary truncate">
-                                {item.type}/{item.id}
-                              </p>
+                {/* Single Scrollable Content Container */}
+                <div
+                  className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                  aria-busy={loading}
+                >
+                  {loading ? (
+                    <div role="status" aria-label={t('common.fhir.loadingSummary')} className="space-y-4">
+                      <div className="rounded-2xl p-3 sm:p-3.5 border border-surface-border flex items-center gap-2.5 animate-pulse">
+                        <div className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3.5 w-48 rounded-lg bg-slate-200 dark:bg-slate-700" />
+                          <div className="h-3 w-28 rounded-lg bg-slate-200 dark:bg-slate-700" />
+                        </div>
+                      </div>
+
+                      <div className="neu-inset rounded-2xl border border-surface-border divide-y divide-surface-border overflow-hidden">
+                        {[0, 1, 2, 3].map((row) => (
+                          <div key={row} className="px-3.5 sm:px-4 py-3 flex items-center gap-3 animate-pulse">
+                            <div className="w-4 h-4 rounded bg-slate-200 dark:bg-slate-700 shrink-0" />
+                            <div className="flex-1 space-y-2">
+                              <div className="h-3.5 w-44 rounded-lg bg-slate-200 dark:bg-slate-700" />
+                              <div className="h-3 w-28 rounded-lg bg-slate-200 dark:bg-slate-700" />
                             </div>
                           </div>
-                          <span className="px-2 py-0.5 rounded-md neu-inset text-[0.625rem] font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider shrink-0">
-                            {item.type}
-                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* FHIR R4 Self-Validation Banner */}
+                      {validation && (
+                        <div
+                          role="status"
+                          className={`rounded-2xl p-3 sm:p-3.5 border ${
+                            validation.valid
+                              ? 'bg-emerald-500/5 border-emerald-500/25'
+                              : 'bg-rose-500/5 border-rose-500/25'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {validation.valid ? (
+                                <CheckCircle
+                                  className="w-5 h-5 text-success dark:text-success-dark shrink-0"
+                                  weight="fill"
+                                  aria-hidden="true"
+                                />
+                              ) : (
+                                <WarningCircle
+                                  className="w-5 h-5 text-danger dark:text-danger-dark shrink-0"
+                                  weight="fill"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              <div className="min-w-0">
+                                <p
+                                  className={`text-sm font-bold leading-snug ${
+                                    validation.valid
+                                      ? 'text-success dark:text-success-dark'
+                                      : 'text-danger dark:text-danger-dark'
+                                  }`}
+                                >
+                                  {isIpsValid
+                                    ? t('common.fhir.validIpsTitle')
+                                    : isR4Valid
+                                      ? t('common.fhir.validR4Title')
+                                      : t('common.fhir.invalidTitle')}
+                                </p>
+                                <p className="text-xs text-tertiary font-semibold tabular-nums mt-0.5">
+                                  {t('common.fhir.checksCount', {
+                                    passed: validation.checksPassed,
+                                    total: validation.checksTotal,
+                                  })}
+                                  {validation.warnings.length > 0
+                                    ? ` • ${t('common.fhir.warningsCount', { count: validation.warnings.length })}`
+                                    : ''}
+                                  {validation.errors.length > 0
+                                    ? ` • ${t('common.fhir.errorsCount', { count: validation.errors.length })}`
+                                    : ''}
+                                </p>
+                              </div>
+                            </div>
+
+                            {hasValidationDetails && (
+                              <button
+                                type="button"
+                                onClick={() => setValidationExpanded((prev) => !prev)}
+                                className="neu-btn min-h-[2.75rem] px-3 rounded-xl text-xs font-bold text-ink dark:text-slate-200 inline-flex items-center gap-1.5 shrink-0 cursor-pointer"
+                              >
+                                <span>
+                                  {validationExpanded ? t('common.fhir.hideDetails') : t('common.fhir.showDetails')}
+                                </span>
+                                {validationExpanded ? (
+                                  <CaretUp className="w-3.5 h-3.5" aria-hidden="true" />
+                                ) : (
+                                  <CaretDown className="w-3.5 h-3.5" aria-hidden="true" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+
+                          {validationExpanded && hasValidationDetails && (
+                            <ul className="mt-3 pt-3 border-t border-surface-border space-y-1.5 text-xs">
+                              {validation.errors.map((err, idx) => (
+                                <li
+                                  key={`err-${idx}`}
+                                  className="text-danger dark:text-danger-dark font-medium break-words"
+                                >
+                                  <span className="font-mono font-bold">{err.path}</span>: {err.message}
+                                </li>
+                              ))}
+                              {validation.warnings.map((warn, idx) => (
+                                <li
+                                  key={`warn-${idx}`}
+                                  className="text-warning dark:text-warning-dark font-medium break-words"
+                                >
+                                  <span className="font-mono font-bold">{warn.path}</span>: {warn.message}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </div>
-                      );
-                    })
+                      )}
+
+                      {/* Included Resources List (Flat divided rows; parent handles scrolling) */}
+                      <div className="neu-inset rounded-2xl border border-surface-border divide-y divide-surface-border overflow-hidden">
+                        {resources.length === 0 ? (
+                          <div className="text-center py-8 px-4 text-sm font-semibold text-tertiary">
+                            {t('common.fhir.noResources')}
+                          </div>
+                        ) : (
+                          resources.map((item) => {
+                            const IconComponent = getResourceIcon(item.type);
+                            return (
+                              <div
+                                key={`${item.type}-${item.id}`}
+                                className="px-3.5 sm:px-4 py-3 flex items-center gap-3 min-w-0"
+                              >
+                                <IconComponent className="w-4 h-4 text-link shrink-0" aria-hidden="true" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-bold text-ink dark:text-slate-100 truncate">
+                                    {item.summary}
+                                  </p>
+                                  <p className="text-xs text-tertiary truncate">
+                                    {item.subtitle}
+                                  </p>
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
-              )}
-            </div>
 
-            {/* Footer Actions */}
-            <div className="px-4 sm:px-6 py-3 sm:py-3.5 border-t border-slate-200/70 dark:border-white/10 shrink-0">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-4">
-                <div className="flex items-center gap-2 text-xs text-tertiary dark:text-slate-400 font-semibold">
-                  <div className="w-6 h-6 rounded-lg bg-emerald-500/10 text-success dark:text-emerald-300 flex items-center justify-center shrink-0">
-                    <ShieldCheck className="w-3.5 h-3.5" />
+                {/* Footer Actions */}
+                <div className="px-4 sm:px-6 py-3.5 border-t border-surface-border shrink-0">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-xs text-tertiary font-semibold">
+                      <ShieldCheck
+                        className="w-4 h-4 text-success dark:text-success-dark shrink-0"
+                        aria-hidden="true"
+                      />
+                      <span className="text-xs leading-snug">{t('common.fhir.localNotice')}</span>
+                    </div>
+
+                    <div className="grid grid-cols-5 sm:flex sm:items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleCopy}
+                        disabled={loading || !json}
+                        className="col-span-2 neu-btn min-h-[2.75rem] px-3.5 py-2.5 rounded-2xl font-bold text-xs text-ink dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {copied ? (
+                          <Check className="w-4 h-4 text-success dark:text-success-dark" aria-hidden="true" />
+                        ) : (
+                          <Copy className="w-4 h-4" aria-hidden="true" />
+                        )}
+                        <span>{copied ? t('common.actions.copied') : t('common.fhir.copyJson')}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownload}
+                        disabled={loading || !json}
+                        aria-busy={loading}
+                        className="col-span-3 neu-btn-primary min-h-[2.75rem] px-4 sm:px-5 py-2.5 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <DownloadSimple className="w-4 h-4 shrink-0" aria-hidden="true" />
+                        <span>{loading ? t('common.fhir.preparingBtn') : t('common.fhir.downloadJson')}</span>
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[0.6875rem] sm:text-xs leading-snug">
-                    {t('common.fhir.localNotice')}
-                  </span>
                 </div>
-
-                <div className="grid grid-cols-5 sm:flex sm:items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={handleCopy}
-                    className="col-span-2 neu-btn px-3.5 py-2.5 rounded-xl font-bold text-xs text-slate-700 dark:text-slate-200 hover:text-link transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                  >
-                    {copied ? <Check className="w-3.5 h-3.5 text-success stroke-[2.5]" /> : <Copy className="w-3.5 h-3.5" />}
-                    <span>{copied ? t('common.actions.copied') : t('common.actions.copy')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleDownload}
-                    className="col-span-3 neu-btn-primary px-4 sm:px-5 py-2.5 rounded-xl font-bold text-xs text-white transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 shadow-sm"
-                  >
-                    <DownloadSimple className="w-4 h-4 shrink-0" />
-                    <span>{t('common.fhir.downloadJson')}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+              </motion.div>
+            </motion.div>
+          </DialogPrimitive.Content>
+        </DialogPrimitive.Portal>
       )}
-    </AnimatePresence>,
-    document.body
+    </DialogPrimitive.Root>
   );
 };
 

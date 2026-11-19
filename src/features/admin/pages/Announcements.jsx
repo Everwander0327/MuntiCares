@@ -23,6 +23,7 @@ import { MotionConfig } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import useSearchQueryParam from '@/hooks/useSearchQueryParam';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
 import {
   normalizeEventLink,
@@ -89,6 +90,13 @@ const AdminAnnouncements = () => {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [historySearch, setHistorySearch] = useState('');
   const [historyFilter, setHistoryFilter] = useState('all');
+
+  useSearchQueryParam(['q'], ({ q }) => {
+    if (q) {
+      setHistorySearch(q);
+      setHistoryFilter('all');
+    }
+  });
   const [confirmSend, setConfirmSend] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 

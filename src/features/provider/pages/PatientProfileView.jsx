@@ -19,7 +19,6 @@ import {
   FolderOpen,
   User,
   FileCode,
-  SpinnerGap,
   ArrowSquareOut,
   Paperclip,
   Check,
@@ -33,9 +32,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import toast from 'react-hot-toast';
 import { FhirExportModal } from '@/shared/components';
-import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
+import { buildIpsBundle } from '@/lib/fhir';
 import PatientRecordModal from '../components/PatientRecordModal';
 import { fetchConsentGrant } from '../lib/consent';
+import { recordProviderFhirExport } from '../lib/fhirAudit';
 
 const PatientProfileView = () => {
   const { id } = useParams();
@@ -193,13 +193,13 @@ const PatientProfileView = () => {
   if (!patient) return null;
 
   const handleFhirExport = async () => {
+    setFhirBundle(null);
     setFhirLoading(true);
+    setFhirOpen(true);
     try {
-      const resources = [];
-
       const { data: userData } = await supabase
         .from('users')
-        .select('*')
+        .select('id, full_name, email, created_at')
         .eq('id', id)
         .single();
 
@@ -209,11 +209,13 @@ const PatientProfileView = () => {
         .eq('user_id', id)
         .maybeSingle();
 
-      const patientRes = buildPatientResource(userData, patData);
-      resources.push(patientRes);
-
-      const canAccess = consent?.is_enabled;
+      const canAccess = Boolean(consent?.is_enabled);
       const perms = consent?.permissions || {};
+      const exportedCategories = ['demographics'];
+
+      let mhData = null;
+      let notesData = [];
+      let docsData = [];
 
       if (canAccess) {
         if (perms.medical_history === true) {
@@ -222,36 +224,56 @@ const PatientProfileView = () => {
             .select('*')
             .eq('patient_id', id)
             .maybeSingle();
-
           if (mh) {
-            const conditions = buildConditionResources(mh, id);
-            resources.push(...conditions);
-            const allergies = buildAllergyResources(mh, id);
-            resources.push(...allergies);
+            mhData = mh;
+            exportedCategories.push('medical_history');
           }
         }
 
         if (perms.visit_notes === true) {
-          const { data: notesData } = await supabase
+          const { data: notes } = await supabase
             .from('visit_notes')
             .select('*')
             .eq('patient_id', id)
-            .eq('provider_id', authUser.id)
             .order('created_at', { ascending: false })
             .limit(100);
+          if (notes?.length) {
+            notesData = notes;
+            exportedCategories.push('visit_notes');
+          }
+        }
 
-          if (notesData?.length) {
-            const vitals = buildVitalSignObservations(notesData, id);
-            resources.push(...vitals);
+        if (perms.documents === true) {
+          const { data: docs } = await supabase
+            .from('patient_documents')
+            .select('id, document_title, uploaded_at')
+            .eq('patient_id', id)
+            .order('uploaded_at', { ascending: false })
+            .limit(50);
+          if (docs?.length) {
+            docsData = docs;
+            exportedCategories.push('documents');
           }
         }
       }
 
-      const bundle = buildBundle(resources);
+      const bundle = buildIpsBundle({
+        userData: { ...(userData || {}), id },
+        patientData: patData,
+        medicalHistory: mhData,
+        visitNotes: notesData,
+        documents: docsData,
+        consents: consent ? [{ ...consent, id: `consent-${id}-${authUser?.id || 'provider'}` }] : [],
+      });
+
+      if (canAccess) {
+        recordProviderFhirExport(id, exportedCategories);
+      }
+
       setFhirBundle(bundle);
-      setFhirOpen(true);
     } catch (err) {
       console.error('FHIR export error:', err);
+      setFhirOpen(false);
       toast.error(t('provider.patientProfile.fhirFailed'));
     } finally {
       setFhirLoading(false);
@@ -361,19 +383,18 @@ const PatientProfileView = () => {
                 whileTap={consent?.is_enabled ? { scale: 0.96 } : {}}
                 onClick={consent?.is_enabled ? handleFhirExport : undefined}
                 disabled={fhirLoading || !consent?.is_enabled}
+                aria-busy={fhirLoading}
                 title={consent?.is_enabled ? t('provider.patientProfile.fhirExportTitle') : t('provider.patientProfile.fhirLockedTitle')}
-                className={`px-3.5 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-all ${
+                className={`min-h-[2.75rem] px-3.5 py-2.5 rounded-xl font-bold text-xs inline-flex items-center justify-center gap-1.5 transition-all ${
                   consent?.is_enabled
-                    ? 'neu-btn text-teal-700 dark:text-teal-300 cursor-pointer'
+                    ? 'neu-btn text-success dark:text-success-dark cursor-pointer'
                     : 'neu-inset opacity-50 text-tertiary dark:text-tertiary cursor-not-allowed'
                 }`}
               >
-                {fhirLoading ? (
-                  <SpinnerGap className="w-4 h-4 animate-spin shrink-0" />
-                ) : consent?.is_enabled ? (
-                  <FileCode className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                {consent?.is_enabled ? (
+                  <FileCode className="w-4 h-4 shrink-0" aria-hidden="true" />
                 ) : (
-                  <Lock className="w-3.5 h-3.5 shrink-0" />
+                  <Lock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                 )}
                 <span className="truncate">
                   {fhirLoading
@@ -794,6 +815,7 @@ const PatientProfileView = () => {
         onClose={() => setFhirOpen(false)}
         bundle={fhirBundle}
         patientName={patient?.full_name}
+        loading={fhirLoading}
       />
     </>
   );

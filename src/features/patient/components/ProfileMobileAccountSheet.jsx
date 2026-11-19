@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CheckCircle, DownloadSimple, FileCode, SignOut } from '@phosphor-icons/react';
+import { CheckCircle, DownloadSimple, FileCode, SignOut, UploadSimple } from '@phosphor-icons/react';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -25,6 +25,7 @@ export default function ProfileMobileAccountSheet({
   hasUnsavedChanges = false,
   onExportPdf,
   onExportFhir,
+  onImportFhir,
   onLogout,
 }) {
   const { t } = useLanguage();
@@ -150,6 +151,16 @@ export default function ProfileMobileAccountSheet({
                       <FileCode className="w-4 h-4" aria-hidden="true" />
                       <span>{fhirLoading ? t('patient.accountSheet.exportingFhir') : t('patient.accountSheet.fhirBtn')}</span>
                     </button>
+                    {onImportFhir && (
+                      <button
+                        type="button"
+                        onClick={() => runActionThenClose(onImportFhir)}
+                        className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl font-bold text-link transition-all text-xs sm:text-sm cursor-pointer"
+                      >
+                        <UploadSimple className="w-4 h-4" aria-hidden="true" />
+                        <span>{t('patient.accountSheet.importFhirBtn')}</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 

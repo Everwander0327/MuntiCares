@@ -21,6 +21,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { presessionMapFor, ratedMapFor } from '@/features/patient/utils/localState';
 import usePatientRequests from '@/hooks/usePatientRequests';
+import useSearchQueryParam from '@/hooks/useSearchQueryParam';
 import { supabase } from '@/lib/supabase';
 import { Link, useNavigate } from 'react-router-dom';
 import ReviewModal from '../components/ReviewModal';
@@ -395,6 +396,16 @@ const PatientRequests = () => {
   const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' | 'past' | 'all'
   const [filter, setFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
+
+  useSearchQueryParam(['q', 'tab'], ({ q, tab }) => {
+    if (q) {
+      setSearchTerm(q);
+      setFilter('All');
+      setActiveTab(tab && ['upcoming', 'past', 'all'].includes(tab) ? tab : 'all');
+    } else if (tab && ['upcoming', 'past', 'all'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  });
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedReviewReq, setSelectedReviewReq] = useState(null);

@@ -8,7 +8,7 @@ import { initialsAvatar } from '@/lib/avatar';
 import { ChatCircle, MagnifyingGlass, X } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatWindow, ConversationList } from '@/features/chat';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 
 const ProviderMessages = () => {
@@ -17,6 +17,7 @@ const ProviderMessages = () => {
   const tRef = useRef(t);
   tRef.current = t;
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [view, setView] = useState('list');
   const [selectedPartner, setSelectedPartner] = useState(null);
@@ -129,9 +130,9 @@ const ProviderMessages = () => {
         setAutoStartCall({ active: true, type: 'video', ts: tsParam || Date.now(), callId: callIdParam || null });
         setAutoStartVideo(true);
       }
-      window.history.replaceState({}, '', location.pathname);
+      navigate(location.pathname, { replace: true });
     }
-  }, [location.search, currentUserData, location.pathname]);
+  }, [location.search, currentUserData, location.pathname, navigate]);
 
   useBodyScrollLock(view === 'chat' && !isDesktop);
 

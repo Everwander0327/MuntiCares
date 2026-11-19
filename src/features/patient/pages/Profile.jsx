@@ -33,8 +33,8 @@ import toast from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import { getSignedUrl } from '@/lib/supabaseHelpers';
 import { SkeletonPage, EmptyState } from '@/shared/ui';
-import { ProfilePhotoUpload, FhirExportModal } from '@/shared/components';
-import { buildPatientResource, buildVitalSignObservations, buildConditionResources, buildAllergyResources, buildBundle } from '@/lib/fhir';
+import { ProfilePhotoUpload, FhirExportModal, FhirImportModal } from '@/shared/components';
+import { buildIpsBundle } from '@/lib/fhir';
 import ProfileAddressModal from '@/features/patient/components/ProfileAddressModal';
 import ProfileMobileAccountSheet from '@/features/patient/components/ProfileMobileAccountSheet';
 import ProfileConfirmDialog from '@/features/patient/components/ProfileConfirmDialog';
@@ -58,6 +58,7 @@ const PatientProfile = () => {
   const [visitNotes, setVisitNotes] = useState([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [fhirOpen, setFhirOpen] = useState(false);
+  const [fhirImportOpen, setFhirImportOpen] = useState(false);
   const [fhirBundle, setFhirBundle] = useState(null);
   const [fhirLoading, setFhirLoading] = useState(false);
   const { user, logout } = useAuth();
@@ -81,6 +82,7 @@ const PatientProfile = () => {
     full_name: '',
     email: '',
     phone: '',
+    date_of_birth: '',
     address: '',
     medical_notes: '',
     emergency_contact: '',
@@ -89,6 +91,8 @@ const PatientProfile = () => {
     allergies: '',
     chronic_conditions: '',
     past_surgeries: '',
+    medications: '',
+    blood_type: '',
     is_profile_complete: false,
     created_at: ''
   });
@@ -131,6 +135,7 @@ const PatientProfile = () => {
           full_name: userData.full_name,
           email: userData.email,
           phone: patData?.phone || '',
+          date_of_birth: patData?.date_of_birth ? String(patData.date_of_birth).slice(0, 10) : '',
           address: patData?.address || '',
           medical_notes: patData?.medical_notes || '',
           emergency_contact: formatEmergencyContact(emergencyParts.name, emergencyParts.phone),
@@ -139,6 +144,8 @@ const PatientProfile = () => {
           allergies: '',
           chronic_conditions: '',
           past_surgeries: '',
+          medications: '',
+          blood_type: '',
           is_profile_complete: patData?.is_profile_complete || false,
           created_at: userData.created_at
         };
@@ -153,11 +160,17 @@ const PatientProfile = () => {
           if (!cancelled && avData?.avatar_url) setAvatarUrl(avData.avatar_url);
         } catch {} // column may not exist yet
 
-        // Fetch Medical History
-        const { data: histRows, error: histError } = await supabase
+        // Fetch Medical History (include additive medications & blood_type columns when available)
+        let { data: histRows, error: histError } = await supabase
           .from('medical_histories')
-          .select('allergies, chronic_conditions, past_surgeries')
+          .select('allergies, chronic_conditions, past_surgeries, medications, blood_type')
           .eq('patient_id', userId);
+        if (histError && isMissingColumnError(histError)) {
+          ({ data: histRows, error: histError } = await supabase
+            .from('medical_histories')
+            .select('allergies, chronic_conditions, past_surgeries')
+            .eq('patient_id', userId));
+        }
         if (cancelled) return;
         if (histError) {
           console.error('Error fetching medical history:', histError);
@@ -170,6 +183,8 @@ const PatientProfile = () => {
               allergies: mh.allergies || '',
               chronic_conditions: mh.chronic_conditions || '',
               past_surgeries: mh.past_surgeries || '',
+              medications: mh.medications || '',
+              blood_type: mh.blood_type || '',
             };
             setProfile(hydratedProfile);
           }
@@ -446,13 +461,15 @@ const PatientProfile = () => {
     formatEmergencyContact(profile.emergency_contact_name, profile.emergency_contact_phone) ||
     profile.emergency_contact;
 
-  // FHIR Export
+  // FHIR R4 IPS Export
   const handleFhirExport = async () => {
+    setFhirBundle(null);
     setFhirLoading(true);
+    setFhirOpen(true);
     try {
       const { data: userData } = await supabase
         .from('users')
-        .select('*')
+        .select('id, full_name, email, created_at')
         .eq('id', user.id)
         .single();
 
@@ -474,30 +491,117 @@ const PatientProfile = () => {
         .eq('patient_id', user.id)
         .order('created_at', { ascending: false });
 
-      const resources = [];
+      const { data: docsData } = await supabase
+        .from('patient_documents')
+        .select('id, document_title, uploaded_at')
+        .eq('patient_id', user.id)
+        .order('uploaded_at', { ascending: false });
 
-      const patientRes = buildPatientResource(userData, patData);
-      resources.push(patientRes);
-
-      const vitals = buildVitalSignObservations(notesData || [], user.id);
-      resources.push(...vitals);
-
-      if (histData) {
-        const conditions = buildConditionResources(histData, user.id);
-        resources.push(...conditions);
-        const allergies = buildAllergyResources(histData, user.id);
-        resources.push(...allergies);
+      let consentsData = [];
+      try {
+        const { data: grants } = await supabase
+          .from('consent_access')
+          .select('id, is_enabled, permissions, expires_at, updated_at, created_at')
+          .eq('patient_id', user.id);
+        if (Array.isArray(grants)) consentsData = grants;
+      } catch {
+        consentsData = [];
       }
 
-      const bundle = buildBundle(resources);
+      const bundle = buildIpsBundle({
+        userData: { ...(userData || {}), id: user.id },
+        patientData: patData,
+        medicalHistory: histData,
+        visitNotes: notesData || [],
+        documents: docsData || documents || [],
+        consents: consentsData,
+      });
+
       setFhirBundle(bundle);
-      setFhirOpen(true);
     } catch (err) {
       console.error('FHIR export error:', err);
+      setFhirOpen(false);
       toast.error(t('patient.profile.fhirErrorToast'));
     } finally {
       setFhirLoading(false);
     }
+  };
+
+  // FHIR R4 Bundle Import Merge
+  const handleFhirImportMerge = async (merged) => {
+    if (!user?.id || !merged) return;
+
+    if (merged.hasPatientUpdate) {
+      const patientPayload = {
+        user_id: user.id,
+        ...merged.patientPatch,
+      };
+      let { error } = await supabase
+        .from('patients')
+        .upsert(patientPayload, { onConflict: 'user_id' });
+
+      if (error && isMissingColumnError(error)) {
+        const legacyPayload = { ...patientPayload };
+        delete legacyPayload.date_of_birth;
+        delete legacyPayload.emergency_contact_name;
+        delete legacyPayload.emergency_contact_phone;
+        ({ error } = await supabase
+          .from('patients')
+          .upsert(legacyPayload, { onConflict: 'user_id' }));
+      }
+      if (error) throw error;
+      if (merged.patientPatch.address) {
+        initialAddressRef.current = merged.patientPatch.address;
+      }
+    }
+
+    if (merged.hasMedicalHistoryUpdate) {
+      const { data: existingMH, error: historyLookupError } = await supabase
+        .from('medical_histories')
+        .select('id')
+        .eq('patient_id', user.id);
+      if (historyLookupError) throw historyLookupError;
+      const hasExisting = Array.isArray(existingMH) && existingMH.length > 0;
+
+      const mhPayload = {
+        patient_id: user.id,
+        allergies: merged.nextProfile.allergies || '',
+        chronic_conditions: merged.nextProfile.chronic_conditions || '',
+        past_surgeries: merged.nextProfile.past_surgeries || '',
+        ...(merged.medicalHistoryPatch.medications !== undefined
+          ? { medications: merged.medicalHistoryPatch.medications }
+          : {}),
+        ...(merged.medicalHistoryPatch.blood_type !== undefined
+          ? { blood_type: merged.medicalHistoryPatch.blood_type }
+          : {}),
+      };
+
+      let { error: mhError } = await saveMedicalHistory(supabase, user.id, mhPayload, hasExisting);
+      if (mhError && isMissingColumnError(mhError)) {
+        const legacyMhPayload = {
+          patient_id: user.id,
+          allergies: mhPayload.allergies,
+          chronic_conditions: mhPayload.chronic_conditions,
+          past_surgeries: mhPayload.past_surgeries,
+        };
+        ({ error: mhError } = await saveMedicalHistory(
+          supabase,
+          user.id,
+          legacyMhPayload,
+          hasExisting
+        ));
+      }
+      if (mhError) throw mhError;
+      setHistoryLoaded(true);
+    }
+
+    setProfile(merged.nextProfile);
+    savedBaselineRef.current = {
+      profile: merged.nextProfile,
+      homeCoords,
+      addressDraftMeta,
+    };
+    setSavedSnapshot(buildProfileSnapshot(merged.nextProfile, homeCoords));
   };
 
   // PDF Generation
@@ -1099,10 +1203,20 @@ const PatientProfile = () => {
                       type="button"
                       onClick={handleFhirExport}
                       disabled={fhirLoading}
+                      aria-busy={fhirLoading}
                       className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-success dark:text-success-dark transition-all text-xs cursor-pointer disabled:opacity-50"
                     >
-                      {fhirLoading ? <SpinnerGap className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />}
+                      <FileCode className="w-4 h-4" aria-hidden="true" />
                       <span>{fhirLoading ? t('patient.profile.exportingFhir') : t('patient.profile.fhirBtn')}</span>
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      type="button"
+                      onClick={() => setFhirImportOpen(true)}
+                      className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-link transition-all text-xs cursor-pointer"
+                    >
+                      <UploadSimple className="w-4 h-4" aria-hidden="true" />
+                      <span>{t('patient.profile.importFhirBtn')}</span>
                     </motion.button>
                   </div>
                 </div>
@@ -1626,6 +1740,7 @@ const PatientProfile = () => {
         hasUnsavedChanges={dirty}
         onExportPdf={generatePDF}
         onExportFhir={handleFhirExport}
+        onImportFhir={() => setFhirImportOpen(true)}
         onLogout={requestLogout}
       />
 
@@ -1666,6 +1781,14 @@ const PatientProfile = () => {
         onClose={() => setFhirOpen(false)}
         bundle={fhirBundle}
         patientName={profile.full_name}
+        loading={fhirLoading}
+      />
+
+      <FhirImportModal
+        open={fhirImportOpen}
+        onClose={() => setFhirImportOpen(false)}
+        currentProfile={profile}
+        onConfirmMerge={handleFhirImportMerge}
       />
     </>
   );

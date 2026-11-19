@@ -7,6 +7,7 @@ import { MagnifyingGlass } from '@phosphor-icons/react';
 import { SkeletonPage } from '@/shared/ui';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/shared/ui/sheet';
 import useSort from '@/hooks/useSort';
+import useSearchQueryParam from '@/hooks/useSearchQueryParam';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 import toast from 'react-hot-toast';
@@ -420,6 +421,13 @@ const AdminPatients = () => {
   tRef.current = t;
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('All');
+
+  useSearchQueryParam(['q'], ({ q }) => {
+    if (q) {
+      setSearchTerm(q);
+      setFilter('All');
+    }
+  });
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);

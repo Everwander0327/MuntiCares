@@ -26,6 +26,7 @@ import {
 } from '@/features/tracking/services/trackingService';
 import toast from 'react-hot-toast';
 import { formatSlotLabel, slotMinutes, toLocalDateKey, parseLocalDate } from '@/lib/localDate';
+import useSearchQueryParam from '@/hooks/useSearchQueryParam';
 
 const getStatusFlow = (t) => ({
   Accepted: { next: 'On The Way', label: t('provider.schedule.flowOnTheWay'), color: 'neu-btn-primary text-white' },
@@ -242,6 +243,21 @@ const ProviderSchedule = () => {
 
   // Booking search (by patient name, across all current bookings)
   const [searchQuery, setSearchQuery] = useState('');
+
+  useSearchQueryParam(['date', 'appt', 'q'], ({ date, appt, q }) => {
+    if (date) {
+      const parsed = parseLocalDate(String(date).split('T')[0]);
+      if (parsed && !Number.isNaN(parsed.getTime())) {
+        setSelectedDate(parsed);
+      }
+    }
+    if (appt) {
+      setExpandedAppts((prev) => ({ ...prev, [appt]: true }));
+    }
+    if (q) {
+      setSearchQuery(q);
+    }
+  });
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];

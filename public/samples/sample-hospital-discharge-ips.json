@@ -1,0 +1,794 @@
+{
+  "resourceType": "Bundle",
+  "id": "sample-discharge-ips-20261119",
+  "meta": {
+    "profile": [
+      "http://hl7.org/fhir/uv/ips/StructureDefinition/Bundle-uv-ips"
+    ],
+    "lastUpdated": "2026-11-18T08:30:00.000Z"
+  },
+  "identifier": {
+    "system": "https://example.org/synthetic-fhir/bundles",
+    "value": "sample-discharge-ips-20261119"
+  },
+  "type": "document",
+  "timestamp": "2026-11-18T08:30:00.000Z",
+  "entry": [
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Composition/comp-elena-demo",
+      "resource": {
+        "resourceType": "Composition",
+        "id": "comp-elena-demo",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/uv/ips/StructureDefinition/Composition-uv-ips"
+          ]
+        },
+        "status": "final",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "60591-5",
+              "display": "Patient summary Document"
+            }
+          ],
+          "text": "International Patient Summary (Synthetic Discharge Demo)"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo",
+          "display": "Elena Dela Cruz"
+        },
+        "date": "2026-11-18T08:30:00.000Z",
+        "author": [
+          {
+            "reference": "Organization/org-sample-clinic",
+            "display": "Sample Metro Discharge Clinic (Synthetic Demo)"
+          }
+        ],
+        "title": "Synthetic Hospital Discharge Patient Summary (IPS)",
+        "confidentiality": "N",
+        "custodian": {
+          "reference": "Organization/org-sample-clinic",
+          "display": "Sample Metro Discharge Clinic (Synthetic Demo)"
+        },
+        "section": [
+          {
+            "title": "Allergies and Intolerances",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "48765-2",
+                  "display": "Allergies and adverse reactions Document"
+                }
+              ]
+            },
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><ul><li>Penicillin</li><li>Shellfish</li></ul></div>"
+            },
+            "entry": [
+              {
+                "reference": "AllergyIntolerance/allergy-elena-1"
+              },
+              {
+                "reference": "AllergyIntolerance/allergy-elena-2"
+              }
+            ]
+          },
+          {
+            "title": "Medication Summary",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "10160-0",
+                  "display": "History of Medication use Narrative"
+                }
+              ]
+            },
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><ul><li>Amlodipine 5mg once daily</li><li>Metformin 500mg twice daily with meals</li></ul></div>"
+            },
+            "entry": [
+              {
+                "reference": "MedicationStatement/med-elena-1"
+              },
+              {
+                "reference": "MedicationStatement/med-elena-2"
+              }
+            ]
+          },
+          {
+            "title": "Problem List",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "11450-4",
+                  "display": "Problem list - Reported"
+                }
+              ]
+            },
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><ul><li>Essential Hypertension</li><li>Type 2 Diabetes Mellitus</li></ul></div>"
+            },
+            "entry": [
+              {
+                "reference": "Condition/cond-elena-1"
+              },
+              {
+                "reference": "Condition/cond-elena-2"
+              }
+            ]
+          },
+          {
+            "title": "Vital Signs",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8716-3",
+                  "display": "Vital signs"
+                }
+              ]
+            },
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><ul><li>Blood pressure: 128/82 mmHg</li><li>Body temperature: 36.7 °C</li><li>Heart rate: 76 beats/min</li><li>Respiratory rate: 18 breaths/min</li><li>SpO2: 98 %</li><li>Blood type: O+</li></ul></div>"
+            },
+            "entry": [
+              {
+                "reference": "Observation/obs-elena-bp"
+              },
+              {
+                "reference": "Observation/obs-elena-temp"
+              },
+              {
+                "reference": "Observation/obs-elena-hr"
+              },
+              {
+                "reference": "Observation/obs-elena-rr"
+              },
+              {
+                "reference": "Observation/obs-elena-spo2"
+              },
+              {
+                "reference": "Observation/obs-elena-bloodtype"
+              }
+            ]
+          },
+          {
+            "title": "History of Procedures",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "47519-4",
+                  "display": "History of Procedures Document"
+                }
+              ]
+            },
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><ul><li>Laparoscopic Cholecystectomy (2021)</li></ul></div>"
+            },
+            "entry": [
+              {
+                "reference": "Procedure/proc-elena-1"
+              }
+            ]
+          },
+          {
+            "title": "Discharge Clinical Note",
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "46240-8",
+                  "display": "History of hospitalizations+Outpatient visits Narrative"
+                }
+              ]
+            },
+            "text": {
+              "status": "generated",
+              "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p>Synthetic demo discharge summary note attached.</p></div>"
+            },
+            "entry": [
+              {
+                "reference": "DocumentReference/doc-elena-discharge-note"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Patient/pat-elena-demo",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "pat-elena-demo",
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "text": "Elena Dela Cruz",
+            "family": "Dela Cruz",
+            "given": [
+              "Elena"
+            ]
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "09175550192",
+            "use": "mobile"
+          }
+        ],
+        "birthDate": "1958-06-14",
+        "address": [
+          {
+            "use": "home",
+            "type": "physical",
+            "text": "Block 7 Lot 12, Soldiers Hills Village, Putatan, Muntinlupa City",
+            "line": [
+              "Block 7 Lot 12",
+              "Soldiers Hills Village"
+            ],
+            "city": "Muntinlupa City",
+            "state": "Metro Manila",
+            "country": "PH"
+          }
+        ],
+        "contact": [
+          {
+            "relationship": [
+              {
+                "coding": [
+                  {
+                    "system": "http://terminology.hl7.org/CodeSystem/v2-0131",
+                    "code": "C",
+                    "display": "Emergency Contact"
+                  }
+                ],
+                "text": "Primary Emergency Contact"
+              }
+            ],
+            "name": {
+              "text": "Marco Dela Cruz"
+            },
+            "telecom": [
+              {
+                "system": "phone",
+                "value": "09185550144",
+                "use": "mobile"
+              }
+            ]
+          }
+        ],
+        "communication": [
+          {
+            "language": {
+              "coding": [
+                {
+                  "system": "urn:ietf:bcp:47",
+                  "code": "fil",
+                  "display": "Filipino"
+                }
+              ],
+              "text": "Filipino / Tagalog"
+            },
+            "preferred": true
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Organization/org-sample-clinic",
+      "resource": {
+        "resourceType": "Organization",
+        "id": "org-sample-clinic",
+        "active": true,
+        "name": "Sample Metro Discharge Clinic (Synthetic Demo)",
+        "address": [
+          {
+            "use": "work",
+            "city": "Muntinlupa City",
+            "state": "Metro Manila",
+            "country": "PH"
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/AllergyIntolerance/allergy-elena-1",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-elena-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ]
+        },
+        "type": "allergy",
+        "code": {
+          "text": "Penicillin"
+        },
+        "patient": {
+          "reference": "Patient/pat-elena-demo"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/AllergyIntolerance/allergy-elena-2",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "allergy-elena-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-verification",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ]
+        },
+        "type": "allergy",
+        "code": {
+          "text": "Shellfish"
+        },
+        "patient": {
+          "reference": "Patient/pat-elena-demo"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/MedicationStatement/med-elena-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-elena-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Amlodipine 5mg once daily"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/MedicationStatement/med-elena-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "med-elena-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Metformin 500mg twice daily with meals"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Condition/cond-elena-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-elena-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item",
+                "display": "Problem List Item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "Essential Hypertension"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Condition/cond-elena-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "cond-elena-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active",
+              "display": "Active"
+            }
+          ]
+        },
+        "verificationStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+              "code": "confirmed",
+              "display": "Confirmed"
+            }
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-category",
+                "code": "problem-list-item",
+                "display": "Problem List Item"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "Type 2 Diabetes Mellitus"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Procedure/proc-elena-1",
+      "resource": {
+        "resourceType": "Procedure",
+        "id": "proc-elena-1",
+        "status": "completed",
+        "code": {
+          "text": "Laparoscopic Cholecystectomy (2021)"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Observation/obs-elena-bp",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-elena-bp",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "85354-9",
+              "display": "Blood pressure panel"
+            }
+          ],
+          "text": "Blood pressure panel"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        },
+        "effectiveDateTime": "2026-11-18T08:00:00.000Z",
+        "component": [
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8480-6",
+                  "display": "Systolic blood pressure"
+                }
+              ],
+              "text": "Systolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 128,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          },
+          {
+            "code": {
+              "coding": [
+                {
+                  "system": "http://loinc.org",
+                  "code": "8462-4",
+                  "display": "Diastolic blood pressure"
+                }
+              ],
+              "text": "Diastolic blood pressure"
+            },
+            "valueQuantity": {
+              "value": 82,
+              "unit": "mmHg",
+              "system": "http://unitsofmeasure.org",
+              "code": "mm[Hg]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Observation/obs-elena-temp",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-elena-temp",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8310-5",
+              "display": "Body temperature"
+            }
+          ],
+          "text": "Body temperature"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        },
+        "effectiveDateTime": "2026-11-18T08:00:00.000Z",
+        "valueQuantity": {
+          "value": 36.7,
+          "unit": "°C",
+          "system": "http://unitsofmeasure.org",
+          "code": "Cel"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Observation/obs-elena-hr",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-elena-hr",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "8867-4",
+              "display": "Heart rate"
+            }
+          ],
+          "text": "Heart rate"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        },
+        "effectiveDateTime": "2026-11-18T08:00:00.000Z",
+        "valueQuantity": {
+          "value": 76,
+          "unit": "beats/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Observation/obs-elena-rr",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-elena-rr",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "9279-1",
+              "display": "Respiratory rate"
+            }
+          ],
+          "text": "Respiratory rate"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        },
+        "effectiveDateTime": "2026-11-18T08:00:00.000Z",
+        "valueQuantity": {
+          "value": 18,
+          "unit": "breaths/min",
+          "system": "http://unitsofmeasure.org",
+          "code": "/min"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Observation/obs-elena-spo2",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-elena-spo2",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "vital-signs",
+                "display": "Vital Signs"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "59408-5",
+              "display": "Oxygen saturation in Arterial blood by Pulse oximetry"
+            }
+          ],
+          "text": "Oxygen saturation"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        },
+        "effectiveDateTime": "2026-11-18T08:00:00.000Z",
+        "valueQuantity": {
+          "value": 98,
+          "unit": "%",
+          "system": "http://unitsofmeasure.org",
+          "code": "%"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/Observation/obs-elena-bloodtype",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "obs-elena-bloodtype",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory",
+                "display": "Laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "882-1",
+              "display": "ABO and Rh group [Type] in Blood"
+            }
+          ],
+          "text": "Blood Type"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        },
+        "effectiveDateTime": "2026-11-18T08:00:00.000Z",
+        "valueCodeableConcept": {
+          "text": "O+"
+        }
+      }
+    },
+    {
+      "fullUrl": "https://example.org/synthetic-fhir/DocumentReference/doc-elena-discharge-note",
+      "resource": {
+        "resourceType": "DocumentReference",
+        "id": "doc-elena-discharge-note",
+        "status": "current",
+        "type": {
+          "coding": [
+            {
+              "system": "http://loinc.org",
+              "code": "11506-3",
+              "display": "Progress note"
+            }
+          ],
+          "text": "Discharge Clinical Note"
+        },
+        "subject": {
+          "reference": "Patient/pat-elena-demo"
+        },
+        "date": "2026-11-18T08:30:00.000Z",
+        "description": "Synthetic demo discharge note: Discharged in stable condition after 2-day observation for elevated blood pressure.",
+        "content": [
+          {
+            "attachment": {
+              "contentType": "text/plain",
+              "data": "U3ludGhldGljIGRlbW8gZGlzY2hhcmdlIG5vdGU6IERpc2NoYXJnZWQgaW4gc3RhYmxlIGNvbmRpdGlvbiBhZnRlciAyLWRheSBvYnNlcnZhdGlvbiBmb3IgZWxldmF0ZWQgYmxvb2QgcHJlc3N1cmUuIENvbnRpbnVlIEFtbG9kaXBpbmUgNW1nIG9uY2UgZGFpbHkgYW5kIE1ldGZvcm1pbiA1MDBtZyB0d2ljZSBkYWlseS4gSG9tZSBudXJzZSBmb2xsb3ctdXAgcmVjb21tZW5kZWQgZm9yIGJsb29kIHByZXNzdXJlIGFuZCBnbHVjb3NlIGNoZWNrcyB0d2ljZSB3ZWVrbHku",
+              "title": "Discharge Summary Note (Synthetic Demo)",
+              "creation": "2026-11-18T08:30:00.000Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

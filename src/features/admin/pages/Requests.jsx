@@ -16,6 +16,7 @@ import { MotionConfig } from 'framer-motion';
 import { CustomSelect, DateRangePicker, Pagination, SkeletonPage, EmptyState } from '@/shared/ui';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/shared/ui/sheet';
 import useSort from '@/hooks/useSort';
+import useSearchQueryParam from '@/hooks/useSearchQueryParam';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { exportToCSV, formatDataForExport } from '@/lib/exportUtils';
@@ -44,6 +45,13 @@ const AdminRequests = () => {
   tRef.current = t;
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('All');
+
+  useSearchQueryParam(['q'], ({ q }) => {
+    if (q) {
+      setSearchTerm(q);
+      setFilter('All');
+    }
+  });
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);

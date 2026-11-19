@@ -6,6 +6,7 @@ import {
 } from '../../tracking/services/trackingService';
 import ArrivalOverrideDialog from '@/features/tracking/components/ArrivalOverrideDialog';
 import { parseLocalDate, slotsOverlap, formatSlotLabel } from '@/lib/localDate';
+import useSearchQueryParam from '@/hooks/useSearchQueryParam';
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import {
@@ -98,6 +99,13 @@ const ProviderRequests = () => {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const filterDropdownRef = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useSearchQueryParam(['q'], ({ q }) => {
+    if (q) {
+      setSearchTerm(q);
+      setFilter('All');
+    }
+  });
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionStates, setActionStates] = useState({});
