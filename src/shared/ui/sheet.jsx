@@ -60,11 +60,11 @@ const SheetContent = React.forwardRef(({ className, children, side = "bottom", .
         node.style.transform = "";
         return;
       }
-      node.style.transition = "transform 200ms cubic-bezier(0.22, 1, 0.36, 1)";
+      node.style.transition = "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)";
       node.style.transform = "";
       window.setTimeout(() => {
         if (node) node.style.transition = "";
-      }, 210);
+      }, 230);
     };
 
     const onTouchStart = (e) => {
@@ -152,11 +152,11 @@ const SheetContent = React.forwardRef(({ className, children, side = "bottom", .
         ref={setRefs}
         aria-modal="true"
         className={cn(
-          "fixed z-overlay gap-4 bg-surface-shell shadow-xl transition-transform duration-250 ease-out will-change-transform transform-gpu",
+          "fixed z-overlay gap-4 bg-surface-shell shadow-2xl transition-transform duration-300 ease-fluid will-change-transform transform-gpu",
           "data-[state=open]:animate-in data-[state=closed]:animate-out duration-200",
           "overflow-y-auto overscroll-contain",
           side === "top" && "inset-x-0 top-0 max-h-[90dvh] data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
-          side === "bottom" && "inset-x-0 bottom-0 max-h-[90dvh] rounded-t-[1.5rem] sm:rounded-t-[2rem] data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+          side === "bottom" && "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-[2rem] border-t border-white/70 dark:border-white/10 data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
           side === "left" && "inset-y-0 left-0 h-full w-3/4 data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:max-w-sm",
           side === "right" && "inset-y-0 right-0 h-full w-3/4 data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right sm:max-w-sm",
           className

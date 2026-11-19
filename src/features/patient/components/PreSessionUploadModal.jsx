@@ -357,7 +357,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
               className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-lg flex flex-col relative max-h-[92dvh] overflow-hidden shadow-2xl border-t sm:border border-white/70 dark:border-white/10"
               initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 42, scale: 0.985 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.32, 0.72, 0, 1] }}
               onClick={(e) => e.stopPropagation()}
               {...drawerMotionProps}
             >
@@ -367,7 +367,7 @@ const PreSessionUploadModal = ({ isOpen, onClose, request }) => {
                 {...dragHandleProps}
               >
                 <div
-                  className="mx-auto h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600 sm:hidden"
+                  className="mx-auto h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
                   aria-hidden="true"
                 />
 

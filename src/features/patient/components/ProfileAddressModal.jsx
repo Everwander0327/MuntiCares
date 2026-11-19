@@ -80,7 +80,7 @@ export default function ProfileAddressModal({
               className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-2xl flex flex-col relative max-h-[92dvh] overflow-hidden shadow-2xl border-t sm:border border-white/70 dark:border-white/10"
               initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 40, scale: 0.985 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.32, 0.72, 0, 1] }}
               onClick={(e) => e.stopPropagation()}
               {...drawerMotionProps}
             >
@@ -90,7 +90,7 @@ export default function ProfileAddressModal({
                 {...dragHandleProps}
               >
                 <div
-                  className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600 sm:hidden"
+                  className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
                   aria-hidden="true"
                 />
                 <div className="flex items-start justify-between gap-3">
@@ -137,10 +137,10 @@ export default function ProfileAddressModal({
               </div>
 
               {/* Thumb-Zone Footer */}
-              <div className="shrink-0 px-4 sm:px-6 py-3.5 border-t border-slate-200/75 dark:border-white/10 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-surface-shell/95 backdrop-blur-sm">
+              <div className="shrink-0 px-4 sm:px-6 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] border-t border-slate-200/75 dark:border-white/10 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-2.5 bg-surface-shell/95 backdrop-blur-sm">
                 <div className="text-xs text-tertiary dark:text-tertiary text-center sm:text-left">
                   {staged.coords ? (
-                    <span className="font-semibold text-success dark:text-success-dark">
+                    <span className="font-semibold text-success dark:text-success-dark tabular-nums">
                       {t('patient.address.pinSetBadge', {
                         lat: staged.coords.lat.toFixed(5),
                         lng: staged.coords.lng.toFixed(5),
@@ -154,16 +154,16 @@ export default function ProfileAddressModal({
                   <button
                     type="button"
                     onClick={() => onClose?.()}
-                    className="neu-btn min-h-[2.75rem] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-100 cursor-pointer"
+                    className="neu-btn min-h-[2.75rem] px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold text-tertiary dark:text-tertiary hover:text-slate-800 dark:hover:text-slate-100 cursor-pointer"
                   >
                     {t('patient.common.cancel')}
                   </button>
                   <button
                     type="button"
                     onClick={handleApply}
-                    className="neu-btn-primary min-h-[2.75rem] px-6 py-2.5 rounded-xl sm:rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer"
+                    className="neu-btn-primary min-h-[2.75rem] px-6 py-2.5 rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <Check className="w-4 h-4" />
+                    <Check className="w-4 h-4" aria-hidden="true" />
                     <span>{t('patient.address.applyBtn')}</span>
                   </button>
                 </div>

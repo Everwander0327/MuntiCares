@@ -841,10 +841,10 @@ const AdminRequests = () => {
                 event.preventDefault();
                 modalTriggerRef.current.focus();
               }}
-              className="px-4 sm:px-5 pt-0 pb-[max(1rem,env(safe-area-inset-bottom))] sm:inset-x-0 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:max-w-lg sm:mx-auto sm:rounded-3xl bg-surface dark:bg-surface-dark border border-surface-border shadow-card focus:outline-none"
+              className="px-4 sm:px-5 pt-0 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:inset-x-0 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:max-w-lg sm:mx-auto sm:rounded-[2rem] bg-surface dark:bg-surface-dark border-t sm:border border-white/70 dark:border-white/10 shadow-2xl"
             >
               <div
-                className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded bg-surface-border sm:hidden shrink-0"
+                className="mx-auto mt-3 mb-1.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
                 aria-hidden="true"
               />
               <SheetHeader className="px-1 pt-3 pb-3.5 text-left ring-0 border-b border-surface-border">

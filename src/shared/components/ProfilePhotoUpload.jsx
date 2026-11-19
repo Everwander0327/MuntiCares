@@ -214,23 +214,27 @@ const ProfilePhotoUpload = ({ userId, fullName, currentUrl, role: propRole, onUp
       {modalOpen && typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
           <div
-            className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 dark:bg-black/75 backdrop-blur-sm animate-fade-in"
+            className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-[2px] animate-fade-in"
             onClick={() => !uploading && setModalOpen(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 24 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label={collectionTitle}
+              initial={{ opacity: 0, scale: 0.97, y: 32 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 24 }}
+              exit={{ opacity: 0, scale: 0.97, y: 32 }}
+              transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
               onClick={(e) => e.stopPropagation()}
               {...drawerMotionProps}
-              className="neu-flat w-full max-w-xl rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 relative overflow-hidden shadow-2xl border-t sm:border border-white/60 dark:border-white/10 max-h-[92dvh] flex flex-col"
+              className="neu-flat w-full max-w-xl rounded-t-[2rem] sm:rounded-[2rem] p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-6 relative overflow-hidden shadow-2xl border-t sm:border border-white/70 dark:border-white/10 max-h-[92dvh] flex flex-col"
             >
               <div
                 className="shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
                 {...dragHandleProps}
               >
                 {/* Mobile Bottom Sheet Grab Handle */}
-                <div className="w-10 h-1 rounded-sm bg-slate-300 dark:bg-slate-600 mx-auto mb-3 sm:hidden shrink-0" />
+                <div className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0" aria-hidden="true" />
 
                 {/* Clean Modal Header (No Left Icon) */}
                 <div className="flex items-start justify-between gap-3 mb-3.5 pb-3 border-b border-slate-200/50 dark:border-white/5 shrink-0">

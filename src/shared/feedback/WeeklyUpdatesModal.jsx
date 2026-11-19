@@ -72,20 +72,20 @@ const WeeklyUpdatesModal = ({
               onClick={() => onOpenChange(false)}
             >
               <motion.div
-                initial={{ opacity: 0, y: 24 }}
+                initial={{ opacity: 0, y: 28 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
                 onClick={(e) => e.stopPropagation()}
                 {...drawerMotionProps}
-                className="neu-flat bg-surface-shell w-full sm:max-w-4xl lg:max-w-5xl rounded-t-[1.5rem] sm:rounded-[2rem] min-h-[72dvh] sm:min-h-0 max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl border-t sm:border border-surface-border pb-[max(1rem,env(safe-area-inset-bottom))]"
+                className="neu-flat bg-surface-shell w-full sm:max-w-4xl lg:max-w-5xl rounded-t-[2rem] sm:rounded-[2rem] min-h-[72dvh] sm:min-h-0 max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl border-t sm:border border-white/70 dark:border-white/10 pb-[max(1rem,env(safe-area-inset-bottom))]"
               >
                 {/* Header */}
                 <div
-                  className="px-4 sm:px-8 pt-3.5 sm:pt-6 pb-3.5 sm:pb-5 border-b border-surface-border/70 dark:border-white/10 shrink-0 cursor-grab sm:cursor-auto"
+                  className="px-4 sm:px-8 pt-3 sm:pt-6 pb-3.5 sm:pb-5 border-b border-surface-border/70 dark:border-white/10 shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
                   {...dragHandleProps}
                 >
                   <div
-                    className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-slate-300 dark:bg-slate-600 sm:hidden"
+                    className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
                     aria-hidden="true"
                   />
                   <div className="flex items-start justify-between gap-4">

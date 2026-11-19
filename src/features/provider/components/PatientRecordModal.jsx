@@ -342,7 +342,7 @@ const PatientRecordModal = ({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay asChild>
           <motion.div 
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-[2px] z-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             onClick={onClose}
@@ -362,22 +362,22 @@ const PatientRecordModal = ({
           <motion.div
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
             onClick={onClose}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-hidden"
+            className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center p-0 sm:p-5 overflow-hidden"
           >
             <motion.div
-              className="relative w-full max-w-5xl h-[92dvh] sm:h-[88vh] max-h-[92dvh] sm:max-h-[88vh] neu-flat rounded-t-[2rem] sm:rounded-[2.25rem] flex flex-col overflow-hidden border-t sm:border border-slate-200/80 dark:border-white/10 shadow-2xl pointer-events-auto bg-surface-shell select-text overscroll-contain"
+              className="relative w-full max-w-5xl h-[92dvh] sm:h-[88dvh] max-h-[92dvh] sm:max-h-[88dvh] neu-flat rounded-t-[2rem] sm:rounded-[2rem] flex flex-col overflow-hidden border-t sm:border border-white/70 dark:border-white/10 shadow-2xl pointer-events-auto bg-surface-shell select-text overscroll-contain"
               onClick={(e) => e.stopPropagation()}
               {...drawerMotionProps}
             >
               {/* Modal Top Header Bar (100% Solid, Non-Collapsing Surface) */}
               <div
-                className="bg-surface-shell border-b border-slate-200/80 dark:border-white/10 shrink-0 z-20 shadow-sm pt-2 sm:pt-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
+                className="bg-surface-shell border-b border-slate-200/80 dark:border-white/10 shrink-0 z-20 shadow-sm pt-3 sm:pt-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
                 {...dragHandleProps}
               >
                 {/* Mobile Pull Bar */}
-                <div className="w-12 h-1 bg-slate-300 dark:bg-slate-700 rounded-sm mx-auto mb-2 sm:hidden shrink-0" />
+                <div className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0" aria-hidden="true" />
 
                 <div className="px-4 sm:px-6 pb-3 sm:py-4 flex items-center justify-between gap-3">
                   {/* Desktop Title Bar */}
@@ -413,7 +413,7 @@ const PatientRecordModal = ({
                             {patientName}
                           </h2>
                         </DialogPrimitive.Title>
-                        <span className="px-1.5 py-0.2 rounded text-3xs font-extrabold uppercase text-success dark:text-success-dark bg-emerald-500/10 border border-emerald-500/30 shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-full text-2xs font-extrabold uppercase text-success dark:text-success-dark bg-success-soft/80 dark:bg-success-darkSoft/80 border border-success/25 dark:border-success-dark/25 shrink-0">
                           {t('provider.recordModal.verified')}
                         </span>
                       </div>
@@ -680,11 +680,11 @@ const PatientRecordModal = ({
                                 </div>
                               ) : (
                                 <div className="space-y-4">
-                                  {/* Allergies Highlight Card with Left Red Alert Line */}
-                                  <div className="neu-flat rounded-2xl p-4 sm:p-5 border-l-4 border-rose-500 space-y-2">
+                                  {/* Allergies Highlight Card */}
+                                  <div className="neu-flat rounded-2xl p-4 sm:p-5 border border-danger/30 dark:border-danger-dark/30 bg-danger-soft/45 dark:bg-danger-darkSoft/35 space-y-2">
                                     <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-rose-500 dark:text-rose-400">
-                                        <WarningCircle className="w-4 h-4" />
+                                      <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-danger dark:text-danger-dark">
+                                        <WarningCircle className="w-4 h-4" aria-hidden="true" />
                                         <span>{t('provider.recordModal.allergiesHeading')}</span>
                                       </div>
                                       <span className="text-2xs font-bold text-tertiary uppercase">{t('provider.recordModal.selfReported')}</span>

@@ -1937,45 +1937,37 @@ const ChatWindow = ({ currentUser, otherUser, onBack, autoStartVideo, autoStartC
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.18 }}
                   onClick={() => setShowProfilePanel(false)}
-                  className="fixed inset-0 z-[70] bg-black/60 flex flex-col justify-end select-text"
+                  className="fixed inset-0 z-overlay bg-slate-950/70 backdrop-blur-[2px] flex flex-col justify-end select-text"
                 >
                   <motion.div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label={t('chat.window.convInfoHeader')}
                     initial={{ y: '100%' }}
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}
-                    transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+                    transition={{ duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
                     onClick={(e) => e.stopPropagation()}
                     {...infoDrawerMotionProps}
-                    className="w-full max-h-[82dvh] bg-surface-shell rounded-t-2xl border-t-2 border-primary/40 shadow-2xl flex flex-col overflow-hidden"
+                    className="neu-flat w-full max-h-[85dvh] bg-surface-shell rounded-t-[2rem] border-t border-white/70 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden"
                     style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0px))' }}
                   >
-                    <div className="shrink-0 cursor-grab active:cursor-grabbing" {...infoDragHandleProps}>
-                      <div className="pt-2.5 pb-1 flex justify-center shrink-0">
-                        <div className="w-10 h-1 rounded-xs bg-slate-400/50 dark:bg-slate-600" />
-                      </div>
-                      <div className="px-4 py-2.5 border-b border-slate-200/80 dark:border-white/10 flex items-center justify-between shrink-0">
-                        <span className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">
-                          {t('chat.window.convInfoHeader')}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => setShowProfilePanel(false)}
-                          className="neu-btn px-2.5 py-1 rounded-lg text-2xs font-black text-slate-700 dark:text-slate-200 hover:text-danger cursor-pointer"
-                        >
-                          {t('common.actions.close')}
-                        </button>
-                      </div>
+                    <div className="shrink-0 px-5 pt-3 pb-3.5 border-b border-slate-200/75 dark:border-white/10 cursor-grab active:cursor-grabbing" {...infoDragHandleProps}>
+                      <div className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 shrink-0" aria-hidden="true" />
+                      <span className="block font-display text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">
+                        {t('chat.window.convInfoHeader')}
+                      </span>
                     </div>
-                    <div className="p-4 overflow-y-auto space-y-4 flex-1">
+                    <div className="p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-4 flex-1">
                       {dossierBody}
                       <Link
                         to={profilePath}
-                        className="neu-btn-primary w-full py-2.5 px-3 rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer"
+                        className="neu-btn-primary w-full min-h-[2.75rem] py-2.5 px-4 rounded-2xl text-xs font-extrabold text-white flex items-center justify-center gap-1.5 transition-all shadow-card cursor-pointer"
                       >
                         <span>{t('chat.window.viewFullProfile')}</span>
-                        <span>&rarr;</span>
+                        <span aria-hidden="true">&rarr;</span>
                       </Link>
                     </div>
                   </motion.div>

@@ -170,7 +170,7 @@ export default function VisitDestinationModal({
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
             onClick={(e) => e.stopPropagation()}
             {...drawerMotionProps}
           >
@@ -179,7 +179,7 @@ export default function VisitDestinationModal({
               {...dragHandleProps}
             >
               {/* Mobile Drag Handle */}
-              <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-md bg-slate-300 dark:bg-slate-700 sm:hidden" aria-hidden="true" />
+              <div className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0" aria-hidden="true" />
 
               {/* Option 1 Compact Header */}
               <div className="flex items-center justify-between gap-3 pb-3.5 mb-3.5 border-b border-slate-200/70 dark:border-white/5 shrink-0">

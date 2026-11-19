@@ -54,7 +54,7 @@ export default function ProviderFilterDrawer({
       <SheetContent side="bottom">
         <div className="px-5 pt-3 pb-3.5 border-b border-surface-border text-left space-y-1">
           <div
-            className="mx-auto mb-2.5 h-1.5 w-10 rounded bg-surface-border sm:hidden"
+            className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
             aria-hidden="true"
           />
           <SheetTitle className="font-display font-black text-ink dark:text-txt-darkPrimary">

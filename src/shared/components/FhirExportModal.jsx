@@ -156,11 +156,11 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
         >
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-slate-950/70 sm:backdrop-blur-sm z-[60]"
+            className="fixed inset-0 bg-slate-950/70 backdrop-blur-[2px] z-0"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: 0.16 }}
             onClick={handleClose}
           />
 
@@ -169,20 +169,20 @@ const FhirExportModal = ({ open, onClose, bundle, patientName }) => {
             role="dialog"
             aria-modal="true"
             aria-labelledby="fhir-modal-title"
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 24 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, y: 28 }}
+            transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
             onClick={(e) => e.stopPropagation()}
             {...drawerMotionProps}
-            className="relative w-full sm:max-w-2xl max-h-[90dvh] sm:max-h-[84vh] neu-flat bg-surface-shell rounded-t-2xl sm:rounded-2xl flex flex-col overflow-hidden z-[70] border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+            className="relative z-10 w-full sm:max-w-2xl max-h-[92dvh] sm:max-h-[86dvh] neu-flat bg-surface-shell rounded-t-[2rem] sm:rounded-[2rem] flex flex-col overflow-hidden border-t sm:border border-white/70 dark:border-white/10 shadow-2xl transform-gpu will-change-transform pb-[max(0.75rem,env(safe-area-inset-bottom))]"
           >
             <div
               className="shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
               {...dragHandleProps}
             >
-              {/* Mobile Drag Indicator Bar (Squircle) */}
-              <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-md mx-auto mt-2.5 sm:hidden shrink-0" />
+              {/* Mobile Drag Indicator Pill */}
+              <div className="mx-auto mt-3 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0" aria-hidden="true" />
 
               {/* Header */}
               <div className="flex items-start sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-slate-200/70 dark:border-white/10">

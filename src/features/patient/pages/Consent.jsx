@@ -980,10 +980,10 @@ const PatientConsent = ({ embedded = false }) => {
                   <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{ duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
                     onClick={(e) => e.stopPropagation()}
                     {...auditDrawerMotionProps}
-                    className="neu-flat bg-surface-shell w-full sm:max-w-2xl rounded-t-[2.25rem] sm:rounded-[2.25rem] p-5 sm:p-6 md:p-7 space-y-4 h-[82vh] sm:h-[35rem] max-h-[85vh] flex flex-col shadow-2xl border-t sm:border border-surface-border transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
+                    className="neu-flat bg-surface-shell w-full sm:max-w-2xl rounded-t-[2rem] sm:rounded-[2rem] p-5 sm:p-6 md:p-7 space-y-4 h-[84dvh] sm:h-[35rem] max-h-[90dvh] flex flex-col shadow-2xl border-t sm:border border-white/70 dark:border-white/10 transform-gpu will-change-transform pb-[max(1.25rem,env(safe-area-inset-bottom))]"
                   >
                     {/* Modal Header (No header icon) */}
                     <div
@@ -991,7 +991,7 @@ const PatientConsent = ({ embedded = false }) => {
                       {...auditDragHandleProps}
                     >
                       <div
-                        className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600 sm:hidden"
+                        className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
                         aria-hidden="true"
                       />
                       <div className="flex items-center justify-between gap-3">

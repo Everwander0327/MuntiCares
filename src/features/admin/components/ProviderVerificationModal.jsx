@@ -208,7 +208,7 @@ export default function ProviderVerificationModal({
           >
             <motion.div
               onClick={(event) => event.stopPropagation()}
-              className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-xl max-h-[90dvh] border-t sm:border border-surface-border shadow-card bg-surface-shell flex flex-col overflow-hidden"
+              className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-xl max-h-[92dvh] border-t sm:border border-white/70 dark:border-white/10 shadow-2xl bg-surface-shell flex flex-col overflow-hidden"
               {...drawerMotionProps}
             >
             {/* Modal Header */}
@@ -216,7 +216,7 @@ export default function ProviderVerificationModal({
               className="px-4 sm:px-6 pt-3 sm:pt-5 pb-4 border-b border-surface-border bg-surface-shell shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
               {...dragHandleProps}
             >
-              <div className="mx-auto mb-2.5 h-1.5 w-10 rounded bg-surface-border sm:hidden" aria-hidden="true" />
+              <div className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0" aria-hidden="true" />
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
                   <DialogPrimitive.Title className="text-lg font-display font-black text-ink dark:text-txt-darkPrimary">

@@ -28,10 +28,10 @@ const DashboardDetailSheet = ({
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
       <SheetContent
         side="bottom"
-        className="px-5 pb-6 pt-0 sm:pt-2 sm:inset-x-0 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:max-w-md sm:mx-auto sm:rounded-3xl bg-surface dark:bg-surface-dark border border-surface-border shadow-card"
+        className="px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-0 sm:pt-2 sm:inset-x-0 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:max-w-md sm:mx-auto sm:rounded-[2rem] bg-surface dark:bg-surface-dark border-t sm:border border-white/70 dark:border-white/10 shadow-2xl"
       >
         <div
-          className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded-full bg-surface-border sm:hidden"
+          className="mx-auto mt-3 mb-1.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
           aria-hidden="true"
         />
 
@@ -82,7 +82,7 @@ const DashboardDetailSheet = ({
                       aria-label={t('admin.sheet.startDateAria')}
                       value={startDate || ''}
                       onChange={(e) => onChangeRange({ start: e.target.value, end: endDate || '' })}
-                      className="w-full min-h-[2.75rem] px-3 rounded-xl border border-surface-border bg-surface-subtle/50 text-xs font-semibold text-ink dark:text-txt-darkPrimary outline-none"
+                      className="w-full min-h-[2.75rem] px-3 rounded-xl border border-surface-border bg-surface-subtle/50 text-xs font-semibold text-ink dark:text-txt-darkPrimary"
                     />
                   </label>
                   <label className="space-y-1 text-xs font-bold text-tertiary">
@@ -92,7 +92,7 @@ const DashboardDetailSheet = ({
                       aria-label={t('admin.sheet.endDateAria')}
                       value={endDate || ''}
                       onChange={(e) => onChangeRange({ start: startDate || '', end: e.target.value })}
-                      className="w-full min-h-[2.75rem] px-3 rounded-xl border border-surface-border bg-surface-subtle/50 text-xs font-semibold text-ink dark:text-txt-darkPrimary outline-none"
+                      className="w-full min-h-[2.75rem] px-3 rounded-xl border border-surface-border bg-surface-subtle/50 text-xs font-semibold text-ink dark:text-txt-darkPrimary"
                     />
                   </label>
                 </div>

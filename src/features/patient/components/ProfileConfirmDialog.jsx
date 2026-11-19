@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Warning, SpinnerGap } from '@phosphor-icons/react';
+import { Warning } from '@phosphor-icons/react';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -59,14 +59,14 @@ export default function ProfileConfirmDialog({
               className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-md flex flex-col relative overflow-hidden shadow-2xl border-t sm:border border-white/70 dark:border-white/10"
               initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 32, scale: 0.985 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.22, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.32, 0.72, 0, 1] }}
               onClick={(e) => e.stopPropagation()}
               {...drawerMotionProps}
               {...dragHandleProps}
             >
-              <div className="p-5 sm:p-6 space-y-4">
+              <div className="p-5 sm:p-6 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:pb-6 space-y-4">
                 <div
-                  className="mx-auto h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600 sm:hidden"
+                  className="mx-auto h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
                   aria-hidden="true"
                 />
 
@@ -74,10 +74,10 @@ export default function ProfileConfirmDialog({
                   <div className="flex items-start gap-3 min-w-0">
                     <div
                       className={`neu-flat-sm w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
-                        danger ? 'text-danger dark:text-rose-400' : 'text-warning dark:text-warning-dark'
+                        danger ? 'text-danger dark:text-danger-dark' : 'text-warning dark:text-warning-dark'
                       }`}
                     >
-                      <Warning className="w-5 h-5" />
+                      <Warning className="w-5 h-5" aria-hidden="true" />
                     </div>
                     <div className="min-w-0">
                       <DialogPrimitive.Title className="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
@@ -95,21 +95,21 @@ export default function ProfileConfirmDialog({
                     type="button"
                     disabled={loading}
                     onClick={() => onCancel?.()}
-                    className="neu-btn min-h-[2.75rem] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer disabled:opacity-50"
+                    className="neu-btn min-h-[2.75rem] px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 cursor-pointer disabled:opacity-50"
                   >
                     {resolvedCancelLabel}
                   </button>
                   <button
                     type="button"
                     disabled={loading}
+                    aria-busy={loading}
                     onClick={() => onConfirm?.()}
-                    className={`min-h-[2.75rem] px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all ${
+                    className={`min-h-[2.75rem] px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 transition-all ${
                       danger
-                        ? 'bg-[#BC3030] hover:bg-[#9E2626] text-white shadow-sm'
+                        ? 'bg-danger hover:bg-danger/90 text-white shadow-card'
                         : 'neu-btn-primary'
                     }`}
                   >
-                    {loading && <SpinnerGap className="w-4 h-4 animate-spin" />}
                     <span>{resolvedConfirmLabel}</span>
                   </button>
                 </div>

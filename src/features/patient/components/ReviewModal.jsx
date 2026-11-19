@@ -8,6 +8,7 @@ import { toast } from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
+import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import { markRequestRated } from '@/features/patient/utils/localState';
 
 const RATING_LABEL_KEYS = {
@@ -64,6 +65,10 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
   }, [onClose]);
 
   useBodyScrollLock(isOpen);
+  const { drawerMotionProps, dragHandleProps } = useBottomDrawerDrag({
+    onClose: handleClose,
+    disabled: submitting,
+  });
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -203,26 +208,21 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
             initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 44 }}
             animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 44 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            drag={shouldReduceMotion ? false : 'y'}
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.45 }}
-            onDragEnd={(_, info) => {
-              if (info.offset.y > 90 || info.velocity.y > 400) {
-                handleClose();
-              }
-            }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.26, ease: [0.32, 0.72, 0, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="neu-flat bg-surface-shell w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border-t sm:border border-surface-border max-h-[92dvh] flex flex-col overflow-hidden transform-gpu will-change-transform"
+            {...drawerMotionProps}
+            className="neu-flat bg-surface-shell w-full max-w-md rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border-t sm:border border-white/70 dark:border-white/10 max-h-[92dvh] flex flex-col overflow-hidden transform-gpu will-change-transform"
           >
-            {/* Mobile drag handle */}
+            {/* Provider-Anchored Header (Zero X button, swipe-down drag handle) */}
             <div
-              className="mx-auto mt-3 mb-1 h-1.5 w-12 rounded-full bg-surface-border sm:hidden shrink-0"
-              aria-hidden="true"
-            />
-
-            {/* Provider-Anchored Header (Zero X button) */}
-            <div className="px-5 pt-4 pb-3.5 border-b border-surface-border/70 flex items-center gap-3.5 shrink-0">
+              className="px-5 pt-3 sm:pt-4 pb-3.5 border-b border-surface-border/70 shrink-0 cursor-grab sm:cursor-auto active:cursor-grabbing sm:active:cursor-auto"
+              {...dragHandleProps}
+            >
+              <div
+                className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0"
+                aria-hidden="true"
+              />
+              <div className="flex items-center gap-3.5">
               <motion.div
                 animate={
                   !shouldReduceMotion && activeRating >= 4
@@ -262,6 +262,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                 <p className="text-sm font-medium text-tertiary truncate mt-0.5">
                   {providerName} — {serviceLabel}
                 </p>
+              </div>
               </div>
             </div>
 
@@ -462,7 +463,7 @@ const ReviewModal = ({ isOpen, onClose, request, onReviewSubmitted }) => {
                   type="button"
                   onClick={handleClose}
                   disabled={submitting}
-                  className="w-full min-h-[2.375rem] py-1.5 rounded-xl text-xs font-bold text-tertiary hover:text-ink dark:hover:text-white transition-colors cursor-pointer"
+                  className="w-full min-h-[2.75rem] py-2 rounded-2xl text-xs font-bold text-tertiary hover:text-ink dark:hover:text-white transition-colors cursor-pointer"
                 >
                   {t('patient.common.cancel')}
                 </button>

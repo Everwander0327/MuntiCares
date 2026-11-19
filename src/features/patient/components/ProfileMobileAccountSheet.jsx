@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CheckCircle, DownloadSimple, FileCode, SpinnerGap, SignOut } from '@phosphor-icons/react';
+import { CheckCircle, DownloadSimple, FileCode, SignOut } from '@phosphor-icons/react';
 import useBodyScrollLock from '@/hooks/useBodyScrollLock';
 import useBottomDrawerDrag from '@/hooks/useBottomDrawerDrag';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -61,7 +61,7 @@ export default function ProfileMobileAccountSheet({
               className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-md flex flex-col relative max-h-[88dvh] overflow-hidden shadow-2xl border-t sm:border border-white/70 dark:border-white/10"
               initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 36 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.32, 0.72, 0, 1] }}
               onClick={(e) => e.stopPropagation()}
               {...drawerMotionProps}
             >
@@ -70,7 +70,7 @@ export default function ProfileMobileAccountSheet({
                 {...dragHandleProps}
               >
                 <div
-                  className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600"
+                  className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 shrink-0"
                   aria-hidden="true"
                 />
                 <div className="min-w-0">
@@ -83,7 +83,7 @@ export default function ProfileMobileAccountSheet({
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] space-y-4">
                 <div className="flex items-center justify-between gap-2">
                   <span className="neu-flat-sm px-3 py-1 text-link font-black text-2xs uppercase tracking-widest rounded-md">
                     {t('patient.accountSheet.roleLabel')}
@@ -134,18 +134,20 @@ export default function ProfileMobileAccountSheet({
                       type="button"
                       onClick={() => runActionThenClose(onExportPdf)}
                       disabled={generatingPdf}
-                      className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-link transition-all text-xs sm:text-sm cursor-pointer disabled:opacity-50"
+                      aria-busy={generatingPdf}
+                      className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl font-bold text-link transition-all text-xs sm:text-sm cursor-pointer disabled:opacity-50"
                     >
-                      {generatingPdf ? <SpinnerGap className="w-4 h-4 animate-spin" /> : <DownloadSimple className="w-4 h-4" />}
+                      <DownloadSimple className="w-4 h-4" aria-hidden="true" />
                       <span>{generatingPdf ? t('patient.accountSheet.generatingPdf') : t('patient.accountSheet.pdfBtn')}</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => runActionThenClose(onExportFhir)}
                       disabled={fhirLoading}
-                      className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl font-bold text-success dark:text-success-dark transition-all text-xs sm:text-sm cursor-pointer disabled:opacity-50"
+                      aria-busy={fhirLoading}
+                      className="neu-btn w-full min-h-[2.75rem] flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl font-bold text-success dark:text-success-dark transition-all text-xs sm:text-sm cursor-pointer disabled:opacity-50"
                     >
-                      {fhirLoading ? <SpinnerGap className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4" />}
+                      <FileCode className="w-4 h-4" aria-hidden="true" />
                       <span>{fhirLoading ? t('patient.accountSheet.exportingFhir') : t('patient.accountSheet.fhirBtn')}</span>
                     </button>
                   </div>

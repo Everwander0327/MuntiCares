@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import {
@@ -10,12 +10,14 @@ import {
   Clock,
   House,
   ArrowRight,
+  ArrowClockwise,
   Shield,
   ShieldCheck,
   SlidersHorizontal,
   Check,
   CaretDown,
   CaretUp,
+  WarningCircle,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -27,7 +29,7 @@ import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { SkeletonPage, EmptyState, Sheet, SheetContent, SheetTitle, SheetDescription, BrandSuccess } from '@/shared/ui';
+import { EmptyState, Sheet, SheetContent, SheetTitle, SheetDescription, BrandSuccess } from '@/shared/ui';
 import { ReviewCard } from '@/shared/components';
 import { usePresence } from '@/contexts/PresenceContext';
 import { VisitDestinationModal } from '@/features/tracking/components';
@@ -78,6 +80,52 @@ const formatSlotParts = (timeStr, durationMinutes = 30, t) => {
   return { startLabel, endLabel };
 };
 
+const ProvidersDirectorySkeleton = () => (
+  <div className="space-y-5 relative pb-6 w-full max-w-full" aria-busy="true" aria-live="polite">
+    <div className="space-y-3.5">
+      <div className="space-y-2 px-0.5">
+        <div className="h-8 w-64 rounded-xl bg-slate-200/80 dark:bg-slate-800 animate-pulse" />
+        <div className="h-4 w-96 max-w-full rounded-lg bg-slate-200/70 dark:bg-slate-800/80 animate-pulse" />
+      </div>
+      <div className="neu-flat p-2.5 sm:p-3 rounded-2xl border border-white/70 dark:border-white/5 flex flex-col md:flex-row gap-2.5">
+        <div className="flex-1 h-12 rounded-xl bg-slate-200/60 dark:bg-slate-800/70 animate-pulse" />
+        <div className="grid grid-cols-2 md:flex gap-2 shrink-0">
+          <div className="h-12 md:w-52 rounded-xl bg-slate-200/60 dark:bg-slate-800/70 animate-pulse" />
+          <div className="h-12 md:w-44 rounded-xl bg-slate-200/60 dark:bg-slate-800/70 animate-pulse" />
+        </div>
+      </div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+      {[0, 1, 2, 3, 4, 5].map((idx) => (
+        <div
+          key={idx}
+          className="neu-flat p-5 rounded-[1.5rem] border border-white/80 dark:border-white/5 space-y-4 animate-pulse"
+        >
+          <div className="flex items-start gap-3.5">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-slate-200/80 dark:bg-slate-800 shrink-0" />
+            <div className="flex-1 space-y-2 pt-1">
+              <div className="h-5 w-36 rounded-lg bg-slate-200/80 dark:bg-slate-800" />
+              <div className="h-3.5 w-24 rounded-md bg-slate-200/70 dark:bg-slate-800/80" />
+              <div className="h-5 w-32 rounded-md bg-slate-200/60 dark:bg-slate-800/70" />
+            </div>
+          </div>
+          <div className="neu-inset rounded-xl p-3 space-y-2">
+            <div className="h-3 w-36 rounded bg-slate-200/70 dark:bg-slate-800/80" />
+            <div className="flex gap-1.5">
+              <div className="h-7 w-24 rounded-lg bg-slate-200/70 dark:bg-slate-800" />
+              <div className="h-7 w-20 rounded-lg bg-slate-200/70 dark:bg-slate-800" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 pt-1">
+            <div className="h-11 w-20 rounded-2xl bg-slate-200/70 dark:bg-slate-800" />
+            <div className="h-11 flex-1 rounded-2xl bg-slate-200/80 dark:bg-slate-800" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 const PatientProviders = () => {
   const { isUserOnline } = usePresence();
   const { t, isTagalog, translateService, translateStatus } = useLanguage();
@@ -109,7 +157,7 @@ const PatientProviders = () => {
   };
   const [providers, setProviders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [, setSearchHistory] = useState([]);
+  const [fetchError, setFetchError] = useState(false);
   const searchRef = React.useRef(null);
   const availabilityContextRef = React.useRef(null);
   
@@ -290,8 +338,18 @@ const PatientProviders = () => {
         setShowSpecialtyMenu(false);
       }
     };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setShowSortMenu(false);
+        setShowSpecialtyMenu(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -346,62 +404,58 @@ const PatientProviders = () => {
     return () => { active = false; };
   }, [user?.id]);
 
-  useEffect(() => {
-    if (user) {
-      const saved = JSON.parse(localStorage.getItem(`search_history_${user.id}`) || '[]');
-      setSearchHistory(saved);
+  const fetchProviders = useCallback(async () => {
+    setLoading(true);
+    setFetchError(false);
+    try {
+      const { data, error } = await supabase
+        .from('providers')
+        .select('id, user_id, services, rating, location, is_approved, bio, phone, professional_id_status, trust_score, user:user_id(id, full_name, email, avatar_url)')
+        .eq('is_approved', true);
+
+      if (error) throw error;
+
+      const shaped = (data || []).map(p => ({
+        id: p.user_id,
+        full_name: p.user?.full_name || 'Unknown',
+        email: p.user?.email || '',
+        phone: p.phone || '',
+        bio: p.bio || 'Experienced healthcare professional dedicated to home care services in Muntinlupa.',
+        services: p.services || [],
+        rating: p.rating || 0,
+        location: p.location || 'Muntinlupa City',
+        professional_id_status: p.professional_id_status || 'none',
+        trust_score: p.trust_score || 0,
+        avatar_url: p.user?.avatar_url || '',
+      }));
+
+      setProviders(shaped);
+
+      if (user) {
+        const { data: existingRequests } = await supabase
+          .from('requests')
+          .select('provider_id, status')
+          .eq('patient_id', user.id)
+          .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
+
+        if (existingRequests) {
+          setRequested(existingRequests.map(r => r.provider_id));
+          const statusMap = {};
+          existingRequests.forEach(r => { statusMap[r.provider_id] = r.status; });
+          setActiveRequestsMap(statusMap);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching providers:', err);
+      setFetchError(true);
+    } finally {
+      setLoading(false);
     }
   }, [user]);
 
   useEffect(() => {
-    const fetchProviders = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('providers')
-          .select('id, user_id, services, rating, location, is_approved, bio, phone, professional_id_status, trust_score, user:user_id(id, full_name, email, avatar_url)')
-          .eq('is_approved', true);
-
-        if (error) throw error;
-
-        const shaped = (data || []).map(p => ({
-          id: p.user_id,
-          full_name: p.user?.full_name || 'Unknown',
-          email: p.user?.email || '',
-          phone: p.phone || '',
-          bio: p.bio || 'Experienced healthcare professional dedicated to home care services in Muntinlupa.',
-          services: p.services || [],
-          rating: p.rating || 0,
-          location: p.location || 'Muntinlupa City',
-          professional_id_status: p.professional_id_status || 'none',
-          trust_score: p.trust_score || 0,
-          avatar_url: p.user?.avatar_url || '',
-        }));
-
-        setProviders(shaped);
-
-        if (user) {
-          const { data: existingRequests } = await supabase
-            .from('requests')
-            .select('provider_id, status')
-            .eq('patient_id', user.id)
-            .in('status', ['Pending', 'Accepted', 'On The Way', 'Arrived']);
-
-          if (existingRequests) {
-            setRequested(existingRequests.map(r => r.provider_id));
-            const statusMap = {};
-            existingRequests.forEach(r => { statusMap[r.provider_id] = r.status; });
-            setActiveRequestsMap(statusMap);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching providers:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProviders();
-  }, [user]);
+  }, [fetchProviders]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -446,19 +500,6 @@ const PatientProviders = () => {
       })
       .catch(() => {});
   }, [viewingProvider]);
-
-  useEffect(() => {
-    if (!searchTerm.trim() || !user) return;
-    const timer = setTimeout(() => {
-      setSearchHistory(prev => {
-        const filtered = prev.filter(s => s !== searchTerm);
-        const updated = [searchTerm, ...filtered].slice(0, 8);
-        localStorage.setItem(`search_history_${user.id}`, JSON.stringify(updated));
-        return updated;
-      });
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, [searchTerm, user]);
 
   useEffect(() => {
     if (!selectedProvider || !selectedProvider.id || !watchedDate || bookingStep === 'done') {
@@ -586,8 +627,7 @@ const PatientProviders = () => {
           : t('patient.providers.alreadyOngoingToast', {
               status: existingStatus ? translateStatus(existingStatus) : t('patient.providers.ongoingFallback'),
               name: providerName,
-            }),
-        { icon: 'ℹ️' }
+            })
       );
       navigate('/patient/requests');
       return;
@@ -771,11 +811,14 @@ const PatientProviders = () => {
         .maybeSingle();
 
       if (existingActive) {
+        const providerName = selectedProvider.full_name || t('patient.providers.thisProviderFallback');
         toast(
           existingActive.status === 'Pending'
-            ? 'You already have a pending booking request with this provider.'
-            : `You already have an ongoing visit (${existingActive.status}) with this provider. Track it in My Requests.`,
-          { icon: 'ℹ️' }
+            ? t('patient.providers.alreadyPendingToast', { name: providerName })
+            : t('patient.providers.alreadyOngoingToast', {
+                status: translateStatus(existingActive.status),
+                name: providerName,
+              })
         );
         setRequested(prev => [...new Set([...prev, providerId])]);
         setActiveRequestsMap(prev => ({ ...prev, [providerId]: existingActive.status }));
@@ -839,7 +882,13 @@ const PatientProviders = () => {
     }
   };
 
-  if (loading) return <DashboardLayout role="patient"><SkeletonPage /></DashboardLayout>;
+  if (loading) {
+    return (
+      <DashboardLayout role="patient">
+        <ProvidersDirectorySkeleton />
+      </DashboardLayout>
+    );
+  }
 
   const sortOptions = [
     { value: 'popular', label: t('patient.providers.sortPopular') },
@@ -847,40 +896,30 @@ const PatientProviders = () => {
     { value: 'trust', label: t('patient.providers.sortTrustScore') },
   ];
 
+  const hasActiveFilters = Boolean(searchTerm.trim() || selectedCategory !== 'All');
+
   return (
     <DashboardLayout role="patient">
       <div className="space-y-5 relative pb-6 w-full max-w-full">
 
-        {/* Slim Inline Title Row + Unified Search & Mobile 1A 50/50 Filter Bar */}
-        <section className="space-y-3.5 relative z-30">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 px-0.5">
-            <div className="min-w-0">
-              <h1 className="font-display font-extrabold tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white">
-                {t('patient.providers.pageTitle')}
-              </h1>
-              <p className="text-xs sm:text-sm text-tertiary dark:text-tertiary mt-0.5 max-w-xl">
-                {t('patient.providers.pageSubtitle')}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-              <span className="neu-flat-sm px-3 py-1.5 rounded-xl text-xs font-extrabold text-link border border-white/60 dark:border-white/5">
-                {t(
-                  sortedProviders.length === 1
-                    ? 'patient.providers.showingOne'
-                    : 'patient.providers.showingMany',
-                  { count: sortedProviders.length }
-                )}
-              </span>
-            </div>
+        {/* Page Header + Unified Search & 50/50 Filter Bar */}
+        <section className="space-y-3.5 relative z-20">
+          <div className="px-0.5">
+            <h1 className="font-display font-extrabold tracking-tight text-2xl md:text-3xl text-slate-900 dark:text-white text-balance">
+              {t('patient.providers.pageTitle')}
+            </h1>
+            <p className="text-sm text-tertiary mt-1 max-w-2xl leading-relaxed">
+              {t('patient.providers.pageSubtitle')}
+            </p>
           </div>
 
-          {/* Control Surface: Row 1 Search Input + Row 2 Mobile 1A 50/50 Split Specialty & Sort Buttons */}
+          {/* Control Surface: Search Input + Specialty & Sort Controls */}
           <div className="neu-flat p-2.5 sm:p-3 rounded-2xl border border-white/70 dark:border-white/5 flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
             {/* Search Input Container */}
             <div className="relative flex-1 min-w-0" ref={searchRef}>
               <label htmlFor="provider-search" className="sr-only">{t('patient.providers.searchAria')}</label>
-              <div className="neu-inset px-3 py-2 rounded-xl flex items-center gap-2.5 h-[2.875rem] sm:h-[3rem]">
-                <MagnifyingGlass className="w-4 h-4 text-link shrink-0" />
+              <div className="neu-inset px-3.5 rounded-xl flex items-center gap-2.5 h-12 border border-transparent focus-within:border-primary/40 transition-colors">
+                <MagnifyingGlass className="w-4 h-4 text-link shrink-0" aria-hidden="true" />
                 <input
                   id="provider-search"
                   type="text"
@@ -888,57 +927,75 @@ const PatientProviders = () => {
                   autoComplete="off"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-transparent border-0 px-0.5 text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 outline-none focus:outline-none focus:ring-0 placeholder:text-tertiary placeholder:font-normal min-w-0"
+                  className="w-full bg-transparent border-0 px-0.5 text-sm font-semibold text-slate-800 dark:text-slate-100 placeholder:text-tertiary placeholder:font-normal min-w-0"
                 />
                 {searchTerm && (
                   <button
+                    type="button"
                     onMouseDown={(e) => { e.preventDefault(); setSearchTerm(''); }}
+                    onClick={() => setSearchTerm('')}
                     aria-label={t('patient.providers.clearSearchAria')}
-                    className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center text-tertiary hover:text-danger transition-colors shrink-0 cursor-pointer"
+                    className="w-11 h-11 -mr-2 rounded-xl flex items-center justify-center text-tertiary hover:text-danger transition-colors shrink-0 cursor-pointer"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <span className="neu-btn w-7 h-7 rounded-lg flex items-center justify-center pointer-events-none">
+                      <X className="w-3.5 h-3.5" aria-hidden="true" />
+                    </span>
                   </button>
                 )}
               </div>
             </div>
 
-            {/* Mobile 1A: 50/50 Split Specialty & Sort Buttons (Zero Horizontal Scrollbar) */}
+            {/* Specialty & Sort Buttons (50/50 Split on Mobile) */}
             <div className="grid grid-cols-2 md:flex items-center gap-2 shrink-0">
-              {/* Specialty Picker Button (Left 50% on Mobile) */}
-              <div className="relative md:min-w-[12.8125rem] z-50" ref={specialtyMenuRef}>
+              {/* Specialty Picker Button */}
+              <div className="relative md:min-w-[13rem]" ref={specialtyMenuRef}>
                 <button
                   type="button"
                   onClick={() => {
                     setShowSpecialtyMenu(prev => !prev);
                     setShowSortMenu(false);
                   }}
-                  className={`w-full neu-btn px-3 py-2 rounded-xl flex items-center justify-between gap-2 h-[2.875rem] sm:h-[3rem] transition-all cursor-pointer outline-none select-none ${
-                    showSpecialtyMenu ? 'ring-2 ring-primary/20' : ''
+                  aria-expanded={showSpecialtyMenu}
+                  aria-haspopup="listbox"
+                  className={`w-full neu-btn px-3.5 py-2 rounded-xl flex items-center justify-between gap-2 h-12 transition-all duration-200 ease-fluid cursor-pointer select-none border ${
+                    showSpecialtyMenu
+                      ? 'border-primary/40 ring-2 ring-primary/20'
+                      : selectedCategory !== 'All'
+                        ? 'border-primary/35 dark:border-primary-400/35'
+                        : 'border-transparent'
                   }`}
                   aria-label={t('patient.providers.filterSpecialtyAria')}
                 >
                   <div className="min-w-0 flex-1 text-left">
-                    <span className="block text-[0.5625rem] font-extrabold uppercase tracking-wider text-tertiary leading-none">
-                      {t('patient.providers.specialtyLabel')}
+                    <span className="flex items-center gap-1.5 text-2xs font-extrabold uppercase tracking-wider text-tertiary leading-none">
+                      <span>{t('patient.providers.specialtyLabel')}</span>
+                      {selectedCategory !== 'All' && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary dark:bg-primary-400 shrink-0" aria-hidden="true" />
+                      )}
                     </span>
                     <span className="block text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate mt-1">
                       {selectedCategory === 'All' ? t('patient.providers.allSpecialties') : translateService(selectedCategory)}
                     </span>
                   </div>
-                  <CaretDown className={`w-3.5 h-3.5 text-link transition-transform duration-200 shrink-0 ${showSpecialtyMenu ? 'rotate-180' : ''}`} />
+                  <CaretDown
+                    aria-hidden="true"
+                    className={`w-3.5 h-3.5 text-link transition-transform duration-200 ease-fluid shrink-0 ${showSpecialtyMenu ? 'rotate-180' : ''}`}
+                  />
                 </button>
 
-                {/* Specialty Floating Popover Menu (2-Column Grid on Mobile for Zero Scroll Clutter) */}
+                {/* Specialty Floating Popover Menu */}
                 <AnimatePresence>
                   {showSpecialtyMenu && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                      role="listbox"
+                      aria-label={t('patient.providers.filterBySpecialtyTitle')}
+                      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: -4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                      transition={{ duration: 0.16, ease: 'easeOut' }}
-                      className="absolute left-0 md:left-auto md:right-0 top-full mt-2 w-[calc(200%+0.5rem)] md:w-72 neu-flat rounded-2xl p-2.5 z-50 shadow-2xl border border-white/70 dark:border-white/10 max-h-80 overflow-y-auto no-scrollbar"
+                      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.32, 0.72, 0, 1] }}
+                      className="absolute left-0 md:left-auto md:right-0 top-full mt-2 w-[calc(200%+0.5rem)] md:w-72 neu-flat rounded-2xl p-2.5 z-popover shadow-softer border border-white/70 dark:border-white/10 max-h-80 overflow-y-auto no-scrollbar"
                     >
-                      <div className="px-2.5 py-1.5 border-b border-slate-200/60 dark:border-white/5 mb-2 flex items-center justify-between">
+                      <div className="px-2.5 py-1.5 border-b border-slate-200/60 dark:border-white/5 mb-2 flex items-center justify-between gap-2">
                         <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providers.filterBySpecialtyTitle')}</span>
                         {selectedCategory !== 'All' && (
                           <button
@@ -947,7 +1004,7 @@ const PatientProviders = () => {
                               setSelectedCategory('All');
                               setShowSpecialtyMenu(false);
                             }}
-                            className="text-2xs font-extrabold text-link hover:underline cursor-pointer"
+                            className="text-xs font-extrabold text-link hover:underline cursor-pointer px-1.5 py-0.5 rounded-md"
                           >
                             {t('patient.providers.resetBtn')}
                           </button>
@@ -956,18 +1013,20 @@ const PatientProviders = () => {
                       <div className="grid grid-cols-2 md:grid-cols-1 gap-1.5">
                         <button
                           type="button"
+                          role="option"
+                          aria-selected={selectedCategory === 'All'}
                           onClick={() => {
                             setSelectedCategory('All');
                             setShowSpecialtyMenu(false);
                           }}
-                          className={`col-span-2 md:col-span-1 w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                          className={`col-span-2 md:col-span-1 w-full min-h-[2.75rem] text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all duration-200 ease-fluid cursor-pointer ${
                             selectedCategory === 'All'
                               ? 'bg-primary text-white font-bold shadow-sm'
                               : 'neu-flat-sm text-slate-700 dark:text-slate-300 hover:text-link'
                           }`}
                         >
                           <span>{t('patient.providers.allSpecialties')}</span>
-                          {selectedCategory === 'All' && <Check className="w-3.5 h-3.5 shrink-0" />}
+                          {selectedCategory === 'All' && <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
                         </button>
                         {allSpecialties.filter(s => s !== 'All').map((spec) => {
                           const active = selectedCategory === spec;
@@ -975,18 +1034,20 @@ const PatientProviders = () => {
                             <button
                               key={spec}
                               type="button"
+                              role="option"
+                              aria-selected={active}
                               onClick={() => {
                                 setSelectedCategory(spec);
                                 setShowSpecialtyMenu(false);
                               }}
-                              className={`w-full text-left px-2.5 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between gap-1.5 transition-all cursor-pointer ${
+                              className={`w-full min-h-[2.75rem] text-left px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between gap-1.5 transition-all duration-200 ease-fluid cursor-pointer ${
                                 active
                                   ? 'bg-primary text-white font-bold shadow-sm'
                                   : 'neu-flat-sm text-slate-700 dark:text-slate-300 hover:text-link'
                               }`}
                             >
                               <span className="truncate">{translateService(spec)}</span>
-                              {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                              {active && <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
                             </button>
                           );
                         })}
@@ -996,45 +1057,46 @@ const PatientProviders = () => {
                 </AnimatePresence>
               </div>
 
-              {/* Sort Picker Button (Right 50% on Mobile) */}
-              <div className="relative md:min-w-[11.5625rem] z-50" ref={sortMenuRef}>
+              {/* Sort Picker Button */}
+              <div className="relative md:min-w-[11.75rem]" ref={sortMenuRef}>
                 <button
                   type="button"
                   onClick={() => {
                     setShowSortMenu(prev => !prev);
                     setShowSpecialtyMenu(false);
                   }}
-                  className={`w-full neu-btn px-3 py-2 rounded-xl flex items-center justify-between gap-2 h-[2.875rem] sm:h-[3rem] transition-all cursor-pointer relative outline-none select-none ${
-                    showSortMenu ? 'ring-2 ring-primary/20' : ''
+                  aria-expanded={showSortMenu}
+                  aria-haspopup="listbox"
+                  className={`w-full neu-btn px-3.5 py-2 rounded-xl flex items-center justify-between gap-2 h-12 transition-all duration-200 ease-fluid cursor-pointer relative select-none border ${
+                    showSortMenu ? 'border-primary/40 ring-2 ring-primary/20' : 'border-transparent'
                   }`}
                   aria-label={t('patient.providers.sortAria')}
                 >
                   <div className="min-w-0 flex-1 text-left">
-                    <span className="block text-[0.5625rem] font-extrabold uppercase tracking-wider text-tertiary leading-none">
+                    <span className="block text-2xs font-extrabold uppercase tracking-wider text-tertiary leading-none">
                       {t('patient.providers.sortByLabel')}
                     </span>
                     <span className="block text-xs font-extrabold text-slate-800 dark:text-slate-100 truncate mt-1">
                       {sortOptions.find(o => o.value === sortBy)?.label || t('patient.providers.sortPopular')}
                     </span>
                   </div>
-                  <SlidersHorizontal className="w-3.5 h-3.5 text-link shrink-0" />
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-link shrink-0" aria-hidden="true" />
                 </button>
 
                 {/* Sort Floating Popover Menu */}
                 <AnimatePresence>
                   {showSortMenu && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.96, y: -4 }}
+                      role="listbox"
+                      aria-label={t('patient.providers.sortProvidersTitle')}
+                      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.96, y: -4 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.96, y: -4 }}
-                      transition={{ duration: 0.16, ease: 'easeOut' }}
-                      className="absolute right-0 top-full mt-2 w-56 neu-flat rounded-2xl p-2.5 z-50 shadow-2xl border border-white/70 dark:border-white/10"
+                      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: -4 }}
+                      transition={{ duration: prefersReducedMotion ? 0 : 0.18, ease: [0.32, 0.72, 0, 1] }}
+                      className="absolute right-0 top-full mt-2 w-56 neu-flat rounded-2xl p-2.5 z-popover shadow-softer border border-white/70 dark:border-white/10"
                     >
-                      <div className="px-2.5 py-1.5 border-b border-slate-200/60 dark:border-white/5 mb-1.5 flex items-center justify-between">
+                      <div className="px-2.5 py-1.5 border-b border-slate-200/60 dark:border-white/5 mb-1.5 flex items-center justify-between gap-2">
                         <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">{t('patient.providers.sortProvidersTitle')}</span>
-                        <span className="text-2xs text-link font-bold">
-                          {sortOptions.find(o => o.value === sortBy)?.label}
-                        </span>
                       </div>
                       <div className="space-y-1">
                         {sortOptions.map((opt) => {
@@ -1043,18 +1105,20 @@ const PatientProviders = () => {
                             <button
                               key={opt.value}
                               type="button"
+                              role="option"
+                              aria-selected={active}
                               onClick={() => {
                                 setSortBy(opt.value);
                                 setShowSortMenu(false);
                               }}
-                              className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                              className={`w-full min-h-[2.75rem] text-left px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all duration-200 ease-fluid cursor-pointer ${
                                 active
                                   ? 'bg-primary text-white font-bold shadow-sm'
                                   : 'neu-flat-sm text-slate-700 dark:text-slate-300 hover:text-link'
                               }`}
                             >
                               <span>{opt.label}</span>
-                              {active && <Check className="w-3.5 h-3.5 shrink-0" />}
+                              {active && <Check className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
                             </button>
                           );
                         })}
@@ -1067,8 +1131,33 @@ const PatientProviders = () => {
           </div>
         </section>
 
-        {/* Option 1: Clean 3-Layer Provider Cards Grid (Spring Health / Rula Pattern) */}
-        {sortedProviders.length > 0 ? (
+        {/* Provider Directory Grid, Fetch Error Recovery, or Empty State */}
+        {fetchError ? (
+          <div
+            role="alert"
+            className="neu-flat p-8 sm:p-12 rounded-3xl border border-danger/20 dark:border-danger-dark/25 text-center flex flex-col items-center justify-center gap-3"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-danger-soft dark:bg-danger-darkSoft text-danger dark:text-danger-dark flex items-center justify-center">
+              <WarningCircle className="w-7 h-7" weight="duotone" aria-hidden="true" />
+            </div>
+            <div className="space-y-1 max-w-md">
+              <h2 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">
+                {t('patient.providers.loadErrorTitle')}
+              </h2>
+              <p className="text-sm text-tertiary leading-relaxed">
+                {t('patient.providers.loadErrorMsg')}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={fetchProviders}
+              className="mt-2 neu-btn-primary min-h-[2.75rem] px-5 py-2.5 rounded-2xl text-sm font-extrabold inline-flex items-center gap-2 cursor-pointer active:scale-[0.98] transition-all duration-200 ease-fluid shadow-card"
+            >
+              <ArrowClockwise className="w-4 h-4" aria-hidden="true" />
+              <span>{t('patient.providers.retryBtn')}</span>
+            </button>
+          </div>
+        ) : sortedProviders.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {sortedProviders.map((p, idx) => {
               const hasActiveReq = requested.includes(p.id);
@@ -1076,17 +1165,17 @@ const PatientProviders = () => {
                 ? p.services
                 : ['General Consultation'];
               return (
-              <motion.div
+              <motion.article
                 key={p.id}
-                initial={{ opacity: 0, y: 15 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.32, delay: Math.min(idx, 9) * 0.04 }}
-                className="group neu-flat p-5 rounded-[1.5rem] border border-white/80 dark:border-white/5 flex flex-col justify-between gap-4 select-text transition-all"
+                transition={{ duration: prefersReducedMotion ? 0 : 0.28, delay: prefersReducedMotion ? 0 : Math.min(idx, 8) * 0.035, ease: [0.32, 0.72, 0, 1] }}
+                className="group neu-flat p-5 rounded-[1.5rem] border border-white/80 dark:border-white/5 flex flex-col justify-between gap-4 select-text transition-all duration-300 ease-fluid hover:-translate-y-0.5 hover:shadow-card"
               >
                 <div className="space-y-4">
-                  {/* Layer 1: Identity Row (64px Squircle Avatar / Initials + Verified Name + Location + Single Clean Meta Pill) */}
+                  {/* Layer 1: Identity Row (Avatar + Name + Location + Trust/Verification Meta) */}
                   <div className="flex items-start gap-3.5">
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shrink-0 border-2 border-white dark:border-slate-700 shadow-md neu-flat-sm flex items-center justify-center text-base sm:text-lg font-extrabold text-link">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden shrink-0 border-2 border-white dark:border-slate-700 shadow-card neu-flat-sm flex items-center justify-center text-base sm:text-lg font-extrabold text-link">
                       {p.avatar_url ? (
                         <img
                           src={p.avatar_url}
@@ -1107,21 +1196,26 @@ const PatientProviders = () => {
                     </div>
 
                     <div className="min-w-0 flex-1 pt-0.5">
-                      <div className="flex items-center gap-1.5">
-                        <h3 className="font-display font-extrabold tracking-tight text-slate-900 dark:text-slate-100 text-base sm:text-lg truncate">
-                          {p.full_name}
-                        </h3>
-                        <ShieldCheck className="w-4 h-4 text-link shrink-0" title={t('patient.common.verifiedProvider')} />
-                      </div>
-                      <p className="text-xs font-semibold text-tertiary mt-0.5 truncate">
-                        {p.location || t('patient.common.muntinlupaCity')}
+                      <h2 className="font-display font-extrabold tracking-tight text-slate-900 dark:text-slate-100 text-base sm:text-lg leading-snug truncate">
+                        {p.full_name}
+                      </h2>
+                      <p className="text-xs font-semibold text-tertiary mt-0.5 flex items-center gap-1 min-w-0">
+                        <MapPin className="w-3.5 h-3.5 text-link shrink-0" aria-hidden="true" />
+                        <span className="truncate">{p.location || t('patient.common.muntinlupaCity')}</span>
                       </p>
-                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 text-[0.625rem] font-extrabold uppercase tracking-wider">
-                          {t('patient.common.verifiedProvider')}
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success-soft/80 dark:bg-success-darkSoft/80 text-success dark:text-success-dark border border-success/20 dark:border-success-dark/25 text-2xs font-extrabold uppercase tracking-wider">
+                          <ShieldCheck className="w-3 h-3 shrink-0" weight="fill" aria-hidden="true" />
+                          <span>{t('patient.common.verified')}</span>
                         </span>
-                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                          • {servicesList.length} {servicesList.length === 1 ? t('patient.providers.serviceSingle') : t('patient.providers.servicePlural')}
+                        {p.rating > 0 && (
+                          <span className="inline-flex items-center gap-1 text-xs font-extrabold text-slate-700 dark:text-slate-200 tabular-nums">
+                            <Star className="w-3.5 h-3.5 text-warning dark:text-warning-dark shrink-0" weight="fill" aria-hidden="true" />
+                            <span>{Number(p.rating).toFixed(1)}</span>
+                          </span>
+                        )}
+                        <span className="text-xs font-bold text-tertiary tabular-nums">
+                          {p.trust_score}/100
                         </span>
                       </div>
                     </div>
@@ -1129,7 +1223,7 @@ const PatientProviders = () => {
 
                   {/* Layer 2: Structured Specialty Well */}
                   <div className="neu-inset rounded-xl p-3">
-                    <span className="text-[0.625rem] font-extrabold uppercase tracking-wider text-tertiary block mb-2">
+                    <span className="text-2xs font-extrabold uppercase tracking-wider text-tertiary block mb-2">
                       {t('patient.providers.specialtiesWellTitle')}
                     </span>
                     <div className="flex flex-wrap gap-1.5">
@@ -1142,7 +1236,7 @@ const PatientProviders = () => {
                         </span>
                       ))}
                       {servicesList.length > 3 && (
-                        <span className="px-2 py-1 rounded-lg bg-primary/10 text-link text-xs font-extrabold">
+                        <span className="px-2 py-1 rounded-lg bg-primary/10 text-link text-xs font-extrabold tabular-nums">
                           +{servicesList.length - 3}
                         </span>
                       )}
@@ -1150,12 +1244,12 @@ const PatientProviders = () => {
                   </div>
                 </div>
 
-                {/* Layer 3: Asymmetric Action Row (Compact Profile + Prominent Book Appointment CTA) */}
+                {/* Layer 3: Asymmetric Action Row (Secondary Profile + Single Primary Book CTA) */}
                 <div className="flex items-center gap-2.5 pt-1">
                   <button
                     type="button"
                     onClick={() => navigate(`/patient/providers/${p.id}/profile`)}
-                    className="neu-btn px-4 py-2.5 rounded-xl text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:text-link dark:hover:text-link transition-all active:scale-[0.98] cursor-pointer shrink-0"
+                    className="neu-btn min-h-[2.75rem] px-4 py-2.5 rounded-2xl text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:text-link dark:hover:text-link transition-all duration-200 ease-fluid active:scale-[0.98] cursor-pointer shrink-0"
                   >
                     {t('patient.providers.profileBtn')}
                   </button>
@@ -1168,10 +1262,10 @@ const PatientProviders = () => {
                         openBookingModal(p, undefined, event.currentTarget);
                       }
                     }}
-                    className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`flex-1 min-h-[2.75rem] py-2.5 px-4 rounded-2xl text-xs font-extrabold transition-all duration-200 ease-fluid active:scale-[0.98] flex items-center justify-center gap-1.5 cursor-pointer ${
                       hasActiveReq
                         ? 'neu-btn text-success dark:text-success-dark'
-                        : 'neu-btn-primary shadow-md'
+                        : 'neu-btn-primary shadow-card'
                     }`}
                   >
                     {hasActiveReq ? (
@@ -1181,16 +1275,23 @@ const PatientProviders = () => {
                     )}
                   </button>
                 </div>
-              </motion.div>
+              </motion.article>
               );
             })}
           </div>
         ) : (
-          <div className="neu-flat p-12 rounded-3xl text-center">
+          <div className="neu-flat p-8 sm:p-12 rounded-3xl text-center">
             <EmptyState
               icon="search"
               title={t('patient.providers.noProvidersTitle')}
               message={searchTerm ? t('patient.providers.noProvidersSearchMsg') : t('patient.providers.noProvidersCatMsg')}
+              action={hasActiveFilters ? {
+                label: t('patient.providers.clearFiltersBtn'),
+                onClick: () => {
+                  setSearchTerm('');
+                  setSelectedCategory('All');
+                },
+              } : undefined}
             />
           </div>
         )}
@@ -1204,7 +1305,7 @@ const PatientProviders = () => {
       >
         {selectedProvider && (
         <DialogPrimitive.Portal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+          <DialogPrimitive.Overlay className="fixed inset-0 z-overlay bg-slate-950/70 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
           <DialogPrimitive.Content
             asChild
             aria-modal="true"
@@ -1218,7 +1319,7 @@ const PatientProviders = () => {
             }}
           >
             <motion.div
-              className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+              className="fixed inset-0 z-overlay flex items-end sm:items-center justify-center p-0 sm:p-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: prefersReducedMotion ? 0 : 0.16 }}
@@ -1230,7 +1331,7 @@ const PatientProviders = () => {
                 className="neu-flat rounded-t-[2rem] sm:rounded-[2rem] w-full max-w-lg flex flex-col relative max-h-[92dvh] overflow-hidden shadow-2xl border-t sm:border border-white/70 dark:border-white/10"
                 initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 42, scale: 0.985 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.22, 1, 0.36, 1] }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.24, ease: [0.32, 0.72, 0, 1] }}
                 onClick={(e) => e.stopPropagation()}
                 {...bookingDrawerMotionProps}
               >
@@ -1240,7 +1341,7 @@ const PatientProviders = () => {
                   {...bookingDragHandleProps}
                 >
                   {/* Mobile bottom-sheet drag indicator */}
-                  <div className="mx-auto mb-2.5 h-1.5 w-10 rounded-full bg-slate-300 dark:bg-slate-600 sm:hidden" aria-hidden="true" />
+                  <div className="mx-auto mb-2.5 h-1.5 w-11 rounded-full bg-slate-300/90 dark:bg-slate-600/80 sm:hidden shrink-0" aria-hidden="true" />
 
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="neu-flat-sm w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center text-link font-extrabold overflow-hidden p-0.5 shrink-0 aspect-square border border-white/80 dark:border-white/10">
@@ -1368,9 +1469,9 @@ const PatientProviders = () => {
                             }`}
                           >
                             <div className="flex items-center justify-between gap-2">
-                              <label className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
+                              <span id="booking-service-label" className="text-2xs font-extrabold uppercase tracking-wider text-tertiary">
                                 {t('patient.providers.serviceTypeLabel')}
-                              </label>
+                              </span>
                               <span className="text-2xs font-extrabold text-link dark:text-primary-400 tabular-nums">
                                 {t('patient.providers.durationSummary', {
                                   mins: serviceDurationMinutes,
@@ -1384,15 +1485,17 @@ const PatientProviders = () => {
 
                             <button
                               type="button"
+                              aria-labelledby="booking-service-label"
+                              aria-expanded={openServiceMenu}
                               onClick={() => setOpenServiceMenu(prev => !prev)}
-                              className="w-full neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none border border-white/75 dark:border-white/10 hover:border-primary/40 dark:hover:border-primary-400/40 active:scale-[0.99]"
+                              className="w-full min-h-[2.75rem] neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-left transition-all cursor-pointer select-none border border-white/75 dark:border-white/10 hover:border-primary/40 dark:hover:border-primary-400/40 active:scale-[0.99]"
                             >
                               <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
                                 {watchedService ? translateService(watchedService) : t('patient.providers.selectServicePlaceholder')}
                               </span>
                               <span className="text-xs font-extrabold text-link dark:text-primary-400 shrink-0 ml-2 flex items-center gap-1">
                                 {openServiceMenu ? t('patient.common.close') : t('patient.providers.changeBtn')}
-                                {openServiceMenu ? <CaretUp className="w-3.5 h-3.5" /> : <CaretDown className="w-3.5 h-3.5" />}
+                                {openServiceMenu ? <CaretUp className="w-3.5 h-3.5" aria-hidden="true" /> : <CaretDown className="w-3.5 h-3.5" aria-hidden="true" />}
                               </span>
                             </button>
 
@@ -1402,7 +1505,7 @@ const PatientProviders = () => {
                                   initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: 'auto' }}
                                   exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
-                                  transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+                                  transition={{ duration: prefersReducedMotion ? 0 : 0.2, ease: [0.32, 0.72, 0, 1] }}
                                   className="overflow-hidden"
                                 >
                                   <div className="neu-inset rounded-2xl p-1.5 space-y-1 max-h-52 overflow-y-auto no-scrollbar border border-white/60 dark:border-white/5">
@@ -1418,7 +1521,7 @@ const PatientProviders = () => {
                                             setValue('service', s, { shouldValidate: true });
                                             setOpenServiceMenu(false);
                                           }}
-                                          className={`w-full px-3 py-2 rounded-xl text-left flex items-center justify-between transition-all cursor-pointer outline-none select-none active:scale-[0.98] ${
+                                          className={`w-full min-h-[2.75rem] px-3 py-2 rounded-xl text-left flex items-center justify-between transition-all cursor-pointer select-none active:scale-[0.98] ${
                                             isSelected
                                               ? 'bg-primary text-white dark:bg-primary-400 dark:text-neu-fg font-extrabold shadow-sm'
                                               : 'text-slate-700 dark:text-slate-200 hover:bg-white/80 dark:hover:bg-slate-800/70'
@@ -1522,7 +1625,7 @@ const PatientProviders = () => {
                                           setValue('time', '');
                                         }
                                       }}
-                                      className={`min-w-[4.125rem] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 transition-all active:scale-[0.96] select-none outline-none ${
+                                      className={`min-w-[4.125rem] min-h-[2.75rem] flex-1 rounded-xl py-2 px-2 text-center cursor-pointer shrink-0 transition-all active:scale-[0.96] select-none ${
                                         isActive
                                           ? 'bg-primary text-white dark:bg-primary-400 dark:text-neu-fg shadow-md shadow-primary/25 dark:shadow-primary-400/20'
                                           : 'neu-flat-sm text-slate-800 dark:text-slate-100 border border-white/70 dark:border-white/5 hover:border-primary/40 dark:hover:border-primary-400/40'
@@ -1567,8 +1670,11 @@ const PatientProviders = () => {
                                     className="overflow-hidden"
                                   >
                                     <div className="neu-flat-sm rounded-xl px-3 py-2 flex items-center justify-between gap-2 border border-white/70 dark:border-white/5">
-                                      <span className="text-xs font-bold text-slate-600 dark:text-slate-300 shrink-0">{t('patient.providers.jumpToDateLabel')}</span>
+                                      <label htmlFor="booking-custom-date" className="text-xs font-bold text-slate-600 dark:text-slate-300 shrink-0">
+                                        {t('patient.providers.jumpToDateLabel')}
+                                      </label>
                                       <input
+                                        id="booking-custom-date"
                                         type="date"
                                         min={toLocalDateKey()}
                                         value={watchedDate || ''}
@@ -1577,7 +1683,7 @@ const PatientProviders = () => {
                                           setValue('date', e.target.value, { shouldValidate: true });
                                           setValue('time', '');
                                         }}
-                                        className="bg-transparent text-xs font-extrabold text-slate-900 dark:text-white outline-none cursor-pointer"
+                                        className="bg-transparent text-xs font-extrabold text-slate-900 dark:text-white cursor-pointer"
                                       />
                                     </div>
                                   </motion.div>
@@ -1723,7 +1829,7 @@ const PatientProviders = () => {
                                                 type="button"
                                                 disabled={!slot.available}
                                                 onClick={() => setValue('time', slot.time, { shouldValidate: true })}
-                                                className={`py-2.5 px-2 rounded-xl text-center transition-all outline-none select-none ${
+                                                className={`min-h-[2.75rem] py-2.5 px-2 rounded-xl text-center transition-all select-none ${
                                                   !slot.available
                                                     ? 'bg-slate-100/70 dark:bg-slate-800/40 text-slate-400 dark:text-slate-600 border border-slate-200/60 dark:border-white/5 cursor-not-allowed'
                                                     : isSelected
@@ -1734,7 +1840,7 @@ const PatientProviders = () => {
                                                 <span className="text-xs font-extrabold block leading-tight tabular-nums">
                                                   {startLabel}
                                                 </span>
-                                                <span className={`text-[0.6875rem] font-semibold block mt-0.5 leading-tight tabular-nums ${
+                                                <span className={`text-xs font-semibold block mt-0.5 leading-tight tabular-nums ${
                                                   !slot.available
                                                     ? 'text-slate-400 dark:text-slate-600'
                                                     : isSelected
@@ -1774,7 +1880,7 @@ const PatientProviders = () => {
                             <button
                               type="button"
                               onClick={() => setDestinationModalOpen(true)}
-                              className="w-full neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-left transition-all cursor-pointer outline-none select-none border border-white/75 dark:border-white/10 hover:border-primary/40 dark:hover:border-primary-400/40 active:scale-[0.99]"
+                              className="w-full neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between text-left transition-all cursor-pointer select-none border border-white/75 dark:border-white/10 hover:border-primary/40 dark:hover:border-primary-400/40 active:scale-[0.99]"
                             >
                               <div className="min-w-0 flex-1 pr-3">
                                 <div className="flex items-center gap-1.5">
@@ -1795,10 +1901,10 @@ const PatientProviders = () => {
                                   {visitDestination?.address || patientHome?.address || t('patient.providers.setVisitLocationPrompt')}
                                 </p>
                                 <p className={`text-xs truncate mt-0.5 font-semibold flex items-center gap-1.5 tabular-nums ${
-                                  destinationConfirmed ? 'text-success dark:text-success-dark' : 'text-[#B45309] dark:text-[#FCD34D]'
+                                  destinationConfirmed ? 'text-success dark:text-success-dark' : 'text-warning dark:text-warning-dark'
                                 }`}>
                                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                    destinationConfirmed ? 'bg-emerald-500' : 'bg-amber-500'
+                                    destinationConfirmed ? 'bg-success dark:bg-success-dark' : 'bg-warning dark:bg-warning-dark'
                                   }`} />
                                   <span className="truncate">
                                     {visitDestination?.lat
@@ -1824,6 +1930,7 @@ const PatientProviders = () => {
                             <div className="neu-inset rounded-2xl px-3.5 py-2.5 border border-slate-300/40 dark:border-white/5">
                               <button
                                 type="button"
+                                aria-expanded={Boolean(showBookingNotes || watchedNotes?.trim())}
                                 onClick={() => setShowBookingNotes(prev => !prev)}
                                 className="w-full flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none"
                               >
@@ -1841,11 +1948,15 @@ const PatientProviders = () => {
                                 }`}
                               >
                                 <div className="overflow-hidden">
+                                  <label htmlFor="booking-notes" className="sr-only">
+                                    {t('patient.providers.notesInputLabel')}
+                                  </label>
                                   <input
+                                    id="booking-notes"
                                     type="text"
                                     {...register('notes')}
                                     placeholder={t('patient.providers.notesInputPlaceholder')}
-                                    className="mt-2 w-full neu-flat-sm rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none placeholder:text-tertiary placeholder:font-normal border border-white/70 dark:border-white/10 focus:border-primary/50 dark:focus:border-primary-400/50"
+                                    className="mt-2 w-full neu-flat-sm rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-100 placeholder:text-tertiary placeholder:font-normal border border-white/70 dark:border-white/10 focus:border-primary/50 dark:focus:border-primary-400/50"
                                   />
                                 </div>
                               </div>
@@ -1893,20 +2004,20 @@ const PatientProviders = () => {
                             <button
                               type="button"
                               onClick={closeBookingModal}
-                              className="w-full neu-btn py-3 rounded-xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
+                              className="w-full min-h-[2.75rem] neu-btn py-3 rounded-2xl text-xs font-extrabold text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-all active:scale-[0.98]"
                             >
                               {t('patient.common.cancel')}
                             </button>
                             <button
                               type="submit"
-                              className="w-full neu-btn-primary py-3 px-4 rounded-xl text-xs sm:text-sm font-extrabold shadow-md flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform cursor-pointer"
+                              className="w-full min-h-[2.75rem] neu-btn-primary py-3 px-4 rounded-2xl text-xs sm:text-sm font-extrabold shadow-card flex items-center justify-center gap-1.5 active:scale-[0.98] transition-transform cursor-pointer"
                             >
                               <span>
                                 {selectedSlotParts
                                   ? t('patient.providers.reviewVisitBtn', { time: selectedSlotParts.startLabel })
                                   : t('patient.providers.selectTimeSlotBtn')}
                               </span>
-                              <ArrowRight className="w-4 h-4 shrink-0" />
+                              <ArrowRight className="w-4 h-4 shrink-0" aria-hidden="true" />
                             </button>
                           </div>
                         </div>
@@ -2055,8 +2166,8 @@ const PatientProviders = () => {
                                 {visitDestination?.lat != null && (
                                   destinationConfirmed ? (
                                     <div className="rounded-xl bg-emerald-50/90 dark:bg-emerald-950/35 border border-emerald-200/80 dark:border-emerald-800/60 px-3 py-2 flex items-start gap-2">
-                                      <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-                                      <div className="text-[0.6875rem] leading-snug min-w-0">
+                                      <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" aria-hidden="true" />
+                                      <div className="text-xs leading-snug min-w-0">
                                         <span className="font-extrabold text-emerald-800 dark:text-emerald-300 tabular-nums block">
                                           {t('patient.providers.gpsPinConfirmed', {
                                             lat: visitDestination.lat.toFixed(5),
@@ -2070,8 +2181,8 @@ const PatientProviders = () => {
                                     </div>
                                   ) : (
                                     <div className="rounded-xl bg-amber-50/90 dark:bg-amber-950/35 border border-amber-200/80 dark:border-amber-800/60 px-3 py-2 flex items-start gap-2">
-                                      <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-                                      <div className="text-[0.6875rem] leading-snug min-w-0">
+                                      <MapPin className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" aria-hidden="true" />
+                                      <div className="text-xs leading-snug min-w-0">
                                         <span className="font-extrabold text-amber-800 dark:text-amber-300 tabular-nums block">
                                           {t('patient.providers.approxPinLabel', {
                                             lat: visitDestination.lat.toFixed(5),
@@ -2105,13 +2216,13 @@ const PatientProviders = () => {
                         <div className="neu-flat-sm rounded-2xl px-3.5 py-2.5 flex items-center justify-between gap-2 border border-white/75 dark:border-white/10">
                           <div className="flex items-center gap-2.5 min-w-0">
                             <div className="w-7 h-7 rounded-lg bg-primary/10 dark:bg-primary-400/15 text-link dark:text-primary-400 flex items-center justify-center shrink-0">
-                              <ShieldCheck className="w-4 h-4" />
+                              <ShieldCheck className="w-4 h-4" aria-hidden="true" />
                             </div>
                             <div className="min-w-0">
                               <div className="text-xs font-extrabold text-success dark:text-success-dark">
                                 {t('patient.providers.consentVerifiedTitle')}
                               </div>
-                              <div className="text-[0.6875rem] text-tertiary truncate">
+                              <div className="text-xs text-tertiary truncate">
                                 {t('patient.providers.instantNoticeSub', { name: selectedProvider.full_name })}
                               </div>
                             </div>
@@ -2129,7 +2240,7 @@ const PatientProviders = () => {
                             type="button"
                             onClick={() => goToBookingStep('form', 'left')}
                             disabled={bookingLoading}
-                            className="w-full py-3 neu-btn rounded-xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs disabled:opacity-50 cursor-pointer active:scale-[0.98]"
+                            className="w-full min-h-[2.75rem] py-3 neu-btn rounded-2xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs disabled:opacity-50 cursor-pointer active:scale-[0.98]"
                           >
                             {t('patient.common.back')}
                           </button>
@@ -2137,16 +2248,12 @@ const PatientProviders = () => {
                             type="button"
                             onClick={handleBookingSubmit}
                             disabled={bookingLoading}
-                            className="w-full py-3 px-4 neu-btn-primary rounded-xl shadow-md flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-extrabold cursor-pointer active:scale-[0.98]"
+                            aria-busy={bookingLoading}
+                            className="w-full min-h-[2.75rem] py-3 px-4 neu-btn-primary rounded-2xl shadow-card flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed text-xs sm:text-sm font-extrabold cursor-pointer active:scale-[0.98]"
                           >
-                            {bookingLoading ? (
-                              <>
-                                <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                <span>{t('patient.providers.submittingBtn')}</span>
-                              </>
-                            ) : (
-                              <span>{t('patient.providers.confirmAppointmentBtn')}</span>
-                            )}
+                            <span>
+                              {bookingLoading ? t('patient.providers.submittingBtn') : t('patient.providers.confirmAppointmentBtn')}
+                            </span>
                           </button>
                         </div>
                       </div>
@@ -2247,7 +2354,7 @@ const PatientProviders = () => {
                           <button
                             type="button"
                             onClick={closeBookingModal}
-                            className="w-full py-3 neu-btn rounded-xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs cursor-pointer active:scale-[0.98]"
+                            className="w-full min-h-[2.75rem] py-3 neu-btn rounded-2xl font-extrabold text-slate-600 dark:text-slate-300 transition-all text-xs cursor-pointer active:scale-[0.98]"
                           >
                             {t('patient.common.done')}
                           </button>
@@ -2257,10 +2364,10 @@ const PatientProviders = () => {
                               closeBookingModal();
                               navigate('/patient/requests');
                             }}
-                            className="w-full py-3 px-4 neu-btn-primary rounded-xl shadow-md flex items-center justify-center gap-1.5 text-xs sm:text-sm font-extrabold cursor-pointer active:scale-[0.98]"
+                            className="w-full min-h-[2.75rem] py-3 px-4 neu-btn-primary rounded-2xl shadow-card flex items-center justify-center gap-1.5 text-xs sm:text-sm font-extrabold cursor-pointer active:scale-[0.98]"
                           >
                             <span>{t('patient.providers.viewMyRequestsBtn')}</span>
-                            <ArrowRight className="w-4 h-4 shrink-0" />
+                            <ArrowRight className="w-4 h-4 shrink-0" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
@@ -2283,7 +2390,7 @@ const PatientProviders = () => {
             event.preventDefault();
             sheetTriggerRef.current.focus();
           }}
-          className={`sm:max-w-lg md:max-w-3xl lg:max-w-4xl sm:mx-auto sm:bottom-4 rounded-t-[2rem] sm:rounded-[2.5rem] md:inset-0 md:m-auto h-[80dvh] min-h-[28.75rem] sm:h-[82vh] md:min-h-[33.75rem] max-h-[88vh] flex flex-col overflow-hidden p-0 bg-surface-shell border-0 shadow-2xl transform-gpu will-change-transform ${selectedProvider ? 'opacity-0 pointer-events-none' : ''}`}
+          className={`sm:max-w-lg md:max-w-3xl lg:max-w-4xl sm:mx-auto sm:bottom-4 rounded-t-[2rem] sm:rounded-[2.5rem] md:inset-0 md:m-auto h-[80dvh] min-h-[28.75rem] sm:h-[82dvh] md:min-h-[33.75rem] max-h-[90dvh] flex flex-col overflow-hidden p-0 bg-surface-shell border-0 shadow-2xl transform-gpu will-change-transform ${selectedProvider ? 'opacity-0 pointer-events-none' : ''}`}
         >
           <SheetTitle className="sr-only">{viewingProvider?.full_name || t('patient.providers.sheetTitleFallback')}</SheetTitle>
           <SheetDescription className="sr-only">{t('patient.providers.sheetDescSr')}</SheetDescription>
@@ -2294,7 +2401,7 @@ const PatientProviders = () => {
               {/* Cover Header */}
               <div className="h-20 sm:h-24 md:h-28 bg-gradient-to-r from-primary via-primary-600 to-primary-700 relative overflow-hidden shrink-0">
                 <div className="absolute inset-0 bg-white/10 dark:bg-black/20" />
-                <div className="mx-auto mt-2.5 h-1.5 w-12 rounded-md bg-white/40 sm:hidden relative z-10" aria-hidden="true" />
+                <div className="mx-auto mt-2.5 h-1.5 w-11 rounded-full bg-white/55 sm:hidden relative z-10" aria-hidden="true" />
               </div>
 
               {/* Identity & Badges */}
@@ -2363,7 +2470,10 @@ const PatientProviders = () => {
                 <div className="grid grid-cols-3 gap-2">
                   <div className="neu-flat-sm p-2.5 rounded-xl text-center">
                     <p className="text-2xs uppercase font-bold text-tertiary">{t('patient.providers.sheetRatingLabel')}</p>
-                    <p className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5">{(viewingProvider.rating || 0).toFixed(1)} ★</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-slate-100 mt-0.5 tabular-nums inline-flex items-center justify-center gap-1">
+                      <span>{(viewingProvider.rating || 0).toFixed(1)}</span>
+                      <Star weight="fill" className="w-3.5 h-3.5 text-warning dark:text-warning-dark shrink-0" aria-hidden="true" />
+                    </p>
                   </div>
                   <div className="neu-flat-sm p-2.5 rounded-xl text-center">
                     <p className="text-2xs uppercase font-bold text-tertiary">{t('patient.providers.sheetServicesLabel')}</p>
@@ -2441,7 +2551,7 @@ const PatientProviders = () => {
                       role="tab"
                       aria-selected={sheetTab === tabItem.v}
                       onClick={() => setSheetTab(tabItem.v)}
-                      className={`py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer truncate outline-none select-none ${
+                      className={`min-h-[2.75rem] py-2 px-1 rounded-xl text-xs font-bold transition-all cursor-pointer truncate select-none ${
                         sheetTab === tabItem.v
                           ? 'bg-primary text-white shadow-md'
                           : 'text-slate-600 dark:text-tertiary hover:text-link dark:hover:text-white bg-transparent'
